@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { getStoredSessionToken } from '$lib/stores/auth.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let taxDocs = $state([]);
 	let loading = $state(true);
@@ -221,14 +223,15 @@
 
 <svelte:head><title>Tax Prep | GYC</title></svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="tax-shell">
 <div class="tax-page">
-	<div class="dash-tabs">
-		<a href="/app/dashboard" class="dash-tab">Overview</a>
-		<a href="/app/portfolio" class="dash-tab">Portfolio</a>
-		<a href="/app/plan" class="dash-tab">My Plan</a>
-	</div>
+	<PageHeader title="Tax Prep" className="tax-page-header">
+		<div slot="secondaryRow" class="dash-tabs">
+			<a href="/app/dashboard" class="dash-tab">Overview</a>
+			<a href="/app/portfolio" class="dash-tab">Portfolio</a>
+			<a href="/app/plan" class="dash-tab">My Plan</a>
+		</div>
+	</PageHeader>
 
 	<div class="header-row">
 		<div class="filter-row">
@@ -449,11 +452,12 @@
 		</div>
 	</div>
 {/if}
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.tax-page { padding: 20px 24px; max-width: 1000px; }
+	.tax-shell { --ly-frame-max: 1000px; }
+	.tax-page { padding: 0; max-width: 1000px; margin: 0; }
+	.tax-page-header { margin-bottom: 24px; }
 	.dash-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
 	.dash-tab {
 		padding: 8px 16px; border-radius: 8px; font-family: var(--font-ui);
@@ -572,12 +576,11 @@
 	.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.tax-page { padding: 20px 24px 40px; max-width: 840px; }
+		.tax-page { max-width: 840px; }
 		.modal { max-width: 560px; }
 	}
 
 	@media (max-width: 768px) {
-		.tax-page { padding: 16px; }
 		.form-grid { grid-template-columns: 1fr; }
 		.header-row { flex-direction: column; }
 		.year-status-summary { display: none; }

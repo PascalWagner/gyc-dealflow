@@ -5,6 +5,8 @@
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
 	import { getStoredSessionToken, isMember, userToken } from '$lib/stores/auth.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let searchQuery = $state('');
 	let activeCategory = $state('All');
@@ -143,8 +145,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="resources-shell">
 <div class="resources-page">
 	{#if !$isMember}
 		<div class="gate-wrap">
@@ -187,18 +188,19 @@
 			</div>
 		</div>
 	{:else}
-		<div class="page-header">
-			<div>
+		<PageHeader title="Resources" className="resources-page-header">
+			<div slot="actions">
+				<a href={replayLibraryUrl} class="header-cta" target={replayLibraryUrl.startsWith('http') ? '_blank' : undefined} rel="noopener">
+					Open Full Library
+				</a>
+			</div>
+			<div slot="secondaryRow" class="resources-header-copy">
 				<div class="page-eyebrow">Cash Flow Academy</div>
-				<h1>Resources</h1>
 				<p class="page-desc">
 					A cleaner video library for office hours replays, deal reviews, and training lessons. This is where the member video shelf lives now.
 				</p>
 			</div>
-			<a href={replayLibraryUrl} class="header-cta" target={replayLibraryUrl.startsWith('http') ? '_blank' : undefined} rel="noopener">
-				Open Full Library
-			</a>
-		</div>
+		</PageHeader>
 
 		<div class="resource-stats">
 			<div class="resource-stat">
@@ -352,23 +354,13 @@
 		</div>
 	</div>
 {/if}
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.resources-page {
-		max-width: 1180px;
-		margin: 0 auto;
-		padding: 0 24px 48px;
-	}
-
-	.page-header {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 24px;
-		margin-bottom: 22px;
-	}
+	.resources-shell { --ly-frame-max: 1180px; }
+	.resources-page { max-width: 1180px; margin: 0; padding: 0 0 48px; }
+	.resources-page-header { margin-bottom: 22px; }
+	.resources-header-copy { display: grid; gap: 10px; }
 	.page-eyebrow {
 		font-family: var(--font-ui);
 		font-size: 11px;
@@ -377,13 +369,6 @@
 		text-transform: uppercase;
 		color: var(--text-muted);
 		margin-bottom: 10px;
-	}
-	h1 {
-		margin: 0 0 10px;
-		font-family: var(--font-headline);
-		font-size: 42px;
-		line-height: 0.95;
-		color: var(--text-dark);
 	}
 	.page-desc {
 		max-width: 640px;

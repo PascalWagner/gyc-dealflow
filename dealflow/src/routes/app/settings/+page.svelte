@@ -3,6 +3,8 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores/auth.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let activeTab = $state('plan');
 
@@ -448,20 +450,17 @@
 	});
 </script>
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="settings-shell-page">
 <div class="settings-page">
-	<div class="settings-shell">
-		<div class="settings-shell-title">Settings</div>
-	</div>
-
-	<div class="settings-tabs">
-		<button class="settings-tab" class:active={activeTab === 'profile'} onclick={() => activeTab = 'profile'}>Profile</button>
-		<button class="settings-tab" class:active={activeTab === 'plan'} onclick={() => activeTab = 'plan'}>My Plan</button>
-		<button class="settings-tab" class:active={activeTab === 'investor'} onclick={() => activeTab = 'investor'}>Investor</button>
-		<button class="settings-tab" class:active={activeTab === 'privacy'} onclick={() => activeTab = 'privacy'}>Privacy</button>
-		<button class="settings-tab" class:active={activeTab === 'notifications'} onclick={() => activeTab = 'notifications'}>Notifications</button>
-	</div>
+	<PageHeader title="Settings" className="settings-header">
+		<div slot="secondaryRow" class="settings-tabs">
+			<button class="settings-tab" class:active={activeTab === 'profile'} onclick={() => activeTab = 'profile'}>Profile</button>
+			<button class="settings-tab" class:active={activeTab === 'plan'} onclick={() => activeTab = 'plan'}>My Plan</button>
+			<button class="settings-tab" class:active={activeTab === 'investor'} onclick={() => activeTab = 'investor'}>Investor</button>
+			<button class="settings-tab" class:active={activeTab === 'privacy'} onclick={() => activeTab = 'privacy'}>Privacy</button>
+			<button class="settings-tab" class:active={activeTab === 'notifications'} onclick={() => activeTab = 'notifications'}>Notifications</button>
+		</div>
+	</PageHeader>
 
 	{#if activeTab === 'profile'}
 		<div class="settings-panel">
@@ -842,24 +841,14 @@
 		</button>
 	</div>
 </div>
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.settings-page { padding: 0 32px 40px; max-width: 920px; }
-	.settings-shell {
-		padding: 26px 0 18px;
-		margin: 0 -32px 24px;
-		padding-left: 32px;
-		padding-right: 32px;
-		border-bottom: 1px solid var(--border);
-	}
-	.settings-shell-title {
-		font-family: var(--font-headline);
-		font-size: 22px;
-		font-weight: 400;
-		color: var(--text-dark);
-		letter-spacing: -0.3px;
+	.settings-shell-page { --ly-frame-max: 920px; }
+	.settings-page { padding: 0 0 40px; max-width: 920px; margin: 0; }
+	.settings-header {
+		margin-bottom: 24px;
+		padding-bottom: 0;
 	}
 	.settings-tabs {
 		display: flex;
@@ -1049,12 +1038,7 @@
 	}
 
 	@media (max-width: 768px) {
-		.settings-page { padding: 0 16px 24px; }
-		.settings-shell {
-			margin: 0 -16px 20px;
-			padding: 20px 16px 14px;
-		}
-		.settings-shell-title { font-size: 20px; }
+		.settings-page { padding: 0 0 24px; }
 		.settings-tabs { margin-bottom: 20px; }
 		.settings-tab { padding: 12px 16px; font-size: 12px; }
 		.settings-page-title { font-size: 24px; }
@@ -1081,11 +1065,7 @@
 	}
 
 	@media (max-width: 480px) {
-		.settings-page { padding: 0 14px 24px; }
-		.settings-shell {
-			margin: 0 -14px 18px;
-			padding: 18px 14px 12px;
-		}
+		.settings-page { padding: 0 0 24px; }
 		.settings-tab { padding: 11px 14px; }
 		.profile-input { font-size: 16px; }
 		.avatar-row { align-items: flex-start; }

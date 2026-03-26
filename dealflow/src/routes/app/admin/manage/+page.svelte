@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { canonicalizeUserTier, user, isAdmin, userToken } from '$lib/stores/auth.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let activeTab = $state('operators');
 	const tabs = ['operators', 'deals', 'users', 'submissions', 'intros'];
@@ -276,19 +278,16 @@
 {#if !$isAdmin}
 	<div class="loading">Redirecting...</div>
 {:else}
-<div class="ly-page">
-	<div class="ly-frame">
-<div class="manage-page">
-	<div class="topbar">
-		<div class="topbar-title">Manage Database</div>
-		<div class="seg-ctrl">
+<PageContainer className="manage-page ly-page-stack">
+	<PageHeader title="Manage Data">
+		<div slot="secondaryRow" class="seg-ctrl">
 			{#each tabs as tab}
 				<button class="seg-btn" class:active={activeTab === tab} onclick={() => switchTab(tab)}>{tabLabels[tab]}</button>
 			{/each}
 		</div>
-	</div>
+	</PageHeader>
 
-	<div class="content" style="max-width:1200px">
+	<div class="content">
 		<!-- Toolbar -->
 		<div class="toolbar">
 			<div class="search-wrap">
@@ -390,17 +389,12 @@
 			</div>
 		{/if}
 	</div>
-</div>
-</div>
-</div>
+</PageContainer>
 {/if}
 
 <style>
 	.manage-page { min-height: 100vh; }
-	.topbar { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card); flex-wrap: wrap; }
-	.topbar-title { font-family: var(--font-ui); font-size: 18px; font-weight: 800; color: var(--text-dark); }
 	.seg-ctrl {
-		margin-left: auto;
 		display: flex;
 		gap: 8px;
 		padding: 6px;
@@ -432,7 +426,7 @@
 		box-shadow: 0 10px 22px rgba(16, 37, 42, 0.16);
 	}
 	.seg-btn:hover:not(.active) { background: rgba(81, 190, 123, 0.08); color: var(--text-dark); }
-	.content { padding: 24px; margin: 0 auto; }
+	.content { min-width: 0; }
 
 	.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
 	.search-wrap { position: relative; flex: 1; min-width: 200px; display: flex; align-items: center; }

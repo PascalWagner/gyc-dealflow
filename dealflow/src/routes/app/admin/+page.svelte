@@ -5,6 +5,8 @@
 	import { user, isAdmin, userToken, userEmail } from '$lib/stores/auth.js';
 	import { deals } from '$lib/stores/deals.js';
 	import { onboardingReviewGroups } from '$lib/onboarding/reviewLinks.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let activeTab = $state('overview');
 	let showReviewTools = $state(false);
@@ -280,12 +282,9 @@
 {#if !$isAdmin}
 	<div class="loading">Redirecting...</div>
 {:else}
-<div class="ly-page">
-	<div class="ly-frame">
-<div class="admin-page">
-	<div class="topbar">
-		<div class="topbar-title">Admin Dashboard</div>
-		<div class="topbar-actions">
+<PageContainer className="admin-page ly-page-stack">
+	<PageHeader title="Admin Dashboard">
+		<div slot="actions" class="topbar-actions">
 			<button class="topbar-btn" class:toggle-active={showReviewTools} onclick={toggleReviewTools}>
 				{showReviewTools ? 'Hide Review Links' : 'Show Review Links'}
 			</button>
@@ -294,9 +293,20 @@
 			<button class="topbar-btn" onclick={() => triggerGhlSync()}>Sync GHL</button>
 			<button class="topbar-btn" onclick={() => loadTab(activeTab)}>Refresh</button>
 		</div>
-	</div>
+		<div slot="secondaryRow" class="tab-bar">
+			{#each tabs as tab}
+				<button
+					class="tab-btn"
+					class:active={activeTab === tab}
+					onclick={() => switchTab(tab)}
+				>
+					{tabLabels[tab]}
+				</button>
+			{/each}
+		</div>
+	</PageHeader>
 
-	<div class="content" style="max-width:1100px">
+	<div class="content">
 		{#if showReviewTools}
 			<section class="review-tools-card">
 				<div class="review-tools-head">
@@ -328,19 +338,6 @@
 				</div>
 			</section>
 		{/if}
-
-		<!-- Tab Bar -->
-		<div class="tab-bar">
-			{#each tabs as tab}
-				<button
-					class="tab-btn"
-					class:active={activeTab === tab}
-					onclick={() => switchTab(tab)}
-				>
-					{tabLabels[tab]}
-				</button>
-			{/each}
-		</div>
 
 		<!-- TAB: Overview -->
 		{#if activeTab === 'overview'}
@@ -1309,20 +1306,16 @@
 			{/if}
 		{/if}
 	</div>
-</div>
-</div>
-</div>
+</PageContainer>
 {/if}
 
 <style>
 	.admin-page { min-height: 100vh; }
-	.topbar { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card); flex-wrap: wrap; }
-	.topbar-title { font-family: var(--font-ui); font-size: 18px; font-weight: 800; color: var(--text-dark); }
-	.topbar-actions { margin-left: auto; display: flex; gap: 8px; }
+	.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 	.topbar-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 14px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 	.topbar-btn:hover { border-color: var(--primary); color: var(--primary); }
 	.topbar-btn.toggle-active { background: rgba(81, 190, 123, 0.14); border-color: rgba(81, 190, 123, 0.36); color: var(--text-dark); }
-	.content { padding: 24px; margin: 0 auto; }
+	.content { min-width: 0; max-width: 1100px; }
 
 	/* Tab bar */
 	.tab-bar {

@@ -3,6 +3,8 @@
 	import { browser } from '$app/environment';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 	import { getStoredSessionToken } from '$lib/stores/auth.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let portfolio = $state([]);
 	let taxDocuments = $state([]);
@@ -848,19 +850,16 @@
 	});
 </script>
 
-<div class="ly-page ly-dashboard-shell portfolio-shell">
-	<div class="ly-dashboard-topbar">
-		<div class="ly-dashboard-topbar-inner ly-frame">
-			<div class="ly-dashboard-title">Dashboard</div>
-			<nav class="ly-dashboard-tabs" aria-label="Dashboard sections">
-				<a href="/app/dashboard" class="ly-dashboard-tab">Overview</a>
-				<a href="/app/portfolio" class="ly-dashboard-tab active">Portfolio</a>
-				<a href="/app/plan" class="ly-dashboard-tab">My Plan</a>
-			</nav>
-		</div>
-	</div>
+<PageContainer className="portfolio-shell ly-page-stack">
+	<PageHeader title="Dashboard" className="dashboard-page-header">
+		<nav slot="secondaryRow" class="ly-dashboard-tabs" aria-label="Dashboard sections">
+			<a href="/app/dashboard" class="ly-dashboard-tab">Overview</a>
+			<a href="/app/portfolio" class="ly-dashboard-tab active">Portfolio</a>
+			<a href="/app/plan" class="ly-dashboard-tab">My Plan</a>
+		</nav>
+	</PageHeader>
 
-	<div class="ly-dashboard-content ly-frame content-area">
+	<div class="content-area">
 	{#if portfolio.length === 0}
 		<div class="import-section">
 			<div class="import-card">
@@ -1171,7 +1170,7 @@
 		</div>
 	{/if}
 	</div>
-</div>
+</PageContainer>
 
 <!-- Deal Search Modal -->
 {#if showDealSearch}
@@ -1403,14 +1402,8 @@
 {/if}
 
 <style>
-	.portfolio-shell {
-		--ly-frame-max: 1200px;
-		--ly-dashboard-content-pad-top: 24px;
-		--ly-dashboard-content-pad-bottom: 40px;
-		--ly-dashboard-content-pad-top-tablet: 20px;
-		--ly-dashboard-content-pad-bottom-tablet: 40px;
-		--ly-dashboard-content-pad-top-mobile: 16px;
-		--ly-dashboard-content-pad-bottom-mobile: 16px;
+	.content-area {
+		min-width: 0;
 	}
 	.btn-add {
 		padding: 8px 18px;
@@ -2210,11 +2203,6 @@
 	.btn-danger:hover { background: #fde8e8; }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.portfolio-shell {
-			--ly-dashboard-content-pad-top: 20px;
-			--ly-dashboard-content-pad-bottom: 40px;
-		}
-
 		.summary-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
@@ -2236,10 +2224,6 @@
 
 	/* ── Mobile Breakpoints ── */
 	@media (max-width: 768px) {
-		.portfolio-shell {
-			--ly-dashboard-content-pad-top: 16px;
-			--ly-dashboard-content-pad-bottom: 16px;
-		}
 		.charts-row { grid-template-columns: 1fr; }
 		.modal-grid { grid-template-columns: 1fr; }
 		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }

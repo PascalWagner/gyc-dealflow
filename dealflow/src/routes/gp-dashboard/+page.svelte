@@ -3,7 +3,8 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { user, isLoggedIn, userEmail, userToken, isAdmin } from '$lib/stores/auth.js';
-	import Sidebar from '$lib/components/Sidebar.svelte';
+	import AppShell from '$lib/layout/AppShell.svelte';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
 
 	// ===== Reactive State (Svelte 5 Runes) =====
 		let loading = $state(true);
@@ -953,10 +954,8 @@
 	<title>GP Dashboard - GYC Dealflow</title>
 </svelte:head>
 
-<Sidebar currentPage="gp-dashboard" />
-
-<div class="main ly-sidebar-main ly-page gp-dashboard-page">
-	<div class="content-wrap ly-frame">
+<AppShell currentPage="gp-dashboard">
+	<PageContainer className="gp-dashboard-page">
 
 		{#if accessDenied}
 			<!-- Access Denied -->
@@ -1422,48 +1421,17 @@
 				</div>
 			</div>
 		{/if}
-	</div>
-</div>
+	</PageContainer>
+</AppShell>
 
 <!-- Toast -->
 <div class="toast" class:show={toastVisible}>{toastMsg}</div>
 
-<!-- Mobile Bottom Tab Bar -->
-<nav class="ly-mobile-tabs" aria-label="Primary">
-	<a class="ly-mobile-tab" href="/app/dashboard">
-		<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-		<span>Dashboard</span>
-	</a>
-	<a class="ly-mobile-tab" href="/app/market-intel">
-		<svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-		<span>Intel</span>
-	</a>
-	<a class="ly-mobile-tab" href="/app/deals">
-		<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-		<span>Deal Flow</span>
-	</a>
-	<a class="ly-mobile-tab active" href="/gp-dashboard" aria-current="page">
-		<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-		<span>GP Portal</span>
-	</a>
-	<a class="ly-mobile-tab" href="/app/more">
-		<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-		<span>More</span>
-	</a>
-</nav>
-
 <style>
 	/* ====== MAIN LAYOUT ====== */
-	.main {
-		min-height: 100vh;
-	}
 	.gp-dashboard-page {
-		--ly-frame-max: 1200px;
 		--ly-frame-pad-top: 32px;
 		--ly-frame-pad-bottom: 64px;
-	}
-	.content-wrap {
-		min-width: 0;
 	}
 	/* ====== LOADING SKELETON ====== */
 	.skeleton {

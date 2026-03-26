@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { user, isLoggedIn, userToken } from '$lib/stores/auth.js';
 	import { deals } from '$lib/stores/deals.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let searchQuery = $state('');
 	let gps = $state([]);
@@ -40,17 +42,16 @@
 
 <svelte:head><title>Find a GP | GYC</title></svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
-<div class="page-header">
-	<h1>Find a GP</h1>
+<PageContainer className="find-gp-page">
+<PageHeader title="Find a GP">
 	<input
+		slot="actions"
 		type="text"
 		class="search-input"
 		placeholder="Search sponsors..."
 		bind:value={searchQuery}
 	/>
-</div>
+</PageHeader>
 
 <div class="gp-grid">
 	{#each filteredGPs as gp}
@@ -81,15 +82,9 @@
 		<div class="empty-state">No sponsors found matching "{searchQuery}"</div>
 	{/if}
 </div>
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.page-header {
-		display: flex; align-items: center; justify-content: space-between;
-		padding: 20px 24px; gap: 16px; flex-wrap: wrap;
-	}
-	h1 { font-family: var(--font-headline); font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 0; }
 	.search-input {
 		min-width: 260px; padding: 10px 14px; border: 1px solid var(--border-light);
 		border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px;
@@ -97,7 +92,7 @@
 	}
 	.gp-grid {
 		display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-		gap: 16px; padding: 0 24px 24px;
+		gap: 16px;
 	}
 	.gp-card {
 		background: var(--bg-card); border: 1px solid var(--border-light);
@@ -127,12 +122,10 @@
 		font-family: var(--font-body); font-size: 14px; color: var(--text-muted);
 	}
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.page-header { padding: 20px 24px; }
-		.gp-grid { padding: 0 24px 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.gp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	}
 	@media (max-width: 768px) {
-		.page-header { padding: 16px; }
-		.gp-grid { padding: 0 16px 16px; grid-template-columns: 1fr; }
+		.gp-grid { grid-template-columns: 1fr; }
 		.search-input { min-width: auto; width: 100%; }
 	}
 </style>

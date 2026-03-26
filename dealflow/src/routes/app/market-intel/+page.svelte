@@ -3,6 +3,8 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { accessTier } from '$lib/stores/auth.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let activeTab = $state('sec');
 	let charts = $state({});
@@ -651,19 +653,19 @@
 	onDestroy(() => { destroyCharts(); });
 </script>
 
-<div class="mi-page ly-page">
-	<div class="mi-shell ly-frame">
-	<div class="mi-header">
-		<h1>Market Intelligence</h1>
-		<p>Market-wide data from <strong>{secStats?.totalFilings || '730,640'}</strong> SEC Form D filings combined with deal-level insights from <strong>{totalDeals.toLocaleString()}</strong> offerings we've reviewed (totaling <strong>{totalCapital}</strong> in capital).</p>
-	</div>
-
-	<!-- Tab Bar -->
-	<div class="mi-tab-bar ly-pill-tabs" aria-label="Market intelligence sections">
-		{#each [['sec','Market Intel'],['deals','Deal Insights'],['dealflow','Deal Flow'],['debtfunds','Debt Funds']] as [id, label]}
-			<button type="button" class="mi-tab-btn ly-pill-tab" class:active={activeTab === id} onclick={() => switchTab(id)}>{label}</button>
-		{/each}
-	</div>
+<PageContainer className="mi-page ly-page-stack">
+	<PageHeader
+		title="Market Intelligence"
+		variant="hero"
+		subtitle={`Market-wide data from ${secStats?.totalFilings || '730,640'} SEC Form D filings combined with deal-level insights from ${totalDeals.toLocaleString()} offerings we've reviewed (totaling ${totalCapital} in capital).`}
+		className="mi-page-header"
+	>
+		<div slot="secondaryRow" class="mi-tab-bar ly-pill-tabs" aria-label="Market intelligence sections">
+			{#each [['sec','Market Intel'],['deals','Deal Insights'],['dealflow','Deal Flow'],['debtfunds','Debt Funds']] as [id, label]}
+				<button type="button" class="mi-tab-btn ly-pill-tab" class:active={activeTab === id} onclick={() => switchTab(id)}>{label}</button>
+			{/each}
+		</div>
+	</PageHeader>
 
 	{#snippet miGate()}
 		<div class="mi-gate-overlay">
@@ -967,15 +969,10 @@
 			</div>
 		</div>
 	{/if}
-	</div>
-</div>
+	</PageContainer>
 
 <style>
 	.mi-page {
-		--ly-frame-max: 1240px;
-		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
-		--ly-frame-pad-tablet: 24px;
-		--ly-frame-pad-mobile: 16px;
 		--ly-frame-pad-top: 24px;
 		--ly-frame-pad-bottom: 48px;
 		--ly-frame-pad-top-tablet: 20px;
@@ -987,12 +984,6 @@
 		max-width: 100%;
 	}
 
-	.mi-shell {
-		min-width: 0;
-		max-width: 100%;
-	}
-
-	.mi-header,
 	.mi-section,
 	.mi-gated-shell,
 	.mi-gated-content,
@@ -1012,9 +1003,7 @@
 		min-width: 0;
 	}
 
-	.mi-header h1 { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin: 0 0 8px 0; }
-	.mi-header p { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin: 0; max-width: 680px; }
-	.mi-tab-bar { margin: 24px 0 28px; }
+	.mi-tab-bar { margin-top: 4px; }
 	.mi-tab-btn.active { background: var(--primary); color: #fff; }
 	.mi-section { margin-bottom: 32px; }
 	.mi-section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }

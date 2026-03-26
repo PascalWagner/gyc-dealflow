@@ -3,6 +3,7 @@
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
 	import { isAdmin, isMember } from '$lib/stores/auth.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
 
 	let activeTab = $state(0);
 	let openFaq = $state(-1);
@@ -39,8 +40,7 @@
 
 <svelte:head><title>Cashflow Academy | GYC</title></svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="academy-shell">
 {#if nativeCompanionMode}
 	<div class="academy-native">
 		<section class="native-hero">
@@ -352,13 +352,13 @@
 	<div class="disclaimer">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities.</div>
 </div>
 {/if}
-</div>
-</div>
+</PageContainer>
 
 <style>
+	.academy-shell { --ly-frame-max: 960px; }
 	.academy-native {
 		max-width: 960px;
-		padding: 0 24px 56px;
+		padding: 0 0 56px;
 	}
 
 	.native-hero {
@@ -475,7 +475,7 @@
 		backdrop-filter: blur(6px);
 	}
 
-	.academy-page { max-width: 960px; padding: 0 24px 60px; }
+	.academy-page { max-width: 960px; padding: 0 0 60px; }
 
 	/* Hero */
 	.hero { background: linear-gradient(135deg, #0A1E21 0%, #1a3a42 50%, #0d2e35 100%); border-radius: 16px; padding: 48px 40px; text-align: center; color: #fff; margin-bottom: 24px; }
@@ -621,9 +621,9 @@
 	.disclaimer { font-family: var(--font-ui); font-size: 9px; color: var(--text-muted); text-align: center; opacity: 0.5; line-height: 1.6; }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.academy-native { max-width: 900px; padding: 0 24px 48px; }
+		.academy-native { max-width: 900px; padding: 0 0 48px; }
 		.native-hero { padding: 34px 28px; }
-		.academy-page { max-width: 900px; padding: 0 24px 48px; }
+		.academy-page { max-width: 900px; padding: 0 0 48px; }
 		.hero { padding: 40px 28px; }
 		.hero-stats { gap: 24px; }
 		.compare-grid, .tools-grid, .bonus-grid, .quotes-grid, .pascal-grid { gap: 16px; }
@@ -631,11 +631,11 @@
 	}
 
 	@media (max-width: 768px) {
-		.academy-native { padding: 0 16px 40px; }
+		.academy-native { padding: 0 0 40px; }
 		.native-hero { padding: 30px 20px; }
 		.native-hero h1 { font-size: 26px; }
 		.hub-grid, .preview-grid { grid-template-columns: 1fr; }
-		.academy-page { padding: 0 16px 40px; }
+		.academy-page { padding: 0 0 40px; }
 		.hero { padding: 32px 20px; }
 		.hero h1 { font-size: 24px; }
 		.hero-stats { flex-direction: column; gap: 16px; }

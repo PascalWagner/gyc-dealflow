@@ -3,6 +3,8 @@
 	import { user, isLoggedIn, userToken } from '$lib/stores/auth.js';
 	import { deals, dealStages } from '$lib/stores/deals.js';
 	import { goto } from '$app/navigation';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	const savedDeals = $derived.by(() => {
 		const allDeals = $deals || [];
@@ -13,11 +15,8 @@
 
 <svelte:head><title>Saved Deals | GYC</title></svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
-<div class="page-header">
-	<h1>Saved Deals</h1>
-</div>
+<PageContainer className="saved-page">
+<PageHeader title="Saved Deals" />
 
 {#if savedDeals.length === 0}
 	<div class="empty-state">
@@ -51,13 +50,9 @@
 		{/each}
 	</div>
 {/if}
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.page-header { padding: 20px 24px; }
-	h1 { font-family: var(--font-headline); font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 0; }
-
 	.empty-state {
 		text-align: center; padding: 80px 20px;
 		display: flex; flex-direction: column; align-items: center; gap: 12px;
@@ -74,7 +69,7 @@
 
 	.card-grid {
 		display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-		gap: 16px; padding: 0 24px 24px;
+		gap: 16px;
 	}
 	.deal-card {
 		background: var(--bg-card); border: 1px solid var(--border-light);
@@ -92,7 +87,6 @@
 	.deal-stat { font-family: var(--font-ui); font-size: 11px; color: var(--text-secondary); font-weight: 600; }
 
 	@media (max-width: 768px) {
-		.page-header { padding: 16px; }
-		.card-grid { padding: 0 16px 16px; grid-template-columns: 1fr; }
+		.card-grid { grid-template-columns: 1fr; }
 	}
 </style>

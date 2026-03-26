@@ -1,6 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
 	import { deals, fetchDeals } from '$lib/stores/deals.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let nameSearch = $state('');
 	let assetFilter = $state('');
@@ -123,9 +125,9 @@
 	onMount(() => { fetchDeals(); });
 </script>
 
-<div class="operators-page ly-page">
-	<div class="filter-shell">
-		<div class="filter-shell-inner ly-frame">
+<PageContainer className="operators-page">
+	<PageHeader title="Operators" className="operators-page-header">
+		<div slot="secondaryRow" class="operators-header-filters">
 			<div class="filter-bar desktop-filter-bar">
 				<input type="text" bind:value={nameSearch} placeholder="Search operators..." class="filter-input">
 				<select bind:value={assetFilter} class="filter-select">
@@ -215,9 +217,9 @@
 				{/if}
 			</div>
 		</div>
-	</div>
+	</PageHeader>
 
-	<div class="operators-content ly-frame">
+	<div class="operators-content">
 		<div class="managers-grid ly-grid">
 		{#each filtered as c (c.name)}
 			<a href={getOperatorHref(c)} class="manager-card" data-sveltekit-reload>
@@ -250,35 +252,20 @@
 		{/each}
 		</div>
 	</div>
-</div>
+</PageContainer>
 
 <style>
 	.operators-page {
-		--ly-frame-max: 1440px;
-		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
-		--ly-frame-pad-tablet: 24px;
-		--ly-frame-pad-mobile: 16px;
 		min-width: 0;
 	}
 
-	.filter-shell {
-		border-bottom: 1px solid var(--border);
-		background: var(--bg-card);
-	}
-
-	.filter-shell-inner {
-		--ly-frame-pad-top: 0;
-		--ly-frame-pad-bottom: 0;
+	.operators-header-filters {
+		display: grid;
+		gap: 12px;
 		min-width: 0;
 	}
 
 	.operators-content {
-		--ly-frame-pad-top: 24px;
-		--ly-frame-pad-bottom: 48px;
-		--ly-frame-pad-top-tablet: 20px;
-		--ly-frame-pad-bottom-tablet: 40px;
-		--ly-frame-pad-top-mobile: 16px;
-		--ly-frame-pad-bottom-mobile: 32px;
 		min-width: 0;
 	}
 

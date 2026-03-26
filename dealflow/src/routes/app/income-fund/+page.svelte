@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import WebOnlyNotice from '$lib/components/WebOnlyNotice.svelte';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
 
 	const nativeCompanionMode = browser && isNativeApp();
 </script>
@@ -10,8 +11,7 @@
 	<title>GYC Income Fund | GYC</title>
 </svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="income-fund-shell">
 <div class="if-page">
 	<!-- HERO -->
 	<div class="if-hero">
@@ -65,13 +65,13 @@
 	<!-- DISCLAIMER -->
 	<p class="disclaimer">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only.</p>
 </div>
-</div>
-</div>
+</PageContainer>
 
 <style>
+	.income-fund-shell { --ly-frame-max: 960px; }
 	.if-page {
 		max-width: 960px;
-		margin: 0 auto;
+		margin: 0;
 	}
 
 	/* ===== Hero ===== */
@@ -264,7 +264,7 @@
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.if-page {
 			max-width: 840px;
-			padding: 0 24px 40px;
+			padding: 0 0 40px;
 		}
 
 		.if-hero {

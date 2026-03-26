@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
 	import { getStoredSessionToken, isMember, userToken } from '$lib/stores/auth.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import {
 		downloadEventIcs,
 		formatCanonicalDate,
@@ -250,8 +251,7 @@
 	<title>Office Hours | GYC</title>
 </svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="office-hours-shell">
 <div class="office-hours-page">
 	<div class="office-hours-hero">
 		<div>
@@ -389,15 +389,11 @@
 		</div>
 	{/if}
 </div>
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.office-hours-page {
-		max-width: 1220px;
-		margin: 0 auto;
-		padding: 0 24px 48px;
-	}
+	.office-hours-shell { --ly-frame-max: 1220px; }
+	.office-hours-page { max-width: 1220px; margin: 0; padding: 0 0 48px; }
 
 	.office-hours-hero {
 		display: flex;

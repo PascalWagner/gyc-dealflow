@@ -2,6 +2,8 @@
 	import { accessTier, isAdmin, isGP } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	const nativeCompanionMode = browser && isNativeApp();
 	const canShowMemberHub = $derived(!nativeCompanionMode || ['member', 'admin'].includes($accessTier));
@@ -49,10 +51,9 @@
 
 <svelte:head><title>More | GYC</title></svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="more-frame">
 <div class="more-page">
-	<h1>More</h1>
+	<PageHeader title="More" />
 
 	{#each sections as section}
 		<div class="section-label">{section.label}</div>
@@ -93,12 +94,10 @@
 		</a>
 	{/if}
 </div>
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.more-page { padding: 20px 16px; max-width: 480px; margin: 0 auto; }
-	h1 { font-family: var(--font-headline); font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 0 0 20px; }
+	.more-page { max-width: 480px; margin: 0; }
 
 	.section-label {
 		font-family: var(--font-ui); font-size: 11px; font-weight: 700;
@@ -120,7 +119,6 @@
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.more-page {
 			max-width: 600px;
-			padding: 24px;
 		}
 
 		.menu-item {

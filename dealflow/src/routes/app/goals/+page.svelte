@@ -4,6 +4,8 @@
 	import { deals, dealStages } from '$lib/stores/deals.js';
 	import GoalProgress from '$lib/components/GoalProgress.svelte';
 	import { getStoredSessionToken } from '$lib/stores/auth.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let investorGoals = $state(null);
 	let portfolio = $state([]);
@@ -161,11 +163,8 @@
 	});
 </script>
 
-<div class="ly-page">
-	<div class="ly-frame">
-<div class="topbar">
-	<div class="topbar-title">My Goals</div>
-</div>
+<PageContainer className="goals-page">
+	<PageHeader title="My Goals" />
 
 {#if showWizard}
 	<!-- Goals Wizard -->
@@ -343,15 +342,15 @@
 		</div>
 	</div>
 {/if}
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.topbar { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card); position: sticky; top: 0; z-index: 10; }
-	.topbar-title { font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: var(--text-dark); }
+	.goals-page {
+		--ly-frame-max: 960px;
+	}
 
 	/* Wizard */
-	.wizard-container { max-width: 600px; margin: 40px auto; padding: 0 24px; }
+	.wizard-container { max-width: 600px; margin: 8px 0 0; padding: 0; }
 	.wizard-inner { }
 	.wizard-header { text-align: center; margin-bottom: 32px; }
 	.wizard-icon { font-size: 48px; margin-bottom: 12px; }
@@ -367,8 +366,8 @@
 	.save-toast { margin-top: 12px; padding: 10px 16px; background: #F0F9F4; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; color: #059669; font-weight: 600; text-align: center; }
 
 	/* Dashboard */
-	.goals-dashboard { padding: 0 24px 40px; max-width: 900px; margin: 0 auto; }
-	.goals-top { display: flex; justify-content: space-between; align-items: center; margin: 24px 0; }
+	.goals-dashboard { padding: 0 0 40px; max-width: 900px; margin: 0; }
+	.goals-top { display: flex; justify-content: space-between; align-items: center; margin: 0 0 24px; }
 	.goals-top h2 { font-family: var(--font-headline); font-size: 24px; font-weight: 400; color: var(--text-dark); margin: 0; }
 	.goals-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 	.btn-edit { padding: 6px 14px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 600; font-size: 11px; cursor: pointer; color: var(--text-secondary); }
@@ -423,14 +422,13 @@
 	.rm-value { font-size: 20px; font-weight: 800; color: var(--text-dark); }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.topbar { padding: 16px 24px; }
-		.wizard-container { padding: 0 24px; }
-		.goals-dashboard { padding: 0 24px 40px; }
+		.wizard-container { max-width: 100%; }
 		.metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	}
 
 	@media (max-width: 768px) {
-		.goals-dashboard { padding: 0 16px 40px; }
+		.wizard-container { margin-top: 0; }
+		.goals-dashboard { padding: 0 0 40px; }
 		.metrics-grid { grid-template-columns: repeat(2, 1fr); }
 		.scenarios-grid { grid-template-columns: 1fr; }
 		.roadmap-summary { flex-direction: column; gap: 12px; }

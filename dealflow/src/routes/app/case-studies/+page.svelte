@@ -1,5 +1,7 @@
 <script>
 	import { browser } from '$app/environment';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	// ── Dummy data ──────────────────────────────────────────────────────
 	const DUMMY_MEMBERS = [
@@ -142,13 +144,12 @@
 	<title>Member Success | GYC</title>
 </svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="member-success-shell">
 <div class="page">
-	<header class="page-header">
-		<h1>Member Success</h1>
-		<p class="subtitle">Track member journeys, investment milestones, and engagement across the community.</p>
-	</header>
+	<PageHeader
+		title="Member Success"
+		subtitle="Track member journeys, investment milestones, and engagement across the community."
+	/>
 
 	<!-- Summary Stats -->
 	<div class="stats-row">
@@ -341,28 +342,16 @@
 		{/if}
 	</div>
 </div>
-</div>
-</div>
+</PageContainer>
 
 <style>
 	/* ── Page ──────────────────────────────────────────────────────────── */
 	.page {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 2rem 1.5rem 4rem;
+		max-width: 100%;
+		margin: 0;
+		padding: 0 0 4rem;
 		font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
 		color: var(--text, #1a1a2e);
-	}
-	.page-header { margin-bottom: 1.5rem; }
-	.page-header h1 {
-		font-size: 1.75rem;
-		font-weight: 700;
-		margin: 0 0 0.25rem;
-	}
-	.subtitle {
-		color: var(--text-muted, #6b7280);
-		font-size: 0.9rem;
-		margin: 0;
 	}
 
 	/* ── Stats Row ────────────────────────────────────────────────────── */

@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
 	import LegacyPlanWizard from '$lib/components/LegacyPlanWizard.svelte';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import {
 		getStoredSessionUser,
 		isMember
@@ -904,19 +906,16 @@
 	<title>My Plan | GYC</title>
 </svelte:head>
 
-<div class="ly-page ly-dashboard-shell plan-shell">
-	<div class="ly-dashboard-topbar">
-		<div class="ly-dashboard-topbar-inner ly-frame">
-			<div class="ly-dashboard-title">Dashboard</div>
-			<nav class="ly-dashboard-tabs" aria-label="Dashboard sections">
-				<a href="/app/dashboard" class="ly-dashboard-tab" data-sveltekit-reload>Overview</a>
-				<a href="/app/portfolio" class="ly-dashboard-tab" data-sveltekit-reload>Portfolio</a>
-				<a href="/app/plan" class="ly-dashboard-tab active" data-sveltekit-reload>My Plan</a>
-			</nav>
-		</div>
-	</div>
+<PageContainer className="plan-shell ly-page-stack">
+	<PageHeader title="Dashboard" className="dashboard-page-header">
+		<nav slot="secondaryRow" class="ly-dashboard-tabs" aria-label="Dashboard sections">
+			<a href="/app/dashboard" class="ly-dashboard-tab" data-sveltekit-reload>Overview</a>
+			<a href="/app/portfolio" class="ly-dashboard-tab" data-sveltekit-reload>Portfolio</a>
+			<a href="/app/plan" class="ly-dashboard-tab active" data-sveltekit-reload>My Plan</a>
+		</nav>
+	</PageHeader>
 
-	<div class="ly-dashboard-content ly-frame plan-page">
+	<div class="plan-page">
 	{#if saveMsg}
 		<div class="save-toast">{saveMsg}</div>
 	{/if}
@@ -1297,19 +1296,9 @@
 		</div>
 	{/if}
 	</div>
-</div>
+</PageContainer>
 
 <style>
-	.plan-shell {
-		--ly-frame-max: 1240px;
-		--ly-dashboard-content-pad-top: 24px;
-		--ly-dashboard-content-pad-bottom: 40px;
-		--ly-dashboard-content-pad-top-tablet: 20px;
-		--ly-dashboard-content-pad-bottom-tablet: 40px;
-		--ly-dashboard-content-pad-top-mobile: 16px;
-		--ly-dashboard-content-pad-bottom-mobile: 16px;
-	}
-
 	.plan-page {
 		min-width: 0;
 	}
@@ -2178,10 +2167,6 @@
 	}
 
 	@media (max-width: 1024px) {
-		.plan-shell {
-			--ly-dashboard-content-pad-top: 20px;
-			--ly-dashboard-content-pad-bottom: 40px;
-		}
 		.snapshot-row {
 			grid-template-columns: minmax(200px, 1.8fr) repeat(4, minmax(0, 1fr));
 		}
@@ -2191,10 +2176,6 @@
 	}
 
 	@media (max-width: 768px) {
-		.plan-shell {
-			--ly-dashboard-content-pad-top: 16px;
-			--ly-dashboard-content-pad-bottom: 16px;
-		}
 		.plan-card,
 		.plan-target-card {
 			padding: 20px 18px;

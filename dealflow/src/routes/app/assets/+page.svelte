@@ -1,6 +1,8 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { deals, fetchDeals } from '$lib/stores/deals.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let searchVal = $state('');
 	let classFilter = $state('');
@@ -167,12 +169,10 @@
 	onDestroy(() => { if (map) { map.remove(); map = null; } });
 </script>
 
-<div class="ly-page">
-	<div class="ly-frame">
+<PageContainer className="assets-shell">
 <div class="assets-page">
-	<div class="topbar">
-		<div class="topbar-title">Assets</div>
-		<div class="topbar-controls">
+	<PageHeader title="Assets" className="assets-page-header">
+		<div slot="actions" class="topbar-controls">
 			<div class="view-toggle">
 				<button class="toggle-btn" class:active={viewMode === 'grid'} onclick={() => setView('grid')}>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -183,19 +183,19 @@
 					Map
 				</button>
 			</div>
-			<div class="topbar-filters">
-				<input type="text" bind:value={searchVal} placeholder="Search by name or location..." class="filter-input">
-				<select bind:value={classFilter} class="filter-select">
-					<option value="">All Asset Classes</option>
-					{#each assetClasses as ac}<option value={ac}>{ac}</option>{/each}
-				</select>
-				<select bind:value={stateFilter} class="filter-select">
-					<option value="">All Locations</option>
-					{#each locations as loc}<option value={loc}>{loc}</option>{/each}
-				</select>
-			</div>
 		</div>
-	</div>
+		<div slot="secondaryRow" class="topbar-filters">
+			<input type="text" bind:value={searchVal} placeholder="Search by name or location..." class="filter-input">
+			<select bind:value={classFilter} class="filter-select">
+				<option value="">All Asset Classes</option>
+				{#each assetClasses as ac}<option value={ac}>{ac}</option>{/each}
+			</select>
+			<select bind:value={stateFilter} class="filter-select">
+				<option value="">All Locations</option>
+				{#each locations as loc}<option value={loc}>{loc}</option>{/each}
+			</select>
+		</div>
+	</PageHeader>
 
 	{#if viewMode === 'map'}
 		<div id="assetsMapFull" class="map-container-full"></div>
@@ -263,14 +263,20 @@
 		</div>
 	{/if}
 </div>
-</div>
-</div>
+</PageContainer>
 
 <style>
+	.assets-shell {
+		--ly-frame-max: 1280px;
+	}
+
 	.assets-page { padding: 0; }
-	.topbar { display: flex; align-items: center; gap: 16px; padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card); flex-wrap: wrap; }
-	.topbar-title { font-family: var(--font-ui); font-size: 18px; font-weight: 800; color: var(--text-dark); }
-	.topbar-controls { display: flex; gap: 12px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+	.assets-page-header {
+		margin-bottom: 0;
+		padding-bottom: 16px;
+		border-bottom: 1px solid var(--border);
+	}
+	.topbar-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 	.topbar-filters { display: flex; gap: 8px; align-items: center; }
 	.filter-input { padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; width: 220px; color: var(--text-dark); background: var(--bg-card); }
 	.filter-select { padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; color: var(--text-dark); background: var(--bg-card); }
@@ -286,7 +292,7 @@
 	.map-container-full { height: 460px; background: var(--border-light); }
 
 	/* List under map */
-	.asset-list { padding: 20px 24px; }
+	.asset-list { padding: 20px 0; }
 	.asset-count { font-family: var(--font-ui); font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
 	.asset-row { display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; width: 100%; text-align: left; font-family: inherit; margin-bottom: 8px; }
 	.asset-row:hover { border-color: var(--primary); }
@@ -304,7 +310,7 @@
 	.btn-view { padding: 6px 14px; background: var(--primary); color: #fff; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
 
 	/* Grid View */
-	.asset-grid-wrap { padding: 20px 24px; }
+	.asset-grid-wrap { padding: 20px 0; }
 	.asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 	.asset-card { display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; text-decoration: none; transition: all 0.15s; }
 	.asset-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
@@ -321,19 +327,18 @@
 	.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.topbar { padding: 14px 24px; }
-		.asset-list { padding: 20px 24px; }
-		.asset-grid-wrap { padding: 20px 24px 24px; }
+		.asset-list { padding: 20px 0; }
+		.asset-grid-wrap { padding: 20px 0 24px; }
 		.asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	}
 
 	@media (max-width: 768px) {
-		.topbar { flex-direction: column; align-items: stretch; }
-		.topbar-controls { margin-left: 0; flex-wrap: wrap; }
-		.topbar-filters { margin-left: 0; flex-wrap: wrap; }
+		.topbar-controls { width: 100%; justify-content: flex-start; }
+		.topbar-filters { flex-wrap: wrap; }
+		.filter-input, .filter-select { width: 100%; }
 		.asset-row { flex-wrap: wrap; gap: 8px; }
-		.asset-list { padding: 16px; }
-		.asset-grid-wrap { padding: 16px; }
+		.asset-list { padding: 16px 0; }
+		.asset-grid-wrap { padding: 16px 0; }
 		.asset-grid { grid-template-columns: 1fr; }
 		.map-container-full { height: 320px; }
 	}

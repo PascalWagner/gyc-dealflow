@@ -18,14 +18,23 @@ function assert(condition, message) {
 
 const operatorsPage = read('src/routes/app/operators/+page.svelte');
 const dealFlowPage = read('src/routes/app/deals/+page.svelte');
+const assetsPage = read('src/routes/app/assets/+page.svelte');
+const goalsPage = read('src/routes/app/goals/+page.svelte');
 const marketIntelPage = read('src/routes/app/market-intel/+page.svelte');
+const officeHoursPage = read('src/routes/app/office-hours/+page.svelte');
+const resourcesPage = read('src/routes/app/resources/+page.svelte');
+const settingsPage = read('src/routes/app/settings/+page.svelte');
 const marketIntelApi = read('api/market-intel.js');
 const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
+const taxPrepPage = read('src/routes/app/tax-prep/+page.svelte');
+const academyPage = read('src/routes/app/academy/+page.svelte');
+const incomeFundPage = read('src/routes/app/income-fund/+page.svelte');
 const gpDashboardPage = read('src/routes/gp-dashboard/+page.svelte');
 const onboardingPage = read('src/routes/onboarding/+page.svelte');
 const gpOnboardingPage = read('src/routes/gp-onboarding/+page.svelte');
 const appLayout = read('src/routes/app/+layout.svelte');
+const appShell = read('src/lib/layout/AppShell.svelte');
 const sidebar = read('src/lib/components/Sidebar.svelte');
 const filterBar = read('src/lib/components/FilterBar.svelte');
 const swipeFeed = read('src/lib/components/SwipeFeed.svelte');
@@ -47,12 +56,28 @@ assert(
 	'Operators page must derive sponsor links through getOperatorHref().'
 );
 assert(
-	dealFlowPage.includes('class="deals-page ly-page"'),
+	dealFlowPage.includes("import PageContainer from '$lib/layout/PageContainer.svelte';"),
+	'Deal Flow page must import the shared PageContainer.'
+);
+assert(
+	dealFlowPage.includes("import PageHeader from '$lib/layout/PageHeader.svelte';"),
+	'Deal Flow page must import the shared PageHeader.'
+);
+assert(
+	dealFlowPage.includes('<PageContainer className="deals-page">'),
 	'Deal Flow page must use the shared page wrapper.'
 );
 assert(
-	dealFlowPage.includes('class="deals-shell ly-frame ly-stack"'),
-	'Deal Flow page must use the shared frame + stack shell.'
+	dealFlowPage.includes('class="deals-shell ly-page-stack"'),
+	'Deal Flow page must use the shared stack shell.'
+);
+assert(
+	dealFlowPage.includes('<PageHeader title="Deal Flow"'),
+	'Deal Flow page must use the shared PageHeader.'
+);
+assert(
+	dealFlowPage.includes('class="header-row"'),
+	'Deal Flow page must keep its header controls inside the shared header row.'
 );
 assert(
 	dealFlowPage.includes('class="deals-grid ly-grid"'),
@@ -88,14 +113,61 @@ assert(
 	'CompareView must use the shared table-scroll wrapper.'
 );
 
+for (const [label, source] of [
+	['Assets page', assetsPage],
+	['Goals page', goalsPage],
+	['Resources page', resourcesPage],
+	['Settings page', settingsPage],
+	['Tax Prep page', taxPrepPage]
+]) {
+	assert(source.includes("import PageContainer from '$lib/layout/PageContainer.svelte';"), `${label} must import PageContainer.`);
+	assert(source.includes("import PageHeader from '$lib/layout/PageHeader.svelte';"), `${label} must import PageHeader.`);
+	assert(source.includes('<PageContainer'), `${label} must use PageContainer.`);
+	assert(source.includes('<PageHeader'), `${label} must use PageHeader.`);
+}
+
+for (const [label, source] of [
+	['Office Hours page', officeHoursPage],
+	['Academy page', academyPage],
+	['Income Fund page', incomeFundPage]
+]) {
+	assert(source.includes("import PageContainer from '$lib/layout/PageContainer.svelte';"), `${label} must import PageContainer.`);
+	assert(source.includes('<PageContainer'), `${label} must use PageContainer.`);
+}
+
 assert(
-	marketIntelPage.includes('class="mi-page ly-page"'),
+	!goalsPage.includes('topbar-title'),
+	'Goals page must not use the legacy topbar title shell.'
+);
+
+assert(
+	!settingsPage.includes('settings-shell-title'),
+	'Settings page must not use the legacy settings shell title wrapper.'
+);
+
+assert(
+	!taxPrepPage.includes('<div class="ly-frame">'),
+	'Tax Prep must not use the legacy ly-frame wrapper directly.'
+);
+
+assert(
+	marketIntelPage.includes("import PageContainer from '$lib/layout/PageContainer.svelte';"),
+	'Market Intel must import the shared PageContainer.'
+);
+
+assert(
+	marketIntelPage.includes("import PageHeader from '$lib/layout/PageHeader.svelte';"),
+	'Market Intel must import the shared PageHeader.'
+);
+
+assert(
+	marketIntelPage.includes('<PageContainer className="mi-page ly-page-stack">'),
 	'Market Intel must use the shared page shell.'
 );
 
 assert(
-	marketIntelPage.includes('class="mi-shell ly-frame"'),
-	'Market Intel must use the shared frame wrapper.'
+	marketIntelPage.includes('<PageHeader'),
+	'Market Intel must use the shared header wrapper.'
 );
 
 assert(
@@ -160,18 +232,20 @@ assert(
 );
 
 assert(
-	appLayout.includes('class="mobile-tabs ly-mobile-tabs"'),
-	'App layout must use the shared mobile tab primitive.'
+	appLayout.includes("import AppShell from '$lib/layout/AppShell.svelte';") &&
+		appLayout.includes('<AppShell'),
+	'App layout must use the shared AppShell.'
 );
 
 assert(
-	gpDashboardPage.includes('class="ly-mobile-tabs"'),
-	'GP Dashboard must use the shared mobile tab primitive.'
+	gpDashboardPage.includes("import AppShell from '$lib/layout/AppShell.svelte';") &&
+		gpDashboardPage.includes('<AppShell currentPage="gp-dashboard">'),
+	'GP Dashboard must use the shared AppShell.'
 );
 
 assert(
-	gpDashboardPage.includes('<Sidebar currentPage="gp-dashboard"'),
-	'GP Dashboard must pass the canonical currentPage key to Sidebar.'
+	appShell.includes("href: '/app/market-intel'"),
+	'Shared AppShell mobile navigation must link to /app/market-intel.'
 );
 
 assert(
@@ -182,11 +256,6 @@ assert(
 assert(
 	!gpDashboardPage.includes('class="mobile-topbar"'),
 	'GP Dashboard must not use the legacy mobile top bar.'
-);
-
-assert(
-	gpDashboardPage.includes('href="/app/market-intel"'),
-	'GP Dashboard mobile navigation must link to /app/market-intel.'
 );
 
 assert(
@@ -241,6 +310,7 @@ const unwrappedRoutePages = routeFiles.filter((fullPath) => {
 	if (!relativePath.endsWith('+page.svelte')) return false;
 	const source = fs.readFileSync(fullPath, 'utf8');
 	return !(
+		source.includes('<PageContainer') ||
 		source.includes('ly-page') ||
 		source.includes('ly-frame') ||
 		source.includes('ly-dashboard-shell') ||

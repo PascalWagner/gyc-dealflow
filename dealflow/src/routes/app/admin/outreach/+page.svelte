@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { isAdmin, userToken } from '$lib/stores/auth.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let statsCards = $state([]);
 	let outreachData = $state([]);
@@ -90,18 +92,17 @@
 {#if !$isAdmin}
 	<div style="display:flex;align-items:center;justify-content:center;min-height:60vh;color:var(--text-muted)">Redirecting...</div>
 {:else}
-<div class="ly-page">
-	<div class="ly-frame">
-<div class="op">
-	<div class="tb"><div class="tt">Operator Outreach</div></div>
-	<div class="ct">
-		<div class="sg">{#each statsCards as card}<div class="sc" class:ck={!!card.filter} onclick={() => filterByStatus(card.filter)}><div class="sv" style="color:{card.color}">{card.value}</div><div class="sl">{card.label}</div></div>{/each}</div>
-		<div class="fl">
+<PageContainer className="op ly-page-stack">
+	<PageHeader title="Operator Outreach">
+		<div slot="secondaryRow" class="fl">
 			<div class="sw"><input type="text" placeholder="Search operators..." bind:value={searchQuery} oninput={searchDebounce}></div>
 			<select bind:value={statusFilter} onchange={() => { currentPage = 1; loadData(); }}>{#each statuses as s}<option value={s.value}>{s.label}</option>{/each}</select>
 			<button class="sb" onclick={seedNew}>Seed New Operators</button>
 			<div class="rc">{totalCount} operators</div>
 		</div>
+	</PageHeader>
+	<div class="ct">
+		<div class="sg">{#each statsCards as card}<div class="sc" class:ck={!!card.filter} onclick={() => filterByStatus(card.filter)}><div class="sv" style="color:{card.color}">{card.value}</div><div class="sl">{card.label}</div></div>{/each}</div>
 		{#if loading}<div class="lm"><div class="sk-bar" style="width:100%;height:200px;background:var(--border-light,#e5e7eb);border-radius:8px;animation:skPulse 1.5s infinite"></div></div>
 		{:else}
 		<div class="tc"><div class="tw">
@@ -116,16 +117,12 @@
 		<div class="pg"><button class="pb" disabled={currentPage <= 1} onclick={() => { currentPage--; loadData(); }}>Prev</button><span>Page {currentPage}</span><button class="pb" onclick={() => { currentPage++; loadData(); }}>Next</button></div>
 		{/if}
 	</div>
-</div>
-</div>
-</div>
+</PageContainer>
 {/if}
 
 <style>
 	.op { min-height: 100vh; }
-	.tb { display: flex; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card); }
-	.tt { font-family: var(--font-ui); font-size: 18px; font-weight: 800; color: var(--text-dark); }
-	.ct { padding: 24px; max-width: 1400px; margin: 0 auto; }
+	.ct { min-width: 0; }
 	.sg { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
 	.sc { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
 	.sc.ck { cursor: pointer; } .sc.ck:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }

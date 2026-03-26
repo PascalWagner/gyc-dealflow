@@ -3,6 +3,8 @@
 	import { user, isLoggedIn, userToken } from '$lib/stores/auth.js';
 	import { deals } from '$lib/stores/deals.js';
 	import { browser } from '$app/environment';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	let Chart = $state(null);
 	let charts = {};
@@ -138,12 +140,11 @@
 
 <svelte:head><title>Deal Flow Stats | GYC</title></svelte:head>
 
-<div class="ly-page">
-	<div class="ly-frame">
-<div class="page-header">
-	<h1>Deal Flow Stats</h1>
-	<p class="subtitle">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>
-</div>
+<PageContainer className="deal-flow-stats-page">
+<PageHeader
+	title="Deal Flow Stats"
+	subtitle="See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions."
+/>
 
 <div class="stats-grid">
 	<div class="stat-card">
@@ -218,15 +219,10 @@
 	<div class="banner-title">This database can't be rebuilt overnight.</div>
 	<div class="banner-desc">With {analytics.totalDeals} deals tracked, {analytics.assetClassCount} asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>
 </div>
-</div>
-</div>
+</PageContainer>
 
 <style>
-	.page-header { padding: 20px 24px 0; }
-	h1 { font-family: var(--font-headline); font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 0 0 4px; }
-	.subtitle { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); margin: 0 0 24px; }
-
-	.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 0 24px; margin-bottom: 32px; }
+	.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
 	.stat-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 20px; text-align: center; }
 	.stat-label { font-family: var(--font-body); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
 	.stat-value { font-family: var(--font-ui); font-size: 28px; font-weight: 800; color: var(--text-dark); }
@@ -234,13 +230,13 @@
 	.stat-value.orange { color: #D68C45; }
 	.stat-sub { font-family: var(--font-body); font-size: 10px; color: var(--text-muted); }
 
-	.chart-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 24px; margin: 0 24px 24px; }
+	.chart-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 24px; margin: 0 0 24px; }
 	.chart-card h3 { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin: 0 0 4px; }
 	.chart-sub { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin: 0 0 16px; }
 	.chart-container { height: 280px; }
 	.chart-container-sm { height: 240px; }
 
-	.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 0 24px; margin-bottom: 24px; }
+	.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
 	.two-col .chart-card { margin: 0; }
 	.two-col.uneven { grid-template-columns: 1fr 2fr; }
 
@@ -256,24 +252,21 @@
 	.text-right { text-align: right; }
 	.muted { color: var(--text-muted); }
 
-	.value-banner {
-		background: linear-gradient(135deg, #2C3E2D, #3D5A3E); border-radius: var(--radius-sm);
-		padding: 24px; color: #fff; text-align: center; margin: 0 24px 24px;
-	}
+		.value-banner {
+			background: linear-gradient(135deg, #2C3E2D, #3D5A3E); border-radius: var(--radius-sm);
+			padding: 24px; color: #fff; text-align: center; margin: 0 0 24px;
+		}
 	.banner-title { font-family: var(--font-ui); font-size: 18px; font-weight: 800; margin-bottom: 8px; }
 	.banner-desc { font-family: var(--font-body); font-size: 13px; opacity: 0.85; }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.page-header { padding: 20px 24px 0; }
-		.stats-grid { padding: 0 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 		.two-col, .two-col.uneven { grid-template-columns: 1fr; }
 	}
 
 	@media (max-width: 768px) {
-		.two-col, .two-col.uneven { grid-template-columns: 1fr; padding: 0 16px; }
-		.chart-card { margin: 0 16px 16px; }
-		.stats-grid { padding: 0 16px; }
-		.page-header { padding: 16px 16px 0; }
-		.value-banner { margin: 0 16px 16px; }
+		.two-col, .two-col.uneven { grid-template-columns: 1fr; }
+		.chart-card { margin: 0 0 16px; }
+		.value-banner { margin: 0 0 16px; }
 	}
 </style>

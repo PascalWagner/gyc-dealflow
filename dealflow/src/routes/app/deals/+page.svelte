@@ -7,6 +7,8 @@
 	import CompareView from '$lib/components/CompareView.svelte';
 	import RequestIntroductionModal from '$lib/components/RequestIntroductionModal.svelte';
 	import SwipeFeed from '$lib/components/SwipeFeed.svelte';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import {
 		dealStages,
 		compareDealIds,
@@ -715,12 +717,10 @@
 
 <svelte:head><title>Deal Flow | GYC</title></svelte:head>
 
-<div class="deals-page ly-page">
-	<div class="deals-shell ly-frame ly-stack">
-		<!-- Header -->
-		<div class="deals-header">
-			<div class="header-row">
-				<h1 class="deals-title">Deal Flow</h1>
+<PageContainer className="deals-page">
+	<div class="deals-shell ly-page-stack">
+		<PageHeader title="Deal Flow" className="deals-page-header">
+			<div slot="secondaryRow" class="header-row">
 				<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
 				<div class="view-toggle">
 					<button class="view-btn" class:active={$dealFlowViewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
@@ -738,7 +738,7 @@
 					</button>
 				</div>
 			</div>
-		</div>
+		</PageHeader>
 
 		<!-- Filter Bar -->
 		<div class="deals-filters" bind:this={filterAnchor}>
@@ -1073,7 +1073,7 @@
 			</div>
 		{/if}
 	</div>
-</div>
+</PageContainer>
 
 <RequestIntroductionModal
 	deal={introRequestDeal}
@@ -1112,10 +1112,6 @@
 	}
 
 	.deals-shell {
-		--ly-frame-max: 1440px;
-		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
-		--ly-frame-pad-tablet: 24px;
-		--ly-frame-pad-mobile: 16px;
 		--ly-frame-pad-top: 16px;
 		--ly-frame-pad-bottom: 48px;
 		--ly-frame-pad-top-tablet: 14px;
@@ -1126,13 +1122,10 @@
 		min-width: 0;
 	}
 
-	.deals-header {
-		padding: 14px 0 10px;
-	}
-
 	.header-row {
 		display: flex;
-		align-items: flex-end;
+		align-items: center;
+		justify-content: space-between;
 		gap: 16px;
 		width: 100%;
 		min-width: 0;
@@ -1141,17 +1134,6 @@
 
 	.header-row > * {
 		min-width: 0;
-	}
-
-	.deals-title {
-		font-family: var(--font-headline);
-		font-size: 22px;
-		font-weight: 400;
-		color: var(--text-dark);
-		margin: 0;
-		letter-spacing: -0.3px;
-		white-space: nowrap;
-		flex-shrink: 0;
 	}
 
 	:global(.pipeline-tabs.ly-desktop-only) {
@@ -1504,9 +1486,7 @@
 	}
 
 	@media (max-width: 768px) {
-		.deals-header { padding: 8px 0 12px; }
-		.header-row { display: block; }
-		.deals-title { font-size: 20px; margin-bottom: 12px; }
+		.header-row { display: grid; justify-content: stretch; }
 		.view-toggle { margin-left: 0; width: fit-content; }
 		:global(.pipeline-pills.ly-mobile-only) { margin-top: 12px; }
 		.stage-copy { display: block; }

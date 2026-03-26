@@ -4,6 +4,8 @@
 	import { browser } from '$app/environment';
 	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
 	import { user } from '$lib/stores/auth.js';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 
 	// Local state
 	let portfolio = $state([]);
@@ -254,19 +256,16 @@
 	});
 </script>
 
-<div class="ly-page ly-dashboard-shell dashboard-shell">
-	<div class="ly-dashboard-topbar">
-		<div class="ly-dashboard-topbar-inner ly-frame">
-			<div class="ly-dashboard-title">Dashboard</div>
-			<nav class="ly-dashboard-tabs" aria-label="Dashboard sections">
-				<a href="/app/dashboard" class="ly-dashboard-tab active">Overview</a>
-				<a href="/app/portfolio" class="ly-dashboard-tab">Portfolio</a>
-				<a href="/app/plan" class="ly-dashboard-tab">My Plan</a>
-			</nav>
-		</div>
-	</div>
+<PageContainer className="dashboard-shell ly-page-stack">
+	<PageHeader title="Dashboard" className="dashboard-page-header">
+		<nav slot="secondaryRow" class="ly-dashboard-tabs" aria-label="Dashboard sections">
+			<a href="/app/dashboard" class="ly-dashboard-tab active">Overview</a>
+			<a href="/app/portfolio" class="ly-dashboard-tab">Portfolio</a>
+			<a href="/app/plan" class="ly-dashboard-tab">My Plan</a>
+		</nav>
+	</PageHeader>
 
-	<div class="ly-dashboard-content ly-frame content-area">
+	<div class="content-area">
 		{#if !hasOnboarding && dealsReviewed === 0 && portfolio.length === 0}
 			<div class="dashboard-onboarding-card">
 				<div class="dashboard-onboarding-icon">
@@ -390,17 +389,11 @@
 		</div>
 	{/if}
 	</div>
-</div>
+</PageContainer>
 
 <style>
-	.dashboard-shell {
-		--ly-frame-max: 1240px;
-		--ly-dashboard-content-pad-top: 24px;
-		--ly-dashboard-content-pad-bottom: 40px;
-		--ly-dashboard-content-pad-top-tablet: 20px;
-		--ly-dashboard-content-pad-bottom-tablet: 40px;
-		--ly-dashboard-content-pad-top-mobile: 16px;
-		--ly-dashboard-content-pad-bottom-mobile: 16px;
+	.content-area {
+		min-width: 0;
 	}
 
 	.dashboard-onboarding-card {
@@ -780,11 +773,6 @@
 	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.dashboard-shell {
-			--ly-dashboard-content-pad-top: 20px;
-			--ly-dashboard-content-pad-bottom: 40px;
-		}
-
 		.dash-hero {
 			padding: 30px 28px 22px;
 		}
@@ -792,10 +780,6 @@
 
 	/* ── Mobile Responsive ── */
 	@media (max-width: 768px) {
-		.dashboard-shell {
-			--ly-dashboard-content-pad-top: 16px;
-			--ly-dashboard-content-pad-bottom: 16px;
-		}
 		.dashboard-onboarding-card {
 			margin-top: 20px;
 			padding: 28px 20px;
