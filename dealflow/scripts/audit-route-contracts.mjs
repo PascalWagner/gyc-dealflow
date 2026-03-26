@@ -311,6 +311,8 @@ const unwrappedRoutePages = routeFiles.filter((fullPath) => {
 	const source = fs.readFileSync(fullPath, 'utf8');
 	return !(
 		source.includes('<PageContainer') ||
+		source.includes('<OnboardingFocusLayout') ||
+		source.includes('<OnboardingAppLayout') ||
 		source.includes('ly-page') ||
 		source.includes('ly-frame') ||
 		source.includes('ly-dashboard-shell') ||

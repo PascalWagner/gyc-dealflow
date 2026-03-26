@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
 	import LegacyPlanWizard from '$lib/components/LegacyPlanWizard.svelte';
+	import OnboardingAppLayout from '$lib/components/onboarding/OnboardingAppLayout.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import {
@@ -34,6 +35,7 @@
 	let reportUser = $state(null);
 	let portfolioPlan = $state(null);
 	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
+	let wizardComponent = $state(null);
 	const nativeCompanionMode = browser && isNativeApp();
 
 	const canViewAnalytics = $derived($isMember);
@@ -362,11 +364,16 @@
 	}
 
 	function openWizard(editMode = hasPlan) {
+		if (!hasPlan) {
+			goto('/onboarding/plan');
+			return;
+		}
 		wizardForceEdit = editMode;
 		showWizard = true;
 	}
 
-	function closeWizard() {
+	async function exitWizard() {
+		await wizardComponent?.persistProgress?.();
 		showWizard = false;
 	}
 
@@ -383,11 +390,6 @@
 
 	function handleWizardState(event) {
 		syncWizardView(event.detail || {});
-	}
-
-	function handleWizardClose(event) {
-		syncWizardView(event.detail || {});
-		showWizard = false;
 	}
 
 	function handleWizardComplete(event) {
@@ -897,6 +899,10 @@
 			console.warn('Failed to load plan:', error);
 		} finally {
 			loading = false;
+			if (!hasPlan && !wizardStage && !wizardFlowKey) {
+				goto('/onboarding/plan', { replaceState: true });
+				return;
+			}
 			if ((shouldOpenWizardFromLocation || !hasPlan) && !showWizard) openWizard(wizardForceEdit && hasPlan);
 		}
 	});
@@ -907,7 +913,7 @@
 </svelte:head>
 
 <PageContainer className="plan-shell ly-page-stack">
-	<PageHeader title="Dashboard" className="dashboard-page-header">
+	<PageHeader title="My Plan" className="dashboard-page-header">
 		<nav slot="secondaryRow" class="ly-dashboard-tabs" aria-label="Dashboard sections">
 			<a href="/app/dashboard" class="ly-dashboard-tab" data-sveltekit-reload>Overview</a>
 			<a href="/app/portfolio" class="ly-dashboard-tab" data-sveltekit-reload>Portfolio</a>
@@ -931,18 +937,18 @@
 			</div>
 		</div>
 	{:else if showWizard || !hasPlan}
-		<LegacyPlanWizard
-			initialData={wizardData}
-			initialPortfolioPlan={portfolioPlan}
-			allowClose={hasPlan}
-			forceEdit={wizardForceEdit}
-			forcedStage={wizardStage}
-			forcedBranch={wizardBranch}
-			forcedFlowKey={wizardFlowKey}
-			on:state={handleWizardState}
-			on:close={handleWizardClose}
-			on:complete={handleWizardComplete}
-		/>
+		<OnboardingAppLayout exitLabel={hasPlan ? 'Back to My Plan' : ''} onExit={exitWizard}>
+			<LegacyPlanWizard
+				bind:this={wizardComponent}
+				initialData={wizardData}
+				forceEdit={wizardForceEdit}
+				forcedStage={wizardStage}
+				forcedBranch={wizardBranch}
+				forcedFlowKey={wizardFlowKey}
+				on:state={handleWizardState}
+				on:complete={handleWizardComplete}
+			/>
+		</OnboardingAppLayout>
 	{:else}
 		<div class="plan-stack">
 			<section class="plan-card plan-target-card">

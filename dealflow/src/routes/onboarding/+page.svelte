@@ -173,7 +173,7 @@
 	const hasMemberAccess = $derived($accessTier === 'member' || $accessTier === 'admin');
 
 	function lpDealsRedirect() {
-		return hasMemberAccess ? '/app/plan' : '/app/deals';
+		return hasMemberAccess ? '/onboarding/plan' : '/app/deals';
 	}
 
 	function selectBaselinePreset(val) {

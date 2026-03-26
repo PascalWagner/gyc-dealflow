@@ -4,6 +4,8 @@
 	import { browser } from '$app/environment';
 	import { currentAdminRealUser, writeUserScopedJson, writeUserScopedString } from '$lib/utils/userScopedState.js';
 	import { getStoredSessionUser, user } from '$lib/stores/auth.js';
+	import OnboardingSelectableCard from '$lib/components/onboarding/OnboardingSelectableCard.svelte';
+	import OnboardingProgress from '$lib/components/onboarding/OnboardingProgress.svelte';
 	import {
 		STEP,
 		STEP_SEQUENCE,
@@ -43,8 +45,6 @@
 	} from '$lib/onboarding/planWizard.js';
 
 	export let initialData = {};
-	export let initialPortfolioPlan = null;
-	export let allowClose = true;
 	export let forceEdit = false;
 	export let forcedStage = '';
 	export let forcedBranch = '';
@@ -306,6 +306,10 @@
 		}
 	}
 
+	export async function persistProgress() {
+		await saveBuyBox(false);
+	}
+
 	async function saveGoals() {
 		const sessionUser = getStoredSessionUser() || get(user);
 		if (!sessionUser?.token) return;
@@ -372,13 +376,6 @@
 			portfolioPlan: planPreview,
 			persistedPortfolioPlan: true,
 			redirectTo: '/app/deals'
-		});
-	}
-
-	async function closeWizard() {
-		await saveBuyBox(false);
-		dispatch('close', {
-			wizardData: normalizeWizardData(wizardData)
 		});
 	}
 
@@ -545,36 +542,27 @@
 </script>
 
 <div class="wizard-shell">
-	<div class="wizard-top">
-		<div class="phase-strip">
-			{#each PHASE_NAMES as phase, index}
-				<div class="phase-node" class:complete={index < currentPhase} class:active={index === currentPhase}>
-					<span class="phase-number">{index + 1}</span>
-					<span class="phase-label">{phase}</span>
-				</div>
-			{/each}
-		</div>
-		{#if allowClose}
-			<button type="button" class="wizard-close" onclick={closeWizard}>Close</button>
-		{/if}
-	</div>
-
-	<div class="wizard-card">
-		<div class="wizard-progress"><span style={`width:${sequence.length > 1 ? (wizardStepIndex / (sequence.length - 1)) * 100 : 0}%`}></span></div>
-		<div class="wizard-header">
-			<div class="wizard-step-kicker">Step {wizardStepIndex + 1} of {sequence.length}</div>
-			<h1>{stepTitle()}</h1>
-			<p>{stepSubtitle()}</p>
-		</div>
+	<div class="wizard-card ob-surface">
+		<OnboardingProgress
+			phaseNames={PHASE_NAMES}
+			currentPhase={currentPhase}
+			currentStep={wizardStepIndex + 1}
+			totalSteps={sequence.length}
+			title={stepTitle()}
+			subtitle={stepSubtitle()}
+		/>
 
 		{#if currentStep === STEP.GOAL}
 			<div class="goal-grid">
 				{#each GOAL_CARDS as card}
-					<button type="button" class="goal-card" class:selected={wizardData._branch === card.branch} onclick={() => selectGoal(card.branch)}>
-						<div class="goal-icon">{card.icon}</div>
-						<div class="goal-title">{card.title}</div>
-						<div class="goal-copy">{card.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="goal-card"
+						selected={wizardData._branch === card.branch}
+						icon={card.icon}
+						title={card.title}
+						description={card.description}
+						onClick={() => selectGoal(card.branch)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.EXPERIENCE}
@@ -607,12 +595,13 @@
 			</div>
 			<div class="option-stack">
 				{#each RE_PRO_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.reProfessional === option.value} onclick={() => updateField('reProfessional', option.value)}>
-						<div>
-							<div class="option-title">{option.label}</div>
-							<div class="option-copy">{option.description}</div>
-						</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.reProfessional === option.value}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('reProfessional', option.value)}
+					/>
 				{/each}
 			</div>
 			<div class="footnote">Why we ask: RE Pro status changes which deals make sense for you. If you qualify, depreciation-heavy deals can shelter income from your W-2 or business.</div>
@@ -646,29 +635,34 @@
 		{:else if currentStep === STEP.ASSETS}
 			<div class="choice-grid">
 				{#each Object.entries(ASSET_CLASS_OPTIONS) as [assetKey, asset]}
-					<button type="button" class="choice-card" class:selected={wizardData.assetClasses.includes(assetKey)} onclick={() => toggleAssetClass(assetKey)}>
-						<div class="choice-top">
-							<span class="choice-emoji">{asset.icon}</span>
-							<span class="choice-title">{asset.label}</span>
-						</div>
-						<div class="choice-copy">{asset.oneLiner}</div>
-						<div class="choice-meta">
-							<span>{asset.yieldRange} yield</span>
-							<span>{asset.holdYears} yr hold</span>
-						</div>
-					</button>
+					<OnboardingSelectableCard
+						className="choice-card"
+						selected={wizardData.assetClasses.includes(assetKey)}
+						icon={asset.icon}
+						title={asset.label}
+						description={asset.oneLiner}
+						onClick={() => toggleAssetClass(assetKey)}
+					>
+						<svelte:fragment slot="meta">
+							<div class="choice-meta">
+								<span>{asset.yieldRange} yield</span>
+								<span>{asset.holdYears} yr hold</span>
+							</div>
+						</svelte:fragment>
+					</OnboardingSelectableCard>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.STRATEGIES}
 			<div class="option-stack">
 				{#each STRATEGY_ORDER as strategyKey}
-					<button type="button" class="option-card" class:selected={wizardData.strategies.includes(strategyKey)} onclick={() => toggleStrategy(strategyKey)}>
-						<div class="strategy-head">
-							<span class="choice-emoji">{STRATEGY_OPTIONS[strategyKey].icon}</span>
-							<span class="option-title">{STRATEGY_OPTIONS[strategyKey].label}</span>
-						</div>
-						<div class="option-copy">{STRATEGY_OPTIONS[strategyKey].lpImpact}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.strategies.includes(strategyKey)}
+						icon={STRATEGY_OPTIONS[strategyKey].icon}
+						title={STRATEGY_OPTIONS[strategyKey].label}
+						description={STRATEGY_OPTIONS[strategyKey].lpImpact}
+						onClick={() => toggleStrategy(strategyKey)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.RISK}
@@ -681,31 +675,39 @@
 			{/if}
 			<div class="option-stack">
 				{#each LOSS_TOLERANCE_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.maxOperatorPct === option.value} onclick={() => updateField('maxOperatorPct', option.value)}>
-						<div class="option-split">
-							<div>
-								<div class="option-title">{option.label}</div>
-								<div class="option-copy">{option.description}</div>
-							</div>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.maxOperatorPct === option.value}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('maxOperatorPct', option.value)}
+					>
+						<svelte:fragment slot="aside">
 							{#if riskDollarRange(option)}
 								<div class="option-badge">{riskDollarRange(option)}</div>
 							{/if}
-						</div>
-					</button>
+						</svelte:fragment>
+					</OnboardingSelectableCard>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.ACCREDITATION}
 			<div class="option-stack">
 				{#each ACCREDITATION_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.accreditation.includes(option.value)} onclick={() => toggleAccreditation(option.value)}>
-						<div class="option-title">{option.label}</div>
-						<div class="option-copy">{option.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.accreditation.includes(option.value)}
+						title={option.label}
+						description={option.description}
+						onClick={() => toggleAccreditation(option.value)}
+					/>
 				{/each}
-				<button type="button" class="option-card" class:selected={wizardData.accreditation.includes('not_accredited')} onclick={() => toggleAccreditation('not_accredited')}>
-					<div class="option-title">Not yet accredited</div>
-					<div class="option-copy">We will show you deals open to all investors.</div>
-				</button>
+				<OnboardingSelectableCard
+					className="option-card"
+					selected={wizardData.accreditation.includes('not_accredited')}
+					title="Not yet accredited"
+					description="We will show you deals open to all investors."
+					onClick={() => toggleAccreditation('not_accredited')}
+				/>
 			</div>
 		{:else if currentStep === STEP.CF_TARGET}
 			<div class="input-panel centered">
@@ -822,73 +824,90 @@
 		{:else if currentStep === STEP.CAPITAL}
 			<div class="option-stack">
 				{#each CAPITAL_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.capital12mo === option.value} onclick={() => updateField('capital12mo', option.value)}>
-						<div class="option-title">{option.label}</div>
-						<div class="option-copy">{option.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.capital12mo === option.value}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('capital12mo', option.value)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.SOURCE}
 			<div class="option-stack">
 				{#each SOURCE_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.triggerEvent === option.value} onclick={() => updateField('triggerEvent', option.value)}>
-						<div class="strategy-head">
-							<span class="choice-emoji">{option.icon}</span>
-							<span class="option-title">{option.label}</span>
-						</div>
-						<div class="option-copy">{option.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.triggerEvent === option.value}
+						icon={option.icon}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('triggerEvent', option.value)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.READINESS}
 			<div class="option-stack">
 				{#each READINESS_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.capitalReadiness === option.value} onclick={() => updateField('capitalReadiness', option.value)}>
-						<div class="strategy-head">
-							<span class="choice-emoji">{option.icon}</span>
-							<span class="option-title">{option.label}</span>
-						</div>
-						<div class="option-copy">{option.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.capitalReadiness === option.value}
+						icon={option.icon}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('capitalReadiness', option.value)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.DIVERSIFICATION}
 			<div class="option-stack">
 				{#each DIVERSIFICATION_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.diversificationPref === option.value} onclick={() => updateField('diversificationPref', option.value)}>
-						<div class="strategy-head">
-							<span class="choice-emoji">{option.icon}</span>
-							<span class="option-title">{option.label}</span>
-						</div>
-						<div class="option-copy">{option.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.diversificationPref === option.value}
+						icon={option.icon}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('diversificationPref', option.value)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.OPERATOR_FOCUS}
 			<div class="option-stack">
 				{#each OPERATOR_FOCUS_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.operatorFocus === option.value} onclick={() => updateField('operatorFocus', option.value)}>
-						<div class="option-title">{option.label}</div>
-						<div class="option-copy">{option.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.operatorFocus === option.value}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('operatorFocus', option.value)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.LOCKUP}
 			<div class="option-stack">
 				{#each LOCKUP_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.lockup === option.value} class:muted={!lockupHighlight(option) && wizardData.lockup !== option.value} onclick={() => updateField('lockup', option.value)}>
-						<div class="option-title">{option.label}</div>
-						<div class="option-copy">{option.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.lockup === option.value}
+						muted={!lockupHighlight(option) && wizardData.lockup !== option.value}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('lockup', option.value)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.DISTRIBUTIONS}
 			<div class="option-stack">
 				{#each DISTRIBUTION_OPTIONS as option}
-					<button type="button" class="option-card" class:selected={wizardData.distributions === option.value} class:muted={!distributionHighlight(option) && wizardData.distributions !== option.value} onclick={() => updateField('distributions', option.value)}>
-						<div class="option-title">{option.label}</div>
-						<div class="option-copy">{option.description}</div>
-					</button>
+					<OnboardingSelectableCard
+						className="option-card"
+						selected={wizardData.distributions === option.value}
+						muted={!distributionHighlight(option) && wizardData.distributions !== option.value}
+						title={option.label}
+						description={option.description}
+						onClick={() => updateField('distributions', option.value)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.LP_NETWORK}
@@ -974,9 +993,9 @@
 		{/if}
 
 		<div class="wizard-actions">
-			<button type="button" class="action-btn secondary" onclick={previousStep} disabled={wizardStepIndex === 0}>Back</button>
+			<button type="button" class="ob-btn ob-btn--secondary action-btn secondary" onclick={previousStep} disabled={wizardStepIndex === 0}>Back</button>
 			{#if currentStep !== STEP.GOAL}
-				<button type="button" class="action-btn primary" onclick={nextStep} disabled={saving}>
+				<button type="button" class="ob-btn ob-btn--primary action-btn primary" onclick={nextStep} disabled={saving}>
 					{#if currentStep === STEP.LP_NETWORK}
 						Build My Plan →
 					{:else if currentStep === STEP.PROFILE_REVIEW}
@@ -999,124 +1018,9 @@
 		gap: 20px;
 	}
 
-	.wizard-top {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		flex-wrap: wrap;
-	}
-
-	.phase-strip {
-		display: flex;
-		gap: 10px;
-		flex-wrap: wrap;
-	}
-
-	.phase-node {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 10px 12px;
-		border: 1px solid var(--border, #dde5e8);
-		border-radius: 999px;
-		background: #fff;
-		color: var(--text-muted, #607179);
-	}
-
-	.phase-node.active {
-		border-color: rgba(81, 190, 123, 0.4);
-		background: rgba(81, 190, 123, 0.08);
-		color: var(--text-dark, #141413);
-	}
-
-	.phase-node.complete {
-		border-color: rgba(81, 190, 123, 0.18);
-		background: rgba(81, 190, 123, 0.05);
-	}
-
-	.phase-number {
-		display: inline-flex;
-		width: 24px;
-		height: 24px;
-		align-items: center;
-		justify-content: center;
-		border-radius: 999px;
-		background: var(--border-light, #edf1f2);
-		font-size: 12px;
-		font-weight: 700;
-	}
-
-	.phase-node.active .phase-number,
-	.phase-node.complete .phase-number {
-		background: var(--primary, #51be7b);
-		color: #fff;
-	}
-
-	.phase-label {
-		font-size: 12px;
-		font-weight: 700;
-	}
-
-	.wizard-close {
-		border: 0;
-		background: transparent;
-		color: var(--text-muted, #607179);
-		font-size: 13px;
-		font-weight: 700;
-		cursor: pointer;
-	}
-
 	.wizard-card {
 		position: relative;
 		padding: 28px;
-		border: 1px solid var(--border, #dde5e8);
-		border-radius: 20px;
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 249, 245, 0.98) 100%);
-		box-shadow: 0 14px 34px rgba(20, 20, 19, 0.06);
-	}
-
-	.wizard-progress {
-		height: 6px;
-		margin-bottom: 18px;
-		border-radius: 999px;
-		background: rgba(221, 229, 232, 0.8);
-		overflow: hidden;
-	}
-
-	.wizard-progress span {
-		display: block;
-		height: 100%;
-		border-radius: 999px;
-		background: linear-gradient(90deg, #51be7b 0%, #2fa56a 100%);
-	}
-
-	.wizard-header {
-		margin-bottom: 22px;
-	}
-
-	.wizard-step-kicker {
-		margin-bottom: 8px;
-		font-size: 11px;
-		font-weight: 800;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--text-muted, #607179);
-	}
-
-	h1 {
-		margin: 0 0 10px;
-		font-size: 34px;
-		line-height: 1.1;
-		color: var(--text-dark, #141413);
-	}
-
-	.wizard-header p {
-		margin: 0;
-		max-width: 760px;
-		font-size: 15px;
-		line-height: 1.6;
-		color: var(--text-secondary, #607179);
 	}
 
 	.goal-grid,
@@ -1135,81 +1039,10 @@
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 
-	.goal-card,
-	.choice-card,
-	.option-card {
-		padding: 18px;
-		border: 2px solid var(--border, #dde5e8);
-		border-radius: 16px;
-		background: #fff;
-		text-align: left;
-		cursor: pointer;
-		transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-	}
-
-	.goal-card:hover,
-	.choice-card:hover,
-	.option-card:hover {
-		border-color: rgba(81, 190, 123, 0.35);
-		box-shadow: 0 10px 22px rgba(20, 20, 19, 0.06);
-		transform: translateY(-1px);
-	}
-
-	.goal-card.selected,
-	.choice-card.selected,
-	.option-card.selected {
-		border-color: var(--primary, #51be7b);
-		background: rgba(81, 190, 123, 0.06);
-	}
-
-	.option-card.muted {
-		opacity: 0.45;
-	}
-
-	.goal-icon,
-	.choice-emoji {
-		font-size: 24px;
-	}
-
-	.goal-title,
-	.option-title,
-	.choice-title {
-		font-size: 15px;
-		font-weight: 800;
-		color: var(--text-dark, #141413);
-	}
-
-	.goal-title {
-		margin: 12px 0 6px;
-	}
-
-	.goal-copy,
-	.option-copy,
-	.choice-copy {
-		font-size: 13px;
-		line-height: 1.55;
-		color: var(--text-secondary, #607179);
-	}
-
-	.choice-top,
-	.strategy-head,
-	.option-split {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		justify-content: space-between;
-	}
-
-	.choice-top {
-		justify-content: flex-start;
-		margin-bottom: 6px;
-	}
-
 	.choice-meta {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
-		margin-top: 10px;
 	}
 
 	.choice-meta span,
@@ -1482,32 +1315,7 @@
 	}
 
 	.action-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
 		min-width: 132px;
-		padding: 12px 18px;
-		border-radius: 12px;
-		font-size: 13px;
-		font-weight: 800;
-		cursor: pointer;
-	}
-
-	.action-btn.secondary {
-		border: 1px solid var(--border, #dde5e8);
-		background: #fff;
-		color: var(--text-dark, #141413);
-	}
-
-	.action-btn.primary {
-		border: 0;
-		background: var(--primary, #51be7b);
-		color: #fff;
-	}
-
-	.action-btn:disabled {
-		opacity: 0.45;
-		cursor: default;
 	}
 
 	@media (max-width: 900px) {
@@ -1521,32 +1329,15 @@
 			padding: 20px;
 		}
 
-		h1 {
-			font-size: 28px;
-		}
-
 		.plan-year-head,
 		.plan-slot,
-		.review-row,
-		.option-split {
+		.review-row {
 			flex-direction: column;
 			align-items: flex-start;
 		}
 	}
 
 	@media (max-width: 640px) {
-		.phase-strip {
-			gap: 8px;
-		}
-
-		.phase-node {
-			padding: 8px 10px;
-		}
-
-		.phase-label {
-			font-size: 11px;
-		}
-
 		.wizard-actions {
 			flex-direction: column;
 		}

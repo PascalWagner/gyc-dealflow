@@ -235,11 +235,7 @@
 	}
 
 	function openWizard() {
-		if (browser && typeof window.openBuyBoxWizard === 'function') {
-			window.openBuyBoxWizard();
-		} else {
-			goto('/app/plan');
-		}
+		goto(hasPlan ? '/app/plan?edit=1' : '/onboarding/plan');
 	}
 
 	onMount(() => {
@@ -297,7 +293,7 @@
 					<div class="plan-empty-icon">📋</div>
 					<div class="plan-empty-title">You don't have a plan yet.</div>
 					<div class="plan-empty-copy">Members with a plan deploy an average of $150K in their first 90 days. Takes 3 minutes.</div>
-					<a href="/app/plan" class="btn-primary plan-empty-btn">Build My Plan</a>
+					<a href="/onboarding/plan" class="btn-primary plan-empty-btn">Build My Plan</a>
 				</div>
 			{/if}
 
@@ -305,7 +301,7 @@
 			<div class="blueprint-card">
 				<div class="blueprint-header">
 					<div class="blueprint-eyebrow">Your Investment Plan</div>
-					<a href="/app/plan" class="blueprint-link">Edit Plan</a>
+					<a href="/app/plan?edit=1" class="blueprint-link">Edit Plan</a>
 				</div>
 				<div class="blueprint-summary">
 					<strong>{filledCount} of {totalPlanSlots}</strong> investments ·
@@ -355,7 +351,7 @@
 					<div class="plan-cta-title">Turn your goal into concrete deal slots.</div>
 					<div class="plan-cta-copy">Map out check sizes, target yields, and the next investment that should fill your plan.</div>
 				</div>
-				<a href="/app/plan" class="btn-primary plan-cta-btn">Build My Plan →</a>
+				<a href="/onboarding/plan" class="btn-primary plan-cta-btn">Build My Plan →</a>
 			</div>
 		{/if}
 

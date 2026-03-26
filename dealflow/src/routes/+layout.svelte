@@ -1,6 +1,7 @@
 <script>
 	import '$lib/css/theme.css';
 	import '$lib/css/layout.css';
+	import '$lib/css/onboarding.css';
 
 	let { children } = $props();
 </script>
