@@ -35,7 +35,6 @@
 	let reportUser = $state(null);
 	let portfolioPlan = $state(null);
 	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
-	let wizardComponent = $state(null);
 	const nativeCompanionMode = browser && isNativeApp();
 
 	const canViewAnalytics = $derived($isMember);
@@ -370,11 +369,6 @@
 		}
 		wizardForceEdit = editMode;
 		showWizard = true;
-	}
-
-	async function exitWizard() {
-		await wizardComponent?.persistProgress?.();
-		showWizard = false;
 	}
 
 	function syncWizardView(detail = {}) {
@@ -922,7 +916,7 @@
 	</PageHeader>
 
 	<div class="plan-page">
-	{#if saveMsg}
+	{#if saveMsg && !(showWizard || !hasPlan)}
 		<div class="save-toast">{saveMsg}</div>
 	{/if}
 
@@ -937,9 +931,8 @@
 			</div>
 		</div>
 	{:else if showWizard || !hasPlan}
-		<OnboardingAppLayout exitLabel={hasPlan ? 'Back to My Plan' : ''} onExit={exitWizard}>
+		<OnboardingAppLayout>
 			<LegacyPlanWizard
-				bind:this={wizardComponent}
 				initialData={wizardData}
 				forceEdit={wizardForceEdit}
 				forcedStage={wizardStage}
