@@ -4,8 +4,10 @@
 	import { browser } from '$app/environment';
 	import { user, isAdmin, userToken, userEmail } from '$lib/stores/auth.js';
 	import { deals } from '$lib/stores/deals.js';
+	import { onboardingReviewGroups } from '$lib/onboarding/reviewLinks.js';
 
 	let activeTab = $state('overview');
+	let showReviewTools = $state(false);
 	const tabs = ['overview', 'users', 'schema', 'devnotes', 'network', 'transactions', 'feedback', 'ctaAnalytics'];
 	const tabLabels = {
 		overview: 'Overview',
@@ -72,12 +74,16 @@
 	let ctaAnalyticsError = $state('');
 	let ctaAnalytics = $state(null);
 	let ctaAnalyticsRange = $state('30d');
+	const reviewToolsStorageKey = 'gyc:admin:onboarding-review-tools';
 
 	// Admin guard
 	onMount(() => {
 		if (!$isAdmin) {
 			goto('/app/deals');
 			return;
+		}
+		if (browser) {
+			showReviewTools = window.localStorage.getItem(reviewToolsStorageKey) === '1';
 		}
 		loadTab('overview');
 	});
@@ -242,6 +248,13 @@
 		});
 	}
 
+	function toggleReviewTools() {
+		showReviewTools = !showReviewTools;
+		if (browser) {
+			window.localStorage.setItem(reviewToolsStorageKey, showReviewTools ? '1' : '0');
+		}
+	}
+
 	const filteredFeedback = $derived(
 		feedbackFilter === 'all' ? feedbackItems : feedbackItems.filter(f => f.type === feedbackFilter)
 	);
@@ -273,6 +286,10 @@
 	<div class="topbar">
 		<div class="topbar-title">Admin Dashboard</div>
 		<div class="topbar-actions">
+			<button class="topbar-btn" class:toggle-active={showReviewTools} onclick={toggleReviewTools}>
+				{showReviewTools ? 'Hide Review Links' : 'Show Review Links'}
+			</button>
+			<a href="/onboarding-review" class="topbar-btn">Open Review Launcher</a>
 			<a href="https://analytics.google.com/analytics/web/#/p/G-F8B5NMB9J9" target="_blank" rel="noopener" class="topbar-btn">Google Analytics</a>
 			<button class="topbar-btn" onclick={() => triggerGhlSync()}>Sync GHL</button>
 			<button class="topbar-btn" onclick={() => loadTab(activeTab)}>Refresh</button>
@@ -280,6 +297,38 @@
 	</div>
 
 	<div class="content" style="max-width:1100px">
+		{#if showReviewTools}
+			<section class="review-tools-card">
+				<div class="review-tools-head">
+					<div>
+						<div class="review-tools-eyebrow">Admin QA</div>
+						<div class="section-title">Onboarding Review Links</div>
+						<div class="section-desc">This toggle keeps every restored onboarding page one click away inside the admin dashboard. The open state is saved in your browser.</div>
+					</div>
+					<div class="review-tools-actions">
+						<a href="/onboarding-review" class="review-tools-launch">Open full launcher</a>
+						<button class="review-tools-dismiss" onclick={toggleReviewTools}>Hide panel</button>
+					</div>
+				</div>
+				<div class="review-tools-groups">
+					{#each onboardingReviewGroups as group}
+						<div class="review-tools-group">
+							<div class="review-tools-group-title">{group.title}</div>
+							<div class="review-tools-group-desc">{group.description}</div>
+							<div class="review-tools-links">
+								{#each group.links as link}
+									<a class="review-tools-link" href={link.href}>
+										<span>{link.label}</span>
+										<code>{link.href}</code>
+									</a>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/if}
+
 		<!-- Tab Bar -->
 		<div class="tab-bar">
 			{#each tabs as tab}
@@ -1272,6 +1321,7 @@
 	.topbar-actions { margin-left: auto; display: flex; gap: 8px; }
 	.topbar-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 14px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 	.topbar-btn:hover { border-color: var(--primary); color: var(--primary); }
+	.topbar-btn.toggle-active { background: rgba(81, 190, 123, 0.14); border-color: rgba(81, 190, 123, 0.36); color: var(--text-dark); }
 	.content { padding: 24px; margin: 0 auto; }
 
 	/* Tab bar */
@@ -1371,6 +1421,84 @@
 	.section-title { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
 	.section-title-lg { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
 	.section-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+	.review-tools-card {
+		background: linear-gradient(180deg, rgba(81, 190, 123, 0.08), rgba(255, 255, 255, 0.98));
+		border: 1px solid rgba(81, 190, 123, 0.22);
+		border-radius: 20px;
+		padding: 22px;
+		margin-bottom: 18px;
+		box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+	}
+	.review-tools-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 18px;
+	}
+	.review-tools-eyebrow {
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--primary);
+		margin-bottom: 6px;
+	}
+	.review-tools-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+	.review-tools-launch,
+	.review-tools-dismiss {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 10px 14px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--bg-card);
+		color: var(--text-dark);
+		text-decoration: none;
+		font-size: 13px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.review-tools-launch {
+		background: var(--primary);
+		border-color: var(--primary);
+		color: white;
+	}
+	.review-tools-groups { display: grid; gap: 16px; }
+	.review-tools-group {
+		background: rgba(255, 255, 255, 0.78);
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		padding: 18px;
+	}
+	.review-tools-group-title { font-size: 18px; font-weight: 800; color: var(--text-dark); }
+	.review-tools-group-desc { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+	.review-tools-links {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 10px;
+		margin-top: 14px;
+	}
+	.review-tools-link {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 12px 14px;
+		border-radius: 14px;
+		border: 1px solid var(--border);
+		background: rgba(247, 249, 250, 0.95);
+		color: var(--text-dark);
+		text-decoration: none;
+	}
+	.review-tools-link:hover { border-color: rgba(81, 190, 123, 0.45); background: rgba(255, 255, 255, 1); }
+	.review-tools-link span { font-size: 14px; font-weight: 700; }
+	.review-tools-link code {
+		font-size: 12px;
+		line-height: 1.45;
+		color: var(--text-muted);
+		word-break: break-word;
+	}
 	.section-header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 
 	/* Missing fields */
@@ -1748,5 +1876,9 @@
 		.users-filters { width: 100%; justify-content: stretch; }
 		.users-tier-toggle { width: 100%; }
 		.integrations-grid { grid-template-columns: 1fr; }
+		.topbar-actions { width: 100%; margin-left: 0; flex-wrap: wrap; }
+		.review-tools-head { flex-direction: column; }
+		.review-tools-actions { width: 100%; }
+		.review-tools-launch, .review-tools-dismiss { flex: 1 1 180px; }
 	}
 </style>
