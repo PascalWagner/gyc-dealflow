@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { deals, fetchDeals } from '$lib/stores/deals.js';
 
 	let nameSearch = $state('');
@@ -7,6 +7,9 @@
 	let maxInvest = $state('');
 	let fullCycleMin = $state('0');
 	let sortBy = $state('deals');
+	let showMobileSearch = $state(true);
+	let showMobileFilters = $state(false);
+	let mobileSearchInput = $state();
 	function computeStats(dealList) {
 		let irrs = [], prefs = [], mins = [], activeCount = 0;
 		dealList.forEach(d => {
@@ -85,7 +88,29 @@
 		return result;
 	});
 
-	function resetFilters() { nameSearch = ''; assetFilter = ''; maxInvest = ''; fullCycleMin = '0'; sortBy = 'deals'; }
+	const hasAdvancedFilters = $derived(
+		Boolean(assetFilter || maxInvest || parseInt(fullCycleMin) > 0 || sortBy !== 'deals')
+	);
+	const hasAnyFilters = $derived(Boolean(nameSearch.trim()) || hasAdvancedFilters);
+
+	function resetFilters() {
+		nameSearch = '';
+		assetFilter = '';
+		maxInvest = '';
+		fullCycleMin = '0';
+		sortBy = 'deals';
+		showMobileFilters = false;
+	}
+
+	async function focusMobileSearch() {
+		showMobileSearch = true;
+		await tick();
+		mobileSearchInput?.focus();
+	}
+
+	function toggleMobileFilters() {
+		showMobileFilters = !showMobileFilters;
+	}
 
 	function getInitials(name) { return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
 
@@ -95,35 +120,113 @@
 </script>
 
 <div class="operators-page">
-	<div class="filter-bar">
-		<input type="text" bind:value={nameSearch} placeholder="Search operators..." class="filter-input">
-		<select bind:value={assetFilter} class="filter-select">
-			<option value="">All Asset Classes</option>
-			{#each allAssetClasses as ac}<option value={ac}>{ac}</option>{/each}
-		</select>
-		<select bind:value={maxInvest} class="filter-select">
-			<option value="">Max Investment Min.</option>
-			<option value="25000">$25K or less</option>
-			<option value="50000">$50K or less</option>
-			<option value="100000">$100K or less</option>
-		</select>
-		<select bind:value={fullCycleMin} class="filter-select">
-			<option value="0">Full Cycle Deals</option>
-			<option value="1">1+ full cycle</option>
-			<option value="5">5+ full cycle</option>
-			<option value="10">10+ full cycle</option>
-		</select>
-		<select bind:value={sortBy} class="filter-select">
-			<option value="deals">Most Deals</option>
-			<option value="fullcycle">Most Full Cycle</option>
-			<option value="name">Name (A-Z)</option>
-			<option value="newest">Newest First</option>
-		</select>
-		<button class="btn-reset" onclick={resetFilters}>Reset</button>
-		<div class="stats-bar">
-			<span><strong>{filtered.length}</strong> Operators</span>
-			<span><strong>{allAssetClasses.length}</strong> asset classes</span>
-			<span><strong>{filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
+	<div class="filter-shell">
+		<div class="filter-bar desktop-filter-bar">
+			<input type="text" bind:value={nameSearch} placeholder="Search operators..." class="filter-input">
+			<select bind:value={assetFilter} class="filter-select">
+				<option value="">All Asset Classes</option>
+				{#each allAssetClasses as ac}<option value={ac}>{ac}</option>{/each}
+			</select>
+			<select bind:value={maxInvest} class="filter-select">
+				<option value="">Max Investment Min.</option>
+				<option value="25000">$25K or less</option>
+				<option value="50000">$50K or less</option>
+				<option value="100000">$100K or less</option>
+			</select>
+			<select bind:value={fullCycleMin} class="filter-select">
+				<option value="0">Full Cycle Deals</option>
+				<option value="1">1+ full cycle</option>
+				<option value="5">5+ full cycle</option>
+				<option value="10">10+ full cycle</option>
+			</select>
+			<select bind:value={sortBy} class="filter-select">
+				<option value="deals">Most Deals</option>
+				<option value="fullcycle">Most Full Cycle</option>
+				<option value="name">Name (A-Z)</option>
+				<option value="newest">Newest First</option>
+			</select>
+			<button class="btn-reset" onclick={resetFilters}>Reset</button>
+			<div class="stats-bar">
+				<span><strong>{filtered.length}</strong> Operators</span>
+				<span><strong>{allAssetClasses.length}</strong> asset classes</span>
+				<span><strong>{filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
+			</div>
+		</div>
+
+		<div class="mobile-filter-shell">
+			<div class="mobile-filter-tabs" role="toolbar" aria-label="Operator controls">
+				<button
+					type="button"
+					class="mobile-filter-button"
+					class:active={showMobileSearch || Boolean(nameSearch.trim())}
+					onclick={focusMobileSearch}
+					aria-pressed={showMobileSearch || Boolean(nameSearch.trim())}
+				>
+					Search
+				</button>
+				<button
+					type="button"
+					class="mobile-filter-button"
+					class:active={showMobileFilters || hasAdvancedFilters}
+					onclick={toggleMobileFilters}
+					aria-pressed={showMobileFilters}
+				>
+					Filter
+				</button>
+				<button
+					type="button"
+					class="mobile-filter-button"
+					class:active={hasAnyFilters}
+					onclick={resetFilters}
+					disabled={!hasAnyFilters}
+				>
+					Reset
+				</button>
+			</div>
+
+			{#if showMobileSearch}
+				<div class="mobile-filter-panel">
+					<input
+						type="text"
+						bind:this={mobileSearchInput}
+						bind:value={nameSearch}
+						placeholder="Search operators..."
+						class="filter-input mobile-filter-input"
+					>
+				</div>
+			{/if}
+
+			{#if showMobileFilters}
+				<div class="mobile-filter-panel mobile-filter-stack">
+					<select bind:value={assetFilter} class="filter-select mobile-filter-select">
+						<option value="">All Asset Classes</option>
+						{#each allAssetClasses as ac}<option value={ac}>{ac}</option>{/each}
+					</select>
+					<select bind:value={maxInvest} class="filter-select mobile-filter-select">
+						<option value="">Max Investment Min.</option>
+						<option value="25000">$25K or less</option>
+						<option value="50000">$50K or less</option>
+						<option value="100000">$100K or less</option>
+					</select>
+					<select bind:value={fullCycleMin} class="filter-select mobile-filter-select">
+						<option value="0">Full Cycle Deals</option>
+						<option value="1">1+ full cycle</option>
+						<option value="5">5+ full cycle</option>
+						<option value="10">10+ full cycle</option>
+					</select>
+					<select bind:value={sortBy} class="filter-select mobile-filter-select">
+						<option value="deals">Most Deals</option>
+						<option value="fullcycle">Most Full Cycle</option>
+						<option value="name">Name (A-Z)</option>
+						<option value="newest">Newest First</option>
+					</select>
+				</div>
+			{/if}
+
+			<div class="mobile-stats">
+				<span><strong>{filtered.length}</strong> Operators</span>
+				<span><strong>{filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> Deals</span>
+			</div>
 		</div>
 	</div>
 
@@ -162,12 +265,15 @@
 
 <style>
 	.operators-page { padding: 0; }
+	.filter-shell { border-bottom: 1px solid var(--border); background: var(--bg-card); }
 	.filter-bar { padding: 12px 24px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+	.desktop-filter-bar { border-bottom: none; }
 	.filter-input { padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-body); color: var(--text-dark); background: var(--bg-card); min-width: 180px; box-sizing: border-box; }
 	.filter-select { padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-body); color: var(--text-dark); background: var(--bg-card); }
 	.btn-reset { padding: 7px 14px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 700; font-size: 11px; cursor: pointer; color: var(--text-secondary); white-space: nowrap; }
 	.stats-bar { margin-left: auto; display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 	.stats-bar strong { color: var(--text-dark); }
+	.mobile-filter-shell { display: none; }
 	.managers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 24px; }
 	.manager-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; cursor: pointer; transition: all 0.15s; text-decoration: none; color: inherit; display: block; }
 	.manager-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: var(--primary); }
@@ -192,8 +298,75 @@
 	}
 	@media (max-width: 1024px) { .managers-grid { grid-template-columns: repeat(2, 1fr); } }
 	@media (max-width: 768px) {
+		.desktop-filter-bar { display: none; }
+		.mobile-filter-shell {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			padding: 12px 16px 14px;
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 248, 250, 0.94) 100%);
+			backdrop-filter: blur(22px);
+		}
+		.mobile-filter-tabs {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 8px;
+		}
+		.mobile-filter-button {
+			height: 46px;
+			padding: 0 10px;
+			border: 1px solid rgba(31, 81, 89, 0.12);
+			border-radius: 16px;
+			background: rgba(255, 255, 255, 0.88);
+			box-shadow: 0 12px 28px rgba(10, 30, 33, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+			font-family: var(--font-ui);
+			font-size: 13px;
+			font-weight: 700;
+			color: var(--text-secondary);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+		}
+		.mobile-filter-button.active {
+			background: linear-gradient(180deg, rgba(31, 81, 89, 0.16), rgba(31, 81, 89, 0.06));
+			border-color: rgba(31, 81, 89, 0.18);
+			color: #12363c;
+		}
+		.mobile-filter-button:disabled {
+			opacity: 0.45;
+			cursor: default;
+			box-shadow: none;
+		}
+		.mobile-filter-panel {
+			padding: 12px;
+			border: 1px solid rgba(10, 30, 33, 0.08);
+			border-radius: 20px;
+			background: rgba(255, 255, 255, 0.82);
+			box-shadow: 0 18px 36px rgba(10, 30, 33, 0.06);
+		}
+		.mobile-filter-stack { display: grid; gap: 10px; }
+		.mobile-filter-input,
+		.mobile-filter-select {
+			width: 100%;
+			min-width: 0;
+			height: 48px;
+			font-size: 16px;
+			border-radius: 14px;
+			background: #fff;
+		}
+		.mobile-stats {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			padding: 0 4px;
+			font-size: 12px;
+			color: var(--text-muted);
+		}
+		.mobile-stats strong { color: var(--text-dark); }
 		.managers-grid { grid-template-columns: 1fr; padding: 16px; }
-		.filter-bar { padding: 8px 16px; }
 		.stats-bar { display: none; }
 	}
 </style>
