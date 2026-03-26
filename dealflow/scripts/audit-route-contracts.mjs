@@ -22,6 +22,7 @@ const marketIntelPage = read('src/routes/app/market-intel/+page.svelte');
 const marketIntelApi = read('api/market-intel.js');
 const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
+const gpDashboardPage = read('src/routes/gp-dashboard/+page.svelte');
 const appLayout = read('src/routes/app/+layout.svelte');
 const sidebar = read('src/lib/components/Sidebar.svelte');
 const filterBar = read('src/lib/components/FilterBar.svelte');
@@ -154,6 +155,31 @@ assert(
 assert(
 	sidebar.includes("hideHamburgerOnPhone = true"),
 	'Sidebar must default to hiding the mobile hamburger.'
+);
+
+assert(
+	appLayout.includes('class="mobile-tabs ly-mobile-tabs"'),
+	'App layout must use the shared mobile tab primitive.'
+);
+
+assert(
+	gpDashboardPage.includes('class="ly-mobile-tabs"'),
+	'GP Dashboard must use the shared mobile tab primitive.'
+);
+
+assert(
+	!gpDashboardPage.includes('class="mobile-tab-bar"'),
+	'GP Dashboard must not use the legacy page-local mobile tab bar.'
+);
+
+assert(
+	!gpDashboardPage.includes('class="mobile-topbar"'),
+	'GP Dashboard must not use the legacy mobile top bar.'
+);
+
+assert(
+	gpDashboardPage.includes('href="/app/market-intel"'),
+	'GP Dashboard mobile navigation must link to /app/market-intel.'
 );
 
 assert(

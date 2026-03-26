@@ -923,11 +923,6 @@
 
 <Sidebar currentPage="gpdashboard" />
 
-<!-- Mobile top bar -->
-<div class="mobile-topbar">
-	<div class="mobile-topbar-title">GP Dashboard</div>
-</div>
-
 <div class="main ly-sidebar-main ly-page">
 	<div class="content-wrap ly-frame">
 
@@ -1402,28 +1397,28 @@
 <div class="toast" class:show={toastVisible}>{toastMsg}</div>
 
 <!-- Mobile Bottom Tab Bar -->
-<div class="mobile-tab-bar">
-	<a class="mobile-tab-item" href="/app/dashboard">
+<nav class="ly-mobile-tabs" aria-label="Primary">
+	<a class="ly-mobile-tab" href="/app/dashboard">
 		<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
 		<span>Dashboard</span>
 	</a>
-	<a class="mobile-tab-item" href="/app/marketintel">
+	<a class="ly-mobile-tab" href="/app/market-intel">
 		<svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
 		<span>Intel</span>
 	</a>
-	<a class="mobile-tab-item" href="/app/deals">
+	<a class="ly-mobile-tab" href="/app/deals">
 		<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
 		<span>Deal Flow</span>
 	</a>
-	<a class="mobile-tab-item active" href="/gp-dashboard">
+	<a class="ly-mobile-tab active" href="/gp-dashboard" aria-current="page">
 		<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 		<span>GP Portal</span>
 	</a>
-	<a class="mobile-tab-item" href="/app/settings">
+	<a class="ly-mobile-tab" href="/app/more">
 		<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 		<span>More</span>
 	</a>
-</div>
+</nav>
 
 <style>
 	/* ====== MAIN LAYOUT ====== */
@@ -1434,30 +1429,6 @@
 		max-width: 1200px;
 		padding: 32px 0 64px;
 		margin: 0 auto;
-	}
-
-	/* ====== MOBILE TOP BAR ====== */
-	.mobile-topbar {
-		display: none;
-		position: sticky;
-		top: 0;
-		height: 56px;
-		background: var(--bg-cream);
-		border-bottom: 1px solid var(--border);
-		align-items: center;
-		padding: 0 20px;
-		gap: 12px;
-		z-index: 50;
-	}
-	.mobile-topbar-title {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-		flex: 1;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
 	}
 	/* ====== LOADING SKELETON ====== */
 	.skeleton {
@@ -3024,56 +2995,6 @@
 		flex: 1;
 	}
 
-	/* ====== MOBILE TAB BAR ====== */
-	.mobile-tab-bar {
-		display: none;
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		height: calc(64px + env(safe-area-inset-bottom, 0px));
-		padding-bottom: env(safe-area-inset-bottom, 0px);
-		background: var(--bg-card);
-		border-top: 1px solid var(--border);
-		z-index: 200;
-		align-items: center;
-		justify-content: space-around;
-		box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
-		-webkit-backdrop-filter: blur(20px);
-		backdrop-filter: blur(20px);
-		background: rgba(255,255,255,0.92);
-	}
-	.mobile-tab-item {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 3px;
-		padding: 6px 0;
-		min-width: 56px;
-		text-decoration: none;
-		cursor: pointer;
-		border: none;
-		background: none;
-		-webkit-tap-highlight-color: transparent;
-	}
-	.mobile-tab-item :global(svg) {
-		width: 22px;
-		height: 22px;
-		stroke: var(--text-muted);
-		fill: none;
-		stroke-width: 1.8;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-	}
-	.mobile-tab-item span {
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 600;
-		color: var(--text-muted);
-	}
-	.mobile-tab-item.active :global(svg) { stroke: var(--primary); }
-	.mobile-tab-item.active span { color: var(--primary); }
-
 	/* ====== DARK MODE OVERRIDES ====== */
 	:global(html.dark) .skeleton::after {
 		background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
@@ -3163,10 +3084,6 @@
 	:global(html.dark) .gp-header {
 		background: linear-gradient(145deg, var(--teal-midnight) 0%, #1F5159 100%);
 	}
-	:global(html.dark) .mobile-tab-bar {
-		background: rgba(10,30,33,0.92);
-		border-top-color: rgba(255,255,255,0.08);
-	}
 	:global(html.dark) .mi-card-title { color: var(--text-muted); }
 	:global(html.dark) .mi-card-desc { color: var(--text-secondary); }
 	:global(html.dark) .mi-bar-track { background: var(--border); }
@@ -3187,9 +3104,7 @@
 		.dashboard-grid-3-2 { grid-template-columns: 1fr 1fr; }
 	}
 	@media (max-width: 768px) {
-		.mobile-topbar { display: flex; }
 		.content-wrap { padding: 20px 0 100px; }
-		.mobile-tab-bar { display: flex !important; }
 		.gp-header { padding: 24px 20px; }
 		.gp-header-inner {
 			flex-direction: column;

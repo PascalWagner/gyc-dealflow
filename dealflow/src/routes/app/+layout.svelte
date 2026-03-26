@@ -108,24 +108,24 @@
 			</div>
 		</main>
 		<!-- Mobile bottom tab bar -->
-		<nav class="mobile-tabs">
-			<a href="/app/dashboard" class="mobile-tab" class:active={currentPage === 'dashboard'} onclick={tapLight}>
+		<nav class="mobile-tabs ly-mobile-tabs">
+			<a href="/app/dashboard" class="mobile-tab ly-mobile-tab" class:active={currentPage === 'dashboard'} onclick={tapLight}>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
 				<span>Dashboard</span>
 			</a>
-			<a href="/app/market-intel" class="mobile-tab" class:active={currentPage === 'market-intel'} onclick={tapLight}>
+			<a href="/app/market-intel" class="mobile-tab ly-mobile-tab" class:active={currentPage === 'market-intel'} onclick={tapLight}>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
 				<span>Intel</span>
 			</a>
-			<a href="/app/deals" class="mobile-tab" class:active={currentPage === 'deals'} onclick={tapLight}>
+			<a href="/app/deals" class="mobile-tab ly-mobile-tab" class:active={currentPage === 'deals'} onclick={tapLight}>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
 				<span>Deal Flow</span>
 			</a>
-			<a href="/app/operators" class="mobile-tab" class:active={currentPage === 'operators'} onclick={tapLight}>
+			<a href="/app/operators" class="mobile-tab ly-mobile-tab" class:active={currentPage === 'operators'} onclick={tapLight}>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
 				<span>Operators</span>
 			</a>
-			<a href="/app/more" class="mobile-tab" class:active={currentPage === 'more'} onclick={tapLight}>
+			<a href="/app/more" class="mobile-tab ly-mobile-tab" class:active={currentPage === 'more'} onclick={tapLight}>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
 				<span>More</span>
 			</a>
