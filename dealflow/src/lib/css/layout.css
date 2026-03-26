@@ -13,6 +13,26 @@
 	--ly-gap-xl: 32px;
 }
 
+.ly-sidebar-shell {
+	display: flex;
+	min-height: 100vh;
+	min-height: 100dvh;
+}
+
+.ly-sidebar-main {
+	flex: 1;
+	margin-left: var(--ly-sidebar-offset, var(--sidebar-width, 240px));
+	width: calc(100% - var(--ly-sidebar-offset, var(--sidebar-width, 240px)));
+	min-height: 100vh;
+	min-height: 100dvh;
+	min-width: 0;
+	max-width: 100%;
+	background: var(--ly-main-bg, var(--bg-cream));
+	padding-bottom: var(--ly-main-pad-bottom, 0);
+	transition: margin-left 0.3s ease;
+	overflow-x: clip;
+}
+
 .ly-page {
 	width: 100%;
 	min-width: 0;
@@ -30,11 +50,10 @@
 
 .ly-frame,
 .ly-dealflow-frame {
-	width: min(100%, var(--ly-frame-max, var(--ly-dealflow-frame-max, 1440px)));
+	width: min(100%, var(--ly-frame-max, 1440px));
 	margin-inline: auto;
-	padding-inline: var(--ly-frame-pad-desktop, var(--ly-dealflow-frame-pad-desktop, var(--ly-pad-desktop)));
-	padding-block: var(--ly-frame-pad-top, var(--ly-dealflow-frame-pad-top, 20px))
-		var(--ly-frame-pad-bottom, var(--ly-dealflow-frame-pad-bottom, 48px));
+	padding-inline: var(--ly-frame-pad-desktop, var(--ly-pad-desktop));
+	padding-block: var(--ly-frame-pad-top, 20px) var(--ly-frame-pad-bottom, 48px);
 	box-sizing: border-box;
 	min-width: 0;
 	max-width: 100%;
@@ -104,16 +123,132 @@
 	display: none !important;
 }
 
+.ly-skeleton {
+	position: relative;
+	overflow: hidden;
+	background: var(--border-light);
+	border-radius: var(--radius-sm);
+}
+
+.ly-skeleton::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+	animation: ly-shimmer 1.5s infinite;
+}
+
+.ly-skeleton-header {
+	height: 180px;
+	margin-bottom: 24px;
+}
+
+.ly-skeleton-stats {
+	height: 80px;
+	margin-bottom: 24px;
+}
+
+.ly-skeleton-card {
+	height: 200px;
+	margin-bottom: 20px;
+}
+
+@keyframes ly-shimmer {
+	0% { transform: translateX(-100%); }
+	100% { transform: translateX(100%); }
+}
+
+.ly-stat-grid {
+	display: grid;
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.ly-stat-card {
+	background: var(--bg-card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 20px 18px;
+	text-align: center;
+	box-shadow: var(--shadow-card);
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+.ly-stat-card-value {
+	font-family: var(--font-headline);
+	font-size: 26px;
+	color: var(--teal-deep);
+	line-height: 1;
+	margin-bottom: 4px;
+}
+
+.ly-stat-card-label {
+	font-family: var(--font-ui);
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1.2px;
+	color: var(--text-muted);
+}
+
+.ly-panel {
+	background: var(--bg-card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow-card);
+	margin-bottom: 24px;
+	overflow: hidden;
+}
+
+.ly-panel-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 20px 28px;
+	border-bottom: 1px solid var(--border-light);
+}
+
+.ly-section-title {
+	font-family: var(--font-ui);
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+	color: var(--primary);
+}
+
+.ly-section-badge {
+	background: var(--green-bg);
+	color: var(--green);
+	font-family: var(--font-ui);
+	font-size: 11px;
+	font-weight: 700;
+	padding: 2px 10px;
+	border-radius: 10px;
+}
+
+.ly-panel-body {
+	padding: 24px 28px;
+}
+
 @media (max-width: 1024px) {
+	.ly-sidebar-main {
+		margin-left: 0;
+		width: 100%;
+		padding-bottom: var(--ly-main-pad-bottom-tablet, var(--ly-main-pad-bottom, 0));
+	}
+
 	.ly-container {
 		padding-inline: var(--ly-container-pad-tablet, var(--ly-pad-tablet));
 	}
 
 	.ly-frame,
 	.ly-dealflow-frame {
-		padding-inline: var(--ly-frame-pad-tablet, var(--ly-dealflow-frame-pad-tablet, var(--ly-pad-tablet)));
-		padding-block: var(--ly-frame-pad-top-tablet, var(--ly-dealflow-frame-pad-top-tablet, var(--ly-frame-pad-top, var(--ly-dealflow-frame-pad-top, 20px))))
-			var(--ly-frame-pad-bottom-tablet, var(--ly-dealflow-frame-pad-bottom-tablet, var(--ly-frame-pad-bottom, var(--ly-dealflow-frame-pad-bottom, 48px))));
+		padding-inline: var(--ly-frame-pad-tablet, var(--ly-pad-tablet));
+		padding-block: var(--ly-frame-pad-top-tablet, var(--ly-frame-pad-top, 20px))
+			var(--ly-frame-pad-bottom-tablet, var(--ly-frame-pad-bottom, 48px));
 	}
 
 	.ly-grid {
@@ -122,15 +257,19 @@
 }
 
 @media (max-width: 768px) {
+	.ly-sidebar-main {
+		padding-bottom: var(--ly-main-pad-bottom-mobile, var(--ly-main-pad-bottom-tablet, var(--ly-main-pad-bottom, 0)));
+	}
+
 	.ly-container {
 		padding-inline: var(--ly-container-pad-mobile, var(--ly-pad-mobile));
 	}
 
 	.ly-frame,
 	.ly-dealflow-frame {
-		padding-inline: var(--ly-frame-pad-mobile, var(--ly-dealflow-frame-pad-mobile, var(--ly-pad-mobile)));
-		padding-block: var(--ly-frame-pad-top-mobile, var(--ly-dealflow-frame-pad-top-mobile, var(--ly-frame-pad-top, var(--ly-dealflow-frame-pad-top, 20px))))
-			var(--ly-frame-pad-bottom-mobile, var(--ly-dealflow-frame-pad-bottom-mobile, var(--ly-frame-pad-bottom, var(--ly-dealflow-frame-pad-bottom, 48px))));
+		padding-inline: var(--ly-frame-pad-mobile, var(--ly-pad-mobile));
+		padding-block: var(--ly-frame-pad-top-mobile, var(--ly-frame-pad-top, 20px))
+			var(--ly-frame-pad-bottom-mobile, var(--ly-frame-pad-bottom, 48px));
 	}
 
 	.ly-grid {
@@ -143,5 +282,13 @@
 
 	.ly-desktop-only {
 		display: none !important;
+	}
+
+	.ly-panel-header {
+		padding: 16px 18px;
+	}
+
+	.ly-panel-body {
+		padding: 20px 18px;
 	}
 }

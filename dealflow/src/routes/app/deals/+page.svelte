@@ -571,7 +571,7 @@
 
 <svelte:head><title>Deal Flow | GYC</title></svelte:head>
 
-<div class="deals-page ly-dealflow-frame">
+<div class="deals-page ly-frame">
 	<!-- Header -->
 	<div class="deals-header">
 		<div class="header-row">
@@ -930,16 +930,16 @@
 
 <style>
 	.deals-page {
-		--ly-dealflow-frame-max: 1440px;
-		--ly-dealflow-frame-pad-desktop: clamp(32px, 3vw, 40px);
-		--ly-dealflow-frame-pad-tablet: 24px;
-		--ly-dealflow-frame-pad-mobile: 16px;
-		--ly-dealflow-frame-pad-top: 16px;
-		--ly-dealflow-frame-pad-bottom: 48px;
-		--ly-dealflow-frame-pad-top-tablet: 14px;
-		--ly-dealflow-frame-pad-bottom-tablet: 40px;
-		--ly-dealflow-frame-pad-top-mobile: 12px;
-		--ly-dealflow-frame-pad-bottom-mobile: 28px;
+		--ly-frame-max: 1440px;
+		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
+		--ly-frame-pad-tablet: 24px;
+		--ly-frame-pad-mobile: 16px;
+		--ly-frame-pad-top: 16px;
+		--ly-frame-pad-bottom: 48px;
+		--ly-frame-pad-top-tablet: 14px;
+		--ly-frame-pad-bottom-tablet: 40px;
+		--ly-frame-pad-top-mobile: 12px;
+		--ly-frame-pad-bottom-mobile: 28px;
 		min-width: 0;
 	}
 

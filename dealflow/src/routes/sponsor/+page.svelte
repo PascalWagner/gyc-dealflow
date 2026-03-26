@@ -337,17 +337,17 @@
 	<title>{sponsor?.name || 'Sponsor Profile'} - GYC Dealflow</title>
 </svelte:head>
 
-<div class="page-layout">
+<div class="page-layout ly-sidebar-shell">
 	<Sidebar currentPage="sponsor" hideHamburgerOnPhone={true} />
 
-	<div class="main ly-page">
+	<div class="main ly-sidebar-main ly-page">
 		<div class="content-wrap ly-frame">
 
 			{#if loading}
-				<div class="skeleton skeleton-header"></div>
-				<div class="skeleton skeleton-stats"></div>
-				<div class="skeleton skeleton-card"></div>
-				<div class="skeleton skeleton-card"></div>
+				<div class="skeleton ly-skeleton skeleton-header ly-skeleton-header"></div>
+				<div class="skeleton ly-skeleton skeleton-stats ly-skeleton-stats"></div>
+				<div class="skeleton ly-skeleton skeleton-card ly-skeleton-card"></div>
+				<div class="skeleton ly-skeleton skeleton-card ly-skeleton-card"></div>
 			{:else if sponsor}
 				<!-- Sponsor Header -->
 				<div class="sponsor-header">
@@ -391,21 +391,21 @@
 				</div>
 
 				<!-- Stats Strip -->
-				<div class="stats-strip">
+				<div class="stats-strip ly-stat-grid">
 					{#each stats as st}
-						<div class="stat-card">
-							<div class="stat-card-value">{st.value}</div>
-							<div class="stat-card-label">{st.label}</div>
+						<div class="stat-card ly-stat-card">
+							<div class="stat-card-value ly-stat-card-value">{st.value}</div>
+							<div class="stat-card-label ly-stat-card-label">{st.label}</div>
 						</div>
 					{/each}
 				</div>
 
 				<!-- About Section -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">About</div>
+				<div class="section-card ly-panel">
+					<div class="section-header ly-panel-header">
+						<div class="section-title ly-section-title">About</div>
 					</div>
-					<div class="section-body">
+					<div class="section-body ly-panel-body">
 						<div class="details-grid">
 							{#each details as d}
 								<div class="detail-item">
@@ -418,12 +418,12 @@
 				</div>
 
 				<!-- Deals Section -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">Deals</div>
-						<span class="section-badge">{deals.length}</span>
+				<div class="section-card ly-panel">
+					<div class="section-header ly-panel-header">
+						<div class="section-title ly-section-title">Deals</div>
+						<span class="section-badge ly-section-badge">{deals.length}</span>
 					</div>
-					<div class="section-body">
+					<div class="section-body ly-panel-body">
 						{#if deals.length === 0}
 							<div class="empty-inline"><p>No deals listed from this sponsor yet.</p></div>
 						{:else}
@@ -459,12 +459,12 @@
 
 				<!-- Existing Portfolio -->
 				{#if sponsor.portfolioSnapshot?.length > 0}
-					<div class="section-card" style:opacity={isPaid ? '1' : '0.5'}>
-						<div class="section-header">
-							<div class="section-title">Existing Portfolio</div>
-							<span class="section-badge">{sponsor.portfolioSnapshot.length}</span>
+					<div class="section-card ly-panel" style:opacity={isPaid ? '1' : '0.5'}>
+						<div class="section-header ly-panel-header">
+							<div class="section-title ly-section-title">Existing Portfolio</div>
+							<span class="section-badge ly-section-badge">{sponsor.portfolioSnapshot.length}</span>
 						</div>
-						<div class="section-body">
+						<div class="section-body ly-panel-body">
 							{#if !isPaid}
 								<div class="portfolio-gate">
 									<div class="portfolio-gate-icon">
@@ -536,11 +536,11 @@
 				{/if}
 
 				<!-- Key People -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">Key People</div>
+				<div class="section-card ly-panel">
+					<div class="section-header ly-panel-header">
+						<div class="section-title ly-section-title">Key People</div>
 					</div>
-					<div class="section-body">
+					<div class="section-body ly-panel-body">
 						<div class="people-grid">
 							{#if sponsor.ceo}
 								{@const regStatus = getCeoRegStatus(bgResult)}
@@ -633,11 +633,11 @@
 				</div>
 
 				<!-- Background Report -->
-				<div class="section-card">
-					<div class="section-header bg-report-header">
+				<div class="section-card ly-panel">
+					<div class="section-header ly-panel-header bg-report-header">
 						<div style="display:flex;align-items:center;gap:10px;">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;color:var(--primary);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-							<div class="section-title">Sponsor Background Report</div>
+							<div class="section-title ly-section-title">Sponsor Background Report</div>
 						</div>
 						<div class="bg-report-status {bgOverallStatus}">
 							{#if bgOverallStatus === 'clear'}
@@ -655,7 +655,7 @@
 							{/if}
 						</div>
 					</div>
-					<div class="section-body">
+					<div class="section-body ly-panel-body">
 						<div class="bg-report-intro">
 							<strong>What is this?</strong> We automatically search 5 free public databases on every sponsor to surface potential red flags before you invest.
 							This includes SEC filings, FINRA broker records, investment adviser disclosures, Treasury sanctions screening, and federal court records.
@@ -814,11 +814,11 @@
 				</div>
 
 				<!-- Research -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">Research</div>
+				<div class="section-card ly-panel">
+					<div class="section-header ly-panel-header">
+						<div class="section-title ly-section-title">Research</div>
 					</div>
-					<div class="section-body">
+					<div class="section-body ly-panel-body">
 						<div class="research-grid">
 							{#if sponsor.website}
 								<a href={sponsor.website} target="_blank" rel="noopener" class="research-tile">
@@ -874,23 +874,10 @@
 </div>
 
 <style>
-	.page-layout {
-		display: flex;
-		min-height: 100vh;
-		min-height: 100dvh;
-	}
 	.main {
 		--sponsor-mobile-tab-bar-offset: calc(72px + env(safe-area-inset-bottom, 0px));
-		flex: 1;
-		margin-left: var(--sidebar-width, 240px);
-		width: calc(100% - var(--sidebar-width, 240px));
-		min-height: 100vh;
-		min-height: 100dvh;
-		min-width: 0;
-		max-width: 100%;
-		background: var(--bg-cream);
-		transition: margin-left 0.3s ease;
-		overflow-x: clip;
+		--ly-main-pad-bottom-tablet: var(--sponsor-mobile-tab-bar-offset);
+		--ly-main-pad-bottom-mobile: var(--sponsor-mobile-tab-bar-offset);
 	}
 	.content-wrap {
 		--ly-frame-max: 1200px;
@@ -952,14 +939,6 @@
 		color: rgba(255,255,255,0.8);
 	}
 
-	/* Skeleton */
-	.skeleton { position: relative; overflow: hidden; background: var(--border-light); border-radius: var(--radius-sm); }
-	.skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%); animation: shimmer 1.5s infinite; }
-	@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-	.skeleton-header { height: 180px; margin-bottom: 24px; }
-	.skeleton-stats { height: 80px; margin-bottom: 24px; }
-	.skeleton-card { height: 200px; margin-bottom: 20px; }
-
 	/* Sponsor Header */
 	.sponsor-header { background: linear-gradient(145deg, var(--teal-midnight) 0%, var(--teal-deep) 100%); border-radius: var(--radius); padding: 36px 40px; margin-bottom: 24px; position: relative; overflow: hidden; }
 	.sponsor-header::after { content: ''; position: absolute; top: -60%; right: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(81,190,123,0.1) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
@@ -980,17 +959,7 @@
 	.btn-sponsor-outline:hover { border-color: rgba(255,255,255,0.5); color: #fff; background: rgba(255,255,255,0.05); }
 
 	/* Stats Strip */
-	.stats-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
-	.stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 18px; text-align: center; box-shadow: var(--shadow-card); width: 100%; max-width: 100%; box-sizing: border-box; }
-	.stat-card-value { font-family: var(--font-headline); font-size: 26px; color: var(--teal-deep); line-height: 1; margin-bottom: 4px; }
-	.stat-card-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); }
-
-	/* Section Cards */
-	.section-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-card); margin-bottom: 24px; overflow: hidden; }
-	.section-header { display: flex; align-items: center; gap: 10px; padding: 20px 28px; border-bottom: 1px solid var(--border-light); }
-	.section-title { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary); }
-	.section-badge { background: var(--green-bg); color: var(--green); font-family: var(--font-ui); font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 10px; }
-	.section-body { padding: 24px 28px; }
+	.stats-strip { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 
 	/* Details Grid */
 	.details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 20px; }
@@ -1134,11 +1103,6 @@
 
 	/* Responsive */
 	@media (max-width: 1024px) {
-		.main {
-			margin-left: 0;
-			width: 100%;
-			padding-bottom: var(--sponsor-mobile-tab-bar-offset);
-		}
 		.sponsor-mobile-tabs {
 			display: flex;
 			justify-content: space-around;
@@ -1179,8 +1143,6 @@
 		.sponsor-actions { justify-content: center; }
 		.sponsor-name { font-size: 24px; }
 		.stats-strip { grid-template-columns: repeat(2, 1fr); }
-		.section-body { padding: 20px 18px; }
-		.section-header { padding: 16px 18px; }
 		.details-grid { grid-template-columns: 1fr 1fr; }
 		.research-grid { grid-template-columns: 1fr; }
 		.people-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }

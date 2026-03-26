@@ -95,7 +95,7 @@
 	<title>{person?.name || 'Person Profile'} - GYC Dealflow</title>
 </svelte:head>
 
-<div class="page-layout">
+<div class="page-layout ly-sidebar-shell">
 	<Sidebar currentPage="person" />
 
 	<div class="sidebar-overlay" class:open={sidebarOpen} onclick={() => sidebarOpen = false}></div>
@@ -108,14 +108,14 @@
 		<a href="/app/deals" class="mobile-deals-link">Deals</a>
 	</div>
 
-	<div class="main">
-		<div class="content-wrap">
+	<div class="main ly-sidebar-main ly-page">
+		<div class="content-wrap ly-frame">
 
 			{#if loading}
-				<div class="skeleton skeleton-header"></div>
-				<div class="skeleton skeleton-stats"></div>
-				<div class="skeleton skeleton-card"></div>
-				<div class="skeleton skeleton-card"></div>
+				<div class="skeleton ly-skeleton skeleton-header ly-skeleton-header"></div>
+				<div class="skeleton ly-skeleton skeleton-stats ly-skeleton-stats"></div>
+				<div class="skeleton ly-skeleton skeleton-card ly-skeleton-card"></div>
+				<div class="skeleton ly-skeleton skeleton-card ly-skeleton-card"></div>
 			{:else if !person}
 				<div class="empty-inline"><p>Person not found.</p></div>
 			{:else}
@@ -165,22 +165,22 @@
 				</div>
 
 				<!-- Stats Strip -->
-				<div class="stats-strip">
+				<div class="stats-strip ly-stat-grid">
 					{#each statCards as st}
-						<div class="stat-card">
-							<div class="stat-card-value">{st.value}</div>
-							<div class="stat-card-label">{st.label}</div>
+						<div class="stat-card ly-stat-card">
+							<div class="stat-card-value ly-stat-card-value">{st.value}</div>
+							<div class="stat-card-label ly-stat-card-label">{st.label}</div>
 						</div>
 					{/each}
 				</div>
 
 				<!-- Firms Section -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">Firms</div>
-						<span class="section-badge">{companies.length}</span>
+				<div class="section-card ly-panel">
+					<div class="section-header ly-panel-header">
+						<div class="section-title ly-section-title">Firms</div>
+						<span class="section-badge ly-section-badge">{companies.length}</span>
 					</div>
-					<div class="section-body">
+					<div class="section-body ly-panel-body">
 						<div class="firms-grid">
 							{#each companies as c}
 								<a href="/sponsor?company={encodeURIComponent(c.name)}" class="firm-card">
@@ -202,12 +202,12 @@
 				</div>
 
 				<!-- Deals Section -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">Deals</div>
-						<span class="section-badge">{deals.length}</span>
+				<div class="section-card ly-panel">
+					<div class="section-header ly-panel-header">
+						<div class="section-title ly-section-title">Deals</div>
+						<span class="section-badge ly-section-badge">{deals.length}</span>
 					</div>
-					<div class="section-body">
+					<div class="section-body ly-panel-body">
 						{#if deals.length === 0}
 							<div class="empty-inline"><p>No deals found for this person.</p></div>
 						{:else}
@@ -240,11 +240,11 @@
 				</div>
 
 				<!-- Research -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">Research</div>
+				<div class="section-card ly-panel">
+					<div class="section-header ly-panel-header">
+						<div class="section-title ly-section-title">Research</div>
 					</div>
-					<div class="section-body">
+					<div class="section-body ly-panel-body">
 						<div class="research-grid">
 							{#if person.linkedIn}
 								<a href={person.linkedIn} target="_blank" rel="noopener" class="research-tile">
@@ -273,9 +273,15 @@
 </div>
 
 <style>
-	.page-layout { display: flex; min-height: 100vh; }
-	.main { flex: 1; margin-left: var(--sidebar-width, 240px); min-height: 100vh; transition: margin-left 0.3s ease; }
-	.content-wrap { max-width: 1200px; padding: 32px 40px 64px; margin: 0 auto; }
+	.content-wrap {
+		--ly-frame-max: 1200px;
+		--ly-frame-pad-desktop: 40px;
+		--ly-frame-pad-tablet: 24px;
+		--ly-frame-pad-mobile: 16px;
+		--ly-frame-pad-top: 32px;
+		--ly-frame-pad-bottom: 64px;
+		margin: 0 auto;
+	}
 
 	.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; color: var(--text-dark); padding: 4px; }
 	.mobile-menu-btn svg { width: 24px; height: 24px; }
@@ -284,13 +290,6 @@
 	.mobile-deals-link { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
 	.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
 	.sidebar-overlay.open { display: block; }
-
-	.skeleton { position: relative; overflow: hidden; background: var(--border-light); border-radius: var(--radius-sm); }
-	.skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%); animation: shimmer 1.5s infinite; }
-	@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-	.skeleton-header { height: 180px; margin-bottom: 24px; }
-	.skeleton-stats { height: 80px; margin-bottom: 24px; }
-	.skeleton-card { height: 200px; margin-bottom: 20px; }
 
 	/* Person Header */
 	.person-header { background: linear-gradient(145deg, var(--teal-midnight) 0%, var(--teal-deep) 100%); border-radius: var(--radius); padding: 36px 40px; margin-bottom: 24px; position: relative; overflow: hidden; }
@@ -314,17 +313,7 @@
 	.btn-person-outline:hover { border-color: rgba(255,255,255,0.5); color: #fff; background: rgba(255,255,255,0.05); }
 
 	/* Stats */
-	.stats-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-	.stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 18px; text-align: center; box-shadow: var(--shadow-card); }
-	.stat-card-value { font-family: var(--font-headline); font-size: 26px; color: var(--teal-deep); line-height: 1; margin-bottom: 4px; }
-	.stat-card-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); }
-
-	/* Section Cards */
-	.section-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-card); margin-bottom: 24px; overflow: hidden; }
-	.section-header { display: flex; align-items: center; gap: 10px; padding: 20px 28px; border-bottom: 1px solid var(--border-light); }
-	.section-title { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary); }
-	.section-badge { background: var(--green-bg); color: var(--green); font-family: var(--font-ui); font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 10px; }
-	.section-body { padding: 24px 28px; }
+	.stats-strip { grid-template-columns: repeat(4, 1fr); }
 
 	/* Firms Grid */
 	.firms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
@@ -379,15 +368,15 @@
 	}
 	@media (max-width: 768px) {
 		.mobile-topbar { display: flex; }
-		.main { margin-left: 0; }
-		.content-wrap { padding: 20px 16px 48px; }
+		.content-wrap {
+			--ly-frame-pad-top-mobile: 20px;
+			--ly-frame-pad-bottom-mobile: 48px;
+		}
 		.person-header { padding: 24px 20px; }
 		.person-header-inner { flex-direction: column; align-items: center; text-align: center; gap: 16px; }
 		.person-tags { justify-content: center; }
 		.person-actions { justify-content: center; }
 		.person-header-name { font-size: 24px; }
-		.section-body { padding: 20px 18px; }
-		.section-header { padding: 16px 18px; }
 		.research-grid { grid-template-columns: 1fr; }
 	}
 	@media (max-width: 480px) {

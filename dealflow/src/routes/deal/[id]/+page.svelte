@@ -1889,14 +1889,14 @@
 
 <Sidebar currentPage="deals" hideHamburgerOnPhone={true} />
 
-<main class="main ly-page">
-	<div class="content-wrap ly-dealflow-frame">
+<main class="main ly-sidebar-main ly-page">
+	<div class="content-wrap ly-frame">
 		{#if loading}
 			<!-- Loading Skeleton -->
-			<div class="skeleton skeleton-header"></div>
-			<div class="skeleton skeleton-stats"></div>
-			<div class="skeleton skeleton-card"></div>
-			<div class="skeleton skeleton-card"></div>
+			<div class="skeleton ly-skeleton skeleton-header ly-skeleton-header"></div>
+			<div class="skeleton ly-skeleton skeleton-stats ly-skeleton-stats"></div>
+			<div class="skeleton ly-skeleton skeleton-card ly-skeleton-card"></div>
+			<div class="skeleton ly-skeleton skeleton-card ly-skeleton-card"></div>
 		{:else if !deal}
 			<!-- Not Found -->
 			<div class="not-found">
@@ -3690,22 +3690,16 @@
 	/* ===== Layout ===== */
 	.main {
 		--deal-mobile-tab-bar-offset: calc(72px + env(safe-area-inset-bottom, 0px));
-		margin-left: var(--sidebar-width, 240px);
-		width: calc(100% - var(--sidebar-width, 240px));
-		min-height: 100vh;
-		min-width: 0;
-		max-width: 100%;
-		background: var(--bg-cream);
-		transition: margin-left 0.3s ease;
-		overflow-x: clip;
+		--ly-main-pad-bottom-tablet: var(--deal-mobile-tab-bar-offset);
+		--ly-main-pad-bottom-mobile: var(--deal-mobile-tab-bar-offset);
 	}
 	.content-wrap {
-		--ly-dealflow-frame-max: 1440px;
-		--ly-dealflow-frame-pad-desktop: clamp(32px, 3vw, 40px);
-		--ly-dealflow-frame-pad-tablet: 24px;
-		--ly-dealflow-frame-pad-mobile: 16px;
-		--ly-dealflow-frame-pad-top: 32px;
-		--ly-dealflow-frame-pad-bottom: 64px;
+		--ly-frame-max: 1440px;
+		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
+		--ly-frame-pad-tablet: 24px;
+		--ly-frame-pad-mobile: 16px;
+		--ly-frame-pad-top: 32px;
+		--ly-frame-pad-bottom: 64px;
 		margin: 0 auto;
 		min-width: 0;
 	}
@@ -3757,14 +3751,6 @@
 	.deal-mobile-tab:hover {
 		color: rgba(255,255,255,0.8);
 	}
-
-	/* ===== Skeleton ===== */
-	.skeleton { position: relative; overflow: hidden; background: var(--border-light); border-radius: 8px; }
-	.skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%); animation: shimmer 1.5s infinite; }
-	@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-	.skeleton-header { height: 180px; margin-bottom: 24px; }
-	.skeleton-stats { height: 80px; margin-bottom: 24px; }
-	.skeleton-card { height: 200px; margin-bottom: 20px; }
 
 	/* ===== Not Found ===== */
 	.not-found { text-align: center; padding: 80px 20px; }
@@ -4273,17 +4259,11 @@
 
 	/* ===== Responsive ===== */
 	@media (max-width: 1024px) {
-		.main {
-			margin-left: 0;
-			width: 100%;
-			padding-top: 0;
-			padding-bottom: var(--deal-mobile-tab-bar-offset);
-		}
 		.content-wrap {
-			--ly-dealflow-frame-pad-top-tablet: 20px;
-			--ly-dealflow-frame-pad-bottom-tablet: 48px;
-			--ly-dealflow-frame-pad-top-mobile: 20px;
-			--ly-dealflow-frame-pad-bottom-mobile: 48px;
+			--ly-frame-pad-top-tablet: 20px;
+			--ly-frame-pad-bottom-tablet: 48px;
+			--ly-frame-pad-top-mobile: 20px;
+			--ly-frame-pad-bottom-mobile: 48px;
 		}
 		.deal-mobile-tabs {
 			display: flex;
@@ -4330,10 +4310,6 @@
 		.buybox-criteria-grid { grid-template-columns: repeat(2, 1fr) !important; }
 	}
 	@media (max-width: 768px) {
-		.main {
-			padding-top: 0;
-			padding-bottom: var(--deal-mobile-tab-bar-offset);
-		}
 		.deal-mobile-tab {
 			font-size: 10px;
 			padding: 4px 0;
