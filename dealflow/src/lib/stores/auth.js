@@ -75,16 +75,38 @@ function hasCurrentSessionContract(value) {
 	return true;
 }
 
-export function normalizeSessionUser(value) {
+function coerceSessionContract(value) {
 	if (!value || typeof value !== 'object') return null;
-	if (!hasCurrentSessionContract(value)) return null;
+	if (hasCurrentSessionContract(value)) return value;
 
 	const email = normalizeEmail(value.email);
 	if (!email) return null;
-	const normalizedPrivacy = normalizePrivacyProfile(value);
 
-	let token = typeof value.token === 'string' ? value.token : '';
-	let refreshToken = typeof value.refreshToken === 'string' ? value.refreshToken : '';
+	const accessModel = buildAccessModel({
+		...value,
+		email
+	});
+
+	return {
+		...value,
+		email,
+		sessionVersion: SESSION_VERSION,
+		accessTier: accessModel.accessTier,
+		roleFlags: accessModel.roleFlags,
+		capabilities: accessModel.capabilities
+	};
+}
+
+export function normalizeSessionUser(value) {
+	const sessionLike = coerceSessionContract(value);
+	if (!sessionLike) return null;
+
+	const email = normalizeEmail(sessionLike.email);
+	if (!email) return null;
+	const normalizedPrivacy = normalizePrivacyProfile(sessionLike);
+
+	let token = typeof sessionLike.token === 'string' ? sessionLike.token : '';
+	let refreshToken = typeof sessionLike.refreshToken === 'string' ? sessionLike.refreshToken : '';
 	const tokenEmail = normalizeEmail(decodeJwtPayload(token)?.email);
 	let realUser = currentAdminRealUser();
 	let realUserEmail = normalizeEmail(realUser?.email);
@@ -130,25 +152,25 @@ export function normalizeSessionUser(value) {
 	}
 
 	const accessModel = buildAccessModel({
-		...value,
+		...sessionLike,
 		email
 	});
 	const isAdmin = accessModel.roleFlags.admin === true;
 	const managementCompany = accessModel.managementCompany;
 	const name =
-		(typeof value.name === 'string' && value.name.trim()) ||
-		(typeof value.fullName === 'string' && value.fullName.trim()) ||
+		(typeof sessionLike.name === 'string' && sessionLike.name.trim()) ||
+		(typeof sessionLike.fullName === 'string' && sessionLike.fullName.trim()) ||
 		email.split('@')[0];
 
 	return {
-		...value,
+		...sessionLike,
 		...normalizedPrivacy,
 		sessionVersion: SESSION_VERSION,
 		email,
 		name,
 		fullName:
-			(typeof value.fullName === 'string' && value.fullName.trim()) ||
-			(typeof value.name === 'string' && value.name.trim()) ||
+			(typeof sessionLike.fullName === 'string' && sessionLike.fullName.trim()) ||
+			(typeof sessionLike.name === 'string' && sessionLike.name.trim()) ||
 			name,
 		token,
 		refreshToken,
@@ -158,10 +180,10 @@ export function normalizeSessionUser(value) {
 		isAdmin,
 		isGP: accessModel.roleFlags.gp === true,
 		managementCompany,
-		tags: Array.isArray(value.tags) ? value.tags : [],
-		contactId: value.contactId || null,
-		phone: value.phone || '',
-		location: value.location || ''
+		tags: Array.isArray(sessionLike.tags) ? sessionLike.tags : [],
+		contactId: sessionLike.contactId || null,
+		phone: sessionLike.phone || '',
+		location: sessionLike.location || ''
 	};
 }
 
