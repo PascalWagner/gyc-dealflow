@@ -168,6 +168,11 @@ assert(
 );
 
 assert(
+	gpDashboardPage.includes('<Sidebar currentPage="gp-dashboard"'),
+	'GP Dashboard must pass the canonical currentPage key to Sidebar.'
+);
+
+assert(
 	!gpDashboardPage.includes('class="mobile-tab-bar"'),
 	'GP Dashboard must not use the legacy page-local mobile tab bar.'
 );

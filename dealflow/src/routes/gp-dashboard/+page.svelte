@@ -921,9 +921,9 @@
 	<title>GP Dashboard - GYC Dealflow</title>
 </svelte:head>
 
-<Sidebar currentPage="gpdashboard" />
+<Sidebar currentPage="gp-dashboard" />
 
-<div class="main ly-sidebar-main ly-page">
+<div class="main ly-sidebar-main ly-page gp-dashboard-page">
 	<div class="content-wrap ly-frame">
 
 		{#if accessDenied}
@@ -1425,10 +1425,13 @@
 	.main {
 		min-height: 100vh;
 	}
+	.gp-dashboard-page {
+		--ly-frame-max: 1200px;
+		--ly-frame-pad-top: 32px;
+		--ly-frame-pad-bottom: 64px;
+	}
 	.content-wrap {
-		max-width: 1200px;
-		padding: 32px 0 64px;
-		margin: 0 auto;
+		min-width: 0;
 	}
 	/* ====== LOADING SKELETON ====== */
 	.skeleton {
@@ -3104,7 +3107,10 @@
 		.dashboard-grid-3-2 { grid-template-columns: 1fr 1fr; }
 	}
 	@media (max-width: 768px) {
-		.content-wrap { padding: 20px 0 100px; }
+		.gp-dashboard-page {
+			--ly-frame-pad-top: 20px;
+			--ly-frame-pad-bottom: 100px;
+		}
 		.gp-header { padding: 24px 20px; }
 		.gp-header-inner {
 			flex-direction: column;
