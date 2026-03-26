@@ -137,7 +137,7 @@
 								</p>
 							{/if}
 							<div class="person-tags">
-								{#each allAssetClasses() as ac}
+								{#each allAssetClasses as ac}
 									<span class="person-tag asset-class">{ac}</span>
 								{/each}
 								{#each companies as c}

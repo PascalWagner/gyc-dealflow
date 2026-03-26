@@ -268,7 +268,7 @@
 	}
 
 	async function loadBgReport(s) {
-		if (!isPaid()) return;
+		if (!isPaid) return;
 		try {
 			const resp = await fetch('/api/background-check?managementCompanyId=' + encodeURIComponent(s.id), {
 				headers: $user?.token ? { Authorization: `Bearer ${$user.token}` } : {}
@@ -459,13 +459,13 @@
 
 				<!-- Existing Portfolio -->
 				{#if sponsor.portfolioSnapshot?.length > 0}
-					<div class="section-card" style:opacity={isPaid() ? '1' : '0.5'}>
+					<div class="section-card" style:opacity={isPaid ? '1' : '0.5'}>
 						<div class="section-header">
 							<div class="section-title">Existing Portfolio</div>
 							<span class="section-badge">{sponsor.portfolioSnapshot.length}</span>
 						</div>
 						<div class="section-body">
-							{#if !isPaid()}
+							{#if !isPaid}
 								<div class="portfolio-gate">
 									<div class="portfolio-gate-icon">
 										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -483,7 +483,7 @@
 									{/if}
 								</div>
 							{:else}
-								{@const pd = portfolioData()}
+								{@const pd = portfolioData}
 								{#if pd}
 									<div class="portfolio-summary-stats">
 										{#if pd.totalPurchase > 0}
@@ -662,7 +662,7 @@
 							<strong>No sponsor can hide from public records.</strong>
 						</div>
 
-						{#if !isPaid()}
+						{#if !isPaid}
 							<!-- Free tier gate -->
 							<div class="bg-checks-grid">
 								{#each BG_CHECK_SOURCES as src}
@@ -768,7 +768,7 @@
 							{#if bgResult.run_at}
 								<div class="bg-report-timestamp">
 									<span>Last checked: {new Date(bgResult.run_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-									{#if isAdminUser()}
+									{#if isAdminUser}
 										<button class="bg-report-run-btn small" onclick={triggerBgCheck} disabled={bgLoading}>
 											{#if bgLoading}Running...{:else}Re-run Check{/if}
 										</button>
@@ -803,7 +803,7 @@
 							</div>
 							<div class="bg-not-run">
 								<div>Background check has not been run for this sponsor yet. This runs automatically when a deal is enriched.</div>
-								{#if isAdminUser()}
+								{#if isAdminUser}
 									<button class="bg-report-run-btn" onclick={triggerBgCheck} disabled={bgLoading}>
 										{#if bgLoading}Running checks...{:else}Run Background Check{/if}
 									</button>

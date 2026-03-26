@@ -21,6 +21,15 @@ const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
 const smokeSpec = read('tests/session-persona.smoke.spec.ts');
 
+function assertNoDerivedFunctionCalls(source, fileLabel, names) {
+	for (const name of names) {
+		assert(
+			!source.includes(`${name}()`),
+			`${fileLabel} must not call rune-derived value ${name}() like a function.`
+		);
+	}
+}
+
 assert(
 	operatorsPage.includes('function getOperatorHref(company)'),
 	'Operators page must derive sponsor links through getOperatorHref().'
@@ -48,6 +57,13 @@ for (const [label, source] of [
 	);
 }
 
+assertNoDerivedFunctionCalls(sponsorPage, 'Sponsor page', [
+	'isPaid',
+	'portfolioData',
+	'isAdminUser'
+]);
+assertNoDerivedFunctionCalls(personPage, 'Person page', ['allAssetClasses']);
+
 assert(
 	smokeSpec.includes('operator cards load sponsor pages and linked person profiles'),
 	'Smoke coverage for Operators -> Sponsor -> Person navigation is required.'
@@ -57,4 +73,5 @@ console.log('Route audit passed.');
 console.log('- Operators cards resolve to Sponsor routes');
 console.log('- Sponsor and Person pages use the shared protected-route bootstrap');
 console.log('- Sponsor and Person rendering is no longer blocked on hydration');
+console.log('- Sponsor and Person do not call rune-derived values like functions');
 console.log('- Smoke coverage exists for Operators -> Sponsor -> Person');
