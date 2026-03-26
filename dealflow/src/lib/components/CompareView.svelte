@@ -1,650 +1,433 @@
 <script>
-	import { browser } from '$app/environment';
-	import { onMount } from 'svelte';
-	import PlanFitMeter from '$lib/components/PlanFitMeter.svelte';
-	import {
-		OPTIONAL_DECISION_COMPARE_FIELDS,
-		buildComparisonMap,
-		chunkItems,
-		formatFieldValue,
-		formatMoneyCompact,
-		formatPercent,
-		getColumnsForWidth,
-		getSectionedFields,
-		getVisibleFieldDefinitions,
-		normalizeFieldSelection
-	} from '$lib/utils/decisionCompare.js';
+	import { dealStages, STAGE_META, normalizeStage, stageLabel } from '$lib/stores/deals.js';
 
 	let {
 		deals = [],
-		remainingDeals = [],
-		totalDealsInDecision = null,
-		maxDeals = 6,
-		fieldStorageKey = 'gycDecisionCompareVisibleFields',
-		onremove = () => {},
-		onadd = () => {},
-		onopen = () => {},
-		onstagechange = () => {}
+		maxDeals = 3,
+		loading = false,
+		planFitById = {},
+		onremove = () => {}
 	} = $props();
 
-	let viewportWidth = $state(browser ? window.innerWidth : 1440);
-	let optionalFieldIds = $state([]);
-	let fieldPickerOpen = $state(false);
-	let fieldPreferencesReady = $state(!browser);
-	let fieldPickerRoot;
+	const visibleDeals = $derived(deals.slice(0, maxDeals));
+	const comparisonSlots = $derived([
+		...visibleDeals,
+		...Array.from({ length: Math.max(0, maxDeals - visibleDeals.length) }, () => null)
+	]);
 
-	const selectedDeals = $derived(deals.slice(0, maxDeals));
-	const totalDecisionDeals = $derived(totalDealsInDecision ?? (selectedDeals.length + remainingDeals.length));
-	const dealColumns = $derived(getColumnsForWidth(viewportWidth));
-	const dealGroups = $derived(chunkItems(selectedDeals, dealColumns));
-	const visibleFields = $derived(getVisibleFieldDefinitions(optionalFieldIds));
-	const visibleSections = $derived(getSectionedFields(optionalFieldIds));
-	const comparisonMap = $derived(buildComparisonMap(selectedDeals, visibleFields));
-	const lastContentSectionId = $derived(
-		visibleSections
-			.filter((section) => section.id !== 'actions')
-			.at(-1)?.id ?? null
-	);
-	const canCompare = $derived(selectedDeals.length >= 2);
-	const canAddMore = $derived(selectedDeals.length < maxDeals);
+	const COMPARISON_ROWS = [
+		{ label: 'Asset Class', get: (deal) => deal.assetClass || '—' },
+		{ label: 'Plan Fit', higher: true, get: (deal) => formatPlanFit(deal), getNumber: (deal) => getPlanFitScore(deal) },
+		{ label: 'Target IRR', key: 'targetIRR', format: 'pct', higher: true },
+		{ label: 'Preferred Return', key: 'preferredReturn', format: 'pct', higher: true },
+		{ label: 'Cash-on-Cash', key: 'cashOnCash', format: 'pct', higher: true },
+		{ label: 'Equity Multiple', key: 'equityMultiple', format: 'multiple', higher: true },
+		{ label: 'Minimum', key: 'investmentMinimum', format: 'money', higher: false },
+		{ label: 'Hold Period', key: 'holdPeriod', format: 'hold', higher: false },
+		{ label: 'Leverage', key: 'avgLoanLTV', format: 'pct', higher: false },
+		{ label: 'Distributions', get: (deal) => deal.distributions || deal.distributionFrequency || '—' },
+		{ label: 'Strategy', key: 'strategy' },
+		{ label: 'Geography', key: 'investingGeography' }
+	];
 
-	function handleOptionalFieldToggle(fieldId, checked) {
-		const nextIds = checked
-			? normalizeFieldSelection([...optionalFieldIds, fieldId])
-			: optionalFieldIds.filter((id) => id !== fieldId);
-
-		optionalFieldIds = nextIds;
+	function fmtPct(val) {
+		if (val == null || val === '') return '—';
+		const n = typeof val === 'string' ? parseFloat(val) : val;
+		if (Number.isNaN(n)) return '—';
+		return `${(n > 1 ? n : n * 100).toFixed(1)}%`;
 	}
 
-	onMount(() => {
-		if (!browser) return undefined;
+	function fmtMoney(val) {
+		if (!val) return '—';
+		const n = typeof val === 'string' ? parseFloat(String(val).replace(/[$,]/g, '')) : val;
+		if (Number.isNaN(n)) return '—';
+		if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + 'B';
+		if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+		if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+		return '$' + n.toLocaleString();
+	}
 
-		try {
-			const storedIds = JSON.parse(localStorage.getItem(fieldStorageKey) || '[]');
-			optionalFieldIds = normalizeFieldSelection(storedIds);
-		} catch {
-			optionalFieldIds = [];
+	function fmtMultiple(val) {
+		if (!val) return '—';
+		const n = typeof val === 'string' ? parseFloat(val) : val;
+		if (Number.isNaN(n)) return '—';
+		return `${n.toFixed(2)}x`;
+	}
+
+	function fmtHold(val) {
+		if (val == null || val === '') return '—';
+		if (typeof val === 'string' && val.toLowerCase().includes('open')) return 'Open';
+		const n = typeof val === 'string' ? parseFloat(val) : val;
+		if (Number.isNaN(n)) return val;
+		if (n < 1) return `${Math.round(n * 12)} mo`;
+		return `${n} ${n === 1 ? 'yr' : 'yrs'}`;
+	}
+
+	function formatPlanFit(deal) {
+		const score = planFitById?.[deal.id];
+		return score?.label || 'Not set';
+	}
+
+	function getPlanFitScore(deal) {
+		const score = Number(planFitById?.[deal.id]?.score);
+		return Number.isFinite(score) ? score : null;
+	}
+
+	function getStageMeta(dealId) {
+		const stageKey = normalizeStage($dealStages[dealId]);
+		return {
+			key: stageKey,
+			label: stageLabel(stageKey),
+			color: STAGE_META[stageKey]?.color || STAGE_META.filter.color
+		};
+	}
+
+	function getCellValue(deal, row) {
+		if (!deal) return '—';
+		if (typeof row.get === 'function') return row.get(deal);
+
+		const rawValue = row.key ? deal[row.key] : null;
+		if (row.format === 'pct') return fmtPct(rawValue);
+		if (row.format === 'money') return fmtMoney(rawValue);
+		if (row.format === 'multiple') return fmtMultiple(rawValue);
+		if (row.format === 'hold') return fmtHold(rawValue);
+		return rawValue || '—';
+	}
+
+	function getCellNumber(deal, row) {
+		if (!deal) return null;
+		if (typeof row.getNumber === 'function') return row.getNumber(deal);
+		if (!row.key) return null;
+
+		const rawValue = deal[row.key];
+		if (rawValue == null || rawValue === '') return null;
+		const numericValue = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
+		return Number.isFinite(numericValue) ? numericValue : null;
+	}
+
+	function getBest(row) {
+		if (row.higher !== true && row.higher !== false) {
+			return { best: null, uniqueBest: false, values: [] };
 		}
-		fieldPreferencesReady = true;
 
-		const handleResize = () => {
-			viewportWidth = window.innerWidth;
-		};
+		const values = visibleDeals.map((deal) => getCellNumber(deal, row));
+		const numericValues = values.filter((value) => value !== null);
+		if (numericValues.length < 2) {
+			return { best: null, uniqueBest: false, values };
+		}
 
-		const handlePointerDown = (event) => {
-			if (!fieldPickerOpen) return;
-			if (fieldPickerRoot?.contains(event.target)) return;
-			fieldPickerOpen = false;
-		};
+		const best = row.higher
+			? Math.max(...numericValues)
+			: Math.min(...numericValues);
+		const uniqueBest = numericValues.filter((value) => value === best).length === 1;
 
-		window.addEventListener('resize', handleResize);
-		window.addEventListener('pointerdown', handlePointerDown);
-
-		return () => {
-			window.removeEventListener('resize', handleResize);
-			window.removeEventListener('pointerdown', handlePointerDown);
-		};
-	});
-
-	$effect(() => {
-		if (!browser || !fieldPreferencesReady) return;
-		localStorage.setItem(fieldStorageKey, JSON.stringify(optionalFieldIds));
-	});
+		return { best, uniqueBest, values };
+	}
 </script>
 
-{#if totalDecisionDeals > 0}
-	<div class="decision-status-banner" class:is-positive={totalDecisionDeals >= 3}>
-		{#if totalDecisionDeals >= 3}
-			<span class="banner-icon">✓</span>
-			<span>Great - {totalDecisionDeals} deals to compare. Review below before committing capital.</span>
-		{:else}
-			<span class="banner-icon">!</span>
-			<span>Compare at least 3 deals before investing. You currently have {totalDecisionDeals} in Decide.</span>
-		{/if}
-	</div>
-{/if}
+{#if loading && visibleDeals.length === 0}
+	<section class="compare-shell compare-status">
+		<div class="compare-title">Preparing comparison</div>
+		<div class="compare-subtitle">Loading your selected deals into the compare table.</div>
+	</section>
+{:else if visibleDeals.length === 0}
+	<section class="compare-shell compare-status">
+		<div class="compare-title">Select deals to compare</div>
+		<div class="compare-subtitle">Add up to 3 deals from the cards below to see them side by side.</div>
+	</section>
+{:else}
+	<section class="compare-shell">
+		<div class="compare-header">
+			<div>
+				<div class="compare-title">Compare Deals</div>
+				<div class="compare-subtitle">{visibleDeals.length}/{maxDeals} selected across your pipeline</div>
+			</div>
+		</div>
 
-{#if canCompare}
-	<div class="compare-blocks">
-		{#each dealGroups as dealGroup, groupIndex (groupIndex)}
-			<div class="compare-table-wrap">
-				<table class="compare-table" style={`--deal-count:${dealGroup.length};`}>
-					<thead>
+		<div class="compare-table-wrap">
+			<table class="compare-table">
+				<thead>
+					<tr>
+						<th class="sticky-label header-label">Metric</th>
+						{#each comparisonSlots as deal}
+							<th class="deal-header">
+								{#if deal}
+									<div class="deal-topline">
+										<span class="deal-badge">{deal.assetClass || 'Deal'}</span>
+										<button class="remove-btn" onclick={() => onremove(deal.id)} aria-label="Remove from compare">&times;</button>
+									</div>
+									{@const stage = getStageMeta(deal.id)}
+									<span class="stage-pill" style:--stage-color={stage.color}>{stage.label}</span>
+									<div class="deal-name">{deal.investmentName}</div>
+									<div class="deal-manager">{deal.managementCompany || 'Unknown operator'}</div>
+									<a href="/deal/{deal.id}" class="deal-link">Open deal</a>
+								{:else}
+									<div class="deal-placeholder-title">Select a deal</div>
+									<div class="deal-placeholder-copy">Add from the cards below</div>
+								{/if}
+							</th>
+						{/each}
+					</tr>
+				</thead>
+				<tbody>
+					{#each COMPARISON_ROWS as row}
+						{@const best = getBest(row)}
 						<tr>
-							<th class="col-label header-corner"></th>
-							{#each dealGroup as deal}
-								<th class="deal-header">
-									<button class="compare-remove-btn" onclick={() => onremove(deal.id)} title="Remove from comparison" type="button">
-										&times;
-									</button>
-									<button class="deal-header-name" onclick={() => onopen(deal.id)} type="button">
-										{deal.name}
-									</button>
-									<div class="deal-header-sponsor">{deal.sponsor || '\u2014'}</div>
-								</th>
+							<td class="sticky-label label-cell">{row.label}</td>
+							{#each comparisonSlots as deal, index}
+								<td class="value-cell" class:best-cell={deal && best.uniqueBest && best.values[index] === best.best}>
+									{deal ? getCellValue(deal, row) : '—'}
+								</td>
 							{/each}
 						</tr>
-					</thead>
-					<tbody>
-						{#each visibleSections as section}
-							<tr class="section-row">
-								<td colspan={dealGroup.length + 1}>{section.title}</td>
-							</tr>
-
-							{#each section.fields as field}
-								<tr class:actions-row={field.kind === 'actions'}>
-									<td class="col-label">{field.label}</td>
-									{#each dealGroup as deal}
-										{@const isBestValue = comparisonMap[field.id]?.bestDealIds?.has(deal.id)}
-										<td class="col-deal" class:best-val={isBestValue}>
-											{#if field.kind === 'planFit'}
-												<PlanFitMeter score={field.accessor(deal)} highlight={isBestValue} />
-											{:else if field.kind === 'actions'}
-												<div class="action-group">
-													<button class="compare-action-btn" onclick={() => onstagechange(deal.id, 'connect')} type="button">
-														Back to DD
-													</button>
-													<button class="compare-action-btn primary" onclick={() => onstagechange(deal.id, 'invested')} type="button">
-														Mark as Invested
-													</button>
-												</div>
-											{:else}
-												<span class="cell-value">{formatFieldValue(field, deal)}</span>
-											{/if}
-										</td>
-									{/each}
-								</tr>
-							{/each}
-
-							{#if groupIndex === 0 && section.id === lastContentSectionId && OPTIONAL_DECISION_COMPARE_FIELDS.length > 0}
-								<tr class="field-toggle-row">
-									<td colspan={dealGroup.length + 1}>
-										<div class="compare-add-fields" bind:this={fieldPickerRoot}>
-											<button class="compare-add-fields-btn" onclick={() => fieldPickerOpen = !fieldPickerOpen} type="button">
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
-													<line x1="12" y1="5" x2="12" y2="19"></line>
-													<line x1="5" y1="12" x2="19" y2="12"></line>
-												</svg>
-												Add / remove fields
-											</button>
-
-											{#if fieldPickerOpen}
-												<div class="compare-field-picker">
-													{#each OPTIONAL_DECISION_COMPARE_FIELDS as field}
-														<label class="compare-field-option">
-															<input
-																type="checkbox"
-																checked={optionalFieldIds.includes(field.id)}
-																onchange={(event) => handleOptionalFieldToggle(field.id, event.currentTarget.checked)}
-															/>
-															<span>{field.label}</span>
-														</label>
-													{/each}
-												</div>
-											{/if}
-										</div>
-									</td>
-								</tr>
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/each}
-	</div>
-{:else}
-	<div class="compare-empty">
-		<div class="compare-empty-title">Select at least 2 deals to compare</div>
-		<div class="compare-empty-copy">
-			{#if totalDecisionDeals >= 2}
-				Choose finalists from the cards below and this view will render the full Decide comparison table.
-			{:else}
-				Move at least 2 deals into Decide to unlock side-by-side comparison.
-			{/if}
+					{/each}
+				</tbody>
+			</table>
 		</div>
-	</div>
-{/if}
-
-{#if remainingDeals.length > 0}
-	<div class="remaining-section">
-		<div class="remaining-section-title">{remainingDeals.length} More Deal{remainingDeals.length === 1 ? '' : 's'} In Decision</div>
-		<div class="remaining-grid">
-			{#each remainingDeals as deal}
-				<article class="remaining-card">
-					<div class="remaining-pill">{deal.assetClass || 'Deal'}</div>
-					<button class="remaining-name" onclick={() => onopen(deal.id)} type="button">
-						{deal.name}
-					</button>
-					<div class="remaining-sponsor">{deal.sponsor || '\u2014'}</div>
-					<div class="remaining-meta">
-						<span>IRR {formatPercent(deal.returns?.irr)}</span>
-						<span>Min {formatMoneyCompact(deal.terms?.minimum)}</span>
-					</div>
-					<button class="remaining-cta" onclick={() => onadd(deal.id)} disabled={!canAddMore} type="button">
-						{canAddMore ? '+ Add to Compare' : 'Comparison Full'}
-					</button>
-				</article>
-			{/each}
-		</div>
-	</div>
+	</section>
 {/if}
 
 <style>
-	.decision-status-banner {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 12px 16px;
-		border-radius: 12px;
-		border: 1px solid rgba(245, 158, 11, 0.22);
-		background: rgba(245, 158, 11, 0.06);
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 600;
-		color: #b45309;
-	}
-
-	.decision-status-banner.is-positive {
-		border-color: rgba(5, 150, 105, 0.18);
-		background: rgba(5, 150, 105, 0.05);
-		color: #059669;
-	}
-
-	.banner-icon {
-		flex-shrink: 0;
-	}
-
-	.compare-blocks {
-		display: grid;
-		gap: 18px;
-	}
-
-	.compare-table-wrap {
+	.compare-shell {
+		padding: 18px;
+		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: 16px;
-		background: var(--bg-card);
 		box-shadow: var(--shadow-card);
 	}
 
+	.compare-status {
+		text-align: center;
+		padding: 28px 20px;
+	}
+
+	.compare-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+	}
+
+	.compare-title {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 800;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+		color: var(--text-dark);
+	}
+
+	.compare-subtitle {
+		margin-top: 6px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--text-secondary);
+	}
+
+	.compare-table-wrap {
+		margin-top: 16px;
+		overflow-x: auto;
+		border: 1px solid var(--border-light, var(--border));
+		border-radius: 12px;
+		background: var(--bg-card);
+	}
+
 	.compare-table {
-		width: 100%;
+		width: max-content;
+		min-width: 100%;
 		border-collapse: separate;
 		border-spacing: 0;
-		table-layout: fixed;
 		font-family: var(--font-ui);
-		font-size: 13px;
 	}
 
 	.compare-table th,
 	.compare-table td {
-		padding: 10px 12px;
+		padding: 14px 16px;
 		border-bottom: 1px solid var(--border-light, var(--border));
-		vertical-align: middle;
 	}
 
-	.compare-table thead th {
+	.compare-table tbody tr:last-child td {
+		border-bottom: none;
+	}
+
+	.sticky-label {
 		position: sticky;
-		top: 0;
+		left: 0;
 		z-index: 2;
-		background: var(--bg-card);
+		background: var(--bg-main);
+		box-shadow: 1px 0 0 var(--border-light, var(--border));
 	}
 
-	.header-corner {
-		width: 128px;
-		min-width: 128px;
-	}
-
-	.col-label {
-		width: 128px;
-		min-width: 128px;
+	.header-label,
+	.label-cell {
+		min-width: 160px;
+		max-width: 160px;
 		text-align: left;
+	}
+
+	.header-label {
 		font-size: 11px;
 		font-weight: 700;
-		letter-spacing: 0.5px;
 		text-transform: uppercase;
+		letter-spacing: 0.6px;
 		color: var(--text-muted);
+		vertical-align: bottom;
+	}
+
+	.label-cell {
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+	}
+
+	.deal-header,
+	.value-cell {
+		min-width: 210px;
+		max-width: 210px;
+		text-align: left;
 		background: var(--bg-card);
 	}
 
 	.deal-header {
-		position: relative;
-		padding: 18px 18px 16px;
-		text-align: center;
-		border-bottom: 2px solid var(--border);
+		vertical-align: top;
 	}
 
-	.deal-header-name {
+	.deal-topline {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+	}
+
+	.deal-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 4px 8px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.12);
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--primary);
+	}
+
+	.remove-btn {
 		border: none;
 		background: none;
 		padding: 0;
-		font-family: var(--font-ui);
-		font-size: 16px;
-		font-weight: 700;
-		line-height: 1.35;
-		text-decoration: underline;
-		color: var(--text-dark);
+		font-size: 18px;
+		line-height: 1;
+		color: var(--text-muted);
 		cursor: pointer;
 	}
 
-	.deal-header-sponsor {
-		margin-top: 4px;
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--text-muted);
+	.remove-btn:hover {
+		color: #d04040;
 	}
 
-	.compare-remove-btn {
-		position: absolute;
-		top: 8px;
-		right: 8px;
+	.stage-pill {
 		display: inline-flex;
 		align-items: center;
-		justify-content: center;
-		width: 22px;
-		height: 22px;
-		border: 1px solid var(--border);
+		margin-top: 10px;
+		padding: 4px 8px;
 		border-radius: 999px;
-		background: var(--bg-hover, rgba(15, 23, 42, 0.03));
-		color: var(--text-muted);
-		font-size: 14px;
-		line-height: 1;
-		cursor: pointer;
-	}
-
-	.compare-remove-btn:hover {
-		border-color: #fca5a5;
-		background: #fee2e2;
-		color: #ef4444;
-	}
-
-	.section-row td {
-		padding: 14px 12px 6px;
-		border-bottom: none;
-		font-size: 11px;
-		font-weight: 800;
-		letter-spacing: 1px;
+		border: 1px solid color-mix(in srgb, var(--stage-color) 22%, transparent);
+		background: color-mix(in srgb, var(--stage-color) 10%, white);
+		font-size: 10px;
+		font-weight: 700;
 		text-transform: uppercase;
-		color: var(--primary);
-		background: var(--bg-card);
+		letter-spacing: 0.45px;
+		color: var(--stage-color);
 	}
 
-	.col-deal {
-		text-align: center;
+	.deal-name {
+		margin-top: 12px;
+		font-size: 14px;
+		font-weight: 700;
+		line-height: 1.35;
 		color: var(--text-dark);
 	}
 
-	.cell-value {
-		display: block;
-		font-size: 15px;
-		font-weight: 700;
-		color: inherit;
+	.deal-manager {
+		margin-top: 4px;
+		font-size: 12px;
+		font-weight: 500;
+		line-height: 1.45;
+		color: var(--text-muted);
 	}
 
-	.best-val {
+	.deal-link {
+		display: inline-flex;
+		align-items: center;
+		margin-top: 12px;
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--primary);
+		text-decoration: none;
+	}
+
+	.deal-link:hover {
+		text-decoration: underline;
+	}
+
+	.deal-placeholder-title {
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+
+	.deal-placeholder-copy {
+		margin-top: 6px;
+		font-size: 12px;
+		line-height: 1.45;
+		color: var(--text-muted);
+	}
+
+	.value-cell {
+		font-size: 13px;
+		font-weight: 600;
+		line-height: 1.45;
+		color: var(--text-dark);
+	}
+
+	.best-cell {
 		background: rgba(81, 190, 123, 0.08);
 		color: var(--primary);
 	}
 
-	.field-toggle-row td {
-		padding: 8px 12px;
-		border-bottom: none;
-	}
-
-	.compare-add-fields {
-		position: relative;
-		display: flex;
-		justify-content: center;
-	}
-
-	.compare-add-fields-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		padding: 6px 14px;
-		border: 1px dashed var(--border);
-		border-radius: 999px;
-		background: transparent;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		color: var(--text-muted);
-		cursor: pointer;
-	}
-
-	.compare-add-fields-btn:hover {
-		border-color: var(--primary);
-		color: var(--primary);
-	}
-
-	.compare-field-picker {
-		position: absolute;
-		left: 50%;
-		bottom: calc(100% + 8px);
-		transform: translateX(-50%);
-		display: grid;
-		gap: 2px;
-		min-width: 190px;
-		padding: 8px 4px;
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		background: var(--bg-card);
-		box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
-		z-index: 5;
-	}
-
-	.compare-field-option {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 6px 10px;
-		border-radius: 8px;
-		font-size: 12px;
-		color: var(--text-dark);
-		cursor: pointer;
-	}
-
-	.compare-field-option:hover {
-		background: var(--bg-hover, rgba(15, 23, 42, 0.03));
-	}
-
-	.compare-field-option input[type='checkbox'] {
-		accent-color: var(--primary);
-	}
-
-	.actions-row td {
-		padding-top: 12px;
-		padding-bottom: 12px;
-		border-bottom: none;
-	}
-
-	.action-group {
-		display: flex;
-		gap: 6px;
-	}
-
-	.compare-action-btn {
-		flex: 1;
-		padding: 8px 12px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--bg-card);
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 700;
-		color: var(--text-dark);
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.compare-action-btn:hover {
-		border-color: var(--primary);
-		color: var(--primary);
-	}
-
-	.compare-action-btn.primary {
-		border-color: var(--primary);
-		background: var(--primary);
-		color: #fff;
-	}
-
-	.compare-action-btn.primary:hover {
-		opacity: 0.92;
-		color: #fff;
-	}
-
-	.compare-empty {
-		padding: 36px 28px;
-		border: 1px dashed var(--border);
-		border-radius: 16px;
-		background: var(--bg-card);
-		text-align: center;
-	}
-
-	.compare-empty-title {
-		font-family: var(--font-ui);
-		font-size: 16px;
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-
-	.compare-empty-copy {
-		margin-top: 6px;
-		font-family: var(--font-body);
-		font-size: 13px;
-		line-height: 1.6;
-		color: var(--text-secondary);
-	}
-
-	.remaining-section {
-		display: grid;
-		gap: 14px;
-	}
-
-	.remaining-section-title {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 800;
-		letter-spacing: 0.7px;
-		text-transform: uppercase;
-		color: var(--text-muted);
-	}
-
-	.remaining-grid {
-		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-		gap: 12px;
-	}
-
-	.remaining-card {
-		display: grid;
-		align-content: start;
-		gap: 8px;
-		padding: 14px;
-		border: 1px solid var(--border);
-		border-radius: 14px;
-		background: var(--bg-card);
-		box-shadow: var(--shadow-card);
-	}
-
-	.remaining-pill {
-		justify-self: start;
-		padding: 3px 8px;
-		border-radius: 999px;
-		background: var(--green-bg, rgba(81, 190, 123, 0.12));
-		font-size: 9px;
-		font-weight: 800;
-		letter-spacing: 0.3px;
-		text-transform: uppercase;
-		color: var(--green, var(--primary));
-	}
-
-	.remaining-name {
-		border: none;
-		background: none;
-		padding: 0;
-		text-align: left;
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		line-height: 1.4;
-		text-decoration: underline;
-		color: var(--text-dark);
-		cursor: pointer;
-	}
-
-	.remaining-sponsor {
-		font-size: 11px;
-		color: var(--text-muted);
-	}
-
-	.remaining-meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 12px;
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--text-secondary);
-	}
-
-	.remaining-cta {
-		margin-top: 6px;
-		padding: 8px 12px;
-		border: 1px solid rgba(168, 85, 247, 0.22);
-		border-radius: 8px;
-		background: rgba(168, 85, 247, 0.06);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		color: #a855f7;
-		cursor: pointer;
-	}
-
-	.remaining-cta:disabled {
-		border-color: var(--border);
-		background: var(--bg-hover, rgba(15, 23, 42, 0.03));
-		color: var(--text-muted);
-		cursor: not-allowed;
-	}
-
-	@media (max-width: 1479px) {
-		.remaining-grid {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
+	@media (max-width: 768px) {
+		.compare-shell {
+			padding: 14px;
 		}
-	}
 
-	@media (max-width: 1099px) {
-		.remaining-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-	}
-
-	@media (max-width: 767px) {
 		.compare-table th,
 		.compare-table td {
-			padding: 10px 10px;
+			padding: 12px 14px;
 		}
 
-		.header-corner,
-		.col-label {
-			width: 112px;
-			min-width: 112px;
-			font-size: 10px;
+		.header-label,
+		.label-cell {
+			min-width: 132px;
+			max-width: 132px;
 		}
 
-		.deal-header-name {
-			font-size: 15px;
+		.deal-header,
+		.value-cell {
+			min-width: 168px;
+			max-width: 168px;
 		}
 
-		.cell-value {
-			font-size: 14px;
+		.deal-name {
+			font-size: 13px;
 		}
 
-		.action-group {
-			flex-direction: column;
-		}
-
-		.remaining-grid {
-			grid-template-columns: 1fr;
+		.deal-manager,
+		.value-cell {
+			font-size: 12px;
 		}
 	}
 </style>

@@ -12,6 +12,7 @@ import {
 } from '$lib/auth/access-model.js';
 import {
 	ADMIN_REAL_USER_KEY,
+	clearSessionScopedData,
 	clearUserScopedData,
 	currentAdminRealUser
 } from '$lib/utils/userScopedState.js';
@@ -265,6 +266,7 @@ function createUserStore() {
 				localStorage.removeItem('gycUser');
 				localStorage.removeItem(ADMIN_REAL_USER_KEY);
 				clearUserScopedData();
+				clearSessionScopedData();
 				supabase?.auth.signOut();
 			}
 			set(null);

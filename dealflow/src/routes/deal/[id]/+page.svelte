@@ -13,10 +13,11 @@
 	} from '$lib/utils/userScopedState.js';
 	import {
 		dealStages,
-		decisionCompareIds,
+		compareDealIds,
+		dealFlowViewMode,
 		STAGE_META,
 		PIPELINE_STAGES,
-		MAX_DECISION_COMPARE,
+		MAX_COMPARE_DEALS,
 		normalizeStage,
 		stageLabel
 	} from '$lib/stores/deals.js';
@@ -620,25 +621,28 @@
 	}
 
 	// ===== Deal Comparison =====
-	const compareCount = $derived($decisionCompareIds.length);
+	const compareCount = $derived($compareDealIds.length);
+	const isCompared = $derived(deal ? $compareDealIds.includes(deal.id) : false);
 
-	function addToCompare() {
+	function toggleCompare() {
 		if (!browser || !deal) return;
-		if (currentStage !== 'decide') {
-			showShareToast('Move this deal to Decide before adding it to comparison.');
-			return;
-		}
 
-		const result = decisionCompareIds.add(deal.id);
-		if (result.reason === 'exists') {
-			showShareToast('Already in comparison');
-			return;
-		}
+		const result = compareDealIds.toggle(deal.id);
 		if (result.reason === 'max') {
-			showShareToast(`Max ${MAX_DECISION_COMPARE} deals in comparison. Remove one first.`);
+			showShareToast(`You can compare up to ${MAX_COMPARE_DEALS} deals at a time.`);
 			return;
 		}
-		showShareToast(`Added to comparison (${result.ids.length} deal${result.ids.length !== 1 ? 's' : ''})`);
+		if (result.selected === false) {
+			showShareToast('Removed from comparison');
+			return;
+		}
+		showShareToast(`Added to comparison (${result.ids.length}/${MAX_COMPARE_DEALS})`);
+	}
+
+	function openCompareView() {
+		if (!browser) return;
+		dealFlowViewMode.set('compare');
+		window.location.href = `/app/deals?tab=${currentStage}`;
 	}
 
 	// ===== Share Actions =====
@@ -2680,9 +2684,9 @@
 						Reconsider Deal &rarr;
 					</button>
 				{/if}
-				<button class="btn-compare" onclick={addToCompare} title="Add to comparison">
+				<button class="btn-compare" class:is-active={isCompared} onclick={toggleCompare} title={isCompared ? 'Remove from comparison' : 'Add to comparison'}>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-					Compare
+					{isCompared ? 'In Compare' : 'Compare'}
 				</button>
 			</div>
 		{/if}
@@ -2722,10 +2726,10 @@
 
 <!-- ==================== FLOATING COMPARE BADGE ==================== -->
 {#if compareCount > 0}
-	<a href="/app/deals?tab=decide" class="floating-compare-badge">
+	<button class="floating-compare-badge" onclick={openCompareView}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-		Compare ({compareCount})
-	</a>
+		Compare ({compareCount}/{MAX_COMPARE_DEALS})
+	</button>
 {/if}
 
 <!-- ==================== INTRO REQUEST MODAL ==================== -->
@@ -3340,7 +3344,8 @@
 	.btn-stage-select { padding: 9px 18px; background: var(--bg-page); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark); cursor: pointer; display: flex; align-items: center; gap: 6px; }
 	.btn-compare { display: none; }
 	.btn-compare:hover { border-color: var(--primary); color: var(--primary); }
-	.floating-compare-badge { position: fixed; bottom: 80px; right: 24px; background: var(--primary); color: #fff; padding: 8px 16px; border-radius: 20px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px; z-index: 101; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.15s; }
+	.btn-compare.is-active { border-color: rgba(81, 190, 123, 0.34); color: var(--primary); background: rgba(81, 190, 123, 0.1); }
+	.floating-compare-badge { position: fixed; bottom: 80px; right: 24px; background: var(--primary); color: #fff; padding: 8px 16px; border-radius: 20px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px; z-index: 101; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.15s; border: none; cursor: pointer; }
 	.floating-compare-badge:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
 	.stage-label { font-size: 11px; color: var(--text-muted); font-family: var(--font-ui); flex: 1; text-align: center; }
 

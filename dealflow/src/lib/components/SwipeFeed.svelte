@@ -1,15 +1,25 @@
 <script>
-	import { dealStages, stageLabel, STAGE_META, normalizeStage } from '$lib/stores/deals.js';
+	import { dealStages } from '$lib/stores/deals.js';
 	import { getDealHeroImage } from '$lib/utils/dealHero.js';
 	import { tapLight, tapMedium, notifySuccess } from '$lib/utils/haptics.js';
 	import { shareDeal, canShare } from '$lib/utils/share.js';
 
-	let { deals = [], search = '', onfilter = () => {}, onsearch = () => {} } = $props();
+	let {
+		deals = [],
+		search = '',
+		compareIds = [],
+		maxCompare = 3,
+		onfilter = () => {},
+		onsearch = () => {},
+		oncomparetoggle = () => {}
+	} = $props();
 
 	let currentIndex = $state(0);
 	let mobileView = $state('swipe'); // 'swipe' | 'feed'
 
 	const currentDeal = $derived(deals[currentIndex] || null);
+	const compareSet = $derived(new Set(compareIds));
+	const compareCount = $derived(compareIds.length);
 
 	function fmtPct(val) {
 		if (!val) return '\u2014';
@@ -86,6 +96,15 @@
 		if (currentIndex > 0) {
 			currentIndex--;
 		}
+	}
+
+	function isCompareLimitReached(dealId) {
+		return !compareSet.has(dealId) && compareCount >= maxCompare;
+	}
+
+	function handleCompareToggle(dealId) {
+		tapLight();
+		oncomparetoggle(dealId);
 	}
 
 	// Reset index when deals change
@@ -174,6 +193,21 @@
 						</div>
 					</div>
 
+					<button
+						class="swipe-compare"
+						class:is-selected={compareSet.has(currentDeal.id)}
+						class:is-at-limit={isCompareLimitReached(currentDeal.id)}
+						onclick={() => handleCompareToggle(currentDeal.id)}
+					>
+						{#if compareSet.has(currentDeal.id)}
+							Remove Compare
+						{:else if isCompareLimitReached(currentDeal.id)}
+							Compare Full
+						{:else}
+							+ Compare
+						{/if}
+					</button>
+
 					<div class="swipe-actions">
 						<button class="swipe-action skip" onclick={skipDeal}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -215,22 +249,38 @@
 		{#each deals as deal (deal.id)}
 			{@const hero = getHero(deal)}
 			{@const heroImg = getHeroImage(deal)}
-			<a href="/deal/{deal.id}" class="feed-card">
-				<div class="feed-hero" style="background:{heroImg ? `linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.4) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}">
-					<span class="feed-badge">{deal.assetClass || 'Real Estate'}</span>
-					{#if deal.targetIRR}
-						<span class="feed-irr">{fmtPct(deal.targetIRR)} IRR</span>
-					{/if}
-				</div>
-				<div class="feed-info">
-					<div class="feed-title">{deal.investmentName}</div>
-					<div class="feed-manager">{deal.managementCompany || ''}</div>
-					<div class="feed-stats">
-						{#if deal.preferredReturn}<span>{fmtPct(deal.preferredReturn)} pref</span>{/if}
-						{#if deal.investmentMinimum}<span>{fmtMoney(deal.investmentMinimum)} min</span>{/if}
+			<div class="feed-card" class:is-selected={compareSet.has(deal.id)}>
+				<a href="/deal/{deal.id}" class="feed-link">
+					<div class="feed-hero" style="background:{heroImg ? `linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.4) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}">
+						<span class="feed-badge">{deal.assetClass || 'Real Estate'}</span>
+						{#if deal.targetIRR}
+							<span class="feed-irr">{fmtPct(deal.targetIRR)} IRR</span>
+						{/if}
 					</div>
-				</div>
-			</a>
+					<div class="feed-info">
+						<div class="feed-title">{deal.investmentName}</div>
+						<div class="feed-manager">{deal.managementCompany || ''}</div>
+						<div class="feed-stats">
+							{#if deal.preferredReturn}<span>{fmtPct(deal.preferredReturn)} pref</span>{/if}
+							{#if deal.investmentMinimum}<span>{fmtMoney(deal.investmentMinimum)} min</span>{/if}
+						</div>
+					</div>
+				</a>
+				<button
+					class="feed-compare"
+					class:is-selected={compareSet.has(deal.id)}
+					class:is-at-limit={isCompareLimitReached(deal.id)}
+					onclick={() => handleCompareToggle(deal.id)}
+				>
+					{#if compareSet.has(deal.id)}
+						Remove Compare
+					{:else if isCompareLimitReached(deal.id)}
+						Compare Full
+					{:else}
+						+ Compare
+					{/if}
+				</button>
+			</div>
 		{/each}
 	</div>
 {/if}
@@ -395,6 +445,34 @@
 	}
 	.metric-value.highlight { color: var(--primary); }
 
+	.swipe-compare {
+		width: 100%;
+		margin-bottom: 12px;
+		padding: 10px 12px;
+		border-radius: 10px;
+		border: 1px solid var(--border);
+		background: transparent;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+		color: var(--text-secondary);
+		cursor: pointer;
+	}
+
+	.swipe-compare.is-selected {
+		background: rgba(81, 190, 123, 0.12);
+		border-color: rgba(81, 190, 123, 0.34);
+		color: var(--primary);
+	}
+
+	.swipe-compare.is-at-limit {
+		background: rgba(245, 158, 11, 0.08);
+		border-color: rgba(245, 158, 11, 0.25);
+		color: #b7791f;
+	}
+
 	.swipe-actions {
 		display: flex;
 		gap: 8px;
@@ -472,6 +550,15 @@
 		border: 1px solid var(--border-light);
 		border-radius: 10px;
 		overflow: hidden;
+	}
+
+	.feed-card.is-selected {
+		border-color: rgba(81, 190, 123, 0.34);
+		box-shadow: 0 0 0 2px rgba(81, 190, 123, 0.1);
+	}
+
+	.feed-link {
+		display: block;
 		text-decoration: none;
 		color: inherit;
 	}
@@ -531,5 +618,33 @@
 		font-size: 10px;
 		color: var(--text-secondary);
 		font-weight: 600;
+	}
+
+	.feed-compare {
+		width: calc(100% - 16px);
+		margin: 0 8px 8px;
+		padding: 8px 10px;
+		border-radius: 8px;
+		border: 1px solid var(--border);
+		background: transparent;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+		color: var(--text-secondary);
+		cursor: pointer;
+	}
+
+	.feed-compare.is-selected {
+		background: rgba(81, 190, 123, 0.12);
+		border-color: rgba(81, 190, 123, 0.34);
+		color: var(--primary);
+	}
+
+	.feed-compare.is-at-limit {
+		background: rgba(245, 158, 11, 0.08);
+		border-color: rgba(245, 158, 11, 0.25);
+		color: #b7791f;
 	}
 </style>

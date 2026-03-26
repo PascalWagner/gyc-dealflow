@@ -3,13 +3,13 @@
 	import PipelineTabs from '$lib/components/PipelineTabs.svelte';
 	import DealCard from '$lib/components/DealCard.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
-	import DealTable from '$lib/components/DealTable.svelte';
 	import DealMap from '$lib/components/DealMap.svelte';
 	import CompareView from '$lib/components/CompareView.svelte';
 	import SwipeFeed from '$lib/components/SwipeFeed.svelte';
 	import {
 		dealStages,
-		decisionCompareIds,
+		compareDealIds,
+		dealFlowViewMode,
 		stageCounts,
 		memberDeals,
 		memberDealsLoading,
@@ -18,7 +18,8 @@
 		memberDealsMeta,
 		fetchMemberDeals,
 		loadMoreMemberDeals,
-		MAX_DECISION_COMPARE,
+		queryMemberDeals,
+		MAX_COMPARE_DEALS,
 		STAGE_META
 	} from '$lib/stores/deals.js';
 	import { accessTier, getStoredSessionUser, isAdmin } from '$lib/stores/auth.js';
@@ -32,11 +33,16 @@
 	import { isNativeApp } from '$lib/utils/platform.js';
 
 	let currentTab = $state('filter');
-	let viewMode = $state('grid');
 	let isMobile = $state(false);
 	let buyBox = $state(null);
 	let filterAnchor = $state(null);
 	let filtersReady = $state(false);
+	let compareNotice = $state('');
+	let compareNoticeVisible = $state(false);
+	let compareDealsLoading = $state(false);
+	let compareSelectedDeals = $state([]);
+	let compareNoticeTimer = null;
+	let compareRequestId = 0;
 
 	let dailyDealCount = $state(0);
 	let showLimitModal = $state(false);
@@ -61,7 +67,6 @@
 	let sortBy = $state('newest');
 	let showArchived = $state(false);
 	let buyBoxApplied = $state(false);
-	let decisionSelectionInitialized = $state(false);
 
 	const BUY_BOX_DEAL_TYPES = new Set(['fund', 'syndication', 'reit', '1031 exchange', 'joint venture', 'note/debt', 'other']);
 	const UI_STAGE_TABS = new Set(['filter', 'review', 'connect', 'decide', 'invested', 'skipped']);
@@ -98,18 +103,6 @@
 
 	function normalizeMatchValue(value) {
 		return String(value || '').trim().toLowerCase();
-	}
-
-	function coerceNumber(value) {
-		if (value == null || value === '') return null;
-		if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-		const parsed = parseFloat(String(value).replace(/[$,%xX,\s]/g, ''));
-		return Number.isFinite(parsed) ? parsed : null;
-	}
-
-	function normalizeComparisonText(value) {
-		if (Array.isArray(value)) return value.filter(Boolean).join(', ') || null;
-		return value == null || value === '' ? null : String(value);
 	}
 
 	function getBuyBoxCheckSize(inputBuyBox) {
@@ -312,101 +305,99 @@
 		};
 	}
 
-	function calculatePlanFitScore(deal) {
-		if (!buyBox) return null;
+	function switchTab(tab) {
+		currentTab = tab;
+		syncTabInUrl(tab);
+	}
 
+	function switchView(mode) {
+		dealFlowViewMode.set(mode);
+	}
+
+	function showCompareMessage(message) {
+		if (!browser) return;
+		compareNotice = message;
+		compareNoticeVisible = true;
+		if (compareNoticeTimer) window.clearTimeout(compareNoticeTimer);
+		compareNoticeTimer = window.setTimeout(() => {
+			compareNoticeVisible = false;
+		}, 2600);
+	}
+
+	function getComparePlanFit(deal) {
+		if (!deal || !buyBox) return { label: 'Not set', score: null };
+
+		const checks = [];
 		const assetPreferences = (Array.isArray(buyBox.assetClasses) ? buyBox.assetClasses : [])
 			.map(normalizeMatchValue)
 			.filter(Boolean);
 		const buyBoxCheckSize = getBuyBoxCheckSize(buyBox);
-		const buyBoxMaxLockup = Number(buyBox.maxLockup || 0);
+		const { dealTypes: buyBoxDealTypes, strategies: buyBoxStrategies } = getBuyBoxSelections(buyBox);
 		const buyBoxDistribution = normalizeMatchValue(buyBox.distributions);
 		const buyBoxMinIrr = Number(buyBox.minIRR || 0);
-		const { dealTypes: buyBoxDealTypes, strategies: buyBoxStrategies } = getBuyBoxSelections(buyBox);
+		const buyBoxMaxLockup = Number(buyBox.maxLockup || 0);
 
-		const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
-			.map(normalizeMatchValue)
-			.filter(Boolean);
-		const dealStrategy = normalizeMatchValue(deal.investmentStrategy || deal.strategy);
-		const dealType = normalizeMatchValue(deal.dealType);
-		const minimumInvestment = Number(deal.investmentMinimum || deal.minimumInvestment || 0);
-		const holdPeriod = parseFloat(deal.holdPeriod);
-		const distribution = normalizeMatchValue(deal.distributions || deal.distributionFrequency);
-		const targetIrr = Number(deal.targetIRR || 0);
-		const normalizedTargetIrr = targetIrr > 0 ? (targetIrr <= 1 ? targetIrr * 100 : targetIrr) : 0;
-		const normalizedMinIrr = buyBoxMinIrr > 0 ? (buyBoxMinIrr <= 1 ? buyBoxMinIrr * 100 : buyBoxMinIrr) : 0;
+		if (assetPreferences.length) {
+			const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
+				.map(normalizeMatchValue)
+				.filter(Boolean);
+			checks.push(assetPreferences.some((assetClassPreference) => dealAssetClasses.includes(assetClassPreference)));
+		}
 
-		const checks = [
-			assetPreferences.length > 0
-				? assetPreferences.some((preference) => dealAssetClasses.includes(preference))
-				: null,
-			(buyBoxStrategies.length || buyBoxDealTypes.length)
-				? (
-					buyBoxStrategies.some((preference) => dealStrategy === preference || dealAssetClasses.includes(preference)) ||
-					buyBoxDealTypes.includes(dealType)
-				)
-				: null,
-			buyBoxCheckSize > 0
-				? (minimumInvestment > 0 ? minimumInvestment <= buyBoxCheckSize : false)
-				: null,
-			buyBoxMaxLockup > 0
-				? (Number.isFinite(holdPeriod) ? holdPeriod <= buyBoxMaxLockup : false)
-				: null,
-			(buyBoxDistribution || normalizedMinIrr > 0)
-				? (
-					(buyBoxDistribution ? distribution === buyBoxDistribution : true) &&
-					(normalizedMinIrr > 0 ? normalizedTargetIrr >= normalizedMinIrr : true)
-				)
-				: null
-		].filter((value) => value !== null);
+		if (buyBoxStrategies.length || buyBoxDealTypes.length) {
+			const dealStrategy = normalizeMatchValue(deal.strategy);
+			const normalizedDealType = normalizeMatchValue(deal.dealType);
+			const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
+				.map(normalizeMatchValue)
+				.filter(Boolean);
+			const strategyMatch = buyBoxStrategies.length
+				? buyBoxStrategies.some((preference) => dealStrategy === preference || dealAssetClasses.includes(preference))
+				: false;
+			const dealTypeMatch = buyBoxDealTypes.length ? buyBoxDealTypes.includes(normalizedDealType) : false;
 
-		if (checks.length === 0) return null;
+			checks.push(
+				buyBoxStrategies.length && buyBoxDealTypes.length
+					? strategyMatch || dealTypeMatch
+					: buyBoxStrategies.length
+						? strategyMatch
+						: dealTypeMatch
+			);
+		}
 
-		return Math.max(1, Math.min(5, checks.filter(Boolean).length));
-	}
+		if (buyBoxCheckSize > 0) {
+			const dealMinimum = Number(deal.investmentMinimum || deal.minimumInvestment || 0);
+			if (dealMinimum > 0) checks.push(dealMinimum <= buyBoxCheckSize);
+		}
 
-	function buildDecisionCompareDeal(deal) {
-		return {
-			id: deal.id,
-			name: normalizeComparisonText(deal.investmentName || deal.name) || 'Untitled Deal',
-			sponsor: normalizeComparisonText(deal.managementCompany || deal.sponsor),
-			assetClass: normalizeComparisonText(deal.assetClass),
-			planFit: calculatePlanFitScore(deal),
-			returns: {
-				irr: coerceNumber(deal.targetIRR),
-				pref: coerceNumber(deal.preferredReturn),
-				cashOnCash: coerceNumber(deal.cashOnCash),
-				multiple: coerceNumber(deal.equityMultiple)
-			},
-			terms: {
-				minimum: coerceNumber(deal.investmentMinimum || deal.minimumInvestment),
-				holdPeriod: coerceNumber(deal.holdPeriod),
-				leverage: deal.avgLoanLTV ?? deal.leverage ?? null
-			},
-			additional: {
-				distributions: normalizeComparisonText(deal.distributions || deal.distributionFrequency),
-				strategy: normalizeComparisonText(deal.investmentStrategy || deal.strategy),
-				dealType: normalizeComparisonText(deal.dealType),
-				geography: normalizeComparisonText(deal.investingGeography || deal.location),
-				sponsorCoInvest: coerceNumber(deal.sponsorInDeal),
-				lpGpSplit: normalizeComparisonText(deal.lpGpSplit),
-				offeringSize: coerceNumber(deal.offeringSize),
-				sponsorAum: coerceNumber(deal.fundAUM),
-				offeringType: normalizeComparisonText(deal.offeringType),
-				availableTo: normalizeComparisonText(deal.availableTo),
-				status: normalizeComparisonText(deal.status)
+		if (buyBoxMaxLockup > 0) {
+			const holdPeriod = parseFloat(deal.holdPeriod);
+			if (Number.isFinite(holdPeriod)) checks.push(holdPeriod <= buyBoxMaxLockup);
+		}
+
+		if (buyBoxMinIrr > 0) {
+			const dealTargetIrr = Number(deal.targetIRR || 0);
+			if (dealTargetIrr > 0) {
+				const normalizedMinIrr = buyBoxMinIrr <= 1 ? buyBoxMinIrr * 100 : buyBoxMinIrr;
+				const normalizedDealIrr = dealTargetIrr <= 1 ? dealTargetIrr * 100 : dealTargetIrr;
+				checks.push(normalizedDealIrr >= normalizedMinIrr);
 			}
+		}
+
+		if (buyBoxDistribution) {
+			const dealDistribution = normalizeMatchValue(deal.distributions || deal.distributionFrequency);
+			if (dealDistribution) checks.push(dealDistribution === buyBoxDistribution);
+		}
+
+		if (checks.length === 0) return { label: 'Not set', score: null };
+
+		const matched = checks.filter(Boolean).length;
+		const total = checks.length;
+		const score = Math.round((matched / total) * 100);
+
+		return {
+			label: `${matched}/${total} match`,
+			score
 		};
-	}
-
-	function switchTab(tab) {
-		currentTab = tab;
-		syncTabInUrl(tab);
-		if (tab !== 'filter' && viewMode === 'map') viewMode = 'grid';
-	}
-
-	function switchView(mode) {
-		viewMode = mode;
 	}
 
 	const hasActiveFilters = $derived(
@@ -427,22 +418,11 @@
 	const effectiveFilters = $derived(getEffectiveBrowseFilters());
 
 	const filteredDeals = $derived.by(() => applyBuyBoxFilters($memberDeals || []));
-	const decisionCompareSet = $derived(new Set($decisionCompareIds));
-	const selectedDecisionDeals = $derived.by(() => {
-		if (currentTab !== 'decide') return [];
-		const dealsById = new Map(filteredDeals.map((deal) => [deal.id, deal]));
-		return $decisionCompareIds.map((dealId) => dealsById.get(dealId)).filter(Boolean);
-	});
-	const selectedDecisionComparisonDeals = $derived.by(() => {
-		if (currentTab !== 'decide') return [];
-		return selectedDecisionDeals.map(buildDecisionCompareDeal);
-	});
-	const remainingDecisionComparisonDeals = $derived.by(() => {
-		if (currentTab !== 'decide') return [];
-		return filteredDeals
-			.filter((deal) => !decisionCompareSet.has(deal.id))
-			.map(buildDecisionCompareDeal);
-	});
+	const compareDealSet = $derived(new Set($compareDealIds));
+	const compareRemaining = $derived(Math.max(0, MAX_COMPARE_DEALS - $compareDealIds.length));
+	const comparePlanFitById = $derived.by(() =>
+		Object.fromEntries(compareSelectedDeals.map((deal) => [deal.id, getComparePlanFit(deal)]))
+	);
 	const totalMatchingDeals = $derived($memberDealsMeta.total || filteredDeals.length);
 	const avgIRR = $derived.by(() => {
 		const withIRR = filteredDeals.filter((deal) => deal.targetIRR);
@@ -475,29 +455,68 @@
 		buyBoxApplied = false;
 	}
 
+	function handleCompareToggle(dealId) {
+		const result = compareDealIds.toggle(dealId);
+		if (result.reason === 'max') {
+			showCompareMessage(`You can compare up to ${MAX_COMPARE_DEALS} deals at a time.`);
+		}
+	}
+
 	async function loadMoreDeals() {
 		await loadMoreMemberDeals().catch(() => {});
 	}
 
 	$effect(() => {
-		if (!browser || currentTab !== 'decide') return;
+		if (!browser) return;
 
-		const validIds = filteredDeals.map((deal) => deal.id);
-		const nextIds = $decisionCompareIds
-			.filter((dealId) => validIds.includes(dealId))
-			.slice(0, MAX_DECISION_COMPARE);
+		const selectedIds = $compareDealIds;
+		const visibleDealsById = new Map(filteredDeals.map((deal) => [deal.id, deal]));
 
-		if (!decisionSelectionInitialized) {
-			decisionSelectionInitialized = true;
-			if (nextIds.length === 0 && validIds.length >= 2) {
-				decisionCompareIds.set(validIds.slice(0, 2));
-				return;
+		if (selectedIds.length === 0) {
+			compareSelectedDeals = [];
+			compareDealsLoading = false;
+			return;
+		}
+
+		const requestId = ++compareRequestId;
+		compareDealsLoading = true;
+
+		const loadComparedDeals = async () => {
+			try {
+				const missingIds = selectedIds.filter((dealId) => !visibleDealsById.has(dealId));
+				let fetchedDeals = [];
+
+				if (missingIds.length > 0) {
+					const data = await queryMemberDeals({
+						scope: 'ids',
+						ids: missingIds,
+						limit: MAX_COMPARE_DEALS
+					});
+					if (requestId !== compareRequestId) return;
+					fetchedDeals = data?.deals || [];
+				}
+
+				const byId = new Map([
+					...filteredDeals.map((deal) => [deal.id, deal]),
+					...fetchedDeals.map((deal) => [deal.id, deal])
+				]);
+
+				compareSelectedDeals = selectedIds
+					.map((dealId) => byId.get(dealId))
+					.filter(Boolean);
+			} catch {
+				if (requestId !== compareRequestId) return;
+				compareSelectedDeals = selectedIds
+					.map((dealId) => visibleDealsById.get(dealId))
+					.filter(Boolean);
+			} finally {
+				if (requestId === compareRequestId) {
+					compareDealsLoading = false;
+				}
 			}
-		}
+		};
 
-		if (nextIds.length !== $decisionCompareIds.length) {
-			decisionCompareIds.set(nextIds);
-		}
+		loadComparedDeals();
 	});
 
 	$effect(() => {
@@ -528,6 +547,8 @@
 	});
 
 	onMount(() => {
+		compareDealIds.syncFromSession();
+		dealFlowViewMode.syncFromSession();
 		loadBuyBox();
 		applyLocationFilters();
 		loadDailyCount();
@@ -540,6 +561,7 @@
 			const timer = window.setInterval(updateResetTimer, 60000);
 			window.addEventListener('resize', handler);
 			return () => {
+				if (compareNoticeTimer) window.clearTimeout(compareNoticeTimer);
 				window.removeEventListener('resize', handler);
 				window.clearInterval(timer);
 			};
@@ -555,14 +577,19 @@
 		<div class="header-row">
 			<h1 class="deals-title">Deal Flow</h1>
 			<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
-			<div class="view-toggle desktop-only">
-				<button class="view-btn" class:active={viewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
+			<div class="view-toggle">
+				<button class="view-btn" class:active={$dealFlowViewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
 				</button>
-				<button class="view-btn" class:active={viewMode === 'list'} onclick={() => switchView('list')} title="List view">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+				<button class="view-btn view-btn-compare" class:active={$dealFlowViewMode === 'compare'} onclick={() => switchView('compare')} title="Compare view">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+						<rect x="3" y="5" width="7" height="14" rx="1.5"></rect>
+						<rect x="14" y="5" width="7" height="14" rx="1.5"></rect>
+						<line x1="12" y1="3.5" x2="12" y2="20.5"></line>
+					</svg>
+					<span class="view-count">{$compareDealIds.length}/{MAX_COMPARE_DEALS}</span>
 				</button>
-				<button class="view-btn" class:active={viewMode === 'map'} onclick={() => switchView('map')} title="Map view">
+				<button class="view-btn" class:active={$dealFlowViewMode === 'location'} onclick={() => switchView('location')} title="Location view">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
 				</button>
 			</div>
@@ -597,7 +624,7 @@
 		/>
 	</div>
 
-	{#if !(isMobile && currentTab === 'filter') && currentTab !== 'decide'}
+	{#if !(isMobile && currentTab === 'filter')}
 		<div class="stage-banner" style="border-left-color:{currentStageContent.color}">
 			<div class="stage-copy">
 				<span class="stage-title">{currentStageContent.title}</span>
@@ -616,6 +643,10 @@
 				<div class="daily-views-fill" style="width:{dailyViewsPct}%; background:{dailyViewsColor};"></div>
 			</div>
 		</div>
+	{/if}
+
+	{#if compareNoticeVisible}
+		<div class="compare-notice" role="status">{compareNotice}</div>
 	{/if}
 
 	<!-- Content -->
@@ -639,22 +670,130 @@
 			<div class="empty-desc">{$memberDealsError}</div>
 			<button class="btn-browse" onclick={() => fetchMemberDeals($memberDealsMeta.filters || {}).catch(() => {})}>Try Again</button>
 		</div>
-	{:else if currentTab === 'decide' && filteredDeals.length > 0}
-		<div class="decision-compare-page">
+	{:else if $dealFlowViewMode === 'compare'}
+		<div class="compare-mode-layout">
 			<CompareView
-				deals={selectedDecisionComparisonDeals}
-				remainingDeals={remainingDecisionComparisonDeals}
-				totalDealsInDecision={filteredDeals.length}
-				maxDeals={MAX_DECISION_COMPARE}
-				onremove={(dealId) => decisionCompareIds.remove(dealId)}
-				onadd={(dealId) => decisionCompareIds.add(dealId)}
-				onopen={(dealId) => {
-					trackDealView(dealId);
-					if (browser) window.location.href = `/deal/${dealId}`;
-				}}
-				onstagechange={(dealId, nextStage) => dealStages.setStage(dealId, nextStage)}
+				deals={compareSelectedDeals}
+				loading={compareDealsLoading}
+				maxDeals={MAX_COMPARE_DEALS}
+				planFitById={comparePlanFitById}
+				onremove={(dealId) => compareDealIds.remove(dealId)}
 			/>
+
+			<div class="compare-grid-shell">
+				<div class="compare-grid-head">
+					<div>
+						<div class="compare-grid-title">{currentStageContent.title} Deals</div>
+						<div class="compare-grid-desc">
+							{#if $compareDealIds.length === 0}
+								Add up to {MAX_COMPARE_DEALS} deals from the cards below to build your comparison set.
+							{:else if compareRemaining > 0}
+								Add {compareRemaining} more deal{compareRemaining === 1 ? '' : 's'} from the cards below, or review the ones already selected.
+							{:else}
+								Swap deals in and out from the cards below to pressure-test your finalists across stages.
+							{/if}
+						</div>
+					</div>
+
+					<div class="compare-grid-meta">
+						<span class="compare-grid-count">{$compareDealIds.length}/{MAX_COMPARE_DEALS} selected</span>
+						{#if $compareDealIds.length > 0}
+							<button class="compare-clear-btn" onclick={() => compareDealIds.clear()}>Clear compare</button>
+						{/if}
+					</div>
+				</div>
+
+				{#if filteredDeals.length === 0}
+					<div class="empty-state">
+						<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
+						{#if hasActiveFilters && currentTab === 'filter'}
+							<div class="empty-title">No deals match your filters</div>
+							<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
+							<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
+						{:else if currentTab === 'filter'}
+							<div class="empty-title">No deals available</div>
+							<div class="empty-desc">New deals are added regularly. Check back soon.</div>
+						{:else if currentTab === 'review'}
+							<div class="empty-title">No deals in Review yet</div>
+							<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
+							<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
+						{:else if currentTab === 'connect'}
+							<div class="empty-title">No deals in Connect yet</div>
+							<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
+							<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
+						{:else if currentTab === 'decide'}
+							<div class="empty-title">No deals in Decide yet</div>
+							<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
+							<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
+						{:else if currentTab === 'invested'}
+							<div class="empty-title">No investments yet</div>
+							<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
+						{:else if currentTab === 'skipped'}
+							<div class="empty-title">No skipped deals</div>
+							<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
+						{:else}
+							<div class="empty-title">Nothing here yet</div>
+							<div class="empty-desc">Start browsing deals to build your pipeline.</div>
+							<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+						{/if}
+					</div>
+				{:else}
+					<div class="deals-grid">
+						{#each filteredDeals as deal (deal.id)}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<div onclick={() => trackDealView(deal.id)}>
+								<DealCard
+									{deal}
+									compareSelectable={true}
+									compareSelected={compareDealSet.has(deal.id)}
+									compareAtLimit={!compareDealSet.has(deal.id) && $compareDealIds.length >= MAX_COMPARE_DEALS}
+									oncomparetoggle={handleCompareToggle}
+								/>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
 		</div>
+	{:else if $dealFlowViewMode === 'location'}
+		{#if filteredDeals.length === 0}
+			<div class="empty-state">
+				<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
+				{#if hasActiveFilters && currentTab === 'filter'}
+					<div class="empty-title">No deals match your filters</div>
+					<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
+					<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
+				{:else if currentTab === 'filter'}
+					<div class="empty-title">No deals available</div>
+					<div class="empty-desc">New deals are added regularly. Check back soon.</div>
+				{:else if currentTab === 'review'}
+					<div class="empty-title">No deals in Review yet</div>
+					<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
+					<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
+				{:else if currentTab === 'connect'}
+					<div class="empty-title">No deals in Connect yet</div>
+					<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
+					<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
+				{:else if currentTab === 'decide'}
+					<div class="empty-title">No deals in Decide yet</div>
+					<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
+					<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
+				{:else if currentTab === 'invested'}
+					<div class="empty-title">No investments yet</div>
+					<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
+				{:else if currentTab === 'skipped'}
+					<div class="empty-title">No skipped deals</div>
+					<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
+				{:else}
+					<div class="empty-title">Nothing here yet</div>
+					<div class="empty-desc">Start browsing deals to build your pipeline.</div>
+					<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+				{/if}
+			</div>
+		{:else}
+			<DealMap deals={filteredDeals} />
+		{/if}
 	{:else if filteredDeals.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
@@ -689,19 +828,26 @@
 				<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
 			{/if}
 		</div>
-	{:else if viewMode === 'list' && !isMobile}
-		<DealTable deals={filteredDeals} onopen={(dealId) => { trackDealView(dealId); if (browser) window.location.href = `/deal/${dealId}`; }} />
-	{:else if viewMode === 'map' && !isMobile}
-		<DealMap deals={filteredDeals} />
 	{:else if isMobile && currentTab === 'filter'}
-		<SwipeFeed deals={filteredDeals} />
+		<SwipeFeed
+			deals={filteredDeals}
+			compareIds={$compareDealIds}
+			maxCompare={MAX_COMPARE_DEALS}
+			oncomparetoggle={handleCompareToggle}
+		/>
 	{:else}
 		<div class="deals-grid">
 			{#each filteredDeals as deal (deal.id)}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div onclick={() => trackDealView(deal.id)}>
-					<DealCard {deal} />
+					<DealCard
+						{deal}
+						compareSelectable={true}
+						compareSelected={compareDealSet.has(deal.id)}
+						compareAtLimit={!compareDealSet.has(deal.id) && $compareDealIds.length >= MAX_COMPARE_DEALS}
+						oncomparetoggle={handleCompareToggle}
+					/>
 				</div>
 			{/each}
 		</div>
@@ -808,10 +954,31 @@
 		transition: all 0.15s;
 		display: flex;
 		align-items: center;
+		gap: 6px;
 	}
 
 	.view-btn:hover { color: var(--text-dark); }
 	.view-btn.active { background: var(--primary); color: #fff; }
+
+	.view-btn-compare {
+		padding-right: 8px;
+	}
+
+	.view-count {
+		display: inline-flex;
+		align-items: center;
+		padding: 2px 6px;
+		border-radius: 999px;
+		background: rgba(0, 0, 0, 0.06);
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.view-btn.active .view-count {
+		background: rgba(255, 255, 255, 0.18);
+	}
 
 	.stage-banner {
 		padding: 12px 16px;
@@ -885,9 +1052,86 @@
 		transition: width 0.5s ease, background 0.3s ease;
 	}
 
-	.decision-compare-page {
+	.compare-notice {
+		margin-bottom: 14px;
+		padding: 10px 14px;
+		border-radius: 10px;
+		border: 1px solid rgba(245, 158, 11, 0.2);
+		background: rgba(245, 158, 11, 0.08);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: #b7791f;
+	}
+
+	.compare-mode-layout {
 		display: grid;
 		gap: 22px;
+	}
+
+	.compare-grid-shell {
+		padding: 18px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		box-shadow: var(--shadow-card);
+	}
+
+	.compare-grid-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 18px;
+	}
+
+	.compare-grid-title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 800;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+		color: var(--text-dark);
+	}
+
+	.compare-grid-desc {
+		margin-top: 6px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--text-secondary);
+	}
+
+	.compare-grid-meta {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-shrink: 0;
+	}
+
+	.compare-grid-count {
+		padding: 6px 10px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.12);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+
+	.compare-clear-btn {
+		border: none;
+		background: none;
+		padding: 0;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-muted);
+		cursor: pointer;
+	}
+
+	.compare-clear-btn:hover {
+		color: var(--text-dark);
 	}
 
 	.deals-grid {
@@ -988,8 +1232,6 @@
 		cursor: pointer;
 	}
 
-	.desktop-only { display: flex; }
-
 	.limit-overlay {
 		position: fixed;
 		inset: 0;
@@ -1028,18 +1270,30 @@
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 			gap: 16px;
 		}
+
+		.compare-grid-shell {
+			padding: 16px;
+		}
 	}
 
 	@media (max-width: 768px) {
 		.deals-header { padding: 8px 0 12px; }
 		.header-row { display: block; }
 		.deals-title { font-size: 20px; margin-bottom: 12px; }
+		.view-toggle { margin-left: 0; width: fit-content; }
 		:global(.pipeline-pills.mobile-only) { margin-top: 12px; }
 		.deals-grid,
 		.skeleton-grid { grid-template-columns: 1fr; }
-		.desktop-only { display: none; }
 		.stage-copy { display: block; }
 		.stage-desc { display: block; margin-top: 6px; }
 		.daily-views { display: none; }
+		.compare-grid-head {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.compare-grid-meta {
+			justify-content: space-between;
+		}
 	}
 </style>

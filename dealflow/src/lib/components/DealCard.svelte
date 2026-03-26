@@ -8,7 +8,7 @@
 		deal,
 		compareSelectable = false,
 		compareSelected = false,
-		compareDisabled = false,
+		compareAtLimit = false,
 		oncomparetoggle = () => {}
 	} = $props();
 
@@ -92,7 +92,6 @@
 
 	function handleCompareToggle(event) {
 		event.stopPropagation();
-		if (compareDisabled) return;
 		tapLight();
 		oncomparetoggle(deal.id);
 	}
@@ -167,7 +166,7 @@
 	});
 </script>
 
-<div class="deal-card">
+<div class="deal-card" class:is-compared={compareSelected}>
 	<div
 		class="card-hero"
 		style="background:{heroImg ? `linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.5) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}"
@@ -283,20 +282,21 @@
 			<button
 				class="card-btn compare-btn"
 				class:btn-compare-selected={compareSelected}
-				disabled={compareDisabled}
+				class:btn-compare-limit={compareAtLimit && !compareSelected}
+				aria-pressed={compareSelected}
 				onclick={handleCompareToggle}
 			>
 				{#if compareSelected}
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<line x1="5" y1="12" x2="19" y2="12"></line>
 					</svg>
-					Remove From Compare
+					Remove Compare
 				{:else}
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<line x1="12" y1="5" x2="12" y2="19"></line>
 						<line x1="5" y1="12" x2="19" y2="12"></line>
 					</svg>
-					{compareDisabled ? 'Compare Full' : 'Add To Compare'}
+					{compareAtLimit ? 'Compare Full' : '+ Compare'}
 				{/if}
 			</button>
 		{/if}
@@ -372,6 +372,11 @@
 		box-shadow: var(--shadow-card-hover);
 		transform: translateY(-2px);
 		border-color: #D4C9AD;
+	}
+
+	.deal-card.is-compared {
+		border-color: rgba(81, 190, 123, 0.35);
+		box-shadow: 0 0 0 2px rgba(81, 190, 123, 0.12), var(--shadow-card);
 	}
 
 	.card-hero {
@@ -725,11 +730,6 @@
 		flex: 1 1 100%;
 	}
 
-	.compare-btn:disabled {
-		opacity: 0.55;
-		cursor: default;
-	}
-
 	.btn-compare-selected {
 		background: rgba(81, 190, 123, 0.12);
 		border-color: rgba(81, 190, 123, 0.34);
@@ -740,6 +740,12 @@
 		background: rgba(81, 190, 123, 0.18);
 		border-color: rgba(81, 190, 123, 0.46);
 		color: var(--primary);
+	}
+
+	.btn-compare-limit {
+		border-color: rgba(245, 158, 11, 0.28);
+		color: #b7791f;
+		background: rgba(245, 158, 11, 0.08);
 	}
 
 	@media (max-width: 1200px) {

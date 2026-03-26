@@ -5,6 +5,7 @@ export const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
 
 const SCOPED_BUNDLE_PREFIX = '_scopedBundle_';
 const SCOPED_STORAGE_PREFIX = '__gycScoped__';
+const SESSION_SCOPED_STORAGE_PREFIX = '__gycSessionScoped__';
 const USER_SCOPED_JSON_KEYS = new Set(['gycDealStages', 'gycDecisionCompareDeals']);
 const LEGACY_SCOPED_JSON_ALIASES = new Map([
 	['gycCompareDeals', 'gycDecisionCompareDeals']
@@ -56,9 +57,17 @@ function storage() {
 	return browser ? window.localStorage : null;
 }
 
+function sessionStorageArea() {
+	return browser ? window.sessionStorage : null;
+}
+
+function sessionUserFromStorage() {
+	if (!browser) return null;
+	return safeJsonParse(localStorage.getItem('gycUser'), null);
+}
+
 export function currentSessionEmail() {
-	if (!browser) return '';
-	const currentUser = safeJsonParse(localStorage.getItem('gycUser'), null);
+	const currentUser = sessionUserFromStorage();
 	return normalizeEmail(currentUser?.email);
 }
 
@@ -106,6 +115,12 @@ export function scopedStorageKey(baseKey, email = currentSessionEmail()) {
 	return `${SCOPED_STORAGE_PREFIX}${encodeURIComponent(normalizedEmail)}__${baseKey}`;
 }
 
+export function scopedSessionStorageKey(baseKey, email = currentSessionEmail()) {
+	const normalizedEmail = normalizeEmail(email);
+	const suffix = normalizedEmail ? `${encodeURIComponent(normalizedEmail)}__${baseKey}` : baseKey;
+	return `${SESSION_SCOPED_STORAGE_PREFIX}${suffix}`;
+}
+
 function isUserScopedKey(key) {
 	return USER_SCOPED_JSON_KEYS.has(key);
 }
@@ -137,6 +152,23 @@ export function clearUserScopedData() {
 	const storageArea = storage();
 	if (!storageArea) return;
 	for (const key of scopedKeyList()) {
+		storageArea.removeItem(key);
+	}
+}
+
+export function clearSessionScopedData() {
+	const storageArea = sessionStorageArea();
+	if (!storageArea) return;
+
+	const keys = [];
+	for (let i = 0; i < storageArea.length; i += 1) {
+		const key = storageArea.key(i);
+		if (key?.startsWith(SESSION_SCOPED_STORAGE_PREFIX)) {
+			keys.push(key);
+		}
+	}
+
+	for (const key of keys) {
 		storageArea.removeItem(key);
 	}
 }
@@ -195,8 +227,7 @@ export function loadUserScopedData(email) {
 	return true;
 }
 
-function persistJson(key, value) {
-	const storageArea = storage();
+function persistJson(key, value, storageArea = storage()) {
 	if (!storageArea) return;
 	if (value === null || value === undefined) {
 		storageArea.removeItem(key);
@@ -205,8 +236,7 @@ function persistJson(key, value) {
 	storageArea.setItem(key, JSON.stringify(value));
 }
 
-function persistString(key, value) {
-	const storageArea = storage();
+function persistString(key, value, storageArea = storage()) {
 	if (!storageArea) return;
 	if (value === null || value === undefined || value === '') {
 		storageArea.removeItem(key);
@@ -278,6 +308,28 @@ export function writeScopedString(key, value, { email = currentSessionEmail() } 
 	persistString(scopedStorageKey(canonicalScopedKey(key), email), value);
 }
 
+export function readScopedSessionJson(key, fallback = null, { email = currentSessionEmail() } = {}) {
+	const storageArea = sessionStorageArea();
+	if (!storageArea) return fallback;
+	const parsed = safeJsonParse(storageArea.getItem(scopedSessionStorageKey(canonicalScopedKey(key), email)), fallback);
+	return parsed === null ? fallback : parsed;
+}
+
+export function readScopedSessionString(key, fallback = '', { email = currentSessionEmail() } = {}) {
+	const storageArea = sessionStorageArea();
+	if (!storageArea) return fallback;
+	const value = storageArea.getItem(scopedSessionStorageKey(canonicalScopedKey(key), email));
+	return value === null ? fallback : value;
+}
+
+export function writeScopedSessionJson(key, value, { email = currentSessionEmail() } = {}) {
+	persistJson(scopedSessionStorageKey(canonicalScopedKey(key), email), value, sessionStorageArea());
+}
+
+export function writeScopedSessionString(key, value, { email = currentSessionEmail() } = {}) {
+	persistString(scopedSessionStorageKey(canonicalScopedKey(key), email), value, sessionStorageArea());
+}
+
 export function getUserScopedCacheSnapshot() {
 	const sessionEmail = currentSessionEmail();
 	return {
@@ -289,11 +341,7 @@ export function getUserScopedCacheSnapshot() {
 		buyBoxWizard: readUserScopedJson('gycBuyBoxWizard', {}),
 		portfolioPlan: readUserScopedJson('gycPortfolioPlan', null),
 		notifPrefs: readUserScopedJson('gycNotifPrefs', null),
-		decisionCompareIds: readScopedJson('gycDecisionCompareDeals', [], {
-			email: sessionEmail,
-			migrateLegacy: true,
-			legacyKeys: ['gycDecisionCompareDeals', 'gycCompareDeals']
-		})
+		decisionCompareIds: readScopedSessionJson('gycCompareDealIds', [], { email: sessionEmail })
 	};
 }
 

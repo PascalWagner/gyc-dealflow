@@ -11,7 +11,11 @@ import {
 	currentSessionEmail,
 	isScopedImpersonationActive,
 	readScopedJson,
-	writeScopedJson
+	readScopedSessionJson,
+	readScopedSessionString,
+	writeScopedJson,
+	writeScopedSessionJson,
+	writeScopedSessionString
 } from '$lib/utils/userScopedState.js';
 import {
 	OUTCOME_UI_STAGES,
@@ -31,12 +35,15 @@ function persistStageCache(value) {
 	writeScopedJson('gycDealStages', value, { email: currentSessionEmail() });
 }
 
-const DECISION_COMPARE_STORAGE_KEY = 'gycDecisionCompareDeals';
-const LEGACY_COMPARE_STORAGE_KEY = 'gycCompareDeals';
+const COMPARE_STORAGE_KEY = 'gycCompareDealIds';
+const DEAL_FLOW_VIEW_MODE_STORAGE_KEY = 'gycDealFlowViewMode';
+const VIEW_MODES = ['grid', 'compare', 'location'];
 
-export const MAX_DECISION_COMPARE = 6;
+export const MAX_COMPARE_DEALS = 3;
+export const MAX_DECISION_COMPARE = MAX_COMPARE_DEALS;
+export const DEAL_FLOW_VIEW_MODES = VIEW_MODES;
 
-function normalizeDecisionCompareIds(value) {
+function normalizeCompareDealIds(value) {
 	const ids = [];
 	const seen = new Set();
 
@@ -45,27 +52,40 @@ function normalizeDecisionCompareIds(value) {
 		if (!nextId || seen.has(nextId)) continue;
 		seen.add(nextId);
 		ids.push(nextId);
-		if (ids.length >= MAX_DECISION_COMPARE) break;
+		if (ids.length >= MAX_COMPARE_DEALS) break;
 	}
 
 	return ids;
 }
 
-function persistDecisionCompareIds(value) {
-	writeScopedJson(DECISION_COMPARE_STORAGE_KEY, normalizeDecisionCompareIds(value), {
+function normalizeDealFlowViewMode(value) {
+	const normalized = String(value || '').trim().toLowerCase();
+	if (normalized === 'map') return 'location';
+	return VIEW_MODES.includes(normalized) ? normalized : 'grid';
+}
+
+function persistCompareDealIds(value) {
+	writeScopedSessionJson(COMPARE_STORAGE_KEY, normalizeCompareDealIds(value), {
 		email: currentSessionEmail()
 	});
 }
 
-function readCachedDecisionCompareIds() {
-	const sessionEmail = currentSessionEmail();
-	const shouldMigrateLegacy = !isScopedImpersonationActive(sessionEmail);
-	const scopedValue = readScopedJson(DECISION_COMPARE_STORAGE_KEY, null, {
-		email: sessionEmail,
-		migrateLegacy: shouldMigrateLegacy,
-		legacyKeys: [DECISION_COMPARE_STORAGE_KEY, LEGACY_COMPARE_STORAGE_KEY]
+function persistDealFlowViewMode(value) {
+	writeScopedSessionString(DEAL_FLOW_VIEW_MODE_STORAGE_KEY, normalizeDealFlowViewMode(value), {
+		email: currentSessionEmail()
 	});
-	return normalizeDecisionCompareIds(scopedValue || []);
+}
+
+function readCachedCompareDealIds() {
+	return normalizeCompareDealIds(readScopedSessionJson(COMPARE_STORAGE_KEY, [], {
+		email: currentSessionEmail()
+	}) || []);
+}
+
+function readCachedDealFlowViewMode() {
+	return normalizeDealFlowViewMode(readScopedSessionString(DEAL_FLOW_VIEW_MODE_STORAGE_KEY, 'grid', {
+		email: currentSessionEmail()
+	}));
 }
 
 function normalizeStageMap(value) {
@@ -200,13 +220,13 @@ function createStagesStore() {
 
 export const dealStages = createStagesStore();
 
-function createDecisionCompareStore() {
-	const base = writable(readCachedDecisionCompareIds());
+function createCompareDealsStore() {
+	const base = writable(readCachedCompareDealIds());
 	const { subscribe, set: baseSet } = base;
 
 	function replace(value) {
-		const normalized = normalizeDecisionCompareIds(value);
-		persistDecisionCompareIds(normalized);
+		const normalized = normalizeCompareDealIds(value);
+		persistCompareDealIds(normalized);
 		baseSet(normalized);
 		return normalized;
 	}
@@ -223,15 +243,15 @@ function createDecisionCompareStore() {
 		clear() {
 			return replace([]);
 		},
-		syncFromStorage() {
-			return replace(readCachedDecisionCompareIds());
+		syncFromSession() {
+			return replace(readCachedCompareDealIds());
 		},
 		add(dealId) {
 			const nextId = String(dealId || '').trim();
 			const ids = currentIds();
 			if (!nextId) return { ok: false, reason: 'invalid', ids };
 			if (ids.includes(nextId)) return { ok: false, reason: 'exists', ids };
-			if (ids.length >= MAX_DECISION_COMPARE) return { ok: false, reason: 'max', ids };
+			if (ids.length >= MAX_COMPARE_DEALS) return { ok: false, reason: 'max', ids };
 			return { ok: true, ids: replace([...ids, nextId]) };
 		},
 		remove(dealId) {
@@ -245,18 +265,45 @@ function createDecisionCompareStore() {
 				return { ok: true, selected: false, ids: replace(ids.filter((id) => id !== nextId)) };
 			}
 			if (!nextId) return { ok: false, reason: 'invalid', selected: false, ids };
-			if (ids.length >= MAX_DECISION_COMPARE) return { ok: false, reason: 'max', selected: false, ids };
+			if (ids.length >= MAX_COMPARE_DEALS) return { ok: false, reason: 'max', selected: false, ids };
 			return { ok: true, selected: true, ids: replace([...ids, nextId]) };
 		},
 		prune(validIds) {
-			const allowedIds = new Set(normalizeDecisionCompareIds(validIds));
+			const allowedIds = new Set(normalizeCompareDealIds(validIds));
 			const ids = currentIds().filter((id) => allowedIds.has(id));
 			return { ok: true, ids: replace(ids) };
 		}
 	};
 }
 
-export const decisionCompareIds = createDecisionCompareStore();
+function createDealFlowViewModeStore() {
+	const base = writable(readCachedDealFlowViewMode());
+	const { subscribe, set: baseSet } = base;
+
+	function replace(value) {
+		const normalized = normalizeDealFlowViewMode(value);
+		persistDealFlowViewMode(normalized);
+		baseSet(normalized);
+		return normalized;
+	}
+
+	return {
+		subscribe,
+		set(value) {
+			return replace(value);
+		},
+		reset() {
+			return replace('grid');
+		},
+		syncFromSession() {
+			return replace(readCachedDealFlowViewMode());
+		}
+	};
+}
+
+export const compareDealIds = createCompareDealsStore();
+export const decisionCompareIds = compareDealIds;
+export const dealFlowViewMode = createDealFlowViewModeStore();
 
 export const stageCounts = derived([deals, dealStages, browseTotalCount], ([$deals, $stages, $browseTotal]) => {
 	const counts = { filter: 0, review: 0, connect: 0, decide: 0, invested: 0, skipped: 0 };
