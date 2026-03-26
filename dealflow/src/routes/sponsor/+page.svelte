@@ -10,6 +10,7 @@
 		user
 	} from '$lib/stores/auth.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import { tapLight } from '$lib/utils/haptics.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
 
 	const SPONSOR_API_URL = '/api/sponsor';
@@ -27,7 +28,6 @@
 	let deals = $state([]);
 	let bgResult = $state(null);
 	let bgLoading = $state(false);
-	let sidebarOpen = $state(false);
 	const nativeCompanionMode = browser && isNativeApp();
 
 	let isPaid = $derived($isMember || $isAdmin);
@@ -322,7 +322,6 @@
 		}
 	});
 
-	function toggleSidebar() { sidebarOpen = !sidebarOpen; }
 	function openPersonProfile(name) {
 		goto('/person?name=' + encodeURIComponent(name));
 	}
@@ -339,23 +338,7 @@
 </svelte:head>
 
 <div class="page-layout">
-	<Sidebar currentPage="sponsor" />
-
-	<button
-		type="button"
-		class="sidebar-overlay"
-		class:open={sidebarOpen}
-		aria-label="Close sidebar"
-		onclick={() => sidebarOpen = false}
-	></button>
-
-	<div class="mobile-topbar">
-		<button class="mobile-menu-btn" type="button" aria-label="Toggle sidebar" onclick={toggleSidebar}>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-		</button>
-		<div class="mobile-topbar-title">{sponsor?.name || 'Sponsor Profile'}</div>
-		<a href="/app/deals" class="mobile-deals-link">Deals</a>
-	</div>
+	<Sidebar currentPage="sponsor" hideHamburgerOnPhone={true} />
 
 	<div class="main ly-page">
 		<div class="content-wrap ly-frame">
@@ -865,6 +848,29 @@
 			{/if}
 		</div>
 	</div>
+
+	<nav class="sponsor-mobile-tabs" aria-label="Primary">
+		<a href="/app/dashboard" class="sponsor-mobile-tab" onclick={tapLight}>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+			<span>Dashboard</span>
+		</a>
+		<a href="/app/market-intel" class="sponsor-mobile-tab" onclick={tapLight}>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+			<span>Intel</span>
+		</a>
+		<a href="/app/deals" class="sponsor-mobile-tab" onclick={tapLight}>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+			<span>Deal Flow</span>
+		</a>
+		<a href="/app/operators" class="sponsor-mobile-tab active" aria-current="page" onclick={tapLight}>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+			<span>Operators</span>
+		</a>
+		<a href="/app/more" class="sponsor-mobile-tab" onclick={tapLight}>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+			<span>More</span>
+		</a>
+	</nav>
 </div>
 
 <style>
@@ -874,6 +880,7 @@
 		min-height: 100dvh;
 	}
 	.main {
+		--sponsor-mobile-tab-bar-offset: calc(72px + env(safe-area-inset-bottom, 0px));
 		flex: 1;
 		margin-left: var(--sidebar-width, 240px);
 		width: calc(100% - var(--sidebar-width, 240px));
@@ -915,23 +922,35 @@
 		min-width: 0;
 	}
 
-	/* Mobile */
-	.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; color: var(--text-dark); padding: 4px; }
-	.mobile-menu-btn svg { width: 24px; height: 24px; }
-	.mobile-topbar { display: none; position: sticky; top: 0; height: 56px; background: var(--bg-cream); border-bottom: 1px solid var(--border); align-items: center; padding: 0 20px; gap: 12px; z-index: 50; }
-	.mobile-topbar-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.mobile-deals-link { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
-	.sidebar-overlay {
+	.sponsor-mobile-tabs {
 		display: none;
 		position: fixed;
-		inset: 0;
-		background: rgba(0,0,0,0.5);
-		z-index: 99;
-		border: 0;
-		padding: 0;
-		cursor: pointer;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		background: var(--bg-sidebar, #1a1a2e);
+		border-top: 1px solid rgba(255,255,255,0.08);
+		z-index: 100;
+		padding: 6px 0 calc(env(safe-area-inset-bottom, 0px) + 8px);
 	}
-	.sidebar-overlay.open { display: block; }
+	.sponsor-mobile-tab {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2px;
+		color: rgba(255,255,255,0.5);
+		text-decoration: none;
+		font-size: 10px;
+		font-family: var(--font-ui);
+		padding: 4px 0;
+		transition: color 0.2s;
+	}
+	.sponsor-mobile-tab.active {
+		color: var(--primary, #00c9a7);
+	}
+	.sponsor-mobile-tab:hover {
+		color: rgba(255,255,255,0.8);
+	}
 
 	/* Skeleton */
 	.skeleton { position: relative; overflow: hidden; background: var(--border-light); border-radius: var(--radius-sm); }
@@ -1115,7 +1134,25 @@
 
 	/* Responsive */
 	@media (max-width: 1024px) {
-		.main { margin-left: 0; width: 100%; }
+		.main {
+			margin-left: 0;
+			width: 100%;
+			padding-bottom: var(--sponsor-mobile-tab-bar-offset);
+		}
+		.sponsor-mobile-tabs {
+			display: flex;
+			justify-content: space-around;
+		}
+		.sponsor-mobile-tab {
+			font-size: 12px;
+			padding: 8px 0;
+			min-width: 64px;
+			min-height: 44px;
+		}
+		.sponsor-mobile-tab svg {
+			width: 24px;
+			height: 24px;
+		}
 		.content-wrap {
 			--ly-frame-pad-top-tablet: 20px;
 			--ly-frame-pad-bottom-tablet: 48px;
@@ -1124,7 +1161,14 @@
 		.deals-grid { grid-template-columns: 1fr; }
 	}
 	@media (max-width: 768px) {
-		.mobile-topbar { display: flex; }
+		.sponsor-mobile-tab {
+			font-size: 10px;
+			padding: 4px 0;
+		}
+		.sponsor-mobile-tab svg {
+			width: 20px;
+			height: 20px;
+		}
 		.content-wrap {
 			--ly-frame-pad-top-mobile: 20px;
 			--ly-frame-pad-bottom-mobile: 48px;

@@ -55,27 +55,27 @@
 		const impersonationTimers = [50, 250, 750].map((delay) =>
 			window.setTimeout(() => syncImpersonationState(getStoredSessionUser()), delay)
 		);
-		const phoneMedia = window.matchMedia('(max-width: 768px)');
+		const compactNavMedia = window.matchMedia('(max-width: 1024px)');
 		const syncPhoneHiddenState = () => {
-			if (hideHamburgerOnPhone && phoneMedia.matches) {
+			if (hideHamburgerOnPhone && compactNavMedia.matches) {
 				mobileOpen = false;
 			}
 		};
 		syncPhoneHiddenState();
-		if (phoneMedia.addEventListener) {
-			phoneMedia.addEventListener('change', syncPhoneHiddenState);
+		if (compactNavMedia.addEventListener) {
+			compactNavMedia.addEventListener('change', syncPhoneHiddenState);
 		} else {
-			phoneMedia.addListener(syncPhoneHiddenState);
+			compactNavMedia.addListener(syncPhoneHiddenState);
 		}
 
 		return () => {
 			for (const timer of impersonationTimers) {
 				clearTimeout(timer);
 			}
-			if (phoneMedia.removeEventListener) {
-				phoneMedia.removeEventListener('change', syncPhoneHiddenState);
+			if (compactNavMedia.removeEventListener) {
+				compactNavMedia.removeEventListener('change', syncPhoneHiddenState);
 			} else {
-				phoneMedia.removeListener(syncPhoneHiddenState);
+				compactNavMedia.removeListener(syncPhoneHiddenState);
 			}
 		};
 	});
@@ -235,7 +235,7 @@
 	}
 
 	function toggleMobile() {
-		if (hideHamburgerOnPhone && browser && window.matchMedia('(max-width: 768px)').matches) {
+		if (hideHamburgerOnPhone && browser && window.matchMedia('(max-width: 1024px)').matches) {
 			mobileOpen = false;
 			return;
 		}
@@ -856,7 +856,7 @@
 		}
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1024px) {
 		.sidebar-hamburger.hide-on-phone {
 			display: none;
 		}

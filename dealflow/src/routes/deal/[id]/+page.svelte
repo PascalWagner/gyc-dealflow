@@ -4273,14 +4273,44 @@
 
 	/* ===== Responsive ===== */
 	@media (max-width: 1024px) {
-		.main { margin-left: 0; width: 100%; padding-top: 56px; }
+		.main {
+			margin-left: 0;
+			width: 100%;
+			padding-top: 0;
+			padding-bottom: var(--deal-mobile-tab-bar-offset);
+		}
 		.content-wrap {
 			--ly-dealflow-frame-pad-top-tablet: 20px;
 			--ly-dealflow-frame-pad-bottom-tablet: 48px;
 			--ly-dealflow-frame-pad-top-mobile: 20px;
 			--ly-dealflow-frame-pad-bottom-mobile: 48px;
 		}
-		.sticky-action-bar { left: 0; }
+		.deal-mobile-tabs {
+			display: flex;
+			justify-content: space-around;
+		}
+		.deal-mobile-tab {
+			font-size: 12px;
+			padding: 8px 0;
+		}
+		.deal-mobile-tab svg {
+			width: 24px;
+			height: 24px;
+		}
+		.sticky-action-bar {
+			left: 16px;
+			right: 16px;
+			bottom: calc(var(--deal-mobile-tab-bar-offset) + 12px);
+			padding: 10px 16px;
+			gap: 8px;
+			border-radius: 12px;
+			border-left: 1px solid var(--border);
+			border-right: 1px solid var(--border);
+		}
+		.sticky-action-bar .btn-pass, .sticky-action-bar .btn-advance { padding: 8px 14px; font-size: 12px; }
+		.sticky-action-bar .stage-label { font-size: 11px; }
+		.deal-page-content { padding-bottom: calc(var(--deal-mobile-tab-bar-offset) + 108px); }
+		.floating-compare-badge { bottom: calc(var(--deal-mobile-tab-bar-offset) + 88px); }
 		.metrics-strip { grid-template-columns: repeat(3, 1fr); }
 		.details-grid { grid-template-columns: repeat(3, 1fr); }
 		.economics-grid { grid-template-columns: 1fr; }
@@ -4304,13 +4334,14 @@
 			padding-top: 0;
 			padding-bottom: var(--deal-mobile-tab-bar-offset);
 		}
-		.deal-mobile-tabs {
-			display: flex;
-			justify-content: space-around;
+		.deal-mobile-tab {
+			font-size: 10px;
+			padding: 4px 0;
 		}
-		.sticky-action-bar { left: 16px; right: 16px; bottom: calc(var(--deal-mobile-tab-bar-offset) + 12px); padding: 10px 16px; gap: 8px; border-radius: 12px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
-		.sticky-action-bar .btn-pass, .sticky-action-bar .btn-advance { padding: 8px 14px; font-size: 12px; }
-		.sticky-action-bar .stage-label { font-size: 11px; }
+		.deal-mobile-tab svg {
+			width: 20px;
+			height: 20px;
+		}
 		.data-completeness-hint { display: none; }
 		.data-completeness { padding: 10px 14px; gap: 10px; }
 		.data-completeness-label { font-size: 11px; }
@@ -4335,8 +4366,6 @@
 		.dd-question-text { font-size: 12px; }
 		.dd-answer-text { font-size: 12px; }
 		.returns-chart-container { height: 160px; padding: 12px; }
-		.deal-page-content { padding-bottom: calc(var(--deal-mobile-tab-bar-offset) + 108px); }
-		.floating-compare-badge { bottom: calc(var(--deal-mobile-tab-bar-offset) + 88px); }
 		.operator-profile { flex-direction: column; align-items: center; text-align: center; }
 		.operator-stats { justify-content: center; }
 		.operator-links { justify-content: center; }
