@@ -45,18 +45,22 @@
 	let irContactEmail = $state('');
 	let irLinkedin = $state('');
 	let bookingUrl = $state('');
-	let offeringType = $state('506c');
-	let consents = $state({ tos: false, listing: false, accuracy: false, recording: false });
-	let sigName = $state('');
-	let sigTitle = $state('');
-	let agreementSigned = $state(false);
-	let deckFile = $state(null);
-	let ppmFile = $state(null);
-	let dealUploaded = $state(false);
-	let dealSkipped = $state(false);
-	let presentationInterest = $state(null);
-	let processing = $state(false);
-	const nativeCompanionMode = browser && isNativeApp();
+		let offeringType = $state('506c');
+		let consents = $state({ tos: false, listing: false, accuracy: false, recording: false });
+		let sigName = $state('');
+		let sigTitle = $state('');
+		let agreementSigned = $state(false);
+		let agreementSaving = $state(false);
+		let agreementError = $state('');
+		let deckFile = $state(null);
+		let ppmFile = $state(null);
+		let dealUploaded = $state(false);
+		let dealSkipped = $state(false);
+		let presentationInterest = $state(null);
+		let processing = $state(false);
+		let finishSaving = $state(false);
+		let finishError = $state('');
+		const nativeCompanionMode = browser && isNativeApp();
 
 	// Network stats
 	let networkStats = $state(null);
@@ -357,21 +361,49 @@
 
 	let agreementScrollEl = $state(null);
 
+	async function saveGpOnboardingStep(step, data = {}) {
+		const response = await fetch('/api/gp-onboarding', {
+			method: 'POST',
+			headers,
+			body: JSON.stringify({ email: $user.email, step, data })
+		});
+		const payload = await response.json().catch(() => ({}));
+		if (!response.ok) {
+			const message = payload?.error || 'Unable to save onboarding progress.';
+			if (payload?.requiresAgreement) {
+				agreementSigned = false;
+				agreementError = message;
+				goToStep('step6', true);
+			}
+			throw new Error(message);
+		}
+		return payload;
+	}
+
 	async function saveAgreement() {
-		if (!canSignAgreement) return;
+		if (!canSignAgreement || agreementSaving) return;
 		const agreementText = agreementScrollEl?.innerText || '';
 		const hash = simpleHash(agreementText);
+		agreementSaving = true;
+		agreementError = '';
 
 		try {
-			await fetch('/api/gp-agreement', {
-				method: 'POST', headers,
-				body: JSON.stringify({ email: $user.email, signatoryName: sigName.trim(), signatoryEmail: $user.email, signatoryTitle: sigTitle.trim(), offeringType, acceptedTos: consents.tos, acceptedListing: consents.listing, acceptedDataAccuracy: consents.accuracy, acceptedRecording: consents.recording, agreementText, agreementTextHash: hash })
-			});
+			const response = await fetch('/api/gp-agreement', {
+					method: 'POST', headers,
+					body: JSON.stringify({ email: $user.email, signatoryName: sigName.trim(), signatoryEmail: $user.email, signatoryTitle: sigTitle.trim(), offeringType, acceptedTos: consents.tos, acceptedListing: consents.listing, acceptedDataAccuracy: consents.accuracy, acceptedRecording: consents.recording, agreementText, agreementTextHash: hash })
+				});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(payload?.error || 'Unable to save the signed agreement.');
+			}
+			agreementSigned = true;
+			goToStep('step7');
 		} catch (err) {
 			console.error('Agreement save error:', err);
+			agreementError = err?.message || 'Unable to save the signed agreement.';
+		} finally {
+			agreementSaving = false;
 		}
-		agreementSigned = true;
-		goToStep('step7');
 	}
 
 	// ===== GP: File Upload =====
@@ -402,14 +434,17 @@
 
 		try {
 			const base64data = await fileToBase64(uploadFile);
-			const resp = await fetch('/api/deck-upload', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + $user.token },
-				body: JSON.stringify({ dealId: 'new-' + Date.now(), dealName, filedata: base64data, filename: uploadFile.name, docType, userEmail: $user.email, userName: $user.name || '', companyId: companyId || '' })
-			});
-			const uploadResult = await resp.json();
-			dealUploaded = true;
-			const uploadedDealId = uploadResult?.newDealId || null;
+				const resp = await fetch('/api/deck-upload', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + $user.token },
+					body: JSON.stringify({ dealId: 'new-' + Date.now(), dealName, filedata: base64data, filename: uploadFile.name, docType, userEmail: $user.email, userName: $user.name || '', companyId: companyId || '' })
+				});
+				const uploadResult = await resp.json();
+				if (!resp.ok) {
+					throw new Error(uploadResult?.error || 'Upload failed.');
+				}
+				dealUploaded = true;
+				const uploadedDealId = uploadResult?.newDealId || null;
 
 			if (ppmFile && deckFile && uploadedDealId) {
 				const ppmBase64 = await fileToBase64(ppmFile);
@@ -420,7 +455,7 @@
 				});
 			}
 
-			await fetch('/api/gp-onboarding', { method: 'POST', headers, body: JSON.stringify({ email: $user.email, step: 'deal-uploaded', data: {} }) });
+				await saveGpOnboardingStep('deal-uploaded', {});
 
 			if (uploadedDealId) {
 				goto('/app/deals?id=' + uploadedDealId + '&from=onboarding');
@@ -428,25 +463,38 @@
 				processing = false;
 				goToStep('step8');
 			}
-		} catch (err) {
-			console.error('Upload error:', err);
-			processing = false;
-			alert('Upload failed. You can try again or skip for now.');
+			} catch (err) {
+				console.error('Upload error:', err);
+				processing = false;
+				agreementError = err?.message || 'Upload failed. You can try again or skip for now.';
+				if (!agreementError.toLowerCase().includes('agreement')) {
+					alert(agreementError);
+				}
+			}
 		}
-	}
 
-	function skipDealUpload() {
-		dealSkipped = true;
-		fetch('/api/gp-onboarding', { method: 'POST', headers, body: JSON.stringify({ email: $user.email, step: 'deal-skipped', data: {} }) }).catch(() => {});
-		goToStep('step8');
-	}
+		async function skipDealUpload() {
+			dealSkipped = true;
+			try {
+				await saveGpOnboardingStep('deal-skipped', {});
+				goToStep('step8');
+			} catch (err) {
+				console.error('Skip deal upload error:', err);
+				alert(err?.message || 'Unable to continue right now.');
+			}
+		}
 
-	// ===== GP: Presentation =====
-	function savePresentation(interested) {
-		presentationInterest = interested;
-		fetch('/api/gp-onboarding', { method: 'POST', headers, body: JSON.stringify({ email: $user.email, step: 'presentation', data: { interested } }) }).catch(() => {});
-		goToStep(interested ? 'step9' : 'step10');
-	}
+		// ===== GP: Presentation =====
+		async function savePresentation(interested) {
+			presentationInterest = interested;
+			try {
+				await saveGpOnboardingStep('presentation', { interested });
+				goToStep(interested ? 'step9' : 'step10');
+			} catch (err) {
+				console.error('Presentation save error:', err);
+				alert(err?.message || 'Unable to continue right now.');
+			}
+		}
 
 	function skipPayment() { goToStep('step10'); }
 
@@ -465,14 +513,24 @@
 	}
 
 	// ===== GP: Also an LP? =====
-	function finishOnboarding(wantsBuyBox) {
-		fetch('/api/gp-onboarding', { method: 'POST', headers, body: JSON.stringify({ email: $user.email, step: wantsBuyBox ? 'buybox-interest' : 'complete', data: {} }) }).catch(() => {});
-		if (wantsBuyBox) {
-			goToStep('stepLpGoal');
-		} else {
-			goto('/gp-dashboard');
+		async function finishOnboarding(wantsBuyBox) {
+			if (finishSaving) return;
+			finishSaving = true;
+			finishError = '';
+			try {
+				await saveGpOnboardingStep(wantsBuyBox ? 'buybox-interest' : 'complete', {});
+				if (wantsBuyBox) {
+					goToStep('stepLpGoal');
+				} else {
+					goto('/gp-dashboard');
+				}
+			} catch (err) {
+				console.error('Finish onboarding error:', err);
+				finishError = err?.message || 'Unable to complete onboarding right now.';
+			} finally {
+				finishSaving = false;
+			}
 		}
-	}
 
 	// ===== Network Stats =====
 	async function loadNetworkStats() {
@@ -614,26 +672,49 @@
 				if (data.company.ir_contact_email) irContactEmail = data.company.ir_contact_email;
 				if (data.company.booking_url) bookingUrl = data.company.booking_url;
 			}
-			if (data.profile) {
-				selectedRole = data.profile.onboardingRole;
-				presentationInterest = data.profile.presentationInterest;
-			}
-			if (data.dealCount > 0) dealUploaded = true;
+				if (data.profile) {
+					selectedRole = data.profile.onboardingRole;
+					presentationInterest = data.profile.presentationInterest;
+				}
+				const agreementStatus = data.agreementStatus || {};
+				const currentAgreement = agreementStatus.agreement || null;
+				agreementSigned = !!agreementStatus.hasCurrentAgreement;
+				if (currentAgreement) {
+					offeringType = currentAgreement.offering_type || offeringType;
+					sigName = currentAgreement.signatory_name || sigName;
+					sigTitle = currentAgreement.signatory_title || sigTitle;
+					consents = {
+						tos: currentAgreement.accepted_tos === true,
+						listing: currentAgreement.accepted_listing === true,
+						accuracy: currentAgreement.accepted_data_accuracy === true,
+						recording: currentAgreement.accepted_recording === true
+					};
+				}
+				if (data.dealCount > 0) dealUploaded = true;
 
-			const step = data.profile?.onboardingStep || 0;
+				const step = data.profile?.onboardingStep || 0;
 
-			if (!reviewMode && data.profile?.onboardingComplete) { goto('/gp-dashboard'); return; }
-			if (!reviewMode && data.profile?.onboardingRole === 'lp') { goto(lpDealsRedirect()); return; }
-			if (!reviewMode && data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
+				if (!reviewMode && data.profile?.onboardingComplete && agreementStatus.hasCurrentAgreement) { goto('/gp-dashboard'); return; }
+				if (!reviewMode && data.profile?.onboardingRole === 'lp') { goto(lpDealsRedirect()); return; }
+				if (!reviewMode && data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
+				if (!reviewMode && data.profile?.onboardingComplete && !agreementStatus.hasCurrentAgreement) {
+					selectedRole = 'gp';
+					agreementError = 'A current signed operator listing agreement is required before you can access the GP workflow.';
+					goToStep('step6');
+					return;
+				}
 
-			// DB steps -> UI steps
-			const stepMap = { 0: 'step0', 1: 'step2', 2: 'step5', 3: 'step6', 4: 'step7', 5: 'step8', 6: 'step10' };
-			const resumeStep = $page.url.searchParams.get('resumeStep');
-			if (resumeStep) {
-				goToStep('step' + resumeStep);
-			} else if (!reviewMode && step > 0 && stepMap[step]) {
-				goToStep(stepMap[step]);
-			}
+				// DB steps -> UI steps
+				const stepMap = { 0: 'step0', 1: 'step2', 2: 'step5', 3: 'step6', 4: 'step7', 5: 'step8', 6: 'step10' };
+				const resumeStep = $page.url.searchParams.get('resumeStep');
+				if (resumeStep) {
+					goToStep('step' + resumeStep);
+				} else if (!reviewMode && step >= 4 && !agreementStatus.hasCurrentAgreement) {
+					agreementError = 'A current signed operator listing agreement is required before you can continue.';
+					goToStep('step6');
+				} else if (!reviewMode && step > 0 && stepMap[step]) {
+					goToStep(stepMap[step]);
+				}
 		} catch (err) {
 			console.error('Load onboarding state error:', err);
 		}
@@ -1161,24 +1242,27 @@
 							<div class="consent-text">I consent to <strong>recording and distribution</strong> of any live presentation events I participate in.</div>
 						</button>
 					</div>
-					<div class="signature-section">
-						<div class="signature-label">Electronic Signature</div>
-						<div class="form-grid">
-							<div class="form-group"><label class="form-label" for="sig-name">Full Legal Name *</label><input id="sig-name" class="form-input" type="text" bind:value={sigName} placeholder="Type your full name as signature"></div>
-							<div class="form-group"><label class="form-label" for="sig-title">Title</label><input id="sig-title" class="form-input" type="text" bind:value={sigTitle} placeholder="e.g. Managing Partner"></div>
+						<div class="signature-section">
+							<div class="signature-label">Electronic Signature</div>
+							<div class="form-grid">
+								<div class="form-group"><label class="form-label" for="sig-name">Full Legal Name *</label><input id="sig-name" class="form-input" type="text" bind:value={sigName} placeholder="Type your full name as signature"></div>
+								<div class="form-group"><label class="form-label" for="sig-title">Title</label><input id="sig-title" class="form-input" type="text" bind:value={sigTitle} placeholder="e.g. Managing Partner"></div>
+							</div>
 						</div>
+						{#if agreementError}
+							<div class="step-error">{agreementError}</div>
+						{/if}
 					</div>
-				</div>
-				<div class="step-footer">
-					<button class="btn-secondary" onclick={() => goToStep('step5', true)}>
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
-						Back
-					</button>
-					<button class="btn-primary" onclick={saveAgreement} disabled={!canSignAgreement}>
-						I Agree &mdash; Continue
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-					</button>
-				</div>
+					<div class="step-footer">
+						<button class="btn-secondary" onclick={() => goToStep('step5', true)}>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+							Back
+						</button>
+						<button class="btn-primary" onclick={saveAgreement} disabled={!canSignAgreement || agreementSaving}>
+							{agreementSaving ? 'Saving...' : 'I Agree — Continue'}
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+						</button>
+					</div>
 			</div>
 		{/if}
 
@@ -1424,15 +1508,18 @@
 						</div>
 					</div>
 				</div>
-				<div class="step-footer">
-					<button class="btn-skip" onclick={() => finishOnboarding(false)}>Skip &mdash; take me to my dashboard</button>
-					<button class="btn-primary" onclick={() => finishOnboarding(true)}>
-						Set Up My Buy Box
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-					</button>
+					<div class="step-footer">
+						<button class="btn-skip" onclick={() => finishOnboarding(false)} disabled={finishSaving}>Skip &mdash; take me to my dashboard</button>
+						<button class="btn-primary" onclick={() => finishOnboarding(true)} disabled={finishSaving}>
+							Set Up My Buy Box
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+						</button>
+					</div>
+					{#if finishError}
+						<div class="step-error" style="margin-top:16px;">{finishError}</div>
+					{/if}
 				</div>
-			</div>
-		{/if}
+			{/if}
 
 			</div>
 		</div>
@@ -1643,6 +1730,7 @@
 	.ot-label { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
 	.ot-desc { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 	.offering-506b-note { background: var(--yellow-bg); border: 1px solid rgba(202,138,4,0.3); border-radius: var(--radius-sm); padding: 12px 16px; font-family: var(--font-ui); font-size: 13px; color: var(--text-dark); line-height: 1.5; }
+	.step-error { margin-top: 16px; padding: 12px 14px; border: 1px solid rgba(208,64,64,0.24); border-radius: var(--radius-sm); background: rgba(208,64,64,0.08); color: #9f2323; font-family: var(--font-ui); font-size: 13px; line-height: 1.5; }
 
 	/* ====== UPLOAD / DROP ZONE ====== */
 	.upload-options { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }

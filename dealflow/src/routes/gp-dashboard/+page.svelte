@@ -6,10 +6,12 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	// ===== Reactive State (Svelte 5 Runes) =====
-	let loading = $state(true);
-	let refreshing = $state(false);
-	let accessDenied = $state(false);
-	let toastMsg = $state('');
+		let loading = $state(true);
+		let refreshing = $state(false);
+		let accessDenied = $state(false);
+		let accessDeniedTitle = $state('GP Access Required');
+		let accessDeniedMessage = $state("This dashboard is for General Partners who list deals on our platform. If you're a sponsor or operator, get started below.");
+		let toastMsg = $state('');
 	let toastVisible = $state(false);
 
 	// GP State
@@ -688,8 +690,8 @@
 	}
 
 	// ===== GP Access Check =====
-	function checkGPAccess() {
-		const u = $user;
+		function checkGPAccess() {
+			const u = $user;
 		if (!u) return false;
 		if (u.isAdmin || (u.email && ADMIN_EMAILS.includes(u.email.toLowerCase()))) {
 			companyId = u.management_company_id || u.managementCompanyId || '8971cd85-60d8-41b5-abc0-c878d5f92cb3';
@@ -706,9 +708,34 @@
 			companyId = u.management_company_id || u.managementCompanyId;
 			companyName = u.management_company_name || u.managementCompanyName || u.company || '';
 			return true;
+			}
+			return false;
 		}
-		return false;
-	}
+
+		async function verifyCurrentAgreement() {
+			if (gpIsAdmin) return true;
+			const email = ($user?.email || '').trim();
+			const token = $user?.token || '';
+			if (!email || !token) {
+				accessDeniedTitle = 'Agreement Verification Failed';
+				accessDeniedMessage = 'We could not verify your signed operator listing agreement. Please sign it again before using the GP dashboard.';
+				return false;
+			}
+
+			const response = await fetch('/api/gp-agreement?email=' + encodeURIComponent(email), {
+				headers: { Authorization: 'Bearer ' + token }
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				console.error('Agreement verification failed:', payload?.error || response.statusText);
+				accessDeniedTitle = 'Agreement Verification Failed';
+				accessDeniedMessage = 'We could not verify your signed operator listing agreement. Please sign it again before using the GP dashboard.';
+				return false;
+			}
+			if (payload?.hasCurrentAgreement) return true;
+			goto('/onboarding?resumeStep=6');
+			return false;
+		}
 
 	// ===== API Fetchers =====
 	function authHeaders() {
@@ -889,19 +916,24 @@
 	});
 
 	// ===== Init =====
-	onMount(async () => {
-		if (!$isLoggedIn) {
-			goto('/login?return=/gp-dashboard');
-			return;
-		}
+		onMount(async () => {
+			if (!$isLoggedIn) {
+				goto('/login?return=/gp-dashboard');
+				return;
+			}
 		if (!checkGPAccess()) {
 			loading = false;
-			accessDenied = true;
-			return;
-		}
-		loadData();
-		// Load Chart.js dynamically (SSR-safe)
-		await loadGPChartJs();
+				accessDenied = true;
+				return;
+			}
+			if (!(await verifyCurrentAgreement())) {
+				loading = false;
+				accessDenied = true;
+				return;
+			}
+			loadData();
+			// Load Chart.js dynamically (SSR-safe)
+			await loadGPChartJs();
 	});
 
 	async function refreshData() {
@@ -931,11 +963,11 @@
 			<div class="access-denied">
 				<div class="access-denied-icon">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-				</div>
-				<h2>GP Access Required</h2>
-				<p>This dashboard is for General Partners who list deals on our platform. If you're a sponsor or operator, get started below.</p>
+					</div>
+					<h2>{accessDeniedTitle}</h2>
+					<p>{accessDeniedMessage}</p>
 				<div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
-					<a href="/gp-onboarding?resumeStep=2" class="btn-back-home">Apply as a GP</a>
+						<a href="/onboarding?resumeStep=6" class="btn-back-home">Return to Onboarding</a>
 					<a href="/app/dashboard" style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);text-decoration:none;">Back to Dashboard</a>
 				</div>
 			</div>

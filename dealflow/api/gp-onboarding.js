@@ -5,6 +5,7 @@
 // POST { email, step, data } → saves a specific onboarding step
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
+import { getLatestGpAgreement, hasCurrentGpAgreement } from './_gp-agreement.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -19,6 +20,19 @@ export default async function handler(req, res) {
     if (!email) return res.status(400).json({ error: 'Email required' });
 
     try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Missing authorization' });
+      }
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user?.email) {
+        return res.status(401).json({ error: 'Invalid authorization' });
+      }
+      if (user.email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({ error: 'Email does not match authenticated user' });
+      }
+
       // Get user profile
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -27,6 +41,9 @@ export default async function handler(req, res) {
         .single();
 
       if (!profile) return res.status(404).json({ error: 'User not found' });
+
+      const agreement = await getLatestGpAgreement(supabase, profile.id);
+      const hasCurrentAgreement = hasCurrentGpAgreement(agreement);
 
       // Get linked company (if any)
       let company = null;
@@ -72,7 +89,12 @@ export default async function handler(req, res) {
         },
         company,
         dealCount,
-        hasBuyBox: !!(buyBox && buyBox.completed_at)
+        hasBuyBox: !!(buyBox && buyBox.completed_at),
+        agreementStatus: {
+          hasAgreement: !!agreement,
+          hasCurrentAgreement,
+          agreement: agreement || null
+        }
       });
     } catch (e) {
       console.error('GP onboarding GET error:', e);
@@ -86,14 +108,45 @@ export default async function handler(req, res) {
     if (!email) return res.status(400).json({ error: 'Email required' });
 
     try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Missing authorization' });
+      }
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user?.email) {
+        return res.status(401).json({ error: 'Invalid authorization' });
+      }
+      if (user.email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({ error: 'Email does not match authenticated user' });
+      }
+
       // Look up user
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('id, management_company_id')
+        .select('id, management_company_id, onboarding_role')
         .eq('email', email.toLowerCase())
         .single();
 
       if (!profile) return res.status(404).json({ error: 'User not found' });
+
+      const requiresAgreement = (
+        step === 'deal-uploaded'
+        || step === 'deal-skipped'
+        || step === 'presentation'
+        || step === 'buybox-interest'
+        || (step === 'complete' && data?.role !== 'lp' && profile.onboarding_role !== 'lp')
+      );
+
+      if (requiresAgreement) {
+        const agreement = await getLatestGpAgreement(supabase, profile.id);
+        if (!hasCurrentGpAgreement(agreement)) {
+          return res.status(409).json({
+            error: 'A current signed operator listing agreement is required before continuing.',
+            requiresAgreement: true
+          });
+        }
+      }
 
       // Step: role-select (Phase 0)
       if (step === 'role-select') {

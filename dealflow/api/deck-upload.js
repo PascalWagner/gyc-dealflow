@@ -9,6 +9,7 @@
 //   - Auto-enrichment: PDFs are sent to Claude for field extraction after upload
 
 import { getAdminClient, setCors } from './_supabase.js';
+import { getLatestGpAgreement, hasCurrentGpAgreement } from './_gp-agreement.js';
 import { extractFromPdf, runEnrichmentCascade } from './_enrichment.js';
 
 export default async function handler(req, res) {
@@ -24,6 +25,26 @@ export default async function handler(req, res) {
     }
 
     const supabase = getAdminClient();
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing authorization' });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user?.id || !user?.email) {
+      return res.status(401).json({ error: 'Invalid authorization' });
+    }
+    if (userEmail && user.email.toLowerCase() !== String(userEmail).toLowerCase()) {
+      return res.status(403).json({ error: 'Upload email must match authenticated user' });
+    }
+
+    const agreement = await getLatestGpAgreement(supabase, user.id);
+    if (!hasCurrentGpAgreement(agreement)) {
+      return res.status(403).json({ error: 'A current signed operator listing agreement is required before uploading deal materials.' });
+    }
+
+    const effectiveUserEmail = user.email;
+    const effectiveUserName = userName || user.user_metadata?.full_name || user.user_metadata?.name || '';
     const cleanDealName = (dealName || 'Unknown').replace(/[^a-zA-Z0-9\s\-]/g, '').trim();
     const storagePath = `deals/${dealId || 'unlinked'}/${cleanDealName} - ${filename}`;
 
@@ -100,8 +121,8 @@ export default async function handler(req, res) {
       deal_name: dealName || '',
       deck_url: deckUrl,
       notes: notes || '',
-      submitted_by_email: userEmail || '',
-      submitted_by_name: userName || ''
+      submitted_by_email: effectiveUserEmail || '',
+      submitted_by_name: effectiveUserName || ''
     });
 
     // 4. Send notification email via Resend
@@ -118,7 +139,7 @@ export default async function handler(req, res) {
             from: 'GYC Dealflow <feedback@growyourcashflow.io>',
             to: ['pascal@growyourcashflow.io'],
             subject: `[Deck Upload] ${dealName || 'Unknown Deal'}`,
-            html: `<p><strong>${userName || 'Someone'}</strong> uploaded a deck for <strong>${dealName}</strong>.</p>
+            html: `<p><strong>${effectiveUserName || effectiveUserEmail || 'Someone'}</strong> uploaded a deck for <strong>${dealName}</strong>.</p>
               <p>File: ${filename}</p>
               ${deckUrl ? '<p><a href="' + deckUrl + '">View Deck</a></p>' : ''}
               ${notes ? '<p>Notes: ' + notes + '</p>' : ''}`

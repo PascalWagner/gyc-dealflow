@@ -9,8 +9,7 @@
 //     → creates immutable acceptance record + PDF
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
-
-const CURRENT_VERSION = '1.0';
+import { CURRENT_GP_AGREEMENT_VERSION, getLatestGpAgreement, hasCurrentGpAgreement } from './_gp-agreement.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -25,6 +24,19 @@ export default async function handler(req, res) {
     if (!email) return res.status(400).json({ error: 'Email required' });
 
     try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Missing authorization' });
+      }
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user?.email) {
+        return res.status(401).json({ error: 'Invalid authorization' });
+      }
+      if (user.email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({ error: 'Email does not match authenticated user' });
+      }
+
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('id, management_company_id')
@@ -33,18 +45,14 @@ export default async function handler(req, res) {
 
       if (!profile) return res.status(404).json({ error: 'User not found' });
 
-      const { data: agreement } = await supabase
-        .from('gp_agreements')
-        .select('id, agreement_version, offering_type, accepted_at, signatory_name, signatory_email, signatory_title, accepted_tos, accepted_listing, accepted_data_accuracy, accepted_recording, agreement_pdf_url')
-        .eq('user_id', profile.id)
-        .order('accepted_at', { ascending: false })
-        .limit(1)
-        .single();
+      const agreement = await getLatestGpAgreement(supabase, profile.id);
+      const hasCurrentAgreement = hasCurrentGpAgreement(agreement);
 
       return res.status(200).json({
         hasAgreement: !!agreement,
-        currentVersion: CURRENT_VERSION,
-        isCurrentVersion: agreement ? agreement.agreement_version === CURRENT_VERSION : false,
+        currentVersion: CURRENT_GP_AGREEMENT_VERSION,
+        isCurrentVersion: hasCurrentAgreement,
+        hasCurrentAgreement,
         agreement: agreement || null
       });
     } catch (e) {
@@ -64,7 +72,7 @@ export default async function handler(req, res) {
     if (!email || !signatoryName || !signatoryEmail) {
       return res.status(400).json({ error: 'Email, signatoryName, and signatoryEmail required' });
     }
-    if (!acceptedTos || !acceptedListing || !acceptedDataAccuracy) {
+    if (!acceptedTos || !acceptedListing || !acceptedDataAccuracy || !acceptedRecording) {
       return res.status(400).json({ error: 'All required terms must be accepted' });
     }
     if (!agreementText) {
@@ -72,6 +80,19 @@ export default async function handler(req, res) {
     }
 
     try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Missing authorization' });
+      }
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user?.email) {
+        return res.status(401).json({ error: 'Invalid authorization' });
+      }
+      if (user.email.toLowerCase() !== email.toLowerCase() || user.email.toLowerCase() !== signatoryEmail.toLowerCase()) {
+        return res.status(403).json({ error: 'Agreement signer must match authenticated user' });
+      }
+
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('id, management_company_id, full_name')
@@ -98,7 +119,7 @@ export default async function handler(req, res) {
         offeringType: offeringType || '506c',
         acceptedAt,
         ip,
-        version: CURRENT_VERSION,
+        version: CURRENT_GP_AGREEMENT_VERSION,
         acceptedTos,
         acceptedListing,
         acceptedDataAccuracy,
@@ -108,7 +129,7 @@ export default async function handler(req, res) {
       // Upload PDF to Supabase Storage
       let pdfUrl = null;
       try {
-        const fileName = `agreements/${profile.id}/${CURRENT_VERSION}_${Date.now()}.html`;
+        const fileName = `agreements/${profile.id}/${CURRENT_GP_AGREEMENT_VERSION}_${Date.now()}.html`;
         const { data: uploadData, error: uploadErr } = await supabase.storage
           .from('deal-decks') // reuse existing bucket
           .upload(fileName, Buffer.from(pdfHtml, 'utf-8'), {
@@ -133,7 +154,7 @@ export default async function handler(req, res) {
         .insert({
           user_id: profile.id,
           management_company_id: profile.management_company_id,
-          agreement_version: CURRENT_VERSION,
+          agreement_version: CURRENT_GP_AGREEMENT_VERSION,
           offering_type: offeringType || '506c',
           accepted_tos: acceptedTos === true,
           accepted_listing: acceptedListing === true,
@@ -165,7 +186,7 @@ export default async function handler(req, res) {
         agreementId: record.id,
         acceptedAt: record.accepted_at,
         pdfUrl: record.agreement_pdf_url,
-        version: CURRENT_VERSION
+        version: CURRENT_GP_AGREEMENT_VERSION
       });
     } catch (e) {
       console.error('GP agreement POST error:', e);
