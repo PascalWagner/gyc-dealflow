@@ -15,7 +15,9 @@
     "cap:open": "npx cap open ios",
     "db:migrate": "npx supabase db push",
     "db:seed": "node supabase/migrate-from-airtable.js",
-    "db:swap": "bash scripts/swap-to-supabase.sh"
+    "db:swap": "bash scripts/swap-to-supabase.sh",
+    "check:canonical-db-shape": "node scripts/check-canonical-db-shape.mjs",
+    "release:preflight": "node scripts/release-preflight.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^6.2.0",
