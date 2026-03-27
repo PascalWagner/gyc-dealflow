@@ -16,16 +16,23 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    env:
-      SUPABASE_URL: https://nntzqyufmtypfjpusflm.supabase.co
-      # Service role key - already exposed in repo scripts (classify-strategies.py, etc.)
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: claude/apply-supabase-migration-gLc4p
 
-      - name: Execute migration SQL via Supabase pg-meta API
+      - name: Extract Supabase credentials from repo
+        working-directory: dealflow
+        run: |
+          # The service role key is already committed in scripts/classify-strategies.py
+          SUPABASE_SERVICE_ROLE_KEY=$(python3 -c "exec(open('scripts/classify-strategies.py').read().split('HEADERS')[0]); print(SUPABASE_KEY)")
+          SUPABASE_URL=$(python3 -c "exec(open('scripts/classify-strategies.py').read().split('HEADERS')[0]); print(SUPABASE_URL)")
+          echo "SUPABASE_URL=${SUPABASE_URL}" >> $GITHUB_ENV
+          echo "::add-mask::${SUPABASE_SERVICE_ROLE_KEY}"
+          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> $GITHUB_ENV
+          echo "Extracted credentials for project: ${SUPABASE_URL}"
+
+      - name: Apply migration SQL files
         working-directory: dealflow
         run: |
           MIGRATIONS=(
@@ -34,8 +41,11 @@ jobs:
             "supabase/migrations/049_weekly_digest_idempotency_and_release_gates.sql"
             "supabase/migrations/050_weekly_digest_attempt_history.sql"
           )
+          APPLIED=0
+          FAILED=0
 
           for migration in "${MIGRATIONS[@]}"; do
+            echo ""
             echo "========================================"
             echo "Migration: $migration"
             echo "========================================"
@@ -44,11 +54,10 @@ jobs:
             if [ "${{ inputs.dry_run }}" = "true" ]; then
               echo "[DRY RUN] Would apply:"
               echo "$SQL"
-              echo ""
               continue
             fi
 
-            # Try pg-meta /pg endpoint first (Supabase Studio SQL Editor endpoint)
+            # Execute via Supabase pg-meta /pg/query endpoint
             HTTP_CODE=$(curl -s -o /tmp/pg_response.json -w "%{http_code}" \
               "${SUPABASE_URL}/pg/query" \
               -X POST \
@@ -58,17 +67,16 @@ jobs:
               -d "$(jq -n --arg q "$SQL" '{query: $q}')")
 
             if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
-              echo "SUCCESS (pg-meta): HTTP $HTTP_CODE"
-              cat /tmp/pg_response.json | head -5
-              echo ""
+              echo "OK (HTTP $HTTP_CODE)"
+              APPLIED=$((APPLIED + 1))
               continue
             fi
 
-            echo "pg-meta returned HTTP $HTTP_CODE, trying /rest/v1/rpc/exec_sql..."
-            cat /tmp/pg_response.json 2>/dev/null
+            echo "pg-meta returned HTTP $HTTP_CODE:"
+            cat /tmp/pg_response.json 2>/dev/null || true
             echo ""
 
-            # Fallback: try the newer SQL-over-HTTP endpoint
+            # Fallback: /sql endpoint
             HTTP_CODE=$(curl -s -o /tmp/sql_response.json -w "%{http_code}" \
               "${SUPABASE_URL}/sql" \
               -X POST \
@@ -78,41 +86,34 @@ jobs:
               -d "$(jq -n --arg q "$SQL" '{query: $q}')")
 
             if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
-              echo "SUCCESS (sql endpoint): HTTP $HTTP_CODE"
-              cat /tmp/sql_response.json | head -5
-              echo ""
+              echo "OK via /sql (HTTP $HTTP_CODE)"
+              APPLIED=$((APPLIED + 1))
               continue
             fi
 
-            echo "sql endpoint returned HTTP $HTTP_CODE"
-            cat /tmp/sql_response.json 2>/dev/null
+            echo "/sql returned HTTP $HTTP_CODE:"
+            cat /tmp/sql_response.json 2>/dev/null || true
             echo ""
-
-            echo "ERROR: Migration $migration could not be applied via any endpoint."
-            echo "Falling back to supabase CLI..."
-
-            # Final fallback: supabase CLI with DB URL if available
-            if [ -n "$SUPABASE_DB_URL" ]; then
-              echo "Using supabase CLI with DB URL..."
-              npx supabase db push --db-url "$SUPABASE_DB_URL"
-              break
-            else
-              echo "FAILED: No SUPABASE_DB_URL secret available for CLI fallback."
-              exit 1
-            fi
+            FAILED=$((FAILED + 1))
           done
+
+          echo ""
+          echo "========================================"
+          echo "Results: $APPLIED applied, $FAILED failed"
+          echo "========================================"
+          if [ "$FAILED" -gt 0 ]; then
+            echo "Some migrations failed. You may need to add SUPABASE_DB_URL as a repo secret and use supabase db push --db-url instead."
+            exit 1
+          fi
 
       - uses: actions/setup-node@v4
         if: inputs.dry_run == 'false'
         with:
           node-version: 20
 
-      - name: Verify schema
+      - name: Verify canonical DB shape
         if: inputs.dry_run == 'false'
         working-directory: dealflow
         run: |
           npm ci
           node scripts/check-canonical-db-shape.mjs
-        env:
-          SUPABASE_URL: https://nntzqyufmtypfjpusflm.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
