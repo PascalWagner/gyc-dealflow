@@ -776,7 +776,7 @@
 				publishedAt: '2026-02-11',
 				rating: 5,
 				title: 'Strong communication and reliable execution',
-				body: `${sponsorName} kept updates consistent, set expectations clearly, and operated in a way that felt disciplined from start to finish. The investor communication stood out more than anything else.`
+				body: `${sponsorName} kept updates consistent, set expectations clearly, and operated in a way that felt disciplined from start to finish. The communication stood out most.`
 			},
 			{
 				id: 'icr-2',
@@ -784,7 +784,7 @@
 				publishedAt: '2026-01-28',
 				rating: 5,
 				title: 'Professional sponsor that does what they say',
-				body: `Our experience with ${sponsorName} was organized and straightforward. Materials were easy to follow, the team was responsive, and the deal process felt well managed rather than improvised.`
+				body: `Our experience with ${sponsorName} was organized and straightforward. Materials were easy to follow, the team was responsive, and the process felt well managed rather than improvised.`
 			},
 			{
 				id: 'icr-3',
@@ -792,7 +792,7 @@
 				publishedAt: '2025-12-16',
 				rating: 5,
 				title: 'Clear reporting and investor-first posture',
-				body: `The reporting cadence, responsiveness, and overall presentation gave us confidence in ${sponsorName}. If this were wired to live data, this is the type of third-party social proof I would want surfaced on every sponsor-backed deal page.`
+				body: `The reporting cadence, responsiveness, and overall presentation gave us confidence in ${sponsorName}. This is exactly the kind of third-party social proof worth surfacing on every sponsor-backed deal page.`
 			}
 		];
 		const total = reviews.length;
@@ -2820,39 +2820,42 @@
 								<span class="investclearly-summary-copy">{investClearlyPreview.averageRating} average · {investClearlyPreview.reviewCount} reviews</span>
 							</div>
 						</div>
-						<div class="section-body">
+						<div class="section-body investclearly-body">
 							<div class="investclearly-intro">
 								<div class="investclearly-intro-copy">
-									Temporary sample-data preview for <strong>{investClearlyPreview.sponsorName}</strong>. This is the placement I’d use on the deal page so sponsor reviews stay inside the product rather than sending users off-site.
+									Admin preview for <strong>{investClearlyPreview.sponsorName}</strong>. Live sponsor-level review data will replace this sample content once the API is available.
 								</div>
 							</div>
 							<div class="investclearly-review-list">
 								{#each investClearlyPreview.reviews as review}
 									<article class="investclearly-review-card">
-										<div class="investclearly-review-head">
-											<div class="investclearly-reviewer">
-												<div class="investclearly-review-avatar">{getInitials(review.reviewer)}</div>
-												<div class="investclearly-reviewer-copy">
+										<div class="investclearly-review-top">
+											<div class="investclearly-review-photo" aria-hidden="true">
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+													<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+													<circle cx="12" cy="7" r="4"/>
+												</svg>
+												<span class="investclearly-review-photo-badge">{getInitials(review.reviewer)}</span>
+											</div>
+											<div class="investclearly-reviewer-copy">
+												<div class="investclearly-reviewer-name-row">
 													<div class="investclearly-reviewer-name">{review.reviewer}</div>
-													<div class="investclearly-reviewer-meta">
-														<div class="investclearly-review-stars" aria-hidden="true">
-															{#each [1, 2, 3, 4, 5] as star}
-																<span class:filled={star <= review.rating}>★</span>
-															{/each}
-														</div>
-														<span>{formatReviewDate(review.publishedAt)}</span>
+													<span class="investclearly-review-date">{formatReviewDate(review.publishedAt)}</span>
+												</div>
+												<div class="investclearly-reviewer-meta">
+													<div class="investclearly-review-stars" aria-hidden="true">
+														{#each [1, 2, 3, 4, 5] as star}
+															<span class:filled={star <= review.rating}>★</span>
+														{/each}
 													</div>
+													<span class="investclearly-reviewer-role">Verified third-party review</span>
 												</div>
 											</div>
-											<span class="investclearly-source-tag">Invest Clearly</span>
 										</div>
-										<div class="investclearly-review-title">“{review.title}”</div>
+										<div class="investclearly-review-title">{review.title}</div>
 										<div class="investclearly-review-body">{review.body}</div>
 									</article>
 								{/each}
-							</div>
-							<div class="investclearly-footnote">
-								Admin-only preview. Replace this sample content with live sponsor-level review data once the Invest Clearly API is available.
 							</div>
 						</div>
 					</div>
@@ -3652,17 +3655,20 @@
 		font-weight: 700;
 		color: var(--text-dark);
 	}
+	.investclearly-body {
+		padding-top: 18px;
+	}
 	.investclearly-intro {
-		margin-bottom: 16px;
-		padding: 14px 16px;
-		border-radius: 12px;
-		background: linear-gradient(135deg, rgba(37,99,235,0.04), rgba(81,190,123,0.06));
-		border: 1px solid rgba(81,190,123,0.14);
+		margin-bottom: 14px;
+		padding: 10px 12px;
+		border-radius: 10px;
+		background: rgba(81,190,123,0.05);
+		border: 1px solid rgba(81,190,123,0.12);
 	}
 	.investclearly-intro-copy {
 		font-family: var(--font-body);
-		font-size: 13px;
-		line-height: 1.65;
+		font-size: 12px;
+		line-height: 1.55;
 		color: var(--text-secondary);
 	}
 	.investclearly-intro-copy strong {
@@ -3671,55 +3677,104 @@
 	}
 	.investclearly-review-list {
 		display: grid;
-		gap: 14px;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+		align-items: stretch;
 	}
 	.investclearly-review-card {
-		padding: 18px 18px 16px;
+		display: flex;
+		flex-direction: column;
+		padding: 14px;
 		border: 1px solid var(--border-light);
 		border-radius: 12px;
 		background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,248,246,0.78));
 	}
-	.investclearly-review-head {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 16px;
-	}
-	.investclearly-reviewer {
+	.investclearly-review-top {
 		display: flex;
 		align-items: flex-start;
 		gap: 12px;
-		min-width: 0;
 	}
-	.investclearly-review-avatar {
-		width: 42px;
-		height: 42px;
-		border-radius: 50%;
-		background: linear-gradient(135deg, #3b82f6, #51be7b);
-		color: #fff;
+	.investclearly-review-photo {
+		position: relative;
+		width: 70px;
+		height: 88px;
+		border-radius: 18px;
+		border: 1px solid rgba(255,255,255,0.55);
+		background: linear-gradient(160deg, #ddebf6, #bfdad0);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 800;
 		flex-shrink: 0;
+		overflow: hidden;
+		box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+	}
+	.investclearly-review-card:nth-child(2) .investclearly-review-photo { background: linear-gradient(160deg, #e9e3f6, #cadff1); }
+	.investclearly-review-card:nth-child(3) .investclearly-review-photo { background: linear-gradient(160deg, #f5e6df, #d9eadf); }
+	.investclearly-review-photo svg {
+		width: 34px;
+		height: 34px;
+		color: rgba(255,255,255,0.95);
+		transform: translateY(-6px);
+	}
+	.investclearly-review-photo::after {
+		content: '';
+		position: absolute;
+		inset: auto 10px 8px;
+		height: 28px;
+		border-radius: 999px;
+		background: rgba(255,255,255,0.16);
+		filter: blur(6px);
+	}
+	.investclearly-review-photo-badge {
+		position: absolute;
+		left: 8px;
+		bottom: 8px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 30px;
+		height: 22px;
+		padding: 0 8px;
+		border-radius: 999px;
+		background: rgba(15,23,42,0.65);
+		backdrop-filter: blur(6px);
+		-webkit-backdrop-filter: blur(6px);
+		color: #fff;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 800;
+		letter-spacing: 0.3px;
 	}
 	.investclearly-reviewer-copy {
+		display: grid;
+		gap: 6px;
 		min-width: 0;
+		flex: 1;
+	}
+	.investclearly-reviewer-name-row {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 8px;
 	}
 	.investclearly-reviewer-name {
 		font-family: var(--font-ui);
-		font-size: 14px;
+		font-size: 15px;
 		font-weight: 700;
 		color: var(--text-dark);
+	}
+	.investclearly-review-date {
+		flex-shrink: 0;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-muted);
 	}
 	.investclearly-reviewer-meta {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 6px;
 		flex-wrap: wrap;
-		margin-top: 4px;
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 600;
@@ -3736,42 +3791,33 @@
 	.investclearly-review-stars .filled {
 		color: #f59e0b;
 	}
-	.investclearly-source-tag {
-		display: inline-flex;
-		align-items: center;
-		padding: 4px 8px;
-		border-radius: 999px;
-		background: var(--bg-page);
-		border: 1px solid var(--border-light);
+	.investclearly-reviewer-role {
 		font-family: var(--font-ui);
 		font-size: 10px;
 		font-weight: 700;
 		text-transform: uppercase;
-		letter-spacing: 0.45px;
+		letter-spacing: 0.4px;
 		color: var(--text-muted);
-		flex-shrink: 0;
 	}
 	.investclearly-review-title {
-		margin-top: 14px;
+		margin-top: 12px;
 		font-family: var(--font-ui);
-		font-size: 16px;
+		font-size: 15px;
 		font-weight: 700;
 		color: var(--text-dark);
-		letter-spacing: -0.2px;
+		letter-spacing: -0.15px;
+		line-height: 1.35;
 	}
 	.investclearly-review-body {
-		margin-top: 10px;
+		margin-top: 8px;
 		font-family: var(--font-body);
-		font-size: 14px;
-		line-height: 1.7;
+		font-size: 13px;
+		line-height: 1.55;
 		color: var(--text-secondary);
-	}
-	.investclearly-footnote {
-		margin-top: 14px;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--text-muted);
+		display: -webkit-box;
+		-webkit-line-clamp: 5;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
 	}
 
 	/* ===== Property Location Map ===== */
@@ -4119,6 +4165,7 @@
 		.floating-compare-badge { bottom: calc(var(--deal-mobile-tab-bar-offset) + 88px); }
 		.metrics-strip { grid-template-columns: repeat(3, 1fr); }
 		.details-grid { grid-template-columns: repeat(3, 1fr); }
+		.investclearly-review-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	}
 	@media (max-width: 900px) {
 		.deal-header-inner { flex-direction: column; align-items: flex-start; }
@@ -4142,8 +4189,7 @@
 		.buybox-lite-grid { grid-template-columns: 1fr; }
 		.geography-hero-card,
 		.locked-preview-footer,
-		.sec-footer-row,
-		.investclearly-review-head { flex-direction: column; align-items: flex-start; }
+		.sec-footer-row { flex-direction: column; align-items: flex-start; }
 		.deal-mobile-tab {
 			font-size: 10px;
 			padding: 4px 0;
@@ -4167,6 +4213,16 @@
 			margin-left: 0;
 			width: 100%;
 			justify-content: flex-start;
+		}
+		.investclearly-review-list { grid-template-columns: 1fr; }
+		.investclearly-review-photo {
+			width: 64px;
+			height: 80px;
+			border-radius: 16px;
+		}
+		.investclearly-reviewer-name-row {
+			flex-direction: column;
+			gap: 3px;
 		}
 		.journey-bar { padding: 12px 16px; gap: 0; justify-content: space-between; overflow: visible; }
 		.journey-step { padding: 4px; font-size: 9px; flex-direction: column; text-align: center; gap: 4px; }
