@@ -4516,7 +4516,8 @@ async function renderDeal() {
 
   const params = new URLSearchParams(window.location.search);
 
-  const id = params.get('id');
+  let id = params.get('id');
+  const dealNum = params.get('n');
   // Capture content ref param for attribution tracking
   const ref = params.get('ref');
   if (ref) {
@@ -4528,7 +4529,23 @@ async function renderDeal() {
 
   const container = document.getElementById('loadedContent');
 
-
+  // Resolve deal number to UUID
+  if (!id && dealNum) {
+    try {
+      container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deal...</div>';
+      const numResp = await fetch('/api/deals?n=' + encodeURIComponent(dealNum));
+      if (numResp.ok) {
+        const numData = await numResp.json();
+        if (numData.deal && numData.deal.id) {
+          id = numData.deal.id;
+          const cleanUrl = new URL(window.location);
+          cleanUrl.searchParams.set('id', id);
+          cleanUrl.searchParams.delete('n');
+          window.history.replaceState({}, '', cleanUrl.toString());
+        }
+      }
+    } catch (e) { console.warn('Deal number lookup failed:', e.message); }
+  }
 
   if (!id) {
 

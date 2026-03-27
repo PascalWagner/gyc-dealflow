@@ -26,7 +26,18 @@ export default async function handler(req, res) {
   try {
     const supabase = getAdminClient();
 
-    // Single-deal fetch shortcut: /api/deals?id=UUID
+    // Single-deal fetch shortcut: /api/deals?id=UUID or /api/deals?n=DEAL_NUMBER
+    const dealNumber = req.query?.n;
+    if (dealNumber && /^\d+$/.test(dealNumber)) {
+      const { data: row, error: sErr } = await supabase
+        .from('opportunities')
+        .select('id')
+        .eq('deal_number', parseInt(dealNumber, 10))
+        .single();
+      if (sErr || !row) return res.status(404).json({ error: 'Deal not found' });
+      return res.status(200).json({ deal: { id: row.id, dealNumber: parseInt(dealNumber, 10) } });
+    }
+
     if (singleId && /^[0-9a-f-]{36}$/i.test(singleId)) {
       const { data: row, error: sErr } = await supabase
         .from('opportunities')
