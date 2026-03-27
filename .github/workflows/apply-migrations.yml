@@ -19,6 +19,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate token
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "ERROR: SUPABASE_ACCESS_TOKEN secret is not set."
+            echo "Go to: https://github.com/PascalWagner/gyc-dealflow/settings/secrets/actions"
+            echo "Add secret: SUPABASE_ACCESS_TOKEN (from https://supabase.com/dashboard/account/tokens)"
+            exit 1
+          fi
+          echo "Token is set (length: ${#SUPABASE_ACCESS_TOKEN})"
+
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
@@ -28,11 +38,15 @@ jobs:
         working-directory: dealflow
         run: |
           echo "Linking to Supabase project nntzqyufmtypfjpusflm..."
-          supabase link --project-ref nntzqyufmtypfjpusflm
+          echo "" | supabase link --project-ref nntzqyufmtypfjpusflm --password ""
 
           echo ""
-          echo "Checking pending migrations (dry run)..."
-          supabase db push --dry-run || true
+          echo "Checking migration status..."
+          supabase migration list 2>&1 || true
+
+          echo ""
+          echo "Dry run..."
+          supabase db push --dry-run 2>&1 || true
 
           echo ""
           echo "Applying migrations..."
