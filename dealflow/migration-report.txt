@@ -1,0 +1,17 @@
+Migration Report - Fri Mar 27 14:58:33 UTC 2026
+API test: HTTP 200
+Auth OK
+
+--- supabase/migrations/047_canonical_stage_privacy_contract.sql ---
+HTTP: 400
+{"message":"Failed to run sql query: ERROR:  42P16: cannot drop columns from view\n"}
+--- supabase/migrations/048_weekly_digest_operations.sql ---
+HTTP: 201
+[]
+--- supabase/migrations/049_weekly_digest_idempotency_and_release_gates.sql ---
+HTTP: 201
+[]
+--- supabase/migrations/050_weekly_digest_attempt_history.sql ---
+HTTP: 201
+[]
+Applied: 3, Failed: 1
