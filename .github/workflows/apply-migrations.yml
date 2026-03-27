@@ -23,24 +23,24 @@ jobs:
       - name: Validate token
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "ERROR: SUPABASE_ACCESS_TOKEN secret is not set."
+            echo "ERROR: SUPABASE_ACCESS_TOKEN secret is not set." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-          echo "Token present (length: ${#SUPABASE_ACCESS_TOKEN})"
+          echo "Token present (length: ${#SUPABASE_ACCESS_TOKEN})" >> $GITHUB_STEP_SUMMARY
 
       - name: Test API connectivity
         run: |
-          echo "Testing Management API access..."
           HTTP_CODE=$(curl -s -o /tmp/test.json -w "%{http_code}" \
             "https://api.supabase.com/v1/projects/${PROJECT_REF}" \
             -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}")
-          echo "GET project: HTTP $HTTP_CODE"
-          cat /tmp/test.json | head -3
+          echo "### API Connectivity: HTTP $HTTP_CODE" >> $GITHUB_STEP_SUMMARY
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: Cannot access Supabase Management API. Check your SUPABASE_ACCESS_TOKEN."
-            cat /tmp/test.json
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat /tmp/test.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
+          echo "Project access OK" >> $GITHUB_STEP_SUMMARY
 
       - name: Apply migrations via Management API
         working-directory: dealflow
@@ -54,16 +54,10 @@ jobs:
           APPLIED=0
           FAILED=0
 
-          for migration in "${MIGRATIONS[@]}"; do
-            echo ""
-            echo "========================================"
-            echo "Migration: $migration"
-            echo "========================================"
-            SQL=$(cat "$migration")
-            echo "$SQL"
-            echo ""
+          echo "### Migration Results" >> $GITHUB_STEP_SUMMARY
 
-            # Use read_only: false for DDL statements
+          for migration in "${MIGRATIONS[@]}"; do
+            SQL=$(cat "$migration")
             BODY=$(jq -n --arg q "$SQL" '{query: $q, read_only: false}')
 
             HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
@@ -73,25 +67,23 @@ jobs:
               -H "Content-Type: application/json" \
               -d "$BODY")
 
-            echo "HTTP Status: $HTTP_CODE"
-            RESPONSE=$(cat /tmp/response.json 2>/dev/null || echo "no response")
-            echo "$RESPONSE" | head -20
-            echo ""
+            RESPONSE=$(cat /tmp/response.json 2>/dev/null || echo "empty")
 
             if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
-              echo "OK: Migration applied successfully"
+              echo "- ✅ \`$migration\` — HTTP $HTTP_CODE" >> $GITHUB_STEP_SUMMARY
               APPLIED=$((APPLIED + 1))
             else
-              echo "FAILED: HTTP $HTTP_CODE"
-              echo "Full response: $RESPONSE"
+              echo "- ❌ \`$migration\` — HTTP $HTTP_CODE" >> $GITHUB_STEP_SUMMARY
+              echo '  ```json' >> $GITHUB_STEP_SUMMARY
+              echo "  $RESPONSE" >> $GITHUB_STEP_SUMMARY
+              echo '  ```' >> $GITHUB_STEP_SUMMARY
               FAILED=$((FAILED + 1))
             fi
           done
 
-          echo ""
-          echo "========================================"
-          echo "Results: $APPLIED applied, $FAILED failed"
-          echo "========================================"
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**$APPLIED applied, $FAILED failed**" >> $GITHUB_STEP_SUMMARY
+
           if [ "$FAILED" -gt 0 ]; then
             exit 1
           fi
@@ -107,4 +99,4 @@ jobs:
           SUPABASE_URL=$(python3 -c "exec(open('scripts/classify-strategies.py').read().split('HEADERS')[0]); print(SUPABASE_URL)")
           export SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY
           npm ci
-          node scripts/check-canonical-db-shape.mjs
+          node scripts/check-canonical-db-shape.mjs 2>&1 | tee -a $GITHUB_STEP_SUMMARY
