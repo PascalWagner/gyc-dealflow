@@ -4,10 +4,9 @@
 -- Applied: 2026-03-27
 
 -- 1. Recreate deal_stage_counts view with canonical (post-040) stage names
---    DROP first because CREATE OR REPLACE cannot remove columns from existing view.
---    The view columns keep the same aliases for API backward compat,
---    but filter on the new stage values from migration 040.
-DROP VIEW IF EXISTS deal_stage_counts;
+--    CASCADE is needed because deal_social_proof_counts (created outside migrations,
+--    not used by app code) depends on this view.
+DROP VIEW IF EXISTS deal_stage_counts CASCADE;
 CREATE VIEW deal_stage_counts AS
 SELECT
   deal_id,
