@@ -1,1 +1,1 @@
-# trigger file for migration workflow
+trigger: apply migrations
