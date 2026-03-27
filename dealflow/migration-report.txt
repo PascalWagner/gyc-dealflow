@@ -1,10 +1,10 @@
-Migration Report - Fri Mar 27 14:58:33 UTC 2026
+Migration Report - Fri Mar 27 15:01:04 UTC 2026
 API test: HTTP 200
 Auth OK
 
 --- supabase/migrations/047_canonical_stage_privacy_contract.sql ---
 HTTP: 400
-{"message":"Failed to run sql query: ERROR:  42P16: cannot drop columns from view\n"}
+{"message":"Failed to run sql query: ERROR:  2BP01: cannot drop view deal_stage_counts because other objects depend on it\nDETAIL:  view deal_social_proof_counts depends on view deal_stage_counts\nHINT:  Use DROP ... CASCADE to drop the dependent objects too.\n"}
 --- supabase/migrations/048_weekly_digest_operations.sql ---
 HTTP: 201
 []
