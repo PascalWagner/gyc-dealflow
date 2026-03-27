@@ -1,0 +1,48 @@
+name: Apply Supabase Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (print SQL but do not apply)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Apply migrations
+        working-directory: dealflow
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "=== DRY RUN ==="
+            supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
+          else
+            echo "=== APPLYING MIGRATIONS ==="
+            supabase db push --db-url "$SUPABASE_DB_URL"
+          fi
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      - name: Verify schema
+        if: inputs.dry_run == 'false'
+        working-directory: dealflow
+        run: |
+          npm ci
+          node scripts/check-canonical-db-shape.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
