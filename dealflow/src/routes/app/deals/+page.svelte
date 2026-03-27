@@ -47,6 +47,7 @@
 		writeUserScopedJson
 	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { isNativeApp } from '$lib/utils/platform.js';
 
 	let currentTab = $state('filter');
@@ -692,7 +693,25 @@
 		return () => window.clearTimeout(timer);
 	});
 
-	onMount(() => {
+	onMount(async () => {
+		// Resolve ?n=DEAL_NUMBER → redirect to /deal/{uuid}
+		if (browser) {
+			const params = new URLSearchParams(window.location.search);
+			const dealNum = params.get('n');
+			if (dealNum && /^\d+$/.test(dealNum)) {
+				try {
+					const resp = await fetch(`/api/deals?n=${encodeURIComponent(dealNum)}`);
+					if (resp.ok) {
+						const data = await resp.json();
+						if (data.deal?.id) {
+							goto(`/deal/${data.deal.id}`, { replaceState: true });
+							return;
+						}
+					}
+				} catch (e) { console.warn('Deal number lookup failed:', e.message); }
+			}
+		}
+
 		compareDealIds.syncFromSession();
 		dealFlowViewMode.syncFromSession();
 		loadBuyBox();
