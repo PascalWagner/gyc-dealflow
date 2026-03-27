@@ -8,15 +8,44 @@ on:
       - '.github/workflows/apply-migrations.yml'
       - 'dealflow/supabase/migrations/04*'
       - 'dealflow/supabase/migrations/05*'
+  workflow_dispatch:
 
 jobs:
   migrate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract Supabase credentials from repo
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project and push migrations
+        working-directory: dealflow
+        run: |
+          echo "Linking to Supabase project nntzqyufmtypfjpusflm..."
+          supabase link --project-ref nntzqyufmtypfjpusflm
+
+          echo ""
+          echo "Checking pending migrations (dry run)..."
+          supabase db push --dry-run || true
+
+          echo ""
+          echo "Applying migrations..."
+          supabase db push
+
+          echo ""
+          echo "Migrations applied successfully."
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Extract Supabase credentials for verification
         working-directory: dealflow
         run: |
           SUPABASE_SERVICE_ROLE_KEY=$(python3 -c "exec(open('scripts/classify-strategies.py').read().split('HEADERS')[0]); print(SUPABASE_KEY)")
@@ -24,78 +53,6 @@ jobs:
           echo "SUPABASE_URL=${SUPABASE_URL}" >> $GITHUB_ENV
           echo "::add-mask::${SUPABASE_SERVICE_ROLE_KEY}"
           echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> $GITHUB_ENV
-          echo "Extracted credentials for project: ${SUPABASE_URL}"
-
-      - name: Apply migration SQL files
-        working-directory: dealflow
-        run: |
-          MIGRATIONS=(
-            "supabase/migrations/047_canonical_stage_privacy_contract.sql"
-            "supabase/migrations/048_weekly_digest_operations.sql"
-            "supabase/migrations/049_weekly_digest_idempotency_and_release_gates.sql"
-            "supabase/migrations/050_weekly_digest_attempt_history.sql"
-          )
-          APPLIED=0
-          FAILED=0
-
-          for migration in "${MIGRATIONS[@]}"; do
-            echo ""
-            echo "========================================"
-            echo "Migration: $migration"
-            echo "========================================"
-            SQL=$(cat "$migration")
-
-            # Execute via Supabase pg-meta /pg/query endpoint
-            HTTP_CODE=$(curl -s -o /tmp/pg_response.json -w "%{http_code}" \
-              "${SUPABASE_URL}/pg/query" \
-              -X POST \
-              -H "Content-Type: application/json" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -d "$(jq -n --arg q "$SQL" '{query: $q}')")
-
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
-              echo "OK (HTTP $HTTP_CODE)"
-              APPLIED=$((APPLIED + 1))
-              continue
-            fi
-
-            echo "pg-meta returned HTTP $HTTP_CODE:"
-            cat /tmp/pg_response.json 2>/dev/null || true
-            echo ""
-
-            # Fallback: /sql endpoint
-            HTTP_CODE=$(curl -s -o /tmp/sql_response.json -w "%{http_code}" \
-              "${SUPABASE_URL}/sql" \
-              -X POST \
-              -H "Content-Type: application/json" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -d "$(jq -n --arg q "$SQL" '{query: $q}')")
-
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
-              echo "OK via /sql (HTTP $HTTP_CODE)"
-              APPLIED=$((APPLIED + 1))
-              continue
-            fi
-
-            echo "/sql returned HTTP $HTTP_CODE:"
-            cat /tmp/sql_response.json 2>/dev/null || true
-            echo ""
-            FAILED=$((FAILED + 1))
-          done
-
-          echo ""
-          echo "========================================"
-          echo "Results: $APPLIED applied, $FAILED failed"
-          echo "========================================"
-          if [ "$FAILED" -gt 0 ]; then
-            exit 1
-          fi
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
 
       - name: Verify canonical DB shape
         working-directory: dealflow
