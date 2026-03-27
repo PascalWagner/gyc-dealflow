@@ -11,20 +11,17 @@
 	let searchQuery = $state('');
 	let activeCategory = $state('All');
 	let videos = $state([]);
+	let sections = $state([]);
 	let selectedVideo = $state(null);
 	let loading = $state(true);
-	let replayLibraryUrl = $state('/app/office-hours');
-	let sourceKind = $state('fallback');
 	const nativeCompanionMode = browser && isNativeApp();
 
-	const baseCategories = ['All', 'Office Hours', 'Deal Reviews', 'Education'];
-
 	const categories = $derived.by(() => {
-		const discovered = new Set(baseCategories);
-		for (const video of videos) {
-			if (video?.category) discovered.add(video.category);
+		const cats = ['All'];
+		for (const section of sections) {
+			cats.push(section.title);
 		}
-		return Array.from(discovered);
+		return cats;
 	});
 
 	const filteredVideos = $derived.by(() =>
@@ -32,7 +29,7 @@
 			if (activeCategory !== 'All' && video.category !== activeCategory) return false;
 			if (!searchQuery.trim()) return true;
 			const q = searchQuery.trim().toLowerCase();
-			return [video.title, video.category, video.description]
+			return [video.title, video.category, video.description, video.module]
 				.filter(Boolean)
 				.some((value) => String(value).toLowerCase().includes(q));
 		})
@@ -43,39 +40,28 @@
 	);
 
 	const spotlightVideos = $derived.by(() =>
-		(featuredVideo ? filteredVideos.filter((video) => video.id !== featuredVideo.id) : filteredVideos).slice(0, 3)
+		(featuredVideo ? filteredVideos.filter((video) => video.id !== featuredVideo.id) : filteredVideos).slice(0, 4)
 	);
 
-	const libraryStats = $derived.by(() => ({
-		total: videos.length,
-		officeHours: videos.filter((video) => video.category === 'Office Hours').length,
-		dealReviews: videos.filter((video) => video.category === 'Deal Reviews').length,
-		education: videos.filter((video) => video.category === 'Education').length
-	}));
+	const sectionStats = $derived.by(() => {
+		const stats = {};
+		for (const section of sections) {
+			stats[section.id] = videos.filter((v) => v.section === section.id).length;
+		}
+		return { total: videos.length, ...stats };
+	});
 
 	function badgeClass(category) {
-		if (category === 'Office Hours') return 'resource-badge-office';
-		if (category === 'Deal Reviews') return 'resource-badge-deal';
-		return 'resource-badge-education';
+		if (category === 'Strategy') return 'resource-badge-strategy';
+		if (category === 'Deal Flow') return 'resource-badge-dealflow';
+		if (category === 'Execution') return 'resource-badge-execution';
+		return 'resource-badge-strategy';
 	}
 
 	function getThumbnail(video) {
 		if (video.thumbnail) return video.thumbnail;
 		if (video.youtubeId) return `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`;
 		return '';
-	}
-
-	function formatDate(dateValue) {
-		if (!dateValue) return '';
-		try {
-			return new Date(dateValue).toLocaleDateString('en-US', {
-				month: 'short',
-				day: 'numeric',
-				year: 'numeric'
-			});
-		} catch {
-			return '';
-		}
 	}
 
 	function closeModal() {
@@ -120,8 +106,7 @@
 			if (!response.ok) throw new Error(`Resources load failed: ${response.status}`);
 			const payload = await response.json();
 			videos = Array.isArray(payload) ? payload : payload.videos || [];
-			replayLibraryUrl = payload.replayLibraryUrl || replayLibraryUrl;
-			sourceKind = payload.source || 'fallback';
+			sections = payload.sections || [];
 		} catch (error) {
 			console.warn('Resources unavailable:', error.message);
 			videos = [];
@@ -132,7 +117,7 @@
 
 	onMount(() => {
 		const requestedCategory = $page.url.searchParams.get('category');
-		if (requestedCategory && baseCategories.includes(requestedCategory)) {
+		if (requestedCategory) {
 			activeCategory = requestedCategory;
 		}
 		loadResources();
@@ -140,7 +125,7 @@
 </script>
 
 <svelte:head>
-	<title>Resources | GYC</title>
+	<title>Cashflow Academy | GYC</title>
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -153,7 +138,7 @@
 				{#if nativeCompanionMode}
 					<CompanionGate
 						title="Available to existing members"
-						message="Recorded office hours, deal reviews, and member lessons stay available to existing members on the web."
+						message="Cashflow Academy lessons, deal reviews, and office hours are available to existing members on the web."
 						note="Enrollment and billing are not offered in the iOS app."
 					/>
 				{:else}
@@ -163,9 +148,9 @@
 							<path d="M7 11V7a5 5 0 0 1 10 0v4" />
 						</svg>
 					</div>
-					<div class="gate-title">Unlock the Resource Library</div>
+					<div class="gate-title">Unlock Cashflow Academy</div>
 					<div class="gate-sub">
-						Recorded office hours, deal reviews, and Cash Flow Academy lessons live here for members.
+						Structured courses on strategy, deal flow, and execution — built for passive real estate investors who want to invest with confidence.
 					</div>
 					<a href="/app/academy" class="gate-btn">See What's Included &rarr;</a>
 				{/if}
@@ -188,37 +173,25 @@
 			</div>
 		</div>
 	{:else}
-		<PageHeader title="Resources" className="resources-page-header">
-			<div slot="actions">
-				<a href={replayLibraryUrl} class="header-cta" target={replayLibraryUrl.startsWith('http') ? '_blank' : undefined} rel="noopener">
-					Open Full Library
-				</a>
-			</div>
+		<PageHeader title="Cashflow Academy" className="resources-page-header">
 			<div slot="secondaryRow" class="resources-header-copy">
-				<div class="page-eyebrow">Cash Flow Academy</div>
 				<p class="page-desc">
-					A cleaner video library for office hours replays, deal reviews, and training lessons. This is where the member video shelf lives now.
+					Structured video courses covering strategy, deal sourcing, and execution — everything you need to invest in commercial real estate with confidence.
 				</p>
 			</div>
 		</PageHeader>
 
 		<div class="resource-stats">
 			<div class="resource-stat">
-				<div class="resource-stat-label">Total Videos</div>
-				<div class="resource-stat-value">{libraryStats.total}</div>
+				<div class="resource-stat-label">Total Lessons</div>
+				<div class="resource-stat-value">{sectionStats.total}</div>
 			</div>
-			<div class="resource-stat">
-				<div class="resource-stat-label">Office Hours</div>
-				<div class="resource-stat-value">{libraryStats.officeHours}</div>
-			</div>
-			<div class="resource-stat">
-				<div class="resource-stat-label">Deal Reviews</div>
-				<div class="resource-stat-value">{libraryStats.dealReviews}</div>
-			</div>
-			<div class="resource-stat">
-				<div class="resource-stat-label">Education</div>
-				<div class="resource-stat-value">{libraryStats.education}</div>
-			</div>
+			{#each sections as section}
+				<div class="resource-stat">
+					<div class="resource-stat-label">{section.title}</div>
+					<div class="resource-stat-value">{sectionStats[section.id] || 0}</div>
+				</div>
+			{/each}
 		</div>
 
 		{#if featuredVideo}
@@ -238,27 +211,23 @@
 						</div>
 					</div>
 					<div class="featured-copy">
-						<div class="featured-kicker">Featured Replay</div>
+						<div class="featured-kicker">Start Here</div>
 						<h2>{featuredVideo.title}</h2>
 						<p>{featuredVideo.description}</p>
 						<div class="featured-meta">
-							{#if formatDate(featuredVideo.date)}
-								<span>{formatDate(featuredVideo.date)}</span>
+							{#if featuredVideo.module}
+								<span>{featuredVideo.module}</span>
 							{/if}
 							{#if featuredVideo.duration}
 								<span>{featuredVideo.duration}</span>
 							{/if}
-							<span>{sourceKind === 'published-library' ? 'Published Library' : 'Member Library'}</span>
 						</div>
 					</div>
 				</button>
 
 				<div class="spotlight-panel">
 					<div class="spotlight-header">
-						<div class="spotlight-title">Quick Access</div>
-						<a href={replayLibraryUrl} class="spotlight-link" target={replayLibraryUrl.startsWith('http') ? '_blank' : undefined} rel="noopener">
-							Open all
-						</a>
+						<div class="spotlight-title">Up Next</div>
 					</div>
 					<div class="spotlight-list">
 						{#each spotlightVideos as video}
@@ -271,7 +240,7 @@
 							</button>
 						{/each}
 						{#if spotlightVideos.length === 0}
-							<div class="spotlight-empty">More replays will appear here as the library grows.</div>
+							<div class="spotlight-empty">More lessons will appear here as the library grows.</div>
 						{/if}
 					</div>
 				</div>
@@ -284,7 +253,7 @@
 					<circle cx="11" cy="11" r="8" />
 					<line x1="21" y1="21" x2="16.65" y2="16.65" />
 				</svg>
-				<input type="text" class="resource-search" placeholder="Search resources..." bind:value={searchQuery} />
+				<input type="text" class="resource-search" placeholder="Search lessons..." bind:value={searchQuery} />
 			</div>
 
 			<div class="resource-filters">
@@ -298,8 +267,8 @@
 
 		{#if filteredVideos.length === 0}
 			<div class="empty-state">
-				<div class="empty-title">No videos match that search.</div>
-				<div class="empty-desc">Try a different keyword or switch back to all categories.</div>
+				<div class="empty-title">No lessons match that search.</div>
+				<div class="empty-desc">Try a different keyword or switch back to all sections.</div>
 			</div>
 		{:else}
 			<div class="resource-grid">
@@ -320,13 +289,13 @@
 						<div class="resource-meta">
 							<div class="resource-meta-top">
 								<span class="resource-badge {badgeClass(video.category)}">{video.category}</span>
-								{#if formatDate(video.date)}<span>{formatDate(video.date)}</span>{/if}
+								{#if video.module}<span class="resource-module">{video.module}</span>{/if}
 							</div>
 							<h3>{video.title}</h3>
 							<p>{video.description}</p>
 							<div class="resource-meta-bottom">
 								{#if video.duration}<span>{video.duration}</span>{/if}
-								<span>{video.youtubeId ? 'Watch here' : 'Open library'}</span>
+								<span>Watch lesson</span>
 							</div>
 						</div>
 					</button>
@@ -340,7 +309,10 @@
 	<div class="resource-modal-overlay" onclick={handleOverlayClick} role="dialog" tabindex="-1">
 		<div class="resource-modal">
 			<div class="resource-modal-header">
-				<h3>{selectedVideo.title}</h3>
+				<div class="resource-modal-info">
+					<span class="resource-badge {badgeClass(selectedVideo.category)}">{selectedVideo.category}</span>
+					{#if selectedVideo.module}<span class="resource-modal-module">{selectedVideo.module}</span>{/if}
+				</div>
 				<button class="resource-modal-close" onclick={closeModal}>&times;</button>
 			</div>
 			<div class="video-container">
@@ -350,6 +322,13 @@
 					allowfullscreen
 					allow="autoplay"
 				></iframe>
+			</div>
+			<div class="resource-modal-body">
+				<h3>{selectedVideo.title}</h3>
+				<p>{selectedVideo.description}</p>
+				{#if selectedVideo.duration}
+					<div class="resource-modal-duration">{selectedVideo.duration}</div>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -361,15 +340,6 @@
 	.resources-page { max-width: 1180px; margin: 0; padding: 0 0 48px; }
 	.resources-page-header { margin-bottom: 22px; }
 	.resources-header-copy { display: grid; gap: 10px; }
-	.page-eyebrow {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.5px;
-		text-transform: uppercase;
-		color: var(--text-muted);
-		margin-bottom: 10px;
-	}
 	.page-desc {
 		max-width: 640px;
 		margin: 0;
@@ -378,7 +348,6 @@
 		line-height: 1.7;
 		color: var(--text-secondary);
 	}
-	.header-cta,
 	.gate-btn {
 		display: inline-flex;
 		align-items: center;
@@ -545,13 +514,6 @@
 		font-weight: 700;
 		color: var(--text-dark);
 	}
-	.spotlight-link {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 700;
-		color: var(--primary);
-		text-decoration: none;
-	}
 	.spotlight-list {
 		display: grid;
 		gap: 10px;
@@ -690,16 +652,21 @@
 		line-height: 1.6;
 		color: var(--text-secondary);
 	}
+	.resource-module {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		color: var(--text-muted);
+	}
 
-	.resource-badge-office {
+	.resource-badge-strategy {
 		background: rgba(81, 190, 123, 0.12);
 		color: var(--primary);
 	}
-	.resource-badge-deal {
+	.resource-badge-dealflow {
 		background: rgba(59, 130, 246, 0.12);
 		color: #2563eb;
 	}
-	.resource-badge-education {
+	.resource-badge-execution {
 		background: rgba(245, 158, 11, 0.14);
 		color: #c87b10;
 	}
@@ -822,12 +789,15 @@
 		padding: 16px 20px;
 		border-bottom: 1px solid var(--border);
 	}
-	.resource-modal-header h3 {
-		margin: 0;
+	.resource-modal-info {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.resource-modal-module {
 		font-family: var(--font-ui);
-		font-size: 15px;
-		font-weight: 700;
-		color: var(--text-dark);
+		font-size: 12px;
+		color: var(--text-muted);
 	}
 	.resource-modal-close {
 		border: none;
@@ -847,6 +817,29 @@
 		width: 100%;
 		height: 100%;
 		border: none;
+	}
+	.resource-modal-body {
+		padding: 20px 24px;
+	}
+	.resource-modal-body h3 {
+		margin: 0 0 8px;
+		font-family: var(--font-ui);
+		font-size: 17px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.resource-modal-body p {
+		margin: 0;
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--text-secondary);
+	}
+	.resource-modal-duration {
+		margin-top: 10px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-muted);
 	}
 
 	@media (max-width: 1024px) {
