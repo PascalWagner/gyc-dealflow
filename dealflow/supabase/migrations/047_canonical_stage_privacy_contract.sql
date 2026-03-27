@@ -1,6 +1,7 @@
 -- 047: Canonical stage privacy contract
 -- Fixes deal_stage_counts view to use post-040 stage names
 -- Adds email_digest_enabled + deal_alerts_enabled notification columns to user_profiles
+-- Applied: 2026-03-27
 
 -- 1. Recreate deal_stage_counts view with canonical (post-040) stage names
 --    The view columns keep the same aliases for API backward compat,
