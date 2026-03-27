@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 5
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: nntzqyufmtypfjpusflm
     steps:
       - uses: actions/checkout@v4
 
@@ -23,53 +24,68 @@ jobs:
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
             echo "ERROR: SUPABASE_ACCESS_TOKEN secret is not set."
-            echo "Go to: https://github.com/PascalWagner/gyc-dealflow/settings/secrets/actions"
-            echo "Add secret: SUPABASE_ACCESS_TOKEN (from https://supabase.com/dashboard/account/tokens)"
             exit 1
           fi
-          echo "Token is set (length: ${#SUPABASE_ACCESS_TOKEN})"
+          echo "Token present (length: ${#SUPABASE_ACCESS_TOKEN})"
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Link project and push migrations
+      - name: Apply migrations via Management API
         working-directory: dealflow
         run: |
-          echo "Linking to Supabase project nntzqyufmtypfjpusflm..."
-          echo "" | supabase link --project-ref nntzqyufmtypfjpusflm --password ""
+          MIGRATIONS=(
+            "supabase/migrations/047_canonical_stage_privacy_contract.sql"
+            "supabase/migrations/048_weekly_digest_operations.sql"
+            "supabase/migrations/049_weekly_digest_idempotency_and_release_gates.sql"
+            "supabase/migrations/050_weekly_digest_attempt_history.sql"
+          )
+          APPLIED=0
+          FAILED=0
+
+          for migration in "${MIGRATIONS[@]}"; do
+            echo ""
+            echo "========================================"
+            echo "Migration: $migration"
+            echo "========================================"
+            SQL=$(cat "$migration")
+            echo "$SQL"
+            echo ""
+
+            HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+              "https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query" \
+              -X POST \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg q "$SQL" '{query: $q}')")
+
+            echo "HTTP Status: $HTTP_CODE"
+            cat /tmp/response.json 2>/dev/null || true
+            echo ""
+
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+              echo "OK: Migration applied successfully"
+              APPLIED=$((APPLIED + 1))
+            else
+              echo "FAILED: HTTP $HTTP_CODE"
+              FAILED=$((FAILED + 1))
+            fi
+          done
 
           echo ""
-          echo "Checking migration status..."
-          supabase migration list 2>&1 || true
-
-          echo ""
-          echo "Dry run..."
-          supabase db push --dry-run 2>&1 || true
-
-          echo ""
-          echo "Applying migrations..."
-          supabase db push
-
-          echo ""
-          echo "Migrations applied successfully."
+          echo "========================================"
+          echo "Results: $APPLIED applied, $FAILED failed"
+          echo "========================================"
+          if [ "$FAILED" -gt 0 ]; then
+            exit 1
+          fi
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Extract Supabase credentials for verification
+      - name: Verify canonical DB shape
         working-directory: dealflow
         run: |
           SUPABASE_SERVICE_ROLE_KEY=$(python3 -c "exec(open('scripts/classify-strategies.py').read().split('HEADERS')[0]); print(SUPABASE_KEY)")
           SUPABASE_URL=$(python3 -c "exec(open('scripts/classify-strategies.py').read().split('HEADERS')[0]); print(SUPABASE_URL)")
-          echo "SUPABASE_URL=${SUPABASE_URL}" >> $GITHUB_ENV
-          echo "::add-mask::${SUPABASE_SERVICE_ROLE_KEY}"
-          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> $GITHUB_ENV
-
-      - name: Verify canonical DB shape
-        working-directory: dealflow
-        run: |
+          export SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY
           npm ci
           node scripts/check-canonical-db-shape.mjs
