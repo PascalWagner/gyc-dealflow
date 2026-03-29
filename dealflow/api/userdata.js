@@ -57,7 +57,8 @@ const FIELD_MAP = {
   stages: {
     'Deal ID': 'deal_id',
     'Stage': 'stage',
-    'Notes': 'notes'
+    'Notes': 'notes',
+    'Skipped From Stage': 'skipped_from_stage'
   },
   portfolio: {
     'Deal ID': 'deal_id',

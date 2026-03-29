@@ -5,6 +5,7 @@
 	import { user, isLoggedIn, userEmail, userToken, isAdmin } from '$lib/stores/auth.js';
 	import AppShell from '$lib/layout/AppShell.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import GPDealPerformance from '$lib/components/GPDealPerformance.svelte';
 
 	// ===== Reactive State (Svelte 5 Runes) =====
 		let loading = $state(true);
@@ -14,6 +15,9 @@
 		let accessDeniedMessage = $state("This dashboard is for General Partners who list deals on our platform. If you're a sponsor or operator, get started below.");
 		let toastMsg = $state('');
 	let toastVisible = $state(false);
+
+	// Dashboard tab
+	let dashboardTab = $state('overview');
 
 	// GP State
 	let companyId = $state(null);
@@ -999,6 +1003,22 @@
 				</div>
 			</div>
 
+			<!-- Dashboard Tabs -->
+			<div class="gp-tabs">
+				<button class="gp-tab" class:active={dashboardTab === 'overview'} onclick={() => dashboardTab = 'overview'}>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+					Overview
+				</button>
+				<button class="gp-tab" class:active={dashboardTab === 'performance'} onclick={() => dashboardTab = 'performance'}>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-6"/></svg>
+					Deal Performance
+				</button>
+			</div>
+
+			{#if dashboardTab === 'performance'}
+				<GPDealPerformance {companyId} authHeaders={authHeaders} />
+			{:else}
+
 			<!-- 1. Action Items -->
 			<div class="section-card">
 				<div class="section-header">
@@ -1420,7 +1440,8 @@
 					</div>
 				</div>
 			</div>
-		{/if}
+		{/if}<!-- end dashboardTab -->
+		{/if}<!-- end loading/access -->
 	</PageContainer>
 </AppShell>
 
@@ -3138,5 +3159,41 @@
 		.insights-stat-cards { grid-template-columns: 1fr; }
 		.insights-bar-label { min-width: 90px; font-size: 11px; }
 		.insights-two-col { flex-direction: column; }
+	}
+
+	/* ====== DASHBOARD TABS ====== */
+	.gp-tabs {
+		display: flex;
+		gap: 4px;
+		margin-bottom: 20px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		padding: 4px;
+	}
+	.gp-tab {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 10px 20px;
+		border: none;
+		background: transparent;
+		border-radius: 8px;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+	.gp-tab :global(svg) { width: 16px; height: 16px; }
+	.gp-tab:hover { color: var(--text-dark); background: var(--border-light); }
+	.gp-tab.active {
+		background: var(--primary);
+		color: #fff;
+	}
+	@media (max-width: 768px) {
+		.gp-tabs { flex-direction: row; overflow-x: auto; }
+		.gp-tab { font-size: 12px; padding: 8px 14px; white-space: nowrap; }
 	}
 </style>
