@@ -619,7 +619,7 @@ async function syncStageToBackend(dealId, stage, skippedFromStage = null) {
 		'Deal ID': dealId,
 		'Stage': stage
 	};
-	if (skippedFromStage) {
+	if (skippedFromStage != null) {
 		stageData['Skipped From Stage'] = skippedFromStage;
 	}
 

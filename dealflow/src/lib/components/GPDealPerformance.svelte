@@ -52,7 +52,9 @@
 	// Helpers
 	function fmtPct(val) {
 		if (val == null) return '--';
-		return val.toFixed(1) + '%';
+		const num = Number(val);
+		if (isNaN(num)) return '--';
+		return num.toFixed(1) + '%';
 	}
 
 	function fmtDiff(val) {
@@ -107,84 +109,88 @@
 	}
 
 	// Chart
+	let ChartConstructor = null;
+
 	async function loadChartJs() {
 		if (chartJsLoaded) return;
 		const { Chart, BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend } = await import('chart.js');
 		Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+		ChartConstructor = Chart;
 		chartJsLoaded = true;
 	}
 
 	function renderBenchmarkChart() {
-		if (!chartEl || !chartJsLoaded || !selectedDeal) return;
-		if (chartInstance) chartInstance.destroy();
+		if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+		if (!chartEl || !chartJsLoaded || !ChartConstructor || !selectedDeal) return;
 
-		const conv = selectedDeal.conversions;
+		const conv = selectedDeal.conversions || {};
 		const acConv = selectedBenchmark?.avgConversions || {};
 		const platConv = platformBenchmark?.avgConversions || {};
 
-		import('chart.js').then(({ Chart: C }) => {
-			chartInstance = new C(chartEl, {
-				type: 'bar',
-				data: {
-					labels: CONV_KEYS.map(c => c.short),
-					datasets: [
-						{
-							label: 'Your Deal',
-							data: CONV_KEYS.map(c => conv[c.key]),
-							backgroundColor: '#059669',
-							borderRadius: 3,
-							maxBarThickness: 32
-						},
-						{
-							label: selectedDeal.asset_class ? selectedDeal.asset_class + ' Avg' : 'Asset Class Avg',
-							data: CONV_KEYS.map(c => acConv[c.key]),
-							backgroundColor: '#3b82f6',
-							borderRadius: 3,
-							maxBarThickness: 32
-						},
-						{
-							label: 'Platform Avg',
-							data: CONV_KEYS.map(c => platConv[c.key]),
-							backgroundColor: '#94a3b8',
-							borderRadius: 3,
-							maxBarThickness: 32
-						}
-					]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: {
-						legend: {
-							display: true,
-							position: 'top',
-							labels: { boxWidth: 10, boxHeight: 10, padding: 14, font: { size: 11, weight: '600' } }
-						},
-						tooltip: {
-							callbacks: {
-								label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) + '%' : '--'}`
-							}
-						}
+		chartInstance = new ChartConstructor(chartEl, {
+			type: 'bar',
+			data: {
+				labels: CONV_KEYS.map(c => c.short),
+				datasets: [
+					{
+						label: 'Your Deal',
+						data: CONV_KEYS.map(c => conv[c.key] ?? null),
+						backgroundColor: '#059669',
+						borderRadius: 3,
+						maxBarThickness: 32
 					},
-					scales: {
-						x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-						y: { beginAtZero: true, ticks: { callback: v => v + '%', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+					{
+						label: selectedDeal.asset_class ? selectedDeal.asset_class + ' Avg' : 'Asset Class Avg',
+						data: CONV_KEYS.map(c => acConv[c.key] ?? null),
+						backgroundColor: '#3b82f6',
+						borderRadius: 3,
+						maxBarThickness: 32
+					},
+					{
+						label: 'Platform Avg',
+						data: CONV_KEYS.map(c => platConv[c.key] ?? null),
+						backgroundColor: '#94a3b8',
+						borderRadius: 3,
+						maxBarThickness: 32
 					}
+				]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: {
+						display: true,
+						position: 'top',
+						labels: { boxWidth: 10, boxHeight: 10, padding: 14, font: { size: 11, weight: '600' } }
+					},
+					tooltip: {
+						callbacks: {
+							label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) + '%' : '--'}`
+						}
+					}
+				},
+				scales: {
+					x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+					y: { beginAtZero: true, ticks: { callback: v => v + '%', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
 				}
-			});
+			}
 		});
 	}
 
 	// Effects
 	$effect(() => {
 		const _p = period;
-		if (companyId) fetchPerformance();
+		const _c = companyId;
+		if (_c) fetchPerformance();
 	});
 
 	$effect(() => {
 		const _deal = selectedDeal;
 		const _bench = selectedBenchmark;
-		if (chartJsLoaded && chartEl) renderBenchmarkChart();
+		const _loaded = chartJsLoaded;
+		const _el = chartEl;
+		if (_loaded && _el) renderBenchmarkChart();
 	});
 
 	onMount(async () => {
@@ -613,5 +619,14 @@
 		.benchmark-chart-wrap { height: 180px; }
 		.section-header { flex-wrap: wrap; gap: 6px; }
 		.section-header-right { margin-left: 0; }
+	}
+	@media (max-width: 480px) {
+		.funnel-row { grid-template-columns: 65px 1fr 42px; gap: 4px; }
+		.funnel-label { font-size: 10px; }
+		.funnel-count { font-size: 10px; }
+		.funnel-pct { font-size: 10px; }
+		.callout-row { flex-direction: column; align-items: flex-start; }
+		.benchmark-chart-wrap { height: 160px; }
+		.cross-deal-table { font-size: 11px; }
 	}
 </style>

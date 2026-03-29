@@ -110,7 +110,7 @@ export default async function handler(req, res) {
     const supabase = getAdminClient();
 
     // 1. Get GP's parent deals (direct ownership + sponsored)
-    const [{ data: ownedDeals, error: ownedErr }, { data: sponsoredRows }] = await Promise.all([
+    const [{ data: ownedDeals, error: ownedErr }, { data: sponsoredRows, error: sponsoredErr }] = await Promise.all([
       supabase
         .from('opportunities')
         .select('id, investment_name, asset_class, status, created_at, parent_deal_id')
@@ -123,6 +123,7 @@ export default async function handler(req, res) {
     ]);
 
     if (ownedErr) throw ownedErr;
+    if (sponsoredErr) throw sponsoredErr;
 
     // Merge into unique set of parent deal IDs
     const parentDealIdSet = new Set();
@@ -254,11 +255,12 @@ export default async function handler(req, res) {
       const BATCH_SIZE = 500;
       for (let i = 0; i < allBenchmarkDealIds.length; i += BATCH_SIZE) {
         const batch = allBenchmarkDealIds.slice(i, i + BATCH_SIZE);
-        const { data: batchStages } = await supabase
+        const { data: batchStages, error: batchErr } = await supabase
           .from('user_deal_stages')
           .select('deal_id, stage, skipped_from_stage')
           .in('deal_id', batch)
           .gte('updated_at', benchmarkCutoffStr);
+        if (batchErr) throw batchErr;
         benchmarkStages.push(...(batchStages || []));
       }
     }
