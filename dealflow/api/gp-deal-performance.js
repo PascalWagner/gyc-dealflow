@@ -186,8 +186,8 @@ export default async function handler(req, res) {
     if (cutoff) gpStagesQuery = gpStagesQuery.gte('updated_at', cutoff);
 
     let { data: gpData, error: gpErr } = await gpStagesQuery;
-    if (gpErr && gpErr.message?.includes('skipped_from_stage')) {
-      // Column doesn't exist yet — query without it
+    if (gpErr) {
+      // Column skipped_from_stage may not exist yet (migration 046) — retry without it
       let fallbackQuery = supabase
         .from('user_deal_stages')
         .select('user_id, deal_id, stage, updated_at')
@@ -196,8 +196,6 @@ export default async function handler(req, res) {
       const { data: fbData, error: fbErr } = await fallbackQuery;
       if (fbErr) throw fbErr;
       gpStagesRaw = fbData;
-    } else if (gpErr) {
-      throw gpErr;
     } else {
       gpStagesRaw = gpData;
     }
@@ -272,12 +270,23 @@ export default async function handler(req, res) {
 
       for (let i = 0; i < allBenchmarkDealIds.length; i += BATCH_SIZE) {
         const batch = allBenchmarkDealIds.slice(i, i + BATCH_SIZE);
-        const { data: batchStages, error: batchErr } = await supabase
+        let { data: batchStages, error: batchErr } = await supabase
           .from('user_deal_stages')
           .select(benchSelect)
           .in('deal_id', batch)
           .gte('updated_at', benchmarkCutoffStr);
-        if (batchErr) throw batchErr;
+        if (batchErr && hasSkippedCol) {
+          // Retry without skipped_from_stage
+          const fb = await supabase
+            .from('user_deal_stages')
+            .select('deal_id, stage')
+            .in('deal_id', batch)
+            .gte('updated_at', benchmarkCutoffStr);
+          if (fb.error) throw fb.error;
+          batchStages = fb.data;
+        } else if (batchErr) {
+          throw batchErr;
+        }
         benchmarkStages.push(...(batchStages || []));
       }
     }

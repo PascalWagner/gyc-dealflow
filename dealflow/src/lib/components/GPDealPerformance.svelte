@@ -153,9 +153,17 @@
 				`/api/gp-deal-performance?companyId=${encodeURIComponent(companyId)}&period=${period}`,
 				{ headers: authHeaders() }
 			);
-			if (!resp.ok) throw new Error('Failed to load performance data');
-			const data = await resp.json();
-			if (!data.deals || data.deals.length === 0) {
+			if (!resp.ok) {
+				// API error — show sample data instead of crashing
+				console.warn('GP deal performance API returned', resp.status);
+				perfData = SAMPLE_DATA;
+				isDemo = true;
+				selectedDealId = SAMPLE_DATA.deals[0].id;
+				return;
+			}
+			let data;
+			try { data = await resp.json(); } catch { data = null; }
+			if (!data || !data.deals || data.deals.length === 0) {
 				perfData = SAMPLE_DATA;
 				isDemo = true;
 				selectedDealId = SAMPLE_DATA.deals[0].id;
@@ -166,7 +174,11 @@
 				}
 			}
 		} catch (e) {
-			error = e.message;
+			// Network error or other failure — fall back to sample data
+			console.warn('GP deal performance fetch failed:', e);
+			perfData = SAMPLE_DATA;
+			isDemo = true;
+			selectedDealId = SAMPLE_DATA.deals[0].id;
 		} finally {
 			loading = false;
 		}
