@@ -13,6 +13,62 @@
 	let chartEl = $state(null);
 	let chartInstance = $state(null);
 	let chartJsLoaded = $state(false);
+	let isDemo = $state(false);
+
+	// Sample data shown when no real data exists
+	const SAMPLE_DATA = {
+		deals: [
+			{
+				id: 'sample-1', name: 'Oakwood Multi-Family Fund III', asset_class: 'Multi Family',
+				status: 'Active', created_at: '2025-09-15',
+				funnel: { totalEngaged: 187, saved: 124, connect: 58, decide: 21, invested: 9, skipped: 34, skippedBreakdown: { filter: 18, review: 10, connect: 4, decide: 2 } },
+				conversions: { engaged_to_saved: 66.3, saved_to_connect: 46.8, connect_to_decide: 36.2, decide_to_invested: 42.9 }
+			},
+			{
+				id: 'sample-2', name: 'StorageMax Value-Add Portfolio', asset_class: 'Self Storage',
+				status: 'Active', created_at: '2025-11-02',
+				funnel: { totalEngaged: 143, saved: 89, connect: 37, decide: 14, invested: 5, skipped: 28, skippedBreakdown: { filter: 15, review: 8, connect: 3, decide: 2 } },
+				conversions: { engaged_to_saved: 62.2, saved_to_connect: 41.6, connect_to_decide: 37.8, decide_to_invested: 35.7 }
+			},
+			{
+				id: 'sample-3', name: 'Sunbelt Industrial Syndication', asset_class: 'Industrial',
+				status: 'Closed', created_at: '2025-04-10',
+				funnel: { totalEngaged: 215, saved: 156, connect: 72, decide: 31, invested: 14, skipped: 41, skippedBreakdown: { filter: 22, review: 12, connect: 5, decide: 2 } },
+				conversions: { engaged_to_saved: 72.6, saved_to_connect: 46.2, connect_to_decide: 43.1, decide_to_invested: 45.2 }
+			}
+		],
+		benchmarks: {
+			byAssetClass: {
+				'Multi Family': { dealCount: 18, avgConversions: { engaged_to_saved: 58.4, saved_to_connect: 38.1, connect_to_decide: 32.5, decide_to_invested: 36.2 }, sampleNote: null },
+				'Self Storage': { dealCount: 7, avgConversions: { engaged_to_saved: 54.7, saved_to_connect: 35.8, connect_to_decide: 30.1, decide_to_invested: 33.4 }, sampleNote: null },
+				'Industrial': { dealCount: 4, avgConversions: { engaged_to_saved: 61.2, saved_to_connect: 40.5, connect_to_decide: 35.8, decide_to_invested: 38.6 }, sampleNote: 'Based on 4 deals' }
+			},
+			platform: { dealCount: 62, avgConversions: { engaged_to_saved: 55.1, saved_to_connect: 36.4, connect_to_decide: 31.8, decide_to_invested: 34.9 } }
+		},
+		crossDeal: [
+			{
+				id: 'sample-1', name: 'Oakwood Multi-Family Fund III', asset_class: 'Multi Family', status: 'Active',
+				conversions: { engaged_to_saved: 66.3, saved_to_connect: 46.8, connect_to_decide: 36.2, decide_to_invested: 42.9 },
+				vsAssetClass: { engaged_to_saved: 14, saved_to_connect: 23, connect_to_decide: 11, decide_to_invested: 19 },
+				vsPlatform: { engaged_to_saved: 20, saved_to_connect: 29, connect_to_decide: 14, decide_to_invested: 23 },
+				acSampleNote: null
+			},
+			{
+				id: 'sample-2', name: 'StorageMax Value-Add Portfolio', asset_class: 'Self Storage', status: 'Active',
+				conversions: { engaged_to_saved: 62.2, saved_to_connect: 41.6, connect_to_decide: 37.8, decide_to_invested: 35.7 },
+				vsAssetClass: { engaged_to_saved: 14, saved_to_connect: 16, connect_to_decide: 26, decide_to_invested: 7 },
+				vsPlatform: { engaged_to_saved: 13, saved_to_connect: 14, connect_to_decide: 19, decide_to_invested: 2 },
+				acSampleNote: null
+			},
+			{
+				id: 'sample-3', name: 'Sunbelt Industrial Syndication', asset_class: 'Industrial', status: 'Closed',
+				conversions: { engaged_to_saved: 72.6, saved_to_connect: 46.2, connect_to_decide: 43.1, decide_to_invested: 45.2 },
+				vsAssetClass: { engaged_to_saved: 19, saved_to_connect: 14, connect_to_decide: 20, decide_to_invested: 17 },
+				vsPlatform: { engaged_to_saved: 32, saved_to_connect: 27, connect_to_decide: 36, decide_to_invested: 30 },
+				acSampleNote: 'Based on 4 deals'
+			}
+		]
+	};
 
 	const PERIODS = [
 		{ value: '7', label: '7 days' },
@@ -91,15 +147,23 @@
 	async function fetchPerformance() {
 		loading = true;
 		error = null;
+		isDemo = false;
 		try {
 			const resp = await fetch(
 				`/api/gp-deal-performance?companyId=${encodeURIComponent(companyId)}&period=${period}`,
 				{ headers: authHeaders() }
 			);
 			if (!resp.ok) throw new Error('Failed to load performance data');
-			perfData = await resp.json();
-			if (!selectedDealId && perfData.deals?.length > 0) {
-				selectedDealId = perfData.deals[0].id;
+			const data = await resp.json();
+			if (!data.deals || data.deals.length === 0) {
+				perfData = SAMPLE_DATA;
+				isDemo = true;
+				selectedDealId = SAMPLE_DATA.deals[0].id;
+			} else {
+				perfData = data;
+				if (!selectedDealId && data.deals.length > 0) {
+					selectedDealId = data.deals[0].id;
+				}
 			}
 		} catch (e) {
 			error = e.message;
@@ -208,18 +272,23 @@
 	<div class="perf-error">
 		<p>Failed to load performance data. <button onclick={() => fetchPerformance()}>Retry</button></p>
 	</div>
-{:else if deals.length === 0}
-	<div class="perf-empty">
-		<div class="perf-empty-icon">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-6"/></svg>
-		</div>
-		<h3>No Deal Performance Data Yet</h3>
-		<p>Once your deals start getting LP engagement, you'll see funnel metrics, conversion rates, and benchmark comparisons here.</p>
-	</div>
 {:else}
+
+	{#if isDemo}
+		<div class="demo-banner">
+			<div class="demo-banner-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-6"/></svg>
+			</div>
+			<div class="demo-banner-content">
+				<div class="demo-banner-title">Sample Data Preview</div>
+				<div class="demo-banner-text">This is what your Deal Performance dashboard will look like once LPs start engaging with your deals. The data below is illustrative — your real funnel metrics, conversion rates, and benchmark comparisons will replace it automatically.</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Period Filter -->
 	<div class="perf-controls">
+		{#if !isDemo}
 		<div class="period-tabs">
 			{#each PERIODS as p}
 				<button class="period-tab" class:active={period === p.value} onclick={() => { period = p.value; }}>
@@ -227,6 +296,7 @@
 				</button>
 			{/each}
 		</div>
+		{/if}
 	</div>
 
 	<!-- Deal Selector -->
@@ -414,6 +484,43 @@
 {/if}
 
 <style>
+	/* ====== DEMO BANNER ====== */
+	.demo-banner {
+		display: flex;
+		align-items: flex-start;
+		gap: 14px;
+		padding: 16px 20px;
+		margin-bottom: 20px;
+		background: linear-gradient(135deg, rgba(81,190,123,0.08) 0%, rgba(59,130,246,0.06) 100%);
+		border: 1px dashed var(--primary);
+		border-radius: 10px;
+	}
+	.demo-banner-icon {
+		flex-shrink: 0;
+		width: 36px;
+		height: 36px;
+		border-radius: 8px;
+		background: rgba(81,190,123,0.15);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.demo-banner-icon :global(svg) { width: 20px; height: 20px; color: var(--primary); }
+	.demo-banner-content { flex: 1; }
+	.demo-banner-title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-bottom: 4px;
+	}
+	.demo-banner-text {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		line-height: 1.5;
+		color: var(--text-muted);
+	}
+
 	/* ====== LOADING & EMPTY ====== */
 	.perf-loading { display: flex; flex-direction: column; gap: 16px; }
 	.skeleton {
