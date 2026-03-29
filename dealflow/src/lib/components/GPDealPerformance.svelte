@@ -11,7 +11,7 @@
 	let period = $state('all');
 	let selectedDealId = $state(null);
 	let chartEl = $state(null);
-	let chartInstance = $state(null);
+	let chartInstance = null; // NOT $state — avoids infinite effect loop
 	let chartJsLoaded = $state(false);
 	let isDemo = $state(false);
 
