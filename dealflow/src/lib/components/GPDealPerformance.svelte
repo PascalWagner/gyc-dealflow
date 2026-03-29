@@ -246,7 +246,13 @@
 	$effect(() => {
 		const _p = period;
 		const _c = companyId;
-		if (_c) fetchPerformance();
+		if (_c) {
+			fetchPerformance().catch(e => {
+				console.warn('Performance fetch failed:', e);
+				error = e?.message || 'Failed to load';
+				loading = false;
+			});
+		}
 	});
 
 	$effect(() => {
@@ -254,11 +260,13 @@
 		const _bench = selectedBenchmark;
 		const _loaded = chartJsLoaded;
 		const _el = chartEl;
-		if (_loaded && _el) renderBenchmarkChart();
+		if (_loaded && _el) {
+			try { renderBenchmarkChart(); } catch (e) { console.warn('Chart render failed:', e); }
+		}
 	});
 
 	onMount(async () => {
-		await loadChartJs();
+		try { await loadChartJs(); } catch (e) { console.warn('Chart.js load failed:', e); }
 	});
 </script>
 

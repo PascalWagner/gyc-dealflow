@@ -177,17 +177,30 @@ export default async function handler(req, res) {
     }
 
     // 3. Fetch stages for GP's deals
+    // Try with skipped_from_stage column; fall back if migration 046 hasn't run yet
+    let gpStagesRaw;
     let gpStagesQuery = supabase
       .from('user_deal_stages')
       .select('user_id, deal_id, stage, skipped_from_stage, updated_at')
       .in('deal_id', allGpDealIds);
+    if (cutoff) gpStagesQuery = gpStagesQuery.gte('updated_at', cutoff);
 
-    if (cutoff) {
-      gpStagesQuery = gpStagesQuery.gte('updated_at', cutoff);
+    let { data: gpData, error: gpErr } = await gpStagesQuery;
+    if (gpErr && gpErr.message?.includes('skipped_from_stage')) {
+      // Column doesn't exist yet — query without it
+      let fallbackQuery = supabase
+        .from('user_deal_stages')
+        .select('user_id, deal_id, stage, updated_at')
+        .in('deal_id', allGpDealIds);
+      if (cutoff) fallbackQuery = fallbackQuery.gte('updated_at', cutoff);
+      const { data: fbData, error: fbErr } = await fallbackQuery;
+      if (fbErr) throw fbErr;
+      gpStagesRaw = fbData;
+    } else if (gpErr) {
+      throw gpErr;
+    } else {
+      gpStagesRaw = gpData;
     }
-
-    const { data: gpStagesRaw, error: gpStagesErr } = await gpStagesQuery;
-    if (gpStagesErr) throw gpStagesErr;
 
     // Roll up child stages to parent
     const gpStages = (gpStagesRaw || []).map(row => ({
@@ -253,11 +266,15 @@ export default async function handler(req, res) {
     if (allBenchmarkDealIds.length > 0) {
       // Fetch in batches if needed (Supabase IN has limits)
       const BATCH_SIZE = 500;
+      // Detect if skipped_from_stage column exists (from first GP query result)
+      const hasSkippedCol = (gpStagesRaw || []).length === 0 || (gpStagesRaw[0] && 'skipped_from_stage' in gpStagesRaw[0]);
+      const benchSelect = hasSkippedCol ? 'deal_id, stage, skipped_from_stage' : 'deal_id, stage';
+
       for (let i = 0; i < allBenchmarkDealIds.length; i += BATCH_SIZE) {
         const batch = allBenchmarkDealIds.slice(i, i + BATCH_SIZE);
         const { data: batchStages, error: batchErr } = await supabase
           .from('user_deal_stages')
-          .select('deal_id, stage, skipped_from_stage')
+          .select(benchSelect)
           .in('deal_id', batch)
           .gte('updated_at', benchmarkCutoffStr);
         if (batchErr) throw batchErr;
