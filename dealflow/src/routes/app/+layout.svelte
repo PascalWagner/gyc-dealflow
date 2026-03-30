@@ -2,7 +2,8 @@
 	import AppShell from '$lib/layout/AppShell.svelte';
 	import OfflineNotice from '$lib/components/OfflineNotice.svelte';
 	import { page, navigating } from '$app/stores';
-	import { user, isLoggedIn, ensureSessionUserToken, getStoredSessionUser } from '$lib/stores/auth.js';
+	import { user, isAdmin, isLoggedIn, ensureSessionUserToken, getStoredSessionUser } from '$lib/stores/auth.js';
+	import { ADMIN_ONLY_PAGE_KEYS } from '$lib/navigation/app-nav.js';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import {
@@ -37,6 +38,7 @@
 		if (path === 'admin/outreach') return 'outreach';
 		return path || 'dashboard';
 	});
+	const adminOnlyPages = new Set(ADMIN_ONLY_PAGE_KEYS);
 
 	function redirectToLogin() {
 		if (redirecting) return;
@@ -45,6 +47,11 @@
 
 		const returnPath = `${$page.url.pathname}${$page.url.search}`;
 		goto(`/login?return=${encodeURIComponent(returnPath)}`, { replaceState: true }).catch(() => {});
+	}
+
+	function redirectUnauthorizedAdminRoute() {
+		if (!adminOnlyPages.has(currentPage) || $isAdmin || $page.url.pathname === '/app/deals') return;
+		goto('/app/deals', { replaceState: true }).catch(() => {});
 	}
 
 	// Auth guard — on client mount, re-hydrate store from localStorage
@@ -90,6 +97,11 @@
 		return () => {
 			if (authTimeout) clearTimeout(authTimeout);
 		};
+	});
+
+	$effect(() => {
+		if (!authChecked || !sessionReady || redirecting || !$isLoggedIn) return;
+		redirectUnauthorizedAdminRoute();
 	});
 </script>
 

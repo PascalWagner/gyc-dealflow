@@ -13,14 +13,25 @@
 	function toggleFaq(i) { openFaq = openFaq === i ? -1 : i; }
 
 	const tabs = ['Deal Intelligence', 'Tools & DD', 'GP Access', 'Pascal & Community'];
-	const memberHubCards = [
-		{ title: 'Resources', copy: 'Replay library, office hours recordings, and member lessons.', href: '/app/resources' },
-		{ title: 'Office Hours', copy: 'Live weekly sessions, calendar access, and replays.', href: '/app/office-hours' },
-		{ title: 'My Plan', copy: 'Deployment goals, portfolio roadmap, and next-step planning.', href: '/app/plan' },
-		{ title: 'Market Intel', copy: 'Market benchmarks, filing trends, and deal analytics.', href: '/app/market-intel' },
-		{ title: 'Deal Flow', copy: 'Browse deals, save opportunities, and compare options.', href: '/app/deals' },
-		{ title: 'Portfolio', copy: 'Track current holdings and monitor income progress.', href: '/app/portfolio' }
-	];
+	const memberHubCards = $derived.by(() => {
+		const cards = [
+			{ title: 'Resources', copy: 'Replay library, office hours recordings, and member lessons.', href: '/app/resources' },
+			{ title: 'Office Hours', copy: 'Live weekly sessions, calendar access, and replays.', href: '/app/office-hours' },
+			{ title: 'My Plan', copy: 'Deployment goals, portfolio roadmap, and next-step planning.', href: '/app/plan' },
+			{ title: 'Deal Flow', copy: 'Browse deals, save opportunities, and compare options.', href: '/app/deals' },
+			{ title: 'Portfolio', copy: 'Track current holdings and monitor income progress.', href: '/app/portfolio' }
+		];
+
+		if ($isAdmin) {
+			cards.splice(3, 0, {
+				title: 'Market Intel',
+				copy: 'Market benchmarks, filing trends, and deal analytics.',
+				href: '/app/market-intel'
+			});
+		}
+
+		return cards;
+	});
 	const nativePreviewCards = [
 		{ title: 'Resource Library', copy: 'Office hours replays, lessons, and deal reviews.' },
 		{ title: 'Office Hours', copy: 'Weekly live sessions and follow-up notes.' },
