@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "audit:routes": "node scripts/audit-route-contracts.mjs",
     "verify:push": "npm run audit:routes && npm run build",
+    "deploy:sandbox": "bash scripts/deploy-sandbox.sh",
+    "promote:sandbox": "bash scripts/promote-sandbox.sh",
     "test:smoke": "playwright test -c playwright.config.ts",
     "cap:sync": "npx cap sync ios",
     "cap:open": "npx cap open ios",
