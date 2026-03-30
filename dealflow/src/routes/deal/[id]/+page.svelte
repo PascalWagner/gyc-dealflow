@@ -6,7 +6,6 @@
 	import InvestingGeographyMap from '$lib/components/InvestingGeographyMap.svelte';
 	import DealOpportunityCard from '$lib/components/DealOpportunityCard.svelte';
 	import DealAnalysisDashboard from '$lib/components/DealAnalysisDashboard.svelte';
-	import DealSlidePanel from '$lib/components/DealSlidePanel.svelte';
 	import DealDisclaimer from '$lib/components/DealDisclaimer.svelte';
 	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember, isGP } from '$lib/stores/auth.js';
 	import {
@@ -90,10 +89,6 @@
 	// Goal Path
 	let userGoal = $state(null);
 	let goalProgress = $state(null);
-
-	// Slide Panels
-	let showDDPanel = $state(false);
-	let showQAPanel = $state(false);
 
 	// Deck Viewer Modal
 	let showDeckViewer = $state(false);
@@ -1381,17 +1376,6 @@
 		}
 	}
 
-	function openDDPanel() {
-		showDDPanel = true;
-		// Ensure questions loaded
-		if (!qaLoaded) void loadQuestions();
-	}
-
-	function openQAPanel() {
-		showQAPanel = true;
-		if (!qaLoaded) void loadQuestions();
-	}
-
 	// ===== Actions =====
 	function advanceStage() {
 		if (!deal) return;
@@ -2135,7 +2119,75 @@
 
 					<!-- Operator Track Record now in Analysis Dashboard -->
 
-				<!-- DD Checklist is now in a slide-over panel (accessed via Analysis Dashboard) -->
+				<!-- ==================== DD CHECKLIST (inline accordion) ==================== -->
+					{#if checklist && deal}
+						<div class="section flow-order-35">
+							<div class="section-header">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+								<span class="section-title">Deal Research Checklist</span>
+								<span class="dd-accordion-progress">{ddProgress.pct}% · {ddProgress.answered}/{ddProgress.total}</span>
+							</div>
+							<div class="dd-section-body" style="position:relative;min-height:80px;">
+								{#if !isPaid && !$isAdmin}
+									<div class="gate-overlay">
+										<div class="gate-content">
+											<div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+											<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
+											<div class="gate-text">Members unlock the interactive DD checklist with auto-filled answers.</div>
+											{#if !nativeCompanionMode}<a href={academyHref} class="gate-cta">Become a Member</a>{/if}
+										</div>
+									</div>
+								{/if}
+								<div class:blurred={!isPaid && !$isAdmin}>
+									<div class="dd-checklist-subtitle">{checklist.label} · {checklist.sections.length} sections</div>
+									<div class="dd-accordion">
+										{#each checklist.sections as sec, si}
+											<div class="dd-accordion-section">
+												<button class="dd-accordion-header" onclick={() => { ddAccordionOpen = { ...ddAccordionOpen, [si]: !ddAccordionOpen[si] }; }}>
+													<span class="dd-accordion-title">
+														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron" class:open={ddAccordionOpen[si]}><polyline points="9 18 15 12 9 6"/></svg>
+														{sec.title}
+													</span>
+													<span class="dd-accordion-progress">
+														{sec.questions.filter((q, qi) => {
+															const key = `s${si}q${qi}`;
+															return !!(q.autoField ? getAutoValue(deal, q.autoField, q.format) : null) || ddAnswers[key];
+														}).length}/{sec.questions.length}
+													</span>
+												</button>
+												{#if ddAccordionOpen[si]}
+													<div class="dd-accordion-body">
+														{#each sec.questions as q, qi}
+															{@const key = `s${si}q${qi}`}
+															{@const autoVal = q.autoField ? getAutoValue(deal, q.autoField, q.format) : null}
+															{@const userVal = ddAnswers[key] || ''}
+															<div class="dd-question" class:answered={!!autoVal || !!userVal}>
+																<div class="dd-question-text">{q.q}</div>
+																{#if autoVal}
+																	<div class="dd-answer">
+																		<span class="dd-answer-badge auto">auto</span>
+																		<span class="dd-answer-text">{autoVal}</span>
+																	</div>
+																{:else if userVal}
+																	<div class="dd-answer">
+																		<span class="dd-answer-badge user">you</span>
+																		<span class="dd-answer-text">{userVal}</span>
+																	</div>
+																{:else}
+																	<input class="dd-answer-input" type="text" placeholder="Add your research..."
+																		onblur={(e) => saveDDAnswer(key, e.target.value)} />
+																{/if}
+															</div>
+														{/each}
+													</div>
+												{/if}
+											</div>
+										{/each}
+									</div>
+								</div>
+							</div>
+						</div>
+					{/if}
 
 				<!-- ==================== PROJECTED LP CASH FLOW ==================== -->
 				{#if cfRows.length > 0}
@@ -2747,105 +2799,6 @@
 	</a>
 </nav>
 
-<!-- ==================== DD CHECKLIST SLIDE PANEL ==================== -->
-<DealSlidePanel bind:open={showDDPanel} title="Deal Research Checklist" width="55%">
-	{#if checklist && deal}
-		<div class="slide-dd-progress">
-			<span>{ddProgress.pct}% complete</span>
-			<span>{ddProgress.answered}/{ddProgress.total} items</span>
-		</div>
-		{#if !isPaid}
-			<div class="slide-gate">
-				<p>Members unlock the interactive DD checklist with auto-filled answers.</p>
-				{#if !nativeCompanionMode}
-					<a href={academyHref} class="slide-gate-btn">Become a Member</a>
-				{/if}
-			</div>
-		{:else}
-			<div class="slide-dd-subtitle">{checklist.label} · {checklist.sections.length} sections</div>
-			{#each checklist.sections as sec, si}
-				<div class="slide-dd-section">
-					<button class="slide-dd-header" onclick={() => { ddAccordionOpen = { ...ddAccordionOpen, [si]: !ddAccordionOpen[si] }; }}>
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" class="slide-chevron" class:open={ddAccordionOpen[si]}><polyline points="9 18 15 12 9 6"/></svg>
-						<span>{sec.title}</span>
-						<span class="slide-dd-count">
-							{sec.questions.filter((q, qi) => {
-								const key = `s${si}q${qi}`;
-								return !!(q.autoField ? getAutoValue(deal, q.autoField, q.format) : null) || ddAnswers[key];
-							}).length}/{sec.questions.length}
-						</span>
-					</button>
-					{#if ddAccordionOpen[si]}
-						<div class="slide-dd-body">
-							{#each sec.questions as q, qi}
-								{@const key = `s${si}q${qi}`}
-								{@const autoVal = q.autoField ? getAutoValue(deal, q.autoField, q.format) : null}
-								{@const userVal = ddAnswers[key] || ''}
-								<div class="slide-dd-question" class:answered={!!autoVal || !!userVal}>
-									<div class="slide-dd-q-text">{q.q}</div>
-									{#if autoVal}
-										<div class="slide-dd-answer">
-											<span class="slide-dd-badge auto">auto</span>
-											<span>{autoVal}</span>
-										</div>
-									{:else if userVal}
-										<div class="slide-dd-answer">
-											<span class="slide-dd-badge user">you</span>
-											<span>{userVal}</span>
-										</div>
-									{:else}
-										<input class="slide-dd-input" type="text" placeholder="Add your research..."
-											onblur={(e) => saveDDAnswer(key, e.target.value)} />
-									{/if}
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{/each}
-		{/if}
-	{/if}
-</DealSlidePanel>
-
-<!-- ==================== Q&A SLIDE PANEL ==================== -->
-<DealSlidePanel bind:open={showQAPanel} title="Investor Q&A" width="50%">
-	{#if deal}
-		{#if !hasMemberAccess}
-			<div class="slide-gate">
-				<p>Investor Q&A is available to members.</p>
-				{#if !nativeCompanionMode}
-					<a href={academyHref} class="slide-gate-btn">Become a Member</a>
-				{/if}
-			</div>
-		{:else}
-			<div class="slide-qa-form">
-				<textarea class="slide-qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea>
-				<button class="slide-qa-submit" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button>
-			</div>
-			{#if qaLoading}
-				<div class="slide-qa-empty">Loading questions...</div>
-			{:else if qaError}
-				<div class="slide-qa-empty">Couldn't load questions. <button class="slide-qa-retry" onclick={() => loadQuestions(true)}>Try Again</button></div>
-			{:else if questions.length === 0}
-				<div class="slide-qa-empty">No questions yet. Be the first to ask!</div>
-			{:else}
-				<div class="slide-qa-list">
-					{#each questions as q}
-						<div class="slide-qa-item">
-							<div class="slide-qa-question">{q.question}</div>
-							<div class="slide-qa-meta">{q.askedBy || 'Anonymous'} {#if q.askedAt}· {getRelativeTime(q.askedAt)}{/if}</div>
-							{#if q.answer}
-								<div class="slide-qa-answer">
-									<strong>{q.answeredBy || 'Team'}</strong>: {q.answer}
-								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
-			{/if}
-		{/if}
-	{/if}
-</DealSlidePanel>
 
 <!-- ==================== TOAST ==================== -->
 {#if toastVisible}
@@ -5061,42 +5014,4 @@
 		.enrich-field-label { flex: 0 0 100px; font-size: 10px; }
 	}
 
-	/* ===== Slide Panel DD Checklist Content ===== */
-	.slide-dd-progress { display: flex; justify-content: space-between; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
-	.slide-gate { text-align: center; padding: 24px 16px; }
-	.slide-gate p { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
-	.slide-gate-btn { display: inline-block; padding: 10px 24px; background: var(--primary); color: #fff; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 700; text-decoration: none; }
-	.slide-dd-subtitle { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
-	.slide-dd-section { border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: 8px; overflow: hidden; }
-	.slide-dd-header { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; background: var(--bg-card); border: none; cursor: pointer; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); text-align: left; }
-	.slide-dd-header:hover { background: var(--bg-cream); }
-	.slide-chevron { transition: transform 0.2s; color: var(--text-muted); flex-shrink: 0; }
-	.slide-chevron.open { transform: rotate(90deg); }
-	.slide-dd-count { margin-left: auto; font-size: 11px; color: var(--text-muted); font-weight: 500; }
-	.slide-dd-body { padding: 8px 14px 14px; }
-	.slide-dd-question { padding: 8px 0; border-bottom: 1px solid var(--border-light); }
-	.slide-dd-question:last-child { border-bottom: none; }
-	.slide-dd-question.answered { opacity: 0.85; }
-	.slide-dd-q-text { font-family: var(--font-body); font-size: 13px; color: var(--text-dark); margin-bottom: 4px; }
-	.slide-dd-answer { display: flex; align-items: center; gap: 8px; font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); }
-	.slide-dd-badge { padding: 1px 6px; border-radius: 4px; font-family: var(--font-ui); font-size: 9px; font-weight: 700; text-transform: uppercase; }
-	.slide-dd-badge.auto { background: var(--green-bg); color: var(--green); }
-	.slide-dd-badge.user { background: rgba(59, 130, 246, 0.1); color: var(--blue); }
-	.slide-dd-input { width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 12px; background: var(--bg-card); color: var(--text-dark); }
-	.slide-dd-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.15); }
-
-	/* ===== Slide Panel Q&A Content ===== */
-	.slide-qa-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-	.slide-qa-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; background: var(--bg-card); color: var(--text-dark); resize: vertical; }
-	.slide-qa-input:focus { border-color: var(--primary); outline: none; }
-	.slide-qa-submit { align-self: flex-end; padding: 8px 20px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; }
-	.slide-qa-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-	.slide-qa-empty { text-align: center; font-family: var(--font-ui); font-size: 13px; color: var(--text-muted); padding: 20px; }
-	.slide-qa-retry { background: none; border: none; color: var(--primary); font-weight: 600; cursor: pointer; }
-	.slide-qa-list { display: flex; flex-direction: column; gap: 16px; }
-	.slide-qa-item { padding: 12px 0; border-bottom: 1px solid var(--border-light); }
-	.slide-qa-item:last-child { border-bottom: none; }
-	.slide-qa-question { font-family: var(--font-body); font-size: 14px; color: var(--text-dark); margin-bottom: 4px; }
-	.slide-qa-meta { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
-	.slide-qa-answer { background: var(--bg-cream); padding: 10px 14px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 </style>
