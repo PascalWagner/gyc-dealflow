@@ -77,6 +77,6 @@ npm run promote:sandbox -- https://dealflow-abc123-pascal-wagners-projects.verce
 
 ## Important Note About Vercel Authentication
 
-This project currently keeps Vercel protection on for non-production deployments. If the sandbox asks for access before the app loads, open the share link from the sandbox deployment page once in your browser. That sets the access cookie, and then `sandbox.growyourcashflow.io` works normally in that browser session.
+Vercel Authentication is currently disabled for this project, so `sandbox.growyourcashflow.io` should open directly without an extra Vercel access prompt.
 
-If you want the sandbox domain to open without that extra step, the next change would be to relax Vercel Authentication for non-production deployments.
+If preview protection is ever re-enabled in the future, sandbox may require a Vercel share link or other deployment bypass before the app login page will load.
