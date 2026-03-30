@@ -471,7 +471,7 @@
 
 	async function submitQuestion() { if (!deal || !newQuestion.trim()) return; if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to save this deal and start your investor profile.' })) return; if (!hasMemberAccess) { window.location.href = academyHref; return; } qaSubmitting = true; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', dealId: deal.id, dealName: deal.investmentName, question: newQuestion.trim(), userEmail: stored.email || '', userName: stored.name || 'Anonymous' }) }); const d = await r.json(); if (d.success) { newQuestion = ''; await loadQuestions(); } } catch {} qaSubmitting = false; }
 
-	async function submitAnswer(qid, text) { if (!text.trim()) return; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'answer', recordId: qid, answer: text.trim(), userName: stored.name || 'Pascal' }) }); const d = await r.json(); if (d.success) await loadQuestions(); } catch {} }
+	async function submitAnswer(qid, text) { if (!text.trim()) return; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'answer', recordId: qid, answer: text.trim(), userName: stored.name || 'GYC Team' }) }); const d = await r.json(); if (d.success) await loadQuestions(); } catch {} }
 
 	async function upvoteQuestion(qid) {
 		if (!$isLoggedIn || !browser) return;
@@ -1678,10 +1678,11 @@
 
 		// Auto-select first share class (sorted by highest min investment) on initial load
 		if (deal.shareClasses && deal.shareClasses.length > 0) {
-			let bestIdx = 0, bestMin = 0;
+			let bestIdx = 0, bestMin = Infinity;
 			for (let i = 0; i < deal.shareClasses.length; i++) {
-				if ((deal.shareClasses[i].investmentMinimum || 0) > bestMin) {
-					bestMin = deal.shareClasses[i].investmentMinimum || 0;
+				const min = deal.shareClasses[i].investmentMinimum || 0;
+				if (min < bestMin) {
+					bestMin = min;
 					bestIdx = i;
 				}
 			}
@@ -1963,6 +1964,8 @@
 				<DealOpportunityCard
 					{deal}
 					{buyBox}
+					{buyBoxChecks}
+					{buyBoxScore}
 					goal={userGoal}
 					{goalProgress}
 					investmentAmount={deal?.investmentMinimum}
@@ -1970,6 +1973,7 @@
 					{isPaid}
 					onSetGoal={setUserGoal}
 					onOpenAuth={() => openAuthModal({ title: 'Create a free account', body: 'Create a free account to see personalized deal projections.' })}
+					onOpenBuyBox={openBuyBoxAction}
 					{nativeCompanionMode}
 				/>
 
@@ -2095,13 +2099,13 @@
 				<DealAnalysisDashboard
 					{deal}
 					{buyBox}
-					{buyBoxChecks}
-					{buyBoxScore}
 					{feeRows}
 					{operatorTrackRecordRows}
 					{secFiling}
-					{keyRiskItems}
-					{ddProgress}
+					{bgCheck}
+					{bgCheckLoading}
+					{bgCheckLoaded}
+					onLoadBgCheck={() => loadBackgroundCheck()}
 					{isPaid}
 					{isPublicViewer}
 					{isFreeViewer}
@@ -2110,9 +2114,6 @@
 					{nativeCompanionMode}
 					{academyHref}
 					onOpenAuth={() => openAuthModal({ title: 'Create a free account', body: 'Create a free account to save deals and start your analysis.' })}
-					onOpenBuyBox={openBuyBoxAction}
-					onOpenDDChecklist={() => { showDDPanel = true; }}
-					onOpenQA={() => { showQAPanel = true; void loadQuestions(); }}
 					{fmt}
 				/>
 

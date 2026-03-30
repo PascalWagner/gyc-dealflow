@@ -8,56 +8,112 @@
 // ===== Summary Line Builders =====
 // Each returns a short factual sentence (no judgments) for accordion headers.
 
-export function buildFitSummary(deal, buyBox) {
-	if (!deal) return 'No deal data available.';
-	if (!buyBox || !Object.keys(buyBox).length) return 'Set up your Buy Box to see how this deal aligns.';
-	const checks = computeBuyBoxMatchCount(deal, buyBox);
-	if (checks.total === 0) return 'No matching criteria configured yet.';
-	return `${checks.matched} of ${checks.total} Buy Box criteria match this deal.`;
-}
-
-export function buildStructureSummary(deal) {
+export function buildLegitimacySummary(deal, secFiling) {
 	if (!deal) return 'No deal data available.';
 	const parts = [];
-	if (deal.offeringType) parts.push(deal.offeringType);
-	if (deal.dealType) parts.push(deal.dealType.toLowerCase());
-	if (deal.distributions && deal.distributions !== 'Unknown') parts.push(deal.distributions.toLowerCase() + ' distributions');
-	if (deal.holdPeriod) parts.push(formatHoldShort(deal.holdPeriod) + ' hold');
-	if (parts.length === 0) return 'Structure details have not been added yet.';
+	if (secFiling?.hasFiling && secFiling.offeringType) {
+		parts.push(`SEC filed (${secFiling.offeringType})`);
+	} else if (deal.secCik) {
+		parts.push('SEC filed');
+	}
+	if (deal.addedDate) {
+		const months = Math.round((Date.now() - new Date(deal.addedDate).getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+		if (months > 0) parts.push(`In database ${months} month${months !== 1 ? 's' : ''}`);
+	}
+	if (secFiling?.totalInvestors) {
+		parts.push(`${secFiling.totalInvestors} LPs`);
+	}
+	if (parts.length === 0) return 'Legitimacy data not yet available.';
 	return parts.join(' · ');
 }
 
 export function buildSponsorSummary(deal) {
 	if (!deal) return 'No sponsor data available.';
 	const parts = [];
-	if (deal.managementCompany) parts.push(deal.managementCompany);
 	if (deal.mcFoundingYear) {
-		const years = new Date().getFullYear() - deal.mcFoundingYear;
-		parts.push(`${years}+ yr track record`);
+		parts.push(`Est. ${deal.mcFoundingYear}`);
 	}
 	if (deal.fundAUM) parts.push(formatMoneyShort(deal.fundAUM) + ' AUM');
+	if (deal.mcFullCycleExits) {
+		parts.push(`${deal.mcFullCycleExits} full-cycle exit${deal.mcFullCycleExits !== 1 ? 's' : ''}`);
+	} else if (deal.mcFoundingYear) {
+		const years = new Date().getFullYear() - deal.mcFoundingYear;
+		if (years >= 5) parts.push(`${years}+ yr track record`);
+	}
 	if (parts.length === 0) return 'Sponsor details have not been structured yet.';
 	return parts.join(' · ');
 }
 
-export function buildRiskSummary(deal, riskItems) {
+export function buildStructureSummary(deal) {
 	if (!deal) return 'No deal data available.';
-	const count = riskItems?.length || 0;
-	const gapCount = computeDataGaps(deal).length;
-	if (count === 0 && gapCount === 0) return 'No identified risks or data gaps at this time.';
 	const parts = [];
-	if (count > 0) parts.push(`${count} identified risk${count > 1 ? 's' : ''}`);
-	if (gapCount > 0) parts.push(`${gapCount} data gap${gapCount > 1 ? 's' : ''}`);
+	if (deal.fees) {
+		const m = String(deal.fees).match(/([\d.]+)\s*%/);
+		if (m) parts.push(`${m[1]}% fee`);
+	}
+	if (deal.lpGpSplit) parts.push(deal.lpGpSplit);
+	if (deal.preferredReturn) {
+		const pref = deal.preferredReturn > 1 ? deal.preferredReturn : deal.preferredReturn * 100;
+		parts.push(`${pref.toFixed(0)}% pref`);
+	}
+	if (deal.offeringType) parts.push(deal.offeringType);
+	if (parts.length === 0) return 'Structure details have not been added yet.';
 	return parts.join(' · ');
 }
 
-export function buildDeepDiveSummary(deal, ddProgress) {
+export function buildReturnsSummary(deal) {
 	if (!deal) return 'No deal data available.';
 	const parts = [];
-	if (ddProgress?.pct > 0) parts.push(`DD checklist ${ddProgress.pct}% complete`);
-	if (deal.secCik) parts.push('SEC filing verified');
-	else parts.push('No SEC filing matched');
+	const yieldRate = deal.preferredReturn || deal.cashOnCash;
+	if (yieldRate) {
+		const pct = yieldRate > 1 ? yieldRate : yieldRate * 100;
+		parts.push(`${pct.toFixed(1)}% yield`);
+	}
+	if (deal.distributions && deal.distributions !== 'Unknown' && deal.distributions !== 'None') {
+		parts.push(deal.distributions);
+	}
+	if (deal.targetIRR) {
+		const irr = deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100;
+		parts.push(`${irr.toFixed(1)}% target IRR`);
+	}
+	if (parts.length === 0) return 'Return data not yet available.';
 	return parts.join(' · ');
+}
+
+export function buildRiskCompSummary(deal, rcg) {
+	if (!deal) return 'No deal data available.';
+	const parts = [];
+	if (rcg?.risks?.length > 0) parts.push(`${rcg.risks.length} risk${rcg.risks.length > 1 ? 's' : ''}`);
+	if (rcg?.compensations?.length > 0) parts.push(`${rcg.compensations.length} compensation`);
+	if (rcg?.gaps?.length > 0) parts.push(`${rcg.gaps.length} gap${rcg.gaps.length > 1 ? 's' : ''}`);
+	if (parts.length === 0) return 'No identified risks or data gaps at this time.';
+	return parts.join(' · ');
+}
+
+
+// ===== Data Completeness =====
+
+const ALL_TRACKED_FIELDS = [
+	'targetIRR', 'investmentMinimum', 'holdPeriod', 'offeringType',
+	'distributions', 'fees', 'managementCompany', 'investingGeography',
+	'deckUrl', 'strategy', 'preferredReturn', 'cashOnCash',
+	'equityMultiple', 'sponsorInDeal', 'mcFoundingYear', 'fundAUM',
+	'ceo', 'assetClass', 'dealType', 'status', 'secCik',
+	'lpGpSplit', 'availableTo', 'offeringSize'
+];
+
+export function computeDataCompleteness(deal) {
+	if (!deal) return { filled: 0, total: ALL_TRACKED_FIELDS.length, pct: 0 };
+	let filled = 0;
+	for (const key of ALL_TRACKED_FIELDS) {
+		const val = deal[key];
+		if (val !== null && val !== undefined && val !== '' && val !== 0) {
+			if (key === 'distributions' && (val === 'Unknown' || val === 'None')) continue;
+			filled++;
+		}
+	}
+	const total = ALL_TRACKED_FIELDS.length;
+	return { filled, total, pct: Math.round((filled / total) * 100) };
 }
 
 
@@ -90,6 +146,14 @@ function buildIdentifiedRisks(deal) {
 		}
 	}
 
+	// Liquidity
+	if (deal.holdPeriod) {
+		const hold = parseFloat(deal.holdPeriod);
+		if (hold >= 5) {
+			risks.push({ label: 'Liquidity risk', detail: `Your capital is locked for ${hold} years. There is no redemption provision for early exit.` });
+		}
+	}
+
 	// Operator track record
 	if (deal.mcFoundingYear) {
 		const years = new Date().getFullYear() - deal.mcFoundingYear;
@@ -106,19 +170,24 @@ function buildIdentifiedRisks(deal) {
 		}
 	}
 
+	// Execution risk
+	const dt = (deal.dealType || '').toLowerCase();
+	if (dt.includes('lend') || dt.includes('debt')) {
+		risks.push({ label: 'Execution risk', detail: 'Returns depend on the sponsor deploying capital into quality loans on schedule.' });
+	} else if (dt.includes('develop')) {
+		risks.push({ label: 'Execution risk', detail: 'Development deals carry construction, permitting, and timeline risk.' });
+	}
+
+	// Interest rate risk for debt/lending
+	if (dt.includes('lend') || dt.includes('debt')) {
+		risks.push({ label: 'Interest rate risk', detail: 'Fund yields may fluctuate with changes in the broader interest rate environment.' });
+	}
+
 	// Return benchmarks
 	if (deal.targetIRR) {
 		const irr = deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100;
 		if (irr < 8) {
 			risks.push({ label: 'Below-Benchmark Returns', detail: `Target IRR of ${irr.toFixed(1)}% is below the 8% common threshold for this asset class.` });
-		}
-	}
-
-	// Low preferred return
-	if (deal.preferredReturn) {
-		const pref = deal.preferredReturn > 1 ? deal.preferredReturn : deal.preferredReturn * 100;
-		if (pref < 6) {
-			risks.push({ label: 'Low Preferred Return', detail: `Preferred return of ${pref.toFixed(1)}% is below the common 6-8% hurdle.` });
 		}
 	}
 
@@ -133,32 +202,31 @@ function buildIdentifiedRisks(deal) {
 function extractCompensation(deal) {
 	const items = [];
 
-	if (deal.targetIRR) {
-		const irr = deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100;
-		items.push({ label: 'Target IRR', value: `${irr.toFixed(1)}%`, detail: 'Projected total annualized return including distributions and capital gains.' });
-	}
-
 	if (deal.preferredReturn) {
 		const pref = deal.preferredReturn > 1 ? deal.preferredReturn : deal.preferredReturn * 100;
-		items.push({ label: 'Preferred Return', value: `${pref.toFixed(1)}%`, detail: 'LP hurdle rate — LPs are paid this return before GP profit participation.' });
+		items.push({ label: 'Preferred return', value: `${pref.toFixed(1)}%`, detail: 'you get paid first' });
 	}
 
-	if (deal.equityMultiple) {
-		items.push({ label: 'Equity Multiple', value: `${deal.equityMultiple.toFixed(2)}x`, detail: 'Total cash returned per dollar invested over the life of the deal.' });
-	}
-
-	if (deal.cashOnCash) {
-		const coc = deal.cashOnCash > 1 ? deal.cashOnCash : deal.cashOnCash * 100;
-		items.push({ label: 'Cash-on-Cash', value: `${coc.toFixed(1)}%`, detail: 'Annual cash distributions as a percentage of invested capital.' });
+	if (deal.lpGpSplit) {
+		items.push({ label: deal.lpGpSplit, value: '', detail: 'LP-favorable split after pref hurdle' });
 	}
 
 	if (deal.distributions && deal.distributions !== 'Unknown' && deal.distributions !== 'None') {
-		items.push({ label: 'Distributions', value: deal.distributions, detail: `Cash is distributed on a ${deal.distributions.toLowerCase()} basis.` });
+		items.push({ label: deal.distributions.toLowerCase(), value: '', detail: `${deal.distributions.toLowerCase()} distributions for regular cash` });
 	}
 
 	if (deal.sponsorInDeal) {
 		const pct = deal.sponsorInDeal > 1 ? deal.sponsorInDeal : deal.sponsorInDeal * 100;
-		items.push({ label: 'Sponsor Co-Invest', value: `${pct.toFixed(1)}%`, detail: 'Sponsor has skin in the game alongside LPs.' });
+		items.push({ label: `${pct.toFixed(0)}%`, value: '', detail: 'sponsor co-investing alongside LPs' });
+	}
+
+	if (deal.targetIRR) {
+		const irr = deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100;
+		items.push({ label: 'Target IRR', value: `${irr.toFixed(1)}%`, detail: 'projected total annualized return' });
+	}
+
+	if (deal.equityMultiple) {
+		items.push({ label: 'Equity Multiple', value: `${deal.equityMultiple.toFixed(2)}x`, detail: 'total cash returned per dollar invested' });
 	}
 
 	return items;
@@ -197,7 +265,7 @@ export function computeDataGaps(deal) {
 
 export function buildGoalProjection(deal, goal, investmentAmount) {
 	if (!deal || !goal) return null;
-	const amount = investmentAmount || deal.investmentMinimum || 100000;
+	const amount = (investmentAmount != null && investmentAmount > 0) ? investmentAmount : (deal.investmentMinimum || 100000);
 
 	if (goal === 'cashflow') {
 		return buildCashflowProjection(deal, amount);
@@ -220,7 +288,7 @@ function buildCashflowProjection(deal, amount) {
 		headline: `~${formatMoneyShort(monthly)}/mo projected income`,
 		monthly,
 		annual,
-		detail: `Based on ${formatMoneyShort(amount)} at ${(annualRate * 100).toFixed(1)}% ${deal.distributions ? deal.distributions.toLowerCase() : ''} distributions.`
+		detail: `Based on ${(annualRate * 100).toFixed(1)}% preferred return at ${formatMoneyShort(amount)} minimum. Actual returns may vary.`
 	};
 }
 
@@ -241,7 +309,7 @@ function buildTaxProjection(deal, amount) {
 		type: 'tax',
 		headline: `~${formatMoneyShort(writeOff)} yr-1 depreciation`,
 		writeOff,
-		detail: `Based on ${formatMoneyShort(amount)} investment with ${(depRate * 100).toFixed(0)}% first-year depreciation.`
+		detail: `Based on ${formatMoneyShort(amount)} investment with ${(depRate * 100).toFixed(0)}% first-year depreciation. Actual returns may vary.`
 	};
 }
 
@@ -258,7 +326,7 @@ function buildGrowthProjection(deal, amount) {
 			headline: `${em.toFixed(2)}x target over ${hold} years`,
 			totalReturn,
 			gain,
-			detail: `${formatMoneyShort(amount)} could grow to ${formatMoneyShort(totalReturn)} at the target ${em.toFixed(2)}x equity multiple.`
+			detail: `Based on ${formatMoneyShort(amount)} at target ${em.toFixed(2)}x equity multiple. Actual returns may vary.`
 		};
 	} else if (irr > 0) {
 		const totalReturn = amount * Math.pow(1 + irr, hold);
@@ -268,7 +336,7 @@ function buildGrowthProjection(deal, amount) {
 			headline: `${(irr * 100).toFixed(1)}% target IRR over ${hold} years`,
 			totalReturn,
 			gain,
-			detail: `${formatMoneyShort(amount)} at ${(irr * 100).toFixed(1)}% IRR over ${hold} years = ${formatMoneyShort(totalReturn)}.`
+			detail: `Based on ${formatMoneyShort(amount)} at ${(irr * 100).toFixed(1)}% IRR over ${hold} years. Actual returns may vary.`
 		};
 	}
 
@@ -278,7 +346,7 @@ function buildGrowthProjection(deal, amount) {
 
 // ===== Buy Box Match Count (lightweight) =====
 
-function computeBuyBoxMatchCount(deal, buyBox) {
+export function computeBuyBoxMatchCount(deal, buyBox) {
 	let matched = 0, total = 0;
 
 	if (buyBox.assetClasses?.length > 0) {
@@ -314,13 +382,4 @@ function formatMoneyShort(val) {
 	if (val >= 1e6) return '$' + (val / 1e6).toFixed(1) + 'M';
 	if (val >= 1e3) return '$' + Math.round(val / 1e3) + 'K';
 	return '$' + Math.round(val).toLocaleString();
-}
-
-function formatHoldShort(val) {
-	if (!val) return '---';
-	if (typeof val === 'string' && val.toLowerCase().includes('open')) return 'Open-ended';
-	const n = parseFloat(val);
-	if (isNaN(n)) return String(val);
-	if (n === 1) return '1 yr';
-	return n + ' yr';
 }
