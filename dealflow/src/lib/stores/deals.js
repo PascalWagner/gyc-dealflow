@@ -221,7 +221,7 @@ function createStagesStore() {
 
 			const request = (async () => {
 				try {
-					await syncStageToBackend(nextDealId, nextStage);
+					await syncStageToBackend(nextDealId, nextStage, nextStage === 'skipped' ? previousStage : null);
 					return { ok: true, previousStage, nextStage, unchanged: false };
 				} catch (error) {
 					const latest = get(base);
@@ -588,7 +588,7 @@ export async function loadMoreMemberDeals(options = {}) {
 	});
 }
 
-async function syncStageToBackend(dealId, stage) {
+async function syncStageToBackend(dealId, stage, skippedFromStage = null) {
 	if (!browser) return;
 
 	const token = getStoredSessionToken();
@@ -615,6 +615,14 @@ async function syncStageToBackend(dealId, stage) {
 		return;
 	}
 
+	const stageData = {
+		'Deal ID': dealId,
+		'Stage': stage
+	};
+	if (skippedFromStage != null) {
+		stageData['Skipped From Stage'] = skippedFromStage;
+	}
+
 	const response = await fetch('/api/userdata', {
 		method: 'POST',
 		headers: {
@@ -623,10 +631,7 @@ async function syncStageToBackend(dealId, stage) {
 		},
 		body: JSON.stringify(applyAdminImpersonationToPayload({
 			type: 'stages',
-			data: {
-				'Deal ID': dealId,
-				'Stage': stage
-			}
+			data: stageData
 		}))
 	});
 

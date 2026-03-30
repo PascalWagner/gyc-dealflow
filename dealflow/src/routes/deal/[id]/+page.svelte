@@ -4,6 +4,10 @@
 	import { onMount, tick } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import InvestingGeographyMap from '$lib/components/InvestingGeographyMap.svelte';
+	import DealOpportunityCard from '$lib/components/DealOpportunityCard.svelte';
+	import DealAnalysisDashboard from '$lib/components/DealAnalysisDashboard.svelte';
+	import DealSlidePanel from '$lib/components/DealSlidePanel.svelte';
+	import DealDisclaimer from '$lib/components/DealDisclaimer.svelte';
 	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember, isGP } from '$lib/stores/auth.js';
 	import {
 		currentAdminRealUser,
@@ -82,6 +86,14 @@
 	let toastMessage = $state('');
 	let toastVisible = $state(false);
 	const buyBoxEditHref = '/app/plan?edit=1';
+
+	// Goal Path
+	let userGoal = $state(null);
+	let goalProgress = $state(null);
+
+	// Slide Panels
+	let showDDPanel = $state(false);
+	let showQAPanel = $state(false);
 
 	// Deck Viewer Modal
 	let showDeckViewer = $state(false);
@@ -1361,6 +1373,25 @@
 		return { answered, total, pct: total > 0 ? Math.round((answered / total) * 100) : 0 };
 	}
 
+	// ===== Goal Path =====
+	function setUserGoal(goal) {
+		userGoal = goal;
+		if (browser) {
+			writeUserScopedString('gycInvestmentGoal', goal);
+		}
+	}
+
+	function openDDPanel() {
+		showDDPanel = true;
+		// Ensure questions loaded
+		if (!qaLoaded) void loadQuestions();
+	}
+
+	function openQAPanel() {
+		showQAPanel = true;
+		if (!qaLoaded) void loadQuestions();
+	}
+
 	// ===== Actions =====
 	function advanceStage() {
 		if (!deal) return;
@@ -1637,6 +1668,14 @@
 		deckViewed = !!readScopedDealString('gycDeckViewed');
 		introRequested = !!readScopedDealString('gycIntroRequested');
 
+		// Load investment goal from storage
+		try {
+			const storedGoal = readUserScopedString('gycInvestmentGoal', '');
+			if (storedGoal && ['cashflow', 'tax', 'growth'].includes(storedGoal)) {
+				userGoal = storedGoal;
+			}
+		} catch {}
+
 		// Auto-select first share class (sorted by highest min investment) on initial load
 		if (deal.shareClasses && deal.shareClasses.length > 0) {
 			let bestIdx = 0, bestMin = 0;
@@ -1665,7 +1704,13 @@
 				.then(r => r.ok ? r.json() : null)
 				.then(data => {
 					const nextBuyBox = data?.buyBox || data;
-					if (nextBuyBox && Object.keys(nextBuyBox).length > 0) buyBox = nextBuyBox;
+					if (nextBuyBox && Object.keys(nextBuyBox).length > 0) {
+						buyBox = nextBuyBox;
+						// Auto-set goal from buy box if not already set
+						if (!userGoal && (nextBuyBox._branch || nextBuyBox.goal)) {
+							userGoal = nextBuyBox._branch || nextBuyBox.goal;
+						}
+					}
 				})
 				.catch(() => {});
 		}
@@ -1914,71 +1959,19 @@
 					</button>
 				</div>
 
-				<!-- ==================== BUY BOX MATCH ==================== -->
-				<div class="buybox-card" class:buybox-lite-card={!hasMemberAccess}>
-					<div class="buybox-header">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={hasMemberAccess && buyBoxChecks.length > 0 ? (buyBoxScore.pct >= 80 ? '#4ade80' : buyBoxScore.pct >= 50 ? '#fbbf24' : '#f87171') : '#51BE7B'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-						<span class="buybox-title">Buy Box Match</span>
-						{#if hasMemberAccess && buyBoxChecks.length > 0}
-							{@const score = buyBoxScore}
-							{@const matchColor = score.pct >= 80 ? '#4ade80' : score.pct >= 50 ? '#fbbf24' : '#f87171'}
-							{@const matchLabel = score.pct >= 80 ? 'Strong Match' : score.pct >= 50 ? 'Partial Match' : 'Low Match'}
-							<span class="buybox-badge" style="background:{matchColor}18;color:{matchColor}">{matchLabel}</span>
-							<span class="buybox-score" style="color:{matchColor}">{score.matched}/{score.total}</span>
-							<div class="buybox-progress">
-								<div class="buybox-progress-fill" style="width:{score.pct}%;background:{matchColor}"></div>
-							</div>
-							<button class="buybox-edit" onclick={openBuyBoxAction}>Edit Buy Box &rarr;</button>
-						{:else}
-							<span class="buybox-badge buybox-badge-lite">{isPublicViewer ? 'Create your Buy Box' : 'Cash Flow Lite'}</span>
-						{/if}
-					</div>
-					{#if hasMemberAccess && buyBoxChecks.length > 0}
-						{@const bbCols = buyBoxChecks.length <= 3 ? buyBoxChecks.length : (buyBoxChecks.length % 4 === 0 || buyBoxChecks.length >= 8 ? 4 : buyBoxChecks.length % 3 === 0 ? 3 : buyBoxChecks.length <= 4 ? 2 : buyBoxChecks.length <= 6 ? 3 : 4)}
-						<div class="buybox-criteria-grid" style="grid-template-columns:repeat({bbCols}, 1fr)">
-							{#each buyBoxChecks as check}
-								<button class="buybox-criterion" class:match={check.match} class:miss={!check.match} onclick={openBuyBoxAction}>
-									<div class="buybox-criterion-icon">
-										{#if check.match}
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-										{:else}
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-										{/if}
-									</div>
-									<div class="buybox-criterion-content">
-										<div class="buybox-criterion-label" style="color:{check.match ? '#4ade80' : '#f87171'}">{check.label}</div>
-										<div class="buybox-criterion-detail">You want <strong>{check.want}</strong></div>
-										<div class="buybox-criterion-got">Deal: {check.got}</div>
-									</div>
-								</button>
-							{/each}
-						</div>
-					{:else}
-						<div class="buybox-lite-grid">
-							<div class="buybox-lite-card-shell">
-								<div class="buybox-lite-label">{buyBoxLite?.label || 'Cash Flow Potential'}</div>
-								<div class="buybox-lite-status">{buyBoxLite?.status || 'Create your Buy Box'}</div>
-								<div class="buybox-lite-description">
-									{#if isPublicViewer}
-										Create a free account to save deals, start your Buy Box, and unlock a fuller match view.
-									{:else}
-										{buyBoxLite?.description || 'Start with a cash-flow-focused fit, then unlock the full multi-factor match as a member.'}
-									{/if}
-								</div>
-							</div>
-							<div class="buybox-lite-card-shell locked">
-								<div class="buybox-lite-label">Full Match</div>
-								<div class="buybox-lite-status">Member</div>
-								<div class="buybox-lite-description">Asset class, target return, hold period, check size, and strategy fit unlock for members.</div>
-							</div>
-						</div>
-						<div class="buybox-lite-actions">
-							<button class="buybox-edit" onclick={openBuyBoxAction}>
-								{isPublicViewer ? 'Create Free Account' : hasMemberAccess ? 'Edit Buy Box' : 'Become a Member'}
-							</button>
-						</div>
-					{/if}
-				</div>
+				<!-- ==================== PART 1: THE OPPORTUNITY ==================== -->
+				<DealOpportunityCard
+					{deal}
+					{buyBox}
+					goal={userGoal}
+					{goalProgress}
+					investmentAmount={deal?.investmentMinimum}
+					isLoggedIn={$isLoggedIn}
+					{isPaid}
+					onSetGoal={setUserGoal}
+					onOpenAuth={() => openAuthModal({ title: 'Create a free account', body: 'Create a free account to see personalized deal projections.' })}
+					{nativeCompanionMode}
+				/>
 
 				<!-- ==================== DEAL TERMS ==================== -->
 				<div class="two-col-grid ly-min-0">
@@ -2098,6 +2091,32 @@
 					</div>
 				</div>
 
+				<!-- ==================== PART 2: DEAL ANALYSIS DASHBOARD ==================== -->
+				<DealAnalysisDashboard
+					{deal}
+					{buyBox}
+					{buyBoxChecks}
+					{buyBoxScore}
+					{feeRows}
+					{operatorTrackRecordRows}
+					{secFiling}
+					{keyRiskItems}
+					{ddProgress}
+					{isPaid}
+					{isPublicViewer}
+					{isFreeViewer}
+					{hasMemberAccess}
+					isAdmin={$isAdmin}
+					{nativeCompanionMode}
+					{academyHref}
+					onOpenAuth={() => openAuthModal({ title: 'Create a free account', body: 'Create a free account to save deals and start your analysis.' })}
+					onOpenBuyBox={openBuyBoxAction}
+					onOpenDDChecklist={() => { showDDPanel = true; }}
+					onOpenQA={() => { showQAPanel = true; void loadQuestions(); }}
+					{fmt}
+				/>
+
+				<!-- ==================== PART 3: DETAILED SECTIONS ==================== -->
 				<div class="canonical-lower-flow">
 					<div class="section geography-section flow-order-10">
 						<div class="section-header">
@@ -2109,240 +2128,13 @@
 						</div>
 					</div>
 
-					<div class="section flow-order-20">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-							<span class="section-title">SEC Filing</span>
-						</div>
-						<div class="section-body">
-							{#if secFiling?.hasFiling}
-								<div class="metric-grid metric-grid-three">
-									<div class="metric-pill">
-										<div class="metric-pill-label">Offering Type</div>
-										<div class="metric-pill-value">{secFiling.offeringType || 'Form D filing'}</div>
-									</div>
-									<div class="metric-pill">
-										<div class="metric-pill-label">Capital Raised</div>
-										<div class="metric-pill-value">{secFiling.totalRaised ? fmt(secFiling.totalRaised, 'money') : 'Not disclosed'}</div>
-									</div>
-									<div class="metric-pill">
-										<div class="metric-pill-label">Investors</div>
-										<div class="metric-pill-value">{secFiling.totalInvestors || 'Not disclosed'}</div>
-									</div>
-								</div>
-								<div class="sec-footer-row">
-									<div class="sec-footnote">
-										{#if secFiling.firstSaleDate}
-											First sale reported {new Date(secFiling.firstSaleDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.
-										{:else}
-											Structured from the sponsor’s SEC Form D footprint when available.
-										{/if}
-									</div>
-									{#if secFiling.cik}
-										<a href={"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + encodeURIComponent(secFiling.cik) + "&type=D&dateb=&owner=include&count=40"} target="_blank" rel="noopener" class="operator-link">View on SEC EDGAR &rarr;</a>
-									{/if}
-								</div>
-							{:else}
-								<div class="empty-state-card">
-									<div class="empty-state-title">No SEC Form D match found</div>
-									<div class="empty-state-copy">We could not verify a filing from the structured deal record yet.</div>
-								</div>
-							{/if}
-						</div>
-					</div>
+					<!-- SEC Filing now in Analysis Dashboard -->
 
-					<div class="section flow-order-30">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-							<span class="section-title">Fees &amp; Compensation</span>
-						</div>
-						<div class="section-body">
-							{#if isPublicViewer}
-								<div class="locked-preview-shell">
-									<div class="locked-preview-row"><span>Management Fee</span><strong>Member Preview</strong></div>
-									<div class="locked-preview-row"><span>Preferred Return</span><strong>Member Preview</strong></div>
-									<div class="locked-preview-row"><span>LP / GP Split</span><strong>Member Preview</strong></div>
-								</div>
-								<div class="locked-preview-footer">
-									<div>
-										<div class="locked-preview-title">See the structured fee schedule</div>
-										<div class="locked-preview-copy">Create a free account to track deals. Become a member to unlock fee benchmarking.</div>
-									</div>
-									<button class="buybox-edit" onclick={() => openAuthModal({ title: 'Create a free account', body: 'Create a free account to save deals and review fee schedules.' })}>Create Free Account</button>
-								</div>
-							{:else}
-								{#if feeRows.length > 0}
-									<div class="fee-table">
-										{#each feeRows as row}
-											<div class="fee-row">
-												<div class="fee-copy">
-													<div class="fee-label">{row.label}</div>
-													<div class="fee-value">{row.value}</div>
-												</div>
-												{#if hasMemberAccess}
-													<span class="fee-verdict">{row.verdict}</span>
-												{:else}
-													<span class="fee-verdict fee-verdict-muted">Raw sponsor fee row</span>
-												{/if}
-											</div>
-										{/each}
-									</div>
-								{:else}
-									<div class="empty-state-card">
-										<div class="empty-state-title">Fee schedule not available</div>
-										<div class="empty-state-copy">We have not structured the fee rows for this deal yet.</div>
-									</div>
-								{/if}
-							{/if}
-						</div>
-					</div>
+					<!-- Fees now in Analysis Dashboard -->
 
-					<div class="section flow-order-40">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-							<span class="section-title">Operator Track Record</span>
-						</div>
-						<div class="section-body">
-							{#if !hasMemberAccess}
-								<div class="locked-preview-shell">
-									<div class="locked-preview-row"><span>Management company history</span><strong>Locked</strong></div>
-									<div class="locked-preview-row"><span>Experience and scale</span><strong>Locked</strong></div>
-									<div class="locked-preview-row"><span>Operating context</span><strong>Locked</strong></div>
-								</div>
-								<div class="locked-preview-footer">
-									<div>
-										<div class="locked-preview-title">Unlock operator history</div>
-										<div class="locked-preview-copy">This is part of the member diligence layer.</div>
-									</div>
-									{#if !nativeCompanionMode}
-										<a href={academyHref} class="gate-cta">Become a Member</a>
-									{:else}
-										<div class="native-helper-copy">Available to members on web</div>
-									{/if}
-								</div>
-							{:else if operatorTrackRecordRows.length > 0}
-								<div class="rail-fact-list rail-fact-list-wide">
-									{#each operatorTrackRecordRows as row}
-										<div class="rail-fact"><span>{row.label}</span><strong>{row.value}</strong></div>
-									{/each}
-								</div>
-							{:else}
-								<div class="empty-state-card">
-									<div class="empty-state-title">Track record not structured yet</div>
-									<div class="empty-state-copy">We’ll keep the section visible and fill it as operator history is added.</div>
-								</div>
-							{/if}
-						</div>
-					</div>
+					<!-- Operator Track Record now in Analysis Dashboard -->
 
-				<!-- ==================== DD CHECKLIST ==================== -->
-				{#if checklist}
-					<div class="section flow-order-100">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-							<span class="section-title">Deal Research Checklist</span>
-							<div class="dd-progress-ring">
-								<svg width="36" height="36" viewBox="0 0 80 80">
-									<circle cx="40" cy="40" r="35" fill="none" stroke="var(--border)" stroke-width="6"/>
-									<circle cx="40" cy="40" r="35" fill="none"
-										stroke={ddProgress.pct < 33 ? '#f87171' : ddProgress.pct < 66 ? '#fbbf24' : '#4ade80'}
-										stroke-width="6"
-										stroke-dasharray="{(ddProgress.pct / 100) * 251.2} 251.2"
-										stroke-dashoffset="0"
-										transform="rotate(-90 40 40)"
-										stroke-linecap="round"/>
-									<text x="40" y="44" text-anchor="middle" font-size="18" font-weight="700"
-										fill={ddProgress.pct < 33 ? '#f87171' : ddProgress.pct < 66 ? '#fbbf24' : '#4ade80'}
-										font-family="var(--font-ui)">{ddProgress.pct}%</text>
-								</svg>
-							</div>
-						</div>
-						<div class="section-body dd-section-body">
-							{#if !isPaid}
-								<!-- Gate overlay for free users -->
-								<div class="gate-overlay">
-									<div class="gate-content">
-										<div class="gate-icon">
-											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
-										<div class="gate-text">
-											{#if nativeCompanionMode}
-												The {checklist.sections.length}-section interactive due diligence checklist remains available to existing members in their web account.
-											{:else}
-												Members get a {checklist.sections.length}-section interactive DD checklist with auto-filled answers for every deal.
-											{/if}
-										</div>
-										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Become a Member</a>
-										{/if}
-									</div>
-								</div>
-							{/if}
-							<div class="dd-checklist-subtitle">{checklist.label} &middot; {checklist.sections.length} sections</div>
-							<div class="dd-accordion" class:blurred={!isPaid}>
-								{#each checklist.sections as sec, si}
-									<div class="dd-accordion-section">
-										<button class="dd-accordion-header" onclick={() => toggleAccordion(si)}>
-											<div class="dd-accordion-title">
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" class="chevron" class:open={ddAccordionOpen[si]}><polyline points="9 18 15 12 9 6"/></svg>
-												{sec.title}
-											</div>
-											<span class="dd-accordion-progress">
-												{#each sec.questions as q, qi}
-													{@const key = `s${si}q${qi}`}
-													{@const autoVal = q.autoField ? getAutoValue(deal, q.autoField, q.format) : null}
-													{@const isAnswered = !!(autoVal || ddAnswers[key])}
-												{/each}
-												{sec.questions.filter((q, qi) => {
-													const key = `s${si}q${qi}`;
-													return !!(q.autoField ? getAutoValue(deal, q.autoField, q.format) : null) || ddAnswers[key];
-												}).length}/{sec.questions.length}
-											</span>
-										</button>
-										{#if ddAccordionOpen[si]}
-											<div class="dd-accordion-body">
-												{#each sec.questions as q, qi}
-													{@const key = `s${si}q${qi}`}
-													{@const autoVal = q.autoField ? getAutoValue(deal, q.autoField, q.format) : null}
-													{@const userVal = ddAnswers[key] || ''}
-													<div class="dd-question" class:answered={!!autoVal || !!userVal}>
-														<div class="dd-question-text">{q.q}</div>
-														{#if autoVal}
-															<div class="dd-answer">
-																<div class="dd-answer-icon auto">
-																	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-																</div>
-																<div class="dd-answer-text">{autoVal}</div>
-																<span class="dd-answer-badge auto">auto</span>
-															</div>
-														{:else if userVal}
-															<div class="dd-answer">
-																<div class="dd-answer-icon user">
-																	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-																</div>
-																<div class="dd-answer-text">{userVal}</div>
-																<span class="dd-answer-badge user">you</span>
-															</div>
-														{:else}
-															<div class="dd-answer">
-																<div class="dd-answer-icon empty">
-																	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/></svg>
-																</div>
-																<input class="dd-answer-input" type="text" placeholder="Add your research..."
-																	onblur={(e) => saveDDAnswer(key, e.target.value)} />
-															</div>
-														{/if}
-													</div>
-												{/each}
-											</div>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						</div>
-					</div>
-				{/if}
+				<!-- DD Checklist is now in a slide-over panel (accessed via Analysis Dashboard) -->
 
 				<!-- ==================== PROJECTED LP CASH FLOW ==================== -->
 				{#if cfRows.length > 0}
@@ -2452,47 +2244,7 @@
 					</div>
 				{/if}
 
-				<!-- ==================== KEY RISKS ==================== -->
-				<div class="section flow-order-70">
-					<div class="section-header">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-						<span class="section-title">Key Risks</span>
-					</div>
-					<div class="section-body">
-						{#if !hasMemberAccess}
-							<div class="locked-preview-shell">
-								<div class="locked-preview-row"><span>Operational risk review</span><strong>Locked</strong></div>
-								<div class="locked-preview-row"><span>Deal structure concerns</span><strong>Locked</strong></div>
-								<div class="locked-preview-row"><span>Execution watchouts</span><strong>Locked</strong></div>
-							</div>
-							<div class="locked-preview-footer">
-								<div>
-									<div class="locked-preview-title">Unlock risk analysis</div>
-									<div class="locked-preview-copy">Members get the platform-added diligence layer, not just the structured deck facts.</div>
-								</div>
-								{#if !nativeCompanionMode}
-									<a href={academyHref} class="gate-cta">Become a Member</a>
-								{:else}
-									<div class="native-helper-copy">Available to members on web</div>
-								{/if}
-							</div>
-						{:else if keyRiskItems.length > 0}
-							<div class="fit-list-section">
-								{#each keyRiskItems as item}
-									<div class="fit-list-item">
-										<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-										<span>{item}</span>
-									</div>
-								{/each}
-							</div>
-						{:else}
-							<div class="empty-state-card">
-								<div class="empty-state-title">No key risks structured yet</div>
-								<div class="empty-state-copy">This section stays visible even when the diligence notes have not been completed.</div>
-							</div>
-						{/if}
-					</div>
-				</div>
+				<!-- Key Risks now in Analysis Dashboard Risk layer -->
 
 				<!-- ==================== STRESS TEST CALCULATOR ==================== -->
 				{#if deal && !isCredit}
@@ -2737,76 +2489,7 @@
 					</div>
 				{/if}
 
-				<!-- ==================== DEAL FIT SUMMARY ==================== -->
-				{#if dealFit || !hasMemberAccess}
-					<div class="section flow-order-80">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-							<span class="section-title">Deal Fit Summary</span>
-						</div>
-						<div class="section-body deal-fit-body" class:gated={!isPaid && !$isAdmin}>
-							{#if !isPaid && !$isAdmin}
-								<div class="gate-overlay">
-									<div class="gate-content">
-										<div class="gate-icon">
-											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
-										<div class="gate-text">
-											{#if nativeCompanionMode}
-												Deal fit scoring against common investor benchmarks remains available to existing members on the web.
-											{:else}
-												See how this deal matches common investor benchmarks.
-											{/if}
-										</div>
-										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Become a Member</a>
-										{/if}
-									</div>
-								</div>
-							{/if}
-							<div class:blurred={!isPaid && !$isAdmin}>
-								<div class="fit-verdict" style="--verdict-color:{fitSummary.verdictColor}">
-									<div class="fit-verdict-icon">
-										{#if fitSummary.score >= 3}
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-										{:else if fitSummary.score >= -1}
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-										{:else}
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-										{/if}
-									</div>
-									<div>
-										<div class="fit-verdict-text">{fitSummary.verdict}</div>
-										<div class="fit-verdict-sub">Based on deal metrics and standard LP benchmarks</div>
-									</div>
-								</div>
-								{#if fitSummary.fits.length > 0}
-									<div class="fit-list-section">
-										<div class="fit-list-label fit-label-good">What Works</div>
-										{#each fitSummary.fits as item}
-											<div class="fit-list-item">
-												<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
-												<span>{item}</span>
-											</div>
-										{/each}
-									</div>
-								{/if}
-								{#if fitSummary.warnings.length > 0}
-									<div class="fit-list-section">
-										<div class="fit-list-label fit-label-warn">Watch Out For</div>
-										{#each fitSummary.warnings as item}
-											<div class="fit-list-item">
-												<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-												<span>{item}</span>
-											</div>
-										{/each}
-									</div>
-								{/if}
-							</div>
-						</div>
-					</div>
-				{/if}
+				<!-- Deal Fit Summary now in Analysis Dashboard Fit layer -->
 
 				<!-- ==================== INVEST CLEARLY REVIEWS (admin preview) ==================== -->
 				{#if investClearlyPreview}
@@ -2969,6 +2652,9 @@
 				{/if}
 				</div>
 
+				<!-- ==================== DISCLAIMER ==================== -->
+				<DealDisclaimer variant="standard" />
+
 			</div><!-- /deal-page-content -->
 
 			<!-- ==================== STICKY ACTION BAR ==================== -->
@@ -3059,6 +2745,106 @@
 		<span>More</span>
 	</a>
 </nav>
+
+<!-- ==================== DD CHECKLIST SLIDE PANEL ==================== -->
+<DealSlidePanel bind:open={showDDPanel} title="Deal Research Checklist" width="55%">
+	{#if checklist && deal}
+		<div class="slide-dd-progress">
+			<span>{ddProgress.pct}% complete</span>
+			<span>{ddProgress.answered}/{ddProgress.total} items</span>
+		</div>
+		{#if !isPaid}
+			<div class="slide-gate">
+				<p>Members unlock the interactive DD checklist with auto-filled answers.</p>
+				{#if !nativeCompanionMode}
+					<a href={academyHref} class="slide-gate-btn">Become a Member</a>
+				{/if}
+			</div>
+		{:else}
+			<div class="slide-dd-subtitle">{checklist.label} · {checklist.sections.length} sections</div>
+			{#each checklist.sections as sec, si}
+				<div class="slide-dd-section">
+					<button class="slide-dd-header" onclick={() => { ddAccordionOpen = { ...ddAccordionOpen, [si]: !ddAccordionOpen[si] }; }}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" class="slide-chevron" class:open={ddAccordionOpen[si]}><polyline points="9 18 15 12 9 6"/></svg>
+						<span>{sec.title}</span>
+						<span class="slide-dd-count">
+							{sec.questions.filter((q, qi) => {
+								const key = `s${si}q${qi}`;
+								return !!(q.autoField ? getAutoValue(deal, q.autoField, q.format) : null) || ddAnswers[key];
+							}).length}/{sec.questions.length}
+						</span>
+					</button>
+					{#if ddAccordionOpen[si]}
+						<div class="slide-dd-body">
+							{#each sec.questions as q, qi}
+								{@const key = `s${si}q${qi}`}
+								{@const autoVal = q.autoField ? getAutoValue(deal, q.autoField, q.format) : null}
+								{@const userVal = ddAnswers[key] || ''}
+								<div class="slide-dd-question" class:answered={!!autoVal || !!userVal}>
+									<div class="slide-dd-q-text">{q.q}</div>
+									{#if autoVal}
+										<div class="slide-dd-answer">
+											<span class="slide-dd-badge auto">auto</span>
+											<span>{autoVal}</span>
+										</div>
+									{:else if userVal}
+										<div class="slide-dd-answer">
+											<span class="slide-dd-badge user">you</span>
+											<span>{userVal}</span>
+										</div>
+									{:else}
+										<input class="slide-dd-input" type="text" placeholder="Add your research..."
+											onblur={(e) => saveDDAnswer(key, e.target.value)} />
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/each}
+		{/if}
+	{/if}
+</DealSlidePanel>
+
+<!-- ==================== Q&A SLIDE PANEL ==================== -->
+<DealSlidePanel bind:open={showQAPanel} title="Investor Q&A" width="50%">
+	{#if deal}
+		{#if !hasMemberAccess}
+			<div class="slide-gate">
+				<p>Investor Q&A is available to members.</p>
+				{#if !nativeCompanionMode}
+					<a href={academyHref} class="slide-gate-btn">Become a Member</a>
+				{/if}
+			</div>
+		{:else}
+			<div class="slide-qa-form">
+				<textarea class="slide-qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea>
+				<button class="slide-qa-submit" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button>
+			</div>
+			{#if qaLoading}
+				<div class="slide-qa-empty">Loading questions...</div>
+			{:else if qaError}
+				<div class="slide-qa-empty">Couldn't load questions. <button class="slide-qa-retry" onclick={() => loadQuestions(true)}>Try Again</button></div>
+			{:else if questions.length === 0}
+				<div class="slide-qa-empty">No questions yet. Be the first to ask!</div>
+			{:else}
+				<div class="slide-qa-list">
+					{#each questions as q}
+						<div class="slide-qa-item">
+							<div class="slide-qa-question">{q.question}</div>
+							<div class="slide-qa-meta">{q.askedBy || 'Anonymous'} {#if q.askedAt}· {getRelativeTime(q.askedAt)}{/if}</div>
+							{#if q.answer}
+								<div class="slide-qa-answer">
+									<strong>{q.answeredBy || 'Team'}</strong>: {q.answer}
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+		{/if}
+	{/if}
+</DealSlidePanel>
 
 <!-- ==================== TOAST ==================== -->
 {#if toastVisible}
@@ -5273,4 +5059,43 @@
 		.doc-item-row { flex-direction: column; }
 		.enrich-field-label { flex: 0 0 100px; font-size: 10px; }
 	}
+
+	/* ===== Slide Panel DD Checklist Content ===== */
+	.slide-dd-progress { display: flex; justify-content: space-between; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
+	.slide-gate { text-align: center; padding: 24px 16px; }
+	.slide-gate p { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+	.slide-gate-btn { display: inline-block; padding: 10px 24px; background: var(--primary); color: #fff; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 700; text-decoration: none; }
+	.slide-dd-subtitle { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+	.slide-dd-section { border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: 8px; overflow: hidden; }
+	.slide-dd-header { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; background: var(--bg-card); border: none; cursor: pointer; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); text-align: left; }
+	.slide-dd-header:hover { background: var(--bg-cream); }
+	.slide-chevron { transition: transform 0.2s; color: var(--text-muted); flex-shrink: 0; }
+	.slide-chevron.open { transform: rotate(90deg); }
+	.slide-dd-count { margin-left: auto; font-size: 11px; color: var(--text-muted); font-weight: 500; }
+	.slide-dd-body { padding: 8px 14px 14px; }
+	.slide-dd-question { padding: 8px 0; border-bottom: 1px solid var(--border-light); }
+	.slide-dd-question:last-child { border-bottom: none; }
+	.slide-dd-question.answered { opacity: 0.85; }
+	.slide-dd-q-text { font-family: var(--font-body); font-size: 13px; color: var(--text-dark); margin-bottom: 4px; }
+	.slide-dd-answer { display: flex; align-items: center; gap: 8px; font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); }
+	.slide-dd-badge { padding: 1px 6px; border-radius: 4px; font-family: var(--font-ui); font-size: 9px; font-weight: 700; text-transform: uppercase; }
+	.slide-dd-badge.auto { background: var(--green-bg); color: var(--green); }
+	.slide-dd-badge.user { background: rgba(59, 130, 246, 0.1); color: var(--blue); }
+	.slide-dd-input { width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 12px; background: var(--bg-card); color: var(--text-dark); }
+	.slide-dd-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.15); }
+
+	/* ===== Slide Panel Q&A Content ===== */
+	.slide-qa-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+	.slide-qa-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; background: var(--bg-card); color: var(--text-dark); resize: vertical; }
+	.slide-qa-input:focus { border-color: var(--primary); outline: none; }
+	.slide-qa-submit { align-self: flex-end; padding: 8px 20px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; }
+	.slide-qa-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+	.slide-qa-empty { text-align: center; font-family: var(--font-ui); font-size: 13px; color: var(--text-muted); padding: 20px; }
+	.slide-qa-retry { background: none; border: none; color: var(--primary); font-weight: 600; cursor: pointer; }
+	.slide-qa-list { display: flex; flex-direction: column; gap: 16px; }
+	.slide-qa-item { padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+	.slide-qa-item:last-child { border-bottom: none; }
+	.slide-qa-question { font-family: var(--font-body); font-size: 14px; color: var(--text-dark); margin-bottom: 4px; }
+	.slide-qa-meta { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+	.slide-qa-answer { background: var(--bg-cream); padding: 10px 14px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 </style>
