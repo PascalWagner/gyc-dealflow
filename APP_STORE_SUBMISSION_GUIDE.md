@@ -19,12 +19,12 @@
 
 ## What's Already Done
 
-1. **Capacitor iOS project** is set up at `/Users/openclaw/AI/gyc-dealflow/dealflow/`
+1. **Capacitor iOS project** is set up at `/Users/pascalwagner/Documents/New project/dealflow/dealflow/`
 2. **Xcode signing** configured with Team ID XQ875KQN2R in `ios/App/App.xcodeproj/project.pbxproj`
 3. **Apple ID** added to Xcode Accounts (pmoneywagner@icloud.com)
 4. **App-specific password** stored in macOS keychain as "AC_PASSWORD" for pmoneywagner@icloud.com
 5. **App archived and exported** — IPA may be at `/tmp/CashflowAcademyExport/App.ipa` (temp files may be cleaned up)
-6. **Metadata** written in `/Users/openclaw/AI/gyc-dealflow/dealflow/APP_STORE_METADATA.md`
+6. **Metadata** written in `/Users/pascalwagner/Documents/New project/dealflow/dealflow/APP_STORE_METADATA.md`
 7. **Login page redesigned** — Cashflow Academy branding, mobile-first
 8. **Mobile UI optimized** — filters, tabs, sticky nav all done
 9. **Test account** exists in GoHighLevel: test@test.com / test
@@ -51,7 +51,7 @@ Or navigate to https://appstoreconnect.apple.com/apps in a browser signed in wit
 ### Step 2: Rebuild IPA (if temp files were cleaned up)
 
 ```bash
-cd /Users/openclaw/AI/gyc-dealflow/dealflow
+cd /Users/pascalwagner/Documents/New\ project/dealflow/dealflow
 
 # Sync Capacitor
 LANG=en_US.UTF-8 npx cap sync ios
@@ -186,7 +186,7 @@ Use the iOS Simulator:
 xcrun simctl boot "iPhone 17 Pro Max"
 
 # Build and install (if needed)
-cd /Users/openclaw/AI/gyc-dealflow/dealflow
+cd /Users/pascalwagner/Documents/New\ project/dealflow/dealflow
 LANG=en_US.UTF-8 xcodebuild -workspace ios/App/App.xcworkspace -scheme App \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' build
 xcrun simctl install booted /Users/openclaw/Library/Developer/Xcode/DerivedData/App-*/Build/Products/Debug-iphonesimulator/App.app
@@ -221,7 +221,7 @@ In App Store Connect:
 To set up an hourly check that automatically completes the submission:
 
 ```
-Ask Claude: "Read /Users/openclaw/AI/gyc-dealflow/APP_STORE_SUBMISSION_GUIDE.md and set up a scheduled task that checks every hour if App Store Connect is accessible, and if so, completes the full submission following all the steps in that guide. The goal is to get Cashflow Academy published on the App Store."
+Ask Claude: "Read /Users/pascalwagner/Documents/New project/dealflow/APP_STORE_SUBMISSION_GUIDE.md and set up a scheduled task that checks every hour if App Store Connect is accessible, and if so, completes the full submission following all the steps in that guide. The goal is to get Cashflow Academy published on the App Store."
 ```
 
 ---

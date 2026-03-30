@@ -730,9 +730,9 @@
 						<tr><td class="arch-key">Email</td><td>Resend (notifications)</td></tr>
 						<tr><td class="arch-key">Automations</td><td>Make.com (deal processing pipelines)</td></tr>
 						<tr><td class="arch-key">Hosting</td><td>Vercel (serverless + static)</td></tr>
-						<tr><td class="arch-key">Code</td><td><code>github.com/PascalWagner/gyc-dealflow</code></td></tr>
+						<tr><td class="arch-key">Code</td><td><code>Canonical DealFlow repository</code></td></tr>
 						<tr><td class="arch-key">Domain</td><td><code>dealflow.growyourcashflow.io</code></td></tr>
-						<tr><td class="arch-key">Supabase</td><td>gyc-dealflow (nntzqyufmtypfjpusflm)</td></tr>
+						<tr><td class="arch-key">Supabase</td><td>Primary production project (nntzqyufmtypfjpusflm)</td></tr>
 						</tbody>
 					</table>
 				</div>
