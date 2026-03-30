@@ -43,6 +43,39 @@
 	function bgStatusClass(s) { return s === 'clear' ? 'bg-clear' : s === 'flagged' ? 'bg-flagged' : 'bg-pending'; }
 	function bgStatusLabel(s) { return s === 'clear' ? 'Clear' : s === 'flagged' ? 'Flag' : 'Pending'; }
 
+	// Sample data for preview when real data is sparse
+	const sponsorHasDetails = $derived(!!(deal?.ceo || deal?.mcFoundingYear || deal?.investingGeography));
+	const hasTrackRecordStats = $derived(!!(deal?.mcFoundingYear || deal?.fundAUM || deal?.mcFullCycleExits));
+	const hasBgCheckData = $derived(!!(bgCheck || bgCheckLoading));
+
+	// Sample fallbacks for preview
+	const sampleSponsor = { ceo: 'John Smith', founded: 2012, location: 'Dallas, TX' };
+	const sampleTrackRecord = [
+		{ value: '12+ years', label: 'Operating' },
+		{ value: '$340M', label: 'Under Mgmt' },
+		{ value: '3 exits', label: 'Full-cycle' }
+	];
+	const sampleBgSources = [
+		{ label: 'SEC EDGAR', status: 'clear', detail: '3 filings' },
+		{ label: 'FINRA', status: 'clear', detail: 'Clear' },
+		{ label: 'OFAC', status: 'clear', detail: 'Clear' }
+	];
+	const sampleRisks = [
+		{ label: 'Liquidity risk', detail: 'Your capital is locked for 5 years. There is no redemption provision for early exit.' },
+		{ label: 'Execution risk', detail: 'Returns depend on the sponsor deploying capital into quality loans on schedule.' },
+		{ label: 'Interest rate risk', detail: 'Fund yields may fluctuate with changes in the broader interest rate environment.' }
+	];
+	const sampleCompensations = [
+		{ label: '9.5%', value: '', detail: 'preferred return — you get paid first' },
+		{ label: '80/20', value: '', detail: 'LP-favorable split after pref hurdle' },
+		{ label: 'Qtr', value: '', detail: 'quarterly distributions for regular cash' },
+		{ label: '5%', value: '', detail: 'sponsor co-investing alongside LPs' }
+	];
+	const sampleGaps = [
+		{ label: 'Financials are unaudited' },
+		{ label: 'No third-party appraisal on file' }
+	];
+
 	const layers = $derived([
 		{
 			id: 'legitimacy',
@@ -164,21 +197,37 @@
 									<div class="sponsor-avatar">{getInitials(deal.managementCompany)}</div>
 									<div class="sponsor-info">
 										<div class="sponsor-name">{deal.managementCompany}</div>
-										{#if deal.ceo}<div class="sponsor-meta">{deal.ceo}, CEO</div>{/if}
+										{#if deal.ceo}
+											<div class="sponsor-meta">{deal.ceo}, CEO</div>
+										{:else if !sponsorHasDetails}
+											<div class="sponsor-meta sample-text">{sampleSponsor.ceo}, CEO</div>
+										{/if}
 										<div class="sponsor-meta">
-											{#if deal.mcFoundingYear}Founded {deal.mcFoundingYear}{/if}
+											{#if deal.mcFoundingYear}
+												Founded {deal.mcFoundingYear}
+											{:else if !sponsorHasDetails}
+												<span class="sample-text">Founded {sampleSponsor.founded}</span>
+											{/if}
 											{#if deal.mcFoundingYear && deal.investingGeography} · {/if}
-											{#if deal.investingGeography}{deal.investingGeography}{/if}
+											{#if !deal.mcFoundingYear && !sponsorHasDetails && !deal.investingGeography} · {/if}
+											{#if deal.investingGeography}
+												{deal.investingGeography}
+											{:else if !sponsorHasDetails}
+												<span class="sample-text">{sampleSponsor.location}</span>
+											{/if}
 										</div>
 										<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="sponsor-profile-link">View Sponsor Profile &rarr;</a>
 									</div>
 								</div>
+								{#if !sponsorHasDetails}
+									<div class="sample-banner">Sample data shown — sponsor details not yet provided for this deal.</div>
+								{/if}
 							{/if}
 
 							<!-- Track Record -->
-							{#if operatorTrackRecordRows.length > 0 || deal?.fundAUM || deal?.mcFoundingYear}
-								<div class="section-divider"></div>
-								<div class="subsection-title">Track Record</div>
+							<div class="section-divider"></div>
+							<div class="subsection-title">Track Record</div>
+							{#if hasTrackRecordStats}
 								<div class="stat-cards">
 									{#if deal?.mcFoundingYear}
 										{@const years = new Date().getFullYear() - deal.mcFoundingYear}
@@ -200,11 +249,23 @@
 										</div>
 									{/if}
 								</div>
+							{:else}
+								<div class="stat-cards sample-block">
+									{#each sampleTrackRecord as stat}
+										<div class="stat-card">
+											<div class="stat-value sample-text">{stat.value}</div>
+											<div class="stat-label">{stat.label}</div>
+										</div>
+									{/each}
+								</div>
+								<div class="sample-banner">Sample data shown — track record not yet structured for this sponsor.</div>
 							{/if}
 
 							<!-- Co-Invest -->
 							{#if deal?.sponsorInDeal}
 								<div class="co-invest-row">Co-Invest: {fmt(deal.sponsorInDeal, 'pct')} alongside LPs</div>
+							{:else}
+								<div class="co-invest-row sample-text">Co-Invest: 5% alongside LPs</div>
 							{/if}
 
 							<!-- Other deals link -->
@@ -214,35 +275,40 @@
 							{/if}
 
 							<!-- Background Check -->
-							{#if deal?.managementCompanyId}
-								<div class="section-divider"></div>
-								<div class="subsection-title">
-									Background Check
-									{#if !hasMemberAccess}
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" class="ad-lock-icon" style="display:inline;vertical-align:middle;margin-left:6px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-										<span class="member-badge">Member</span>
-									{/if}
-								</div>
-								{#if hasMemberAccess}
-									{#if bgCheckLoading}
-										<div class="bg-loading">Loading background check...</div>
-									{:else if bgCheck}
-										<div class="bg-sources">
-											{#each [{ label: 'SEC EDGAR', status: bgCheck.sec_status, count: bgCheck.sec_filings_count }, { label: 'FINRA', status: bgCheck.finra_status, count: null }, { label: 'OFAC', status: bgCheck.ofac_status, count: null }] as src}
-												<div class="bg-source {bgStatusClass(src.status)}">
-													<span class="bg-source-label">{src.label}</span>
-													<span class="bg-source-status">{bgStatusLabel(src.status)}{#if src.count} · {src.count} filing{src.count !== 1 ? 's' : ''}{/if}</span>
-												</div>
-											{/each}
-										</div>
-									{:else if bgCheckLoaded}
-										<div class="ad-empty"><p>No background check data available.</p></div>
-									{:else}
-										<div class="ad-empty"><p>Background check loads when this section opens.</p></div>
-									{/if}
-								{:else}
-									<div class="bg-gate-text">SEC EDGAR, FINRA, and OFAC screening available for members.</div>
+							<div class="section-divider"></div>
+							<div class="subsection-title">
+								Background Check
+								{#if !hasMemberAccess}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" class="ad-lock-icon" style="display:inline;vertical-align:middle;margin-left:6px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+									<span class="member-badge">Member</span>
 								{/if}
+							</div>
+							{#if hasMemberAccess}
+								{#if bgCheckLoading}
+									<div class="bg-loading">Loading background check...</div>
+								{:else if bgCheck}
+									<div class="bg-sources">
+										{#each [{ label: 'SEC EDGAR', status: bgCheck.sec_status, count: bgCheck.sec_filings_count }, { label: 'FINRA', status: bgCheck.finra_status, count: null }, { label: 'OFAC', status: bgCheck.ofac_status, count: null }] as src}
+											<div class="bg-source {bgStatusClass(src.status)}">
+												<span class="bg-source-label">{src.label}</span>
+												<span class="bg-source-status">{bgStatusLabel(src.status)}{#if src.count} · {src.count} filing{src.count !== 1 ? 's' : ''}{/if}</span>
+											</div>
+										{/each}
+									</div>
+								{:else}
+									<!-- Show sample bg check data -->
+									<div class="bg-sources sample-block">
+										{#each sampleBgSources as src}
+											<div class="bg-source bg-clear">
+												<span class="bg-source-label">{src.label}</span>
+												<span class="bg-source-status sample-text">{src.detail}</span>
+											</div>
+										{/each}
+									</div>
+									<div class="sample-banner">Sample data shown — background check not yet run for this sponsor.</div>
+								{/if}
+							{:else}
+								<div class="bg-gate-text">SEC EDGAR, FINRA, and OFAC screening available for members.</div>
 							{/if}
 
 						{:else if layer.id === 'structure'}
@@ -292,21 +358,26 @@
 
 						{:else if layer.id === 'riskcomp'}
 							<!-- RISK & COMPENSATION LAYER (stacked, not tabbed) -->
+							{@const showRisks = rcg.risks.length > 0 ? rcg.risks : sampleRisks}
+							{@const showComps = rcg.compensations.length > 0 ? rcg.compensations : sampleCompensations}
+							{@const showGaps = rcg.gaps.length > 0 ? rcg.gaps : sampleGaps}
+							{@const isRiskSample = rcg.risks.length === 0}
+							{@const isCompSample = rcg.compensations.length === 0}
+							{@const isGapSample = rcg.gaps.length === 0}
 
 							<!-- Risks -->
 							<div class="rc-section">
 								<div class="rc-section-title">RISKS YOU'RE TAKING</div>
-								{#if rcg.risks.length > 0}
-									<div class="rc-items">
-										{#each rcg.risks as risk}
-											<div class="rc-risk-card">
-												<div class="rc-risk-label">{risk.label}</div>
-												<div class="rc-risk-detail">{risk.detail}</div>
-											</div>
-										{/each}
-									</div>
-								{:else}
-									<div class="rc-empty">No specific risks identified from available data.</div>
+								<div class="rc-items" class:sample-block={isRiskSample}>
+									{#each showRisks as risk}
+										<div class="rc-risk-card">
+											<div class="rc-risk-label" class:sample-text={isRiskSample}>{risk.label}</div>
+											<div class="rc-risk-detail" class:sample-text={isRiskSample}>{risk.detail}</div>
+										</div>
+									{/each}
+								</div>
+								{#if isRiskSample}
+									<div class="sample-banner">Sample risks shown — actual risk analysis based on this deal's data.</div>
 								{/if}
 							</div>
 
@@ -314,17 +385,16 @@
 							<div class="rc-divider"></div>
 							<div class="rc-section">
 								<div class="rc-section-title">WHAT YOU'RE BEING COMPENSATED WITH</div>
-								{#if rcg.compensations.length > 0}
-									<div class="rc-comp-list">
-										{#each rcg.compensations as comp}
-											<div class="rc-comp-row">
-												<span class="rc-comp-value">{comp.label}{#if comp.value} {comp.value}{/if}</span>
-												<span class="rc-comp-detail">{comp.detail}</span>
-											</div>
-										{/each}
-									</div>
-								{:else}
-									<div class="rc-empty">No compensation metrics available.</div>
+								<div class="rc-comp-list" class:sample-block={isCompSample}>
+									{#each showComps as comp}
+										<div class="rc-comp-row">
+											<span class="rc-comp-value" class:sample-text={isCompSample}>{comp.label}{#if comp.value} {comp.value}{/if}</span>
+											<span class="rc-comp-detail" class:sample-text={isCompSample}>{comp.detail}</span>
+										</div>
+									{/each}
+								</div>
+								{#if isCompSample}
+									<div class="sample-banner">Sample data shown — actual compensation extracted from deal terms.</div>
 								{/if}
 							</div>
 
@@ -332,17 +402,16 @@
 							<div class="rc-divider"></div>
 							<div class="rc-section">
 								<div class="rc-section-title">WHAT'S NOT COVERED</div>
-								{#if rcg.gaps.length > 0}
-									<div class="rc-gap-list">
-										{#each rcg.gaps as gap}
-											<div class="rc-gap-row">
-												<span class="rc-gap-dot"></span>
-												<span class="rc-gap-label">{gap.label} not provided</span>
-											</div>
-										{/each}
-									</div>
-								{:else}
-									<div class="rc-empty">All critical data fields are present.</div>
+								<div class="rc-gap-list" class:sample-block={isGapSample}>
+									{#each showGaps as gap}
+										<div class="rc-gap-row">
+											<span class="rc-gap-dot"></span>
+											<span class="rc-gap-label" class:sample-text={isGapSample}>{gap.label}{#if gap.field} not provided{/if}</span>
+										</div>
+									{/each}
+								</div>
+								{#if isGapSample}
+									<div class="sample-banner">Sample gaps shown — actual gaps computed from deal data fields.</div>
 								{/if}
 							</div>
 						{/if}
@@ -842,6 +911,32 @@
 		font-weight: 600;
 		color: var(--text-muted);
 		white-space: nowrap;
+	}
+
+	/* Sample data indicators */
+	.sample-text {
+		opacity: 0.5;
+		font-style: italic;
+	}
+	.sample-block {
+		position: relative;
+	}
+	.sample-banner {
+		margin-top: 10px;
+		padding: 8px 12px;
+		background: #fef9e7;
+		border: 1px solid #f5e6b8;
+		border-radius: var(--radius-sm, 6px);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 600;
+		color: #92750c;
+		text-align: center;
+	}
+	:global(html.dark) .sample-banner {
+		background: rgba(245, 230, 184, 0.08);
+		border-color: rgba(245, 230, 184, 0.2);
+		color: #d4a72c;
 	}
 
 	@media (max-width: 768px) {

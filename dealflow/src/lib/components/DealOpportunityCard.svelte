@@ -171,6 +171,10 @@
 								{/if}
 							</div>
 							<div class="opp-check-label">{check.label}</div>
+							<div class="opp-check-detail">
+								<div class="opp-check-want">Want: {check.want}</div>
+								<div class="opp-check-got">Deal: {check.got}</div>
+							</div>
 						</div>
 					{/each}
 				</div>
@@ -431,11 +435,26 @@
 	}
 	.opp-check-label {
 		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 600;
-		color: var(--text-muted);
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--text-dark);
 		text-align: center;
-		white-space: nowrap;
+	}
+	.opp-check-detail {
+		margin-top: 4px;
+		text-align: center;
+	}
+	.opp-check-want {
+		font-family: var(--font-body);
+		font-size: 10px;
+		color: var(--text-muted);
+		line-height: 1.4;
+	}
+	.opp-check-got {
+		font-family: var(--font-body);
+		font-size: 10px;
+		color: var(--text-secondary);
+		line-height: 1.4;
 	}
 
 	.opp-buybox-empty {
