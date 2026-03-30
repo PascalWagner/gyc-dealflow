@@ -13,6 +13,7 @@
 	import { formatSessionAccessLabel } from '$lib/auth/access-model.js';
 	import { browser } from '$app/environment';
 	import { deals } from '$lib/stores/deals.js';
+	import { ADMIN_NAV_ITEMS, APP_ROUTES, getSidebarSections } from '$lib/navigation/app-nav.js';
 	import { selectionChanged } from '$lib/utils/haptics.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import {
@@ -102,79 +103,22 @@
 	const canShowOfficeHours = $derived(!nativeCompanionMode || ['member', 'admin'].includes($accessTier));
 
 	// Route map: page key → SvelteKit route
-	const routes = {
-		dashboard: '/app/dashboard',
-		deals: '/app/deals',
-		'market-intel': '/app/market-intel',
-		operators: '/app/operators',
-		resources: '/app/resources',
-		academy: '/app/academy',
-		'office-hours': '/app/office-hours',
-		'income-fund': '/app/income-fund',
-		settings: '/app/settings',
-		admin: '/app/admin',
-		'case-studies': '/app/case-studies',
-		'admin-manage': '/app/admin/manage',
-		outreach: '/app/admin/outreach',
-		portfolio: '/app/portfolio',
-		goals: '/app/goals',
-		plan: '/app/plan',
-		'tax-prep': '/app/tax-prep',
-		assets: '/app/assets',
-		'find-gp': '/app/find-gp',
-		saved: '/app/saved',
-		'deal-flow-stats': '/app/deal-flow-stats',
-		more: '/app/more'
-	};
+	const routes = APP_ROUTES;
 
 	function href(pageKey) {
 		return routes[pageKey] || `/app/${pageKey}`;
 	}
 
 	// Navigation items
-	const navSections = $derived.by(() => {
-		const supportItems = [{ page: 'resources', icon: 'academy', label: 'Resources' }];
-		if (canShowMemberHub) {
-			supportItems.unshift({
-				page: 'academy',
-				icon: 'academy',
-				label: nativeCompanionMode ? 'Member Hub' : 'Cash Flow Academy'
-			});
-		}
-		if (canShowOfficeHours) {
-			supportItems.push({ page: 'office-hours', icon: 'officehours', label: 'Office Hours' });
-		}
-		if (!nativeCompanionMode) {
-			supportItems.push({ page: 'income-fund', icon: 'incomefund', label: 'GYC Income Fund' });
-		}
+	const navSections = $derived.by(() =>
+		getSidebarSections({
+			nativeCompanionMode,
+			canShowMemberHub,
+			canShowOfficeHours
+		})
+	);
 
-		return [
-			{
-				label: 'Home',
-				items: [
-					{ page: 'dashboard', icon: 'dashboard', label: 'Dashboard' }
-				]
-			},
-			{
-				label: 'Research',
-				items: [
-					{ page: 'market-intel', icon: 'marketIntel', label: 'Market Intel', paidOnly: true },
-					{ page: 'deals', icon: 'deals', label: 'Deal Flow', badge: true },
-					{ page: 'operators', icon: 'operators', label: 'Operators' }
-				]
-			},
-			{
-				label: 'Support',
-				items: supportItems
-			}
-		];
-	});
-
-	const adminItems = [
-		{ page: 'admin', icon: 'schema', label: 'Admin Dashboard' },
-		{ page: 'case-studies', icon: 'casestudies', label: 'Member Success' },
-		{ page: 'admin-manage', icon: 'manage', label: 'Manage Data' }
-	];
+	const adminItems = ADMIN_NAV_ITEMS;
 
 	// User display info
 	const realAdminUser = $derived.by(() => inferAdminRealUser($user));

@@ -9,6 +9,7 @@
 		isMember,
 		user
 	} from '$lib/stores/auth.js';
+	import { PRIMARY_MOBILE_NAV_ITEMS } from '$lib/navigation/app-nav.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { tapLight } from '$lib/utils/haptics.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
@@ -850,26 +851,20 @@
 	</div>
 
 	<nav class="sponsor-mobile-tabs" aria-label="Primary">
-		<a href="/app/dashboard" class="sponsor-mobile-tab" onclick={tapLight}>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-			<span>Dashboard</span>
-		</a>
-		<a href="/app/market-intel" class="sponsor-mobile-tab" onclick={tapLight}>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-			<span>Intel</span>
-		</a>
-		<a href="/app/deals" class="sponsor-mobile-tab" onclick={tapLight}>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-			<span>Deal Flow</span>
-		</a>
-		<a href="/app/operators" class="sponsor-mobile-tab active" aria-current="page" onclick={tapLight}>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-			<span>Operators</span>
-		</a>
-		<a href="/app/more" class="sponsor-mobile-tab" onclick={tapLight}>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-			<span>More</span>
-		</a>
+		{#each PRIMARY_MOBILE_NAV_ITEMS as item}
+			<a
+				href={item.href}
+				class="sponsor-mobile-tab"
+				class:active={item.key === 'deals'}
+				aria-current={item.key === 'deals' ? 'page' : undefined}
+				onclick={tapLight}
+			>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+					{@html item.icon}
+				</svg>
+				<span>{item.label}</span>
+			</a>
+		{/each}
 	</nav>
 </div>
 

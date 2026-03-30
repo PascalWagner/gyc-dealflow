@@ -4,36 +4,32 @@
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import {
+		ADMIN_NAV_ITEMS,
+		MORE_ACCOUNT_ITEMS,
+		MORE_DASHBOARD_ITEMS,
+		getSupportNavItems
+	} from '$lib/navigation/app-nav.js';
 
 	const nativeCompanionMode = browser && isNativeApp();
 	const canShowMemberHub = $derived(!nativeCompanionMode || ['member', 'admin'].includes($accessTier));
 	const canShowOfficeHours = $derived(!nativeCompanionMode || ['member', 'admin'].includes($accessTier));
 
 	const sections = $derived.by(() => {
-		const supportItems = [];
-		if (canShowMemberHub) {
-			supportItems.push({
-				href: '/app/academy',
-				label: nativeCompanionMode ? 'Member Hub' : 'Cash Flow Academy',
-				icon: '📚'
-			});
-		}
-		supportItems.push({ href: '/app/resources', label: 'Resources', icon: '🎬' });
-		if (canShowOfficeHours) {
-			supportItems.push({ href: '/app/office-hours', label: 'Office Hours', icon: '🕛' });
-		}
-		if (!nativeCompanionMode) {
-			supportItems.push({ href: '/app/income-fund', label: 'GYC Income Fund', icon: '💰' });
-		}
+		const supportItems = getSupportNavItems({
+			nativeCompanionMode,
+			canShowMemberHub,
+			canShowOfficeHours
+		}).map((item) => ({
+			href: item.href,
+			label: item.label,
+			icon: item.moreIcon
+		}));
 
 		return [
 			{
 				label: 'My Dashboard',
-				items: [
-					{ href: '/app/portfolio', label: 'Portfolio', icon: '📊' },
-					{ href: '/app/plan', label: 'My Plan', icon: '🎯' },
-					{ href: '/app/tax-prep', label: 'Tax Prep', icon: '📄' }
-				]
+				items: MORE_DASHBOARD_ITEMS.map((item) => ({ href: item.href, label: item.label, icon: item.moreIcon }))
 			},
 			{
 				label: 'Support',
@@ -41,12 +37,16 @@
 			},
 			{
 				label: 'Account',
-				items: [
-					{ href: '/app/settings', label: 'Settings', icon: '⚙️' }
-				]
+				items: MORE_ACCOUNT_ITEMS.map((item) => ({ href: item.href, label: item.label, icon: item.moreIcon }))
 			}
 		];
 	});
+
+	const adminItems = ADMIN_NAV_ITEMS.map((item) => ({
+		href: item.href,
+		label: item.label,
+		icon: item.moreIcon
+	}));
 </script>
 
 <svelte:head><title>More | GYC</title></svelte:head>
@@ -77,21 +77,13 @@
 
 	{#if $isAdmin}
 		<div class="section-label">Admin</div>
-		<a href="/app/admin" class="menu-item">
-			<span class="menu-icon">🔧</span>
-			<span class="menu-label">Admin Dashboard</span>
-			<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
-		</a>
-		<a href="/app/admin/manage" class="menu-item">
-			<span class="menu-icon">🗄️</span>
-			<span class="menu-label">Manage Data</span>
-			<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
-		</a>
-		<a href="/app/case-studies" class="menu-item">
-			<span class="menu-icon">🏆</span>
-			<span class="menu-label">Member Success</span>
-			<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
-		</a>
+		{#each adminItems as item}
+			<a href={item.href} class="menu-item">
+				<span class="menu-icon">{item.icon}</span>
+				<span class="menu-label">{item.label}</span>
+				<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+			</a>
+		{/each}
 	{/if}
 </div>
 </PageContainer>
