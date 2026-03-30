@@ -83,14 +83,6 @@
 		if (layer.free) return true;
 		return hasMemberAccess;
 	}
-
-	function bbFmtMoney(v) {
-		const n = parseFloat(v);
-		if (!n) return '---';
-		if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
-		if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
-		return '$' + n.toLocaleString();
-	}
 </script>
 
 <div class="analysis-dashboard">
