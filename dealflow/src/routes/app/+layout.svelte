@@ -3,6 +3,7 @@
 	import OfflineNotice from '$lib/components/OfflineNotice.svelte';
 	import { page, navigating } from '$app/stores';
 	import { user, isAdmin, isLoggedIn, ensureSessionUserToken, getStoredSessionUser } from '$lib/stores/auth.js';
+	import { hydrateDealStagesFromCache, hydrateDealStagesFromRows } from '$lib/stores/deals.js';
 	import { ADMIN_ONLY_PAGE_KEYS } from '$lib/navigation/app-nav.js';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -64,6 +65,7 @@
 			const sessionUser = getStoredSessionUser();
 			if (sessionUser?.email) {
 				restoreScopedUserState(sessionUser);
+				hydrateDealStagesFromCache();
 				user.set(sessionUser);
 				sessionReady = true;
 				authChecked = true;
@@ -80,11 +82,16 @@
 					user.set(activeSession);
 				}
 
-				await hydrateUserScopedData({
+				const hydration = await hydrateUserScopedData({
 					email: activeSession.email,
 					token: activeSession.token,
 					adminEmail: inferAdminEmailForSession(activeSession)
-				}).catch(() => {});
+				}).catch(() => null);
+
+				if (hydration?.ok) {
+					// Keep the live stage store aligned with the server-truth bundle we just fetched.
+					hydrateDealStagesFromRows(hydration.bundle?.stages || []);
+				}
 				return;
 			}
 
