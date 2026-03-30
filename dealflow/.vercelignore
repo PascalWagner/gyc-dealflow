@@ -1,3 +1,4 @@
 _airtable_backup/
 node_modules/
 .env*
+docs/
