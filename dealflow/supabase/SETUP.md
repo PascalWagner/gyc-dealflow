@@ -15,7 +15,7 @@ GHL stays as the CRM — tags, automations, and funnel tracking still sync there
 ## Step 1: Create Supabase Project (5 min)
 
 1. Go to [supabase.com](https://supabase.com) → New Project
-2. Name: `gyc-dealflow`
+2. Name: `dealflow` (or another clear production name)
 3. Region: **US East** (closest to your Vercel deployment)
 4. Generate a strong database password (save it)
 5. Wait for project to provision (~2 min)
