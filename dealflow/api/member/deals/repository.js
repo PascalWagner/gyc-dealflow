@@ -1,6 +1,21 @@
 import { CHILD_SHARE_CLASS_SELECT, DEAL_SELECT, SPONSOR_SELECT } from './constants.js';
 import { applyDealVisibilityQuery } from '../../_deal-access.js';
 
+const DEAL_RELATION_BATCH_SIZE = 75;
+
+async function fetchInChunks(ids, fetcher, batchSize = DEAL_RELATION_BATCH_SIZE) {
+	const allRows = [];
+
+	for (let index = 0; index < ids.length; index += batchSize) {
+		const batchIds = ids.slice(index, index + batchSize);
+		const result = await fetcher(batchIds);
+		if (result?.error) throw result.error;
+		allRows.push(...(result?.data || []));
+	}
+
+	return allRows;
+}
+
 function applyDbFilters(query, normalizedQuery, { include506b }) {
 	let next = query;
 
@@ -116,28 +131,29 @@ export async function fetchMemberDealDataset(
 		};
 	}
 
-	const [childResult, sponsorsResult] = await Promise.all([
-		applyDealVisibilityQuery(
-			adminClient
-			.from('opportunities')
-			.select(CHILD_SHARE_CLASS_SELECT)
-			.in('parent_deal_id', parentIds)
-			.order('created_at', { ascending: true }),
-			{ isAdmin, viewerManagementCompanyId }
+	const [childShareClasses, sponsorRows] = await Promise.all([
+		fetchInChunks(parentIds, (batchIds) =>
+			applyDealVisibilityQuery(
+				adminClient
+					.from('opportunities')
+					.select(CHILD_SHARE_CLASS_SELECT)
+					.in('parent_deal_id', batchIds)
+					.order('created_at', { ascending: true }),
+				{ isAdmin, viewerManagementCompanyId }
+			)
 		),
-		adminClient
-			.from('deal_sponsors')
-			.select(SPONSOR_SELECT)
-			.in('deal_id', parentIds)
-			.order('display_order', { ascending: true })
+		fetchInChunks(parentIds, (batchIds) =>
+			adminClient
+				.from('deal_sponsors')
+				.select(SPONSOR_SELECT)
+				.in('deal_id', batchIds)
+				.order('display_order', { ascending: true })
+		)
 	]);
-
-	if (childResult.error) throw childResult.error;
-	if (sponsorsResult.error) throw sponsorsResult.error;
 
 	return {
 		parentDeals: parentDeals || [],
-		childShareClasses: childResult.data || [],
-		sponsorRows: sponsorsResult.data || []
+		childShareClasses,
+		sponsorRows
 	};
 }

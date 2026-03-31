@@ -180,9 +180,10 @@ async function growthMetrics(supabase) {
     });
   }
 
+  const recommendationPriorityOrder = { high: 0, medium: 1, low: 2 };
   recommendations.sort(
     (left, right) =>
-      { high: 0, medium: 1, low: 2 }[left.priority] - { high: 0, medium: 1, low: 2 }[right.priority]
+      recommendationPriorityOrder[left.priority] - recommendationPriorityOrder[right.priority]
   );
 
   return {

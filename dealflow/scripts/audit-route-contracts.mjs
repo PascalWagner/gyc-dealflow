@@ -239,7 +239,8 @@ assert(
 );
 assert(
 	memberDealsRepo.includes(".is('parent_deal_id', null)") &&
-		memberDealsRepo.includes(".in('deal_id', parentIds)") &&
+		(memberDealsRepo.includes(".in('deal_id', parentIds)") || memberDealsRepo.includes(".in('deal_id', batchIds)")) &&
+		memberDealsRepo.includes('fetchInChunks(') &&
 		memberDealsRepo.includes(".eq('asset_class', normalizedQuery.assetClass)") &&
 		memberDealsRepo.includes(".eq('status', normalizedQuery.status)") &&
 		memberDealsRepo.includes("applyDbSort(") &&
