@@ -4,11 +4,12 @@
 	let {
 		deals = [],
 		compareIds = [],
-		getActionModel = () => ({ utilityAction: null, footerActions: [] }),
+		getActionModel = () => ({ utilityAction: null, compareAction: null, footerActions: [] }),
 		getUtilityAnalytics = () => null,
+		getCompareAnalytics = () => null,
 		pendingFooterActionByDealId = {},
 		isCompareAtLimit = () => false,
-		onutilityaction = () => {},
+		oncontrolaction = () => {},
 		onfooteraction = () => {},
 		oncardview = () => {}
 	} = $props();
@@ -24,11 +25,17 @@
 	const currentDeal = $derived(deals[currentIndex] || null);
 	const compareSet = $derived(new Set(compareIds));
 	const currentActionModel = $derived(
-		currentDeal ? (getActionModel(currentDeal) ?? { utilityAction: null, footerActions: [] }) : { utilityAction: null, footerActions: [] }
+		currentDeal
+			? (getActionModel(currentDeal) ?? { utilityAction: null, compareAction: null, footerActions: [] })
+			: { utilityAction: null, compareAction: null, footerActions: [] }
 	);
 	const currentUtilityAction = $derived(currentActionModel.utilityAction || null);
+	const currentCompareAction = $derived(currentActionModel.compareAction || null);
 	const currentUtilityAnalytics = $derived(
 		currentDeal ? getUtilityAnalytics(currentDeal, currentUtilityAction) : null
+	);
+	const currentCompareAnalytics = $derived(
+		currentDeal ? getCompareAnalytics(currentDeal, currentCompareAction) : null
 	);
 	const pendingFooterActionId = $derived(currentDeal ? pendingFooterActionByDealId[currentDeal.id] || '' : '');
 	const stageActionPending = $derived(Boolean(pendingFooterActionId));
@@ -133,9 +140,11 @@
 				{pendingFooterActionId}
 				utilityAction={currentUtilityAction}
 				utilityAnalytics={currentUtilityAnalytics}
+				compareAction={currentCompareAction}
+				compareAnalytics={currentCompareAnalytics}
 				compareSelected={compareSet.has(currentDeal.id)}
 				compareAtLimit={isCompareAtLimit(currentDeal.id)}
-				{onutilityaction}
+				{oncontrolaction}
 				{onfooteraction}
 			/>
 		</div>

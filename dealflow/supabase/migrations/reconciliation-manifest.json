@@ -40,8 +40,8 @@
           "031_activity_columns_and_v1v2_migration.sql",
           "031_portfolio_plans.sql"
         ],
-        "status": "needs_forward_renumber",
-        "reason": "Portfolio-plan creation and onboarding-activity backfill landed with the same prefix."
+        "status": "covered_by_reconciliation_migration",
+        "reason": "Portfolio-plan creation and onboarding-activity backfill landed with the same prefix. 048_reconcile_onboarding_activity.sql is now the forward-only repair for the useful schema and event-derived backfills, without reviving the deprecated goals -> buy_box sync."
       },
       "039": {
         "files": [

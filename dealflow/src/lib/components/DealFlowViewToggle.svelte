@@ -8,7 +8,7 @@
 	const VIEW_MODES = [
 		{ id: 'grid', label: 'Grid', ariaLabel: 'Grid view' },
 		{ id: 'compare', label: 'Compare', ariaLabel: 'Compare view' },
-		{ id: 'location', label: 'Map', ariaLabel: 'Map view' }
+		{ id: 'map', label: 'Map', ariaLabel: 'Map view' }
 	];
 
 	function selectMode(mode) {

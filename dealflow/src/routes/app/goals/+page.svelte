@@ -1,16 +1,18 @@
-<script>
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
-	import { deals, dealStages } from '$lib/stores/deals.js';
-	import GoalProgress from '$lib/components/GoalProgress.svelte';
-	import { getStoredSessionToken } from '$lib/stores/auth.js';
-	import PageContainer from '$lib/layout/PageContainer.svelte';
-	import PageHeader from '$lib/layout/PageHeader.svelte';
-	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
+	<script>
+		import { onMount } from 'svelte';
+		import { browser } from '$app/environment';
+		import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
+		import GoalProgress from '$lib/components/GoalProgress.svelte';
+		import { getStoredSessionToken } from '$lib/stores/auth.js';
+		import PageContainer from '$lib/layout/PageContainer.svelte';
+		import PageHeader from '$lib/layout/PageHeader.svelte';
+		import { getUserScopedCacheSnapshot, readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
+		import { buildInvestedPortfolio } from '$lib/utils/investedPortfolio.js';
 
-	let investorGoals = $state(null);
-	let portfolio = $state([]);
-	let showWizard = $derived(!investorGoals);
+		let investorGoals = $state(null);
+		let portfolioDetails = $state([]);
+		let showWizard = $derived(!investorGoals);
+		const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
 	// Wizard form values
 	let goalType = $state('passive_income');
@@ -25,11 +27,19 @@
 	const gap = $derived(investorGoals ? investorGoals.targetIncome - investorGoals.currentIncome : targetIncome - currentIncome);
 	const progress = $derived(investorGoals && investorGoals.targetIncome > 0 ? Math.min(100, Math.round((investorGoals.currentIncome / investorGoals.targetIncome) * 100)) : 0);
 
-	const pTotalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
-	const pTotalDist = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0));
-	const actualYield = $derived(pTotalInvested > 0 && pTotalDist > 0 ? pTotalDist / pTotalInvested : 0);
-	const avgYield = $derived(actualYield > 0.02 ? actualYield : 0.08);
-	const capitalNeeded = $derived(investorGoals ? (gap > 0 ? Math.round(gap / avgYield) : 0) : 0);
+		const portfolioView = $derived.by(() =>
+			buildInvestedPortfolio({
+				stageMap: $dealStages || {},
+				deals: $deals || [],
+				portfolio: portfolioDetails
+			})
+		);
+		const portfolio = $derived.by(() => portfolioView.entries);
+		const pTotalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
+		const pTotalDist = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0));
+		const actualYield = $derived(pTotalInvested > 0 && pTotalDist > 0 ? pTotalDist / pTotalInvested : 0);
+		const avgYield = $derived(actualYield > 0.02 ? actualYield : 0.08);
+		const capitalNeeded = $derived(investorGoals ? (gap > 0 ? Math.round(gap / avgYield) : 0) : 0);
 	const dealsNeeded = $derived(capitalNeeded > 0 ? Math.ceil(capitalNeeded / 100000) : 0);
 
 	// Scenarios for "how to get there"
@@ -112,26 +122,39 @@
 		investorGoals = null;
 	}
 
-	function populateFormFromGoals(g) {
-		if (!g) return;
+		function populateFormFromGoals(g) {
+			if (!g) return;
 		goalType = g.type || g['Goal Type'] || 'passive_income';
 		currentIncome = g.currentIncome || g['Current Income'] || 0;
 		targetIncome = g.targetIncome || g['Target Income'] || 100000;
 		capital = g.capital || g['Capital Available'] || '$500k - $999k';
 		checkSize = g.checkSize || 100000;
 		timeline = g.timeline || g['Timeline'] || 5;
-		taxReduction = g.taxReduction || g['Tax Reduction'] || 0;
-	}
+			taxReduction = g.taxReduction || g['Tax Reduction'] || 0;
+		}
 
-	onMount(async () => {
-		if (!browser) return;
-		// Load from localStorage first for fast render
-		investorGoals = readUserScopedJson('gycGoals', null);
-		portfolio = readUserScopedJson('gycPortfolio', []);
-		if (investorGoals) populateFormFromGoals(investorGoals);
+		function syncGoalPageState() {
+			if (!browser) return;
+			const snapshot = getUserScopedCacheSnapshot();
+			portfolioDetails = snapshot.portfolio || [];
+			investorGoals = snapshot.goals || investorGoals;
+		}
 
-		// Then try to load from API
-		try {
+		onMount(async () => {
+			if (!browser) return;
+			// Load from localStorage first for fast render
+			investorGoals = readUserScopedJson('gycGoals', null);
+			syncGoalPageState();
+			if (investorGoals) populateFormFromGoals(investorGoals);
+			fetchDeals().catch(() => {});
+
+			const handleScopedStateUpdate = () => {
+				syncGoalPageState();
+			};
+			window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
+
+			// Then try to load from API
+			try {
 			const token = getToken();
 			if (token) {
 				const resp = await fetch('/api/userdata?type=goals', {
@@ -158,11 +181,15 @@
 					}
 				}
 			}
-		} catch (e) {
-			console.warn('Failed to load goals from API:', e);
-		}
-	});
-</script>
+			} catch (e) {
+				console.warn('Failed to load goals from API:', e);
+			}
+
+			return () => {
+				window.removeEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
+			};
+		});
+	</script>
 
 <PageContainer className="goals-page">
 	<PageHeader title="My Goals" />

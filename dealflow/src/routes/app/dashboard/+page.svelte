@@ -2,21 +2,30 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { deals, stageCounts, fetchDeals } from '$lib/stores/deals.js';
+	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
 	import { user } from '$lib/stores/auth.js';
 	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { getUserScopedCacheSnapshot } from '$lib/utils/userScopedState.js';
+	import { buildInvestedPortfolio } from '$lib/utils/investedPortfolio.js';
 
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
 	// Local state
-	let portfolio = $state([]);
+	let portfolioDetails = $state([]);
 	let wizardData = $state({});
 	let goals = $state(null);
 	let distributions = $state([]);
 	let portfolioPlan = $state(null);
+	const portfolioView = $derived.by(() =>
+		buildInvestedPortfolio({
+			stageMap: $dealStages || {},
+			deals: $deals || [],
+			portfolio: portfolioDetails
+		})
+	);
+	const portfolio = $derived.by(() => portfolioView.entries);
 
 	// Derived
 	const branch = $derived(wizardData._branch || '');
@@ -141,7 +150,7 @@
 	function syncDashboardState() {
 		if (!browser) return;
 		const snapshot = getUserScopedCacheSnapshot();
-		portfolio = snapshot.portfolio;
+		portfolioDetails = snapshot.portfolio;
 		wizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
 		goals = snapshot.goals;
 		distributions = snapshot.distributions;

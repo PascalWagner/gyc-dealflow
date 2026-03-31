@@ -5,6 +5,8 @@
  * and goal-path projection helpers for the LP deal page.
  */
 
+import { getDealOperatorName } from '$lib/utils/dealSponsors.js';
+
 // ===== Summary Line Builders =====
 // Each returns a short factual sentence (no judgments) for accordion headers.
 
@@ -30,6 +32,8 @@ export function buildLegitimacySummary(deal, secFiling) {
 export function buildSponsorSummary(deal) {
 	if (!deal) return 'No sponsor data available.';
 	const parts = [];
+	const operatorName = getDealOperatorName(deal, '');
+	if (operatorName) parts.push(operatorName);
 	if (deal.mcFoundingYear) {
 		parts.push(`Est. ${deal.mcFoundingYear}`);
 	}
@@ -158,7 +162,7 @@ function buildIdentifiedRisks(deal) {
 	if (deal.mcFoundingYear) {
 		const years = new Date().getFullYear() - deal.mcFoundingYear;
 		if (years < 3) {
-			risks.push({ label: 'Newer Operator', detail: `${deal.managementCompany || 'Sponsor'} has ${years} year${years !== 1 ? 's' : ''} of operating history.` });
+			risks.push({ label: 'Newer Operator', detail: `${getDealOperatorName(deal, 'Sponsor')} has ${years} year${years !== 1 ? 's' : ''} of operating history.` });
 		}
 	}
 
@@ -192,7 +196,7 @@ function buildIdentifiedRisks(deal) {
 	}
 
 	// Missing management company
-	if (!deal.managementCompanyId && !deal.managementCompany) {
+	if (!deal.managementCompanyId && !getDealOperatorName(deal, '')) {
 		risks.push({ label: 'Unknown Operator', detail: 'No management company is linked to this deal record.' });
 	}
 

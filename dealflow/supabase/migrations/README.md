@@ -18,6 +18,9 @@ debt. That debt is tracked in
   current max file and update the manifest only if new historical debt is
   introduced.
 - Prefer forward-only reconcile migrations over retroactive edits to old files.
+- The current reconcile pack is:
+  - `047_reconcile_intro_requests.sql`
+  - `048_reconcile_onboarding_activity.sql`
 
 ## Audit commands
 
@@ -36,4 +39,6 @@ The end state should be:
 - one unique sequence number per historical migration
 - no duplicate `CREATE TABLE` ownership
 - one forward-only reconciliation pack for live environments
+- one forward-only reconciliation pack for each overlapping lineage that still
+  matters for live-state convergence
 - then a clean baseline for fresh environments

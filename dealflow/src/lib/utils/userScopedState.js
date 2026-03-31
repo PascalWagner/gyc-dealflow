@@ -395,6 +395,7 @@ function mapPortfolio(rows) {
 		status: row.status || 'Active',
 		targetIRR: row.target_irr || '',
 		distributionsReceived: row.distributions_received || 0,
+		equityMultiple: row.equity_multiple || '',
 		holdPeriod: row.hold_period || '',
 		investingEntity: row.investing_entity || '',
 		entityInvestedInto: row.entity_invested_into || '',

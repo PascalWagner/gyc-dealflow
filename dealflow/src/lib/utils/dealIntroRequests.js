@@ -6,6 +6,7 @@ import {
 	writeUserScopedJson,
 	writeUserScopedString
 } from '$lib/utils/userScopedState.js';
+import { getDealOperator } from '$lib/utils/dealSponsors.js';
 
 export const DAILY_INTRO_REQUEST_LIMIT = 3;
 
@@ -18,16 +19,7 @@ function getTodayIntroKey() {
 }
 
 export function getDealOperatorInfo(deal) {
-	const sponsors = Array.isArray(deal?.sponsors) ? deal.sponsors : [];
-	const operator = sponsors.find((sponsor) => sponsor?.role === 'operator');
-
-	return {
-		name: operator?.name || deal?.managementCompany || 'the operator',
-		ceo: operator?.ceo || deal?.ceo || '',
-		foundingYear: operator?.foundingYear || deal?.mcFoundingYear || null,
-		website: operator?.website || deal?.mcWebsite || '',
-		managementCompanyId: deal?.managementCompanyId || operator?.managementCompanyId || ''
-	};
+	return getDealOperator(deal);
 }
 
 export function hasRequestedDealIntroduction(dealId) {
@@ -119,13 +111,13 @@ export async function submitDealIntroductionRequest({ deal, message = '' }) {
 
 		persistIntroRequestState({
 			deal,
-			operatorName: operator.name,
+			operatorName: operator.name || 'the operator',
 			userEmail: stored.email || ''
 		});
 
 		return {
 			success: true,
-			operatorName: operator.name,
+			operatorName: operator.name || 'the operator',
 			operatorCeo: operator.ceo || '',
 			managementCompanyId: operator.managementCompanyId || ''
 		};

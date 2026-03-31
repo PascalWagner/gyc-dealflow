@@ -11,6 +11,7 @@
 import { ADMIN_EMAILS, getAdminClient, setCors } from './_supabase.js';
 import { getLatestGpAgreement, hasCurrentGpAgreement } from './_gp-agreement.js';
 import { extractFromPdf, runEnrichmentCascade } from './_enrichment.js';
+import { buildNewDealDefaults } from '../src/lib/utils/dealWorkflow.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -84,7 +85,12 @@ export default async function handler(req, res) {
         // Deal was created locally (Add Deal) — create it in Supabase first
         const baseName = (dealName || '').replace(/ - PPM$/, '');
         const insertRow = {
+            ...buildNewDealDefaults({
+              investment_name: baseName,
+              sponsor_name: '',
+            }),
             investment_name: baseName,
+            sponsor_name: '',
             [urlField]: deckUrl,
             status: 'Draft',
             added_date: new Date().toISOString().split('T')[0]

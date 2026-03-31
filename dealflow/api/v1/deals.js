@@ -22,7 +22,7 @@
 
 import { getAdminClient } from '../_supabase.js';
 import { verifyApiKey, logRequest, setApiCors, apiError } from './_auth.js';
-import { getDealHistoricalReturns } from '../../src/lib/utils/dealReturns.js';
+import { computePublicDealStaleness, formatPublicDeal } from './deals/shared.js';
 
 export default async function handler(req, res) {
   setApiCors(res);
@@ -56,8 +56,9 @@ export default async function handler(req, res) {
       `)
       .not('investment_name', 'eq', '')
       .is('parent_deal_id', null)       // Only parent deals, not share classes
+      .eq('is_visible_to_users', true)  // Only published deals
       .eq('is_506b', false)             // Never expose 506(b) deals via public API
-      .not('status', 'eq', 'Draft');    // Hide Draft deals from public API (GP must confirm first)
+      .not('lifecycle_status', 'eq', 'archived');
 
     // Filters
     if (q.asset_class) query = query.eq('asset_class', q.asset_class);
@@ -96,10 +97,13 @@ export default async function handler(req, res) {
     const includeStale = q.include_stale === 'true';
 
     const results = (deals || [])
-      .map(d => {
-        const mc = d.management_company || {};
-        const stale = computeStaleness(d, now);
-        return { ...formatDeal(d, mc), is_stale: stale.isStale, staleness_reason: stale.reason };
+      .map((deal) => {
+        const stale = computePublicDealStaleness(deal, now);
+        return {
+          ...formatPublicDeal(deal),
+          is_stale: stale.isStale,
+          staleness_reason: stale.reason
+        };
       })
       .filter(d => includeStale || !d.is_stale);
 
@@ -128,101 +132,3 @@ export default async function handler(req, res) {
   }
 }
 
-// Format a deal for the public API (snake_case, clean structure)
-function formatDeal(d, mc) {
-  const formattedDeal = {
-    id: d.id,
-    deal_number: d.deal_number,
-    name: d.investment_name,
-    asset_class: d.asset_class,
-    deal_type: d.deal_type,
-    status: d.status,
-
-    // Financial metrics
-    target_irr: d.target_irr,
-    equity_multiple: d.equity_multiple,
-    preferred_return: d.preferred_return,
-    cash_on_cash: d.cash_on_cash,
-    investment_minimum: d.investment_minimum,
-    lp_gp_split: d.lp_gp_split,
-    hold_period_years: d.hold_period_years,
-    sponsor_co_invest_pct: d.sponsor_in_deal_pct,
-    fees: d.fees || [],
-
-    // Structure
-    offering_type: d.offering_type,
-    offering_size: d.offering_size,
-    investment_strategy: d.investment_strategy,
-    strategy: d.strategy,
-    instrument: d.instrument,
-    distributions: d.distributions,
-    financials: d.financials,
-    available_to: d.available_to,
-    first_yr_depreciation: d.first_yr_depreciation,
-    vertical_integration: d.vertical_integration,
-
-    // Location
-    geography: d.investing_geography,
-    location: d.location,
-    property_address: d.property_address,
-
-    // Debt fund specific
-    debt_position: d.debt_position,
-    fund_aum: d.fund_aum,
-    loan_count: d.loan_count,
-    avg_loan_ltv: d.avg_loan_ltv,
-
-    // Operator
-    operator: mc.id ? {
-      id: mc.id,
-      name: mc.operator_name,
-      ceo: mc.ceo,
-      website: mc.website,
-      founding_year: mc.founding_year,
-      type: mc.type,
-      asset_classes: mc.asset_classes || [],
-      headquarters: mc.headquarters,
-      full_cycle_deals: mc.full_cycle_deals || null
-    } : null,
-
-    // SEC
-    sec_cik: d.sec_cik || null,
-    date_of_first_sale: d.date_of_first_sale,
-    total_amount_sold: d.total_amount_sold,
-    total_investors: d.total_investors,
-
-    // Timestamps
-    added_date: d.added_date,
-    updated_at: d.updated_at
-  };
-
-  return {
-    ...formattedDeal,
-    historical_returns: getDealHistoricalReturns({
-      ...d,
-      ...formattedDeal
-    }).map((entry) => ({
-      year: entry.year,
-      value: entry.value
-    }))
-  };
-}
-
-function computeStaleness(d, now) {
-  const added = d.added_date ? new Date(d.added_date) : null;
-  const monthsSinceAdded = added ? (now - added) / (1000 * 60 * 60 * 24 * 30.44) : null;
-  const status = (d.status || '').toLowerCase();
-
-  if (status === 'closed' || status === 'fully funded' || status === 'completed') {
-    return { isStale: true, reason: 'closed' };
-  }
-  if (status === 'evergreen') {
-    return { isStale: false, reason: null };
-  }
-  const dealType = (d.deal_type || '').toLowerCase();
-  const threshold = dealType === 'syndication' ? 18 : 24;
-  if (monthsSinceAdded && monthsSinceAdded > threshold) {
-    return { isStale: true, reason: 'added_' + Math.round(monthsSinceAdded) + '_months_ago' };
-  }
-  return { isStale: false, reason: null };
-}

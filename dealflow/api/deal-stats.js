@@ -28,9 +28,14 @@ export default async function handler(req, res) {
     if (error && error.code !== 'PGRST116') throw error;
 
     const result = {
-      interested: data?.interested || 0,
-      duediligence: data?.duediligence || 0,
-      portfolio: data?.portfolio || 0,
+      review: data?.review || data?.interested || 0,
+      connect: data?.connect || 0,
+      decide: data?.decide || 0,
+      invested: data?.invested || data?.portfolio || 0,
+      skipped: data?.skipped || 0,
+      interested: data?.interested || data?.review || 0,
+      duediligence: data?.duediligence || ((data?.connect || 0) + (data?.decide || 0)),
+      portfolio: data?.portfolio || data?.invested || 0,
       namedInvestors: [],
       namedWatchers: []
     };
@@ -70,26 +75,10 @@ export default async function handler(req, res) {
           const p = row.user_profiles;
           if ((row.stage === 'invested' || row.stage === 'portfolio') && p.share_invested) {
             result.namedInvestors.push(name);
-          } else if ((row.stage === 'dd' || row.stage === 'duediligence') && p.share_dd) {
+          } else if ((row.stage === 'connect' || row.stage === 'decide' || row.stage === 'dd' || row.stage === 'duediligence') && p.share_dd) {
             result.namedWatchers.push(name);
-          } else if ((row.stage === 'saved' || row.stage === 'interested') && p.share_saved) {
+          } else if ((row.stage === 'review' || row.stage === 'saved' || row.stage === 'interested') && p.share_saved) {
             result.namedWatchers.push(name);
-          }
-        }
-      }
-
-      // Also check user_portfolio for invested users who opted in
-      const { data: portfolioInvestors } = await supabase
-        .from('user_portfolio')
-        .select('user_id, user_profiles!inner(full_name, share_invested)')
-        .eq('deal_id', dealId)
-        .eq('user_profiles.share_invested', true);
-
-      if (portfolioInvestors) {
-        for (const row of portfolioInvestors) {
-          const name = row.user_profiles?.full_name;
-          if (name && !result.namedInvestors.includes(name)) {
-            result.namedInvestors.push(name);
           }
         }
       }

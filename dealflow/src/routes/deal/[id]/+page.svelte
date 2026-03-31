@@ -7,6 +7,7 @@
 	import DealOpportunityCard from '$lib/components/DealOpportunityCard.svelte';
 	import DealAnalysisDashboard from '$lib/components/DealAnalysisDashboard.svelte';
 	import DealDisclaimer from '$lib/components/DealDisclaimer.svelte';
+	import DealModalLayer from '$lib/components/deal/DealModalLayer.svelte';
 	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember, isGP } from '$lib/stores/auth.js';
 	import {
 		currentAdminRealUser,
@@ -26,7 +27,43 @@
 	import { getUiStage, normalizeStageCounts } from '$lib/utils/dealflow-contract.js';
 	import { tapLight } from '$lib/utils/haptics.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
-	import { buildGoalProjection } from '$lib/utils/dealAnalysis.js';
+	import {
+		buildBuyBoxChecks,
+		buildBuyBoxLite,
+		buildGoalProgress,
+		getDealCompleteness,
+		isDealStale,
+		normalizeGoalBranch,
+		resolveGoalBranch,
+		summarizeBuyBoxScore
+	} from '$lib/utils/dealOpportunity.js';
+	import {
+		buildDocumentRows,
+		buildFeeRows,
+		buildGeographyLabel,
+		buildInvestClearlyPreview,
+		buildKeyRiskItems,
+		buildOperatorTrackRecordRows,
+		buildSecFilingSummary,
+		getDealStateCodes
+	} from '$lib/utils/dealDetailSignals.js';
+	import { calcDDProgress, getChecklistForDeal } from '$lib/utils/dealDueDiligence.js';
+	import {
+		buildDealInviteSharePayload,
+		buildDealShareMailtoHref,
+		buildDealShareSmsHref,
+		getDealCreditBadgeLabel,
+		getDealHeroSummary,
+		getDealUrl,
+		getDeckPreviewUrl
+	} from '$lib/utils/dealDetailUi.js';
+	import {
+		getDealIntroductionRequestGate,
+		hasRequestedDealIntroduction,
+		submitDealIntroductionRequest
+	} from '$lib/utils/dealIntroRequests.js';
+	import { buildInvestmentReportHtml } from '$lib/utils/dealReport.js';
+	import { getDealOperator } from '$lib/utils/dealSponsors.js';
 	import { isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
 
 	let { data } = $props();
@@ -157,9 +194,12 @@
 		writeUserScopedString(scopedDealKey(prefix), value);
 	}
 	const inviteUserName = $derived(currentSessionUser().name || 'Someone');
-	const inviteEmailSubject = $derived(deal ? encodeURIComponent(inviteUserName + ' shared a deal with you: ' + (deal.investmentName || deal.name || '')) : '');
-	const inviteEmailBody = $derived(deal ? encodeURIComponent(inviteUserName + ' thinks you might be interested in this deal:\n\n' + (deal.investmentName || deal.name || '') + '\n\n' + inviteUrl + '\n\nView the full deal details on GYC Dealflow.') : '');
-	const inviteSmsBody = $derived(deal ? encodeURIComponent(inviteUserName + ' shared a deal: ' + (deal.investmentName || deal.name || '') + ' - ' + inviteUrl) : '');
+	const inviteSharePayload = $derived.by(() =>
+		buildDealInviteSharePayload({ deal, viewerName: inviteUserName, inviteUrl })
+	);
+	const inviteEmailSubject = $derived(inviteSharePayload.emailSubject || '');
+	const inviteEmailBody = $derived(inviteSharePayload.emailBody || '');
+	const inviteSmsBody = $derived(inviteSharePayload.smsBody || '');
 
 	// Claim Deal Modal
 	let showClaimModal = $state(false);
@@ -172,10 +212,17 @@
 
 	// ===== Derived =====
 	const dealId = $derived($page.params.id);
+	const dealOperator = $derived.by(() => getDealOperator(deal));
+	const dealOperatorName = $derived(dealOperator?.name || '');
+	const dealOperatorCeo = $derived(dealOperator?.ceo || deal?.ceo || '');
+	const dealOperatorManagementCompanyId = $derived(dealOperator?.managementCompanyId || null);
+	const dealOperatorHref = $derived(
+		dealOperatorName ? `/sponsor?company=${encodeURIComponent(dealOperatorName)}` : '/sponsor'
+	);
 	const viewerManagementCompanyId = $derived($user?.managementCompany?.id || $user?.managementCompanyId || $user?.management_company_id || null);
 	const viewerManagementCompanyName = $derived(($user?.managementCompany?.name || $user?.managementCompanyName || '').trim().toLowerCase());
-	const dealManagementCompanyId = $derived(deal?.managementCompanyId || deal?.management_company_id || deal?.managementCompany?.id || null);
-	const dealManagementCompanyName = $derived((deal?.managementCompany || deal?.managementCompanyName || deal?.managementCompany?.name || '').trim().toLowerCase());
+	const dealManagementCompanyId = $derived(dealOperatorManagementCompanyId);
+	const dealManagementCompanyName = $derived((dealOperatorName || '').trim().toLowerCase());
 	const gpOwnsDeal = $derived.by(() => {
 		if (!$isGP || !deal) return false;
 		if (viewerManagementCompanyId && dealManagementCompanyId) {
@@ -190,7 +237,7 @@
 	const isPublicViewer = $derived(!$isLoggedIn);
 	const isFreeViewer = $derived($isLoggedIn && !$isAdmin && !$isMember && !gpOwnsDeal);
 	const isPaid = $derived(hasMemberAccess);
-	const showGpInsights = $derived(($isAdmin || gpOwnsDeal) && !!deal?.managementCompany);
+	const showGpInsights = $derived(($isAdmin || gpOwnsDeal) && !!dealOperatorManagementCompanyId);
 	const currentStage = $derived(deal ? getUiStage($dealStages[deal.id] || 'filter') : 'filter');
 	const socialProofCounts = $derived.by(() => normalizeStageCounts(socialProof || {}));
 
@@ -206,11 +253,8 @@
 
 	const isCredit = $derived(deal ? isDebtOrLendingDeal(deal) : false);
 	const heroClass = $derived(isCredit ? 'hero-lending' : 'hero-equity');
-
-	const completenessKeys = ['investmentName','assetClass','dealType','strategy','investmentStrategy','targetIRR','preferredReturn','cashOnCash','investmentMinimum','holdPeriod','offeringType','offeringSize','distributions','lpGpSplit','fees','financials','investingGeography','instrument','deckUrl','ppmUrl','secCik','managementCompanyId','purchasePrice','status'];
-	const completeness = $derived(deal ? getCompleteness(deal) : 0);
-
-	const isStale = $derived(deal ? checkStaleness(deal) : false);
+	const completeness = $derived(deal ? getDealCompleteness(deal) : 0);
+	const isStale = $derived(deal ? isDealStale(deal) : false);
 
 	// Share Classes
 	const sortedShareClasses = $derived(deal?.shareClasses?.length > 0
@@ -239,58 +283,12 @@
 	const operatorTrackRecordRows = $derived.by(() => buildOperatorTrackRecordRows(deal));
 	const buyBoxLite = $derived.by(() => buildBuyBoxLite(deal));
 	const investClearlyPreview = $derived.by(() => ($isAdmin ? buildInvestClearlyPreview(deal) : null));
-	const goalBranch = $derived.by(() =>
-		normalizeGoalBranch(userGoal)
-		|| normalizeGoalBranch(buyBox?._branch)
-		|| normalizeGoalBranch(buyBox?.goal)
-	);
-	const goalProgress = $derived.by(() => {
-		if (!buyBox || !goalBranch) return null;
-
-		let targetRaw = null;
-		let currentRaw = 0;
-
-		if (goalBranch === 'cashflow') {
-			targetRaw = parseTargetAmount(buyBox.targetCashFlow || buyBox.targetIncome);
-			currentRaw = parseTargetAmount(buyBox.baselineIncome) || 0;
-		} else if (goalBranch === 'growth') {
-			targetRaw = parseTargetAmount(buyBox.growthCapital || buyBox.targetGrowth);
-		} else if (goalBranch === 'tax') {
-			targetRaw = parseTargetAmount(buyBox.taxableIncome || buyBox.targetTaxSavings);
-		}
-
-		if (!targetRaw || targetRaw <= 0) return null;
-
-		const pct = Math.min(100, Math.max(0, Math.round((currentRaw / targetRaw) * 100)));
-		const projection = deal ? buildGoalProjection(deal, goalBranch, deal?.investmentMinimum) : null;
-
-		let dealContribution = 0;
-		if (projection) {
-			if (goalBranch === 'cashflow') dealContribution = projection.annual || 0;
-			else if (goalBranch === 'tax') dealContribution = projection.writeOff || 0;
-			else if (goalBranch === 'growth') dealContribution = projection.gain || 0;
-		}
-
-		const pctAfter = Math.min(100, Math.max(0, Math.round(((currentRaw + dealContribution) / targetRaw) * 100)));
-
-		return {
-			target: formatTargetDisplay(targetRaw, goalBranch),
-			targetRaw,
-			current: fmtGoalMoney(currentRaw),
-			currentRaw,
-			pct,
-			pctAfter
-		};
-	});
+	const goalBranch = $derived.by(() => resolveGoalBranch({ userGoal, buyBox }));
+	const goalProgress = $derived.by(() => buildGoalProgress({ deal, buyBox, goalBranch }));
 
 	// Buy Box Match
-	const buyBoxChecks = $derived(deal && buyBox ? computeBuyBoxChecks(deal, buyBox) : []);
-	const buyBoxScore = $derived.by(() => {
-		if (buyBoxChecks.length === 0) return { matched: 0, total: 0, pct: 0 };
-		const matched = buyBoxChecks.filter(c => c.match).length;
-		const total = buyBoxChecks.length;
-		return { matched, total, pct: Math.round((matched / total) * 100) };
-	});
+	const buyBoxChecks = $derived.by(() => buildBuyBoxChecks(deal, buyBox));
+	const buyBoxScore = $derived.by(() => summarizeBuyBoxScore(buyBoxChecks));
 
 	// DD Checklist
 	const checklist = $derived(deal ? getChecklistForDeal(deal) : null);
@@ -401,13 +399,13 @@
 	}
 
 	async function loadBackgroundCheck(force = false) {
-		if (!deal?.managementCompanyId || bgCheckLoading || (bgCheckLoaded && !force)) return;
+		if (!dealOperatorManagementCompanyId || bgCheckLoading || (bgCheckLoaded && !force)) return;
 		if (!hasMemberAccess) return;
 		bgCheckLoading = true;
 		bgCheckError = false;
 		try {
 			const headers = getStoredSessionUser()?.token ? { 'Authorization': `Bearer ${getStoredSessionUser().token}` } : {};
-			const resp = await fetch(`/api/background-check?managementCompanyId=${encodeURIComponent(deal.managementCompanyId)}`, { headers });
+			const resp = await fetch(`/api/background-check?managementCompanyId=${encodeURIComponent(dealOperatorManagementCompanyId)}`, { headers });
 			if (resp.ok) {
 				const data = await resp.json();
 				bgCheck = data?.results?.[0] || null;
@@ -423,13 +421,13 @@
 	}
 
 	async function loadGpInsights(force = false) {
-		if (!deal?.managementCompanyId || gpInsightsLoading || (gpInsightsLoaded && !force)) return;
+		if (!dealOperatorManagementCompanyId || gpInsightsLoading || (gpInsightsLoaded && !force)) return;
 		if (!showGpInsights) return;
 		gpInsightsLoading = true;
 		gpInsightsError = false;
 		try {
 			const headers = getStoredSessionUser()?.token ? { 'Authorization': `Bearer ${getStoredSessionUser().token}` } : {};
-			const resp = await fetch(`/api/sponsor-analytics?dealId=${encodeURIComponent(deal.id)}&managementCompanyId=${encodeURIComponent(deal.managementCompanyId)}`, { headers });
+			const resp = await fetch(`/api/sponsor-analytics?dealId=${encodeURIComponent(deal.id)}&managementCompanyId=${encodeURIComponent(dealOperatorManagementCompanyId)}`, { headers });
 			if (resp.ok) {
 				gpInsights = await resp.json();
 			} else {
@@ -645,286 +643,6 @@
 		}
 	}
 
-	// ===== Helpers =====
-	function getCompleteness(d) {
-		let filled = 0;
-		for (const k of completenessKeys) {
-			const v = d[k];
-			if (v !== null && v !== undefined && v !== '' && v !== 0 && !(Array.isArray(v) && v.length === 0)) filled++;
-		}
-		return Math.round((filled / completenessKeys.length) * 100);
-	}
-
-	function checkStaleness(d) {
-		if (d.isStale) return true;
-		const st = (d.status || '').toLowerCase();
-		if (['closed', 'fully funded', 'completed'].includes(st)) return true;
-		if (st !== 'evergreen' && d.addedDate) {
-			const months = (Date.now() - new Date(d.addedDate).getTime()) / (1000 * 60 * 60 * 24 * 30.44);
-			const dt = (d.dealType || '').toLowerCase();
-			if (dt === 'syndication' && months > 18) return true;
-			if (months > 24) return true;
-		}
-		return false;
-	}
-
-	function creditBadgeLabel(d) {
-		const ac = (d.assetClass || '').toLowerCase();
-		if (ac === 'lending') return 'LENDING';
-		if (ac.includes('credit')) return 'CREDIT';
-		const st = (d.strategy || '').toLowerCase();
-		if (st === 'lending') return 'LENDING';
-		return 'CREDIT';
-	}
-
-	function heroSummary(d) {
-		if (!d.investmentStrategy) return '';
-		const dot = d.investmentStrategy.indexOf('. ');
-		return dot > 0 ? d.investmentStrategy.substring(0, dot + 1) : (d.investmentStrategy.length > 200 ? d.investmentStrategy.substring(0, 200) + '...' : d.investmentStrategy);
-	}
-
-	const STATE_NAME_BY_CODE = {
-		AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado',
-		CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho',
-		IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana',
-		ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
-		MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
-		NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
-		OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
-		SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia',
-		WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming'
-	};
-	const STATE_CODE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAME_BY_CODE).map(([code, name]) => [name.toLowerCase(), code]));
-
-	function normalizeStateCode(value) {
-		if (!value) return null;
-		const normalized = String(value).trim();
-		if (STATE_NAME_BY_CODE[normalized.toUpperCase()]) return normalized.toUpperCase();
-		return STATE_CODE_BY_NAME[normalized.toLowerCase()] || null;
-	}
-
-	function getDealStateCodes(d) {
-		if (!d) return [];
-		const matches = [];
-		const addMatch = (value) => {
-			const code = normalizeStateCode(value);
-			if (code && !matches.includes(code)) matches.push(code);
-		};
-		addMatch(d.state);
-		addMatch(d.regionState);
-		const geography = [d.investingGeography, d.location, d.address, d.propertyAddress].filter(Boolean).join(' | ');
-		for (const [code, name] of Object.entries(STATE_NAME_BY_CODE)) {
-			if (new RegExp(`\\b${code}\\b`, 'i').test(geography) || new RegExp(`\\b${name}\\b`, 'i').test(geography)) {
-				addMatch(code);
-			}
-		}
-		return matches;
-	}
-
-	function buildGeographyLabel(d, states) {
-		if (!d) return 'No investing geography provided yet.';
-		if (states.length === 1) return `${STATE_NAME_BY_CODE[states[0]]} focus`;
-		if (states.length > 1) return `${states.length} target states`;
-		return d.investingGeography || d.location || 'Geography not specified';
-	}
-
-	function buildDocumentRows(d) {
-		if (!d) return [];
-		const rows = [];
-		if (d.deckUrl && !String(d.deckUrl).includes('airtableusercontent.com')) {
-			rows.push({ key: 'deck', label: 'Investment Deck', url: d.deckUrl });
-		}
-		if (d.ppmUrl && !String(d.ppmUrl).includes('airtableusercontent.com')) {
-			rows.push({ key: 'ppm', label: 'PPM', url: d.ppmUrl });
-		}
-		return rows;
-	}
-
-	function buildSecFilingSummary(d) {
-		if (!d) return null;
-		const totalRaised = d.totalAmountSold ?? d.amountRaised ?? d.amount_raised ?? null;
-		const totalInvestors = d.totalInvestors ?? d.total_investors ?? null;
-		return {
-			hasFiling: !!(d.secCik || totalRaised || totalInvestors || d.dateOfFirstSale),
-			cik: d.secCik || null,
-			totalRaised,
-			totalInvestors,
-			firstSaleDate: d.dateOfFirstSale || null,
-			offeringType: d.offeringType || null
-		};
-	}
-
-	function extractFeeValue(text, patterns) {
-		const source = String(text || '');
-		for (const pattern of patterns) {
-			const match = source.match(pattern);
-			if (match?.[1]) return match[1].trim();
-		}
-		return null;
-	}
-
-	function buildFeeRows(d) {
-		if (!d) return [];
-		const rawFees = String(d.fees || '');
-		const rows = [];
-		if (d.lpGpSplit) {
-			rows.push({ label: 'LP / GP Split', value: String(d.lpGpSplit), verdict: 'Market-based split' });
-		}
-		const mgmtFee = extractFeeValue(rawFees, [/management fee[^0-9]*([\d.]+%?)/i, /asset management fee[^0-9]*([\d.]+%?)/i]);
-		if (mgmtFee) rows.push({ label: 'Management Fee', value: mgmtFee, verdict: parseFloat(mgmtFee) <= 2 ? 'Investor-friendly' : 'Above benchmark' });
-		const acquisitionFee = extractFeeValue(rawFees, [/acquisition fee[^0-9]*([\d.]+%?)/i]);
-		if (acquisitionFee) rows.push({ label: 'Acquisition Fee', value: acquisitionFee, verdict: parseFloat(acquisitionFee) <= 2 ? 'Common range' : 'Above benchmark' });
-		if (d.preferredReturn) {
-			rows.push({ label: 'Preferred Return', value: fmt(d.preferredReturn, 'pct'), verdict: (d.preferredReturn > 1 ? d.preferredReturn : d.preferredReturn * 100) >= 7 ? 'Strong LP alignment' : 'Below common hurdle' });
-		}
-		if (rawFees && rows.length === 0) rows.push({ label: 'Fee Summary', value: rawFees, verdict: 'Benchmarking available for members' });
-		return rows.slice(0, 5);
-	}
-
-	function buildOperatorTrackRecordRows(d) {
-		if (!d) return [];
-		const rows = [];
-		if (d.managementCompany) rows.push({ label: 'Management Company', value: d.managementCompany });
-		if (d.mcFoundingYear) rows.push({ label: 'Founded', value: String(d.mcFoundingYear) });
-		if (d.fundAUM) rows.push({ label: 'AUM', value: fmt(d.fundAUM, 'money') });
-		if (d.ceo) rows.push({ label: 'Lead Operator', value: d.ceo });
-		if (d.sponsorInDeal) rows.push({ label: 'Sponsor Co-Invest', value: fmt(d.sponsorInDeal, 'pct') });
-		return rows.slice(0, 5);
-	}
-
-	function buildBuyBoxLite(d) {
-		if (!d) return null;
-		const signals = [];
-		if (d.preferredReturn) signals.push(fmt(d.preferredReturn, 'pct') + ' pref');
-		if (d.cashOnCash) signals.push(fmt(d.cashOnCash, 'pct') + ' CoC');
-		if (d.distributions && d.distributions !== 'Unknown') signals.push(d.distributions + ' distributions');
-		const isStrong = signals.length > 0;
-		return {
-			label: isStrong ? 'Cash Flow Potential' : 'Cash Flow Needs Review',
-			status: isStrong ? 'Aligned' : 'Needs more detail',
-			description: isStrong ? signals.join(' • ') : 'Create your account to save this deal, set your preferences, and unlock a fuller Buy Box match.'
-		};
-	}
-
-	function buildInvestClearlyPreview(d) {
-		if (!d?.managementCompany) return null;
-		const sponsorName = d.managementCompany;
-		const reviews = [
-			{
-				id: 'icr-1',
-				reviewer: 'Maya T.',
-				publishedAt: '2026-02-11',
-				rating: 5,
-				title: 'Strong communication and reliable execution',
-				body: `${sponsorName} kept updates consistent, set expectations clearly, and operated in a way that felt disciplined from start to finish. The communication stood out most.`
-			},
-			{
-				id: 'icr-2',
-				reviewer: 'Chris D.',
-				publishedAt: '2026-01-28',
-				rating: 5,
-				title: 'Professional sponsor that does what they say',
-				body: `Our experience with ${sponsorName} was organized and straightforward. Materials were easy to follow, the team was responsive, and the process felt well managed rather than improvised.`
-			},
-			{
-				id: 'icr-3',
-				reviewer: 'Elena R.',
-				publishedAt: '2025-12-16',
-				rating: 5,
-				title: 'Clear reporting and investor-first posture',
-				body: `The reporting cadence, responsiveness, and overall presentation gave us confidence in ${sponsorName}. This is exactly the kind of third-party social proof worth surfacing on every sponsor-backed deal page.`
-			}
-		];
-		const total = reviews.length;
-		const avg = reviews.reduce((sum, review) => sum + review.rating, 0) / total;
-		return {
-			sponsorName,
-			reviewCount: total,
-			averageRating: avg.toFixed(1),
-			reviews
-		};
-	}
-
-	function buildKeyRiskItems(d, fit, stale) {
-		const items = [];
-		if (stale) items.push('The deal may no longer be actively accepting new capital.');
-		if (fit?.warnings?.length) items.push(...fit.warnings);
-		if (!d?.managementCompanyId) items.push('Management company record is incomplete, which limits independent verification.');
-		return items.slice(0, 4);
-	}
-
-	// ===== Buy Box Matching =====
-	function bbFmtMoney(v) {
-		const n = parseFloat(v);
-		if (!n) return '---';
-		if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
-		if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
-		return '$' + n.toLocaleString();
-	}
-
-	function computeBuyBoxChecks(d, bb) {
-		const checks = [];
-		if (bb.assetClasses?.length > 0) {
-			checks.push({ label: 'Asset Class', match: bb.assetClasses.includes(d.assetClass), want: bb.assetClasses.join(', '), got: d.assetClass || '---' });
-		}
-		if (bb.checkSize) {
-			checks.push({ label: 'Check Size', match: (d.investmentMinimum || 0) <= bb.checkSize, want: 'Up to ' + bbFmtMoney(bb.checkSize), got: fmt(d.investmentMinimum, 'money') });
-		}
-		if (bb.minIRR) {
-			const bbIRR = parseFloat(bb.minIRR);
-			const dealIRR = d.targetIRR || 0;
-			const dealIRRpct = dealIRR <= 1 ? dealIRR * 100 : dealIRR;
-			const bbIRRpct = bbIRR <= 1 ? bbIRR * 100 : bbIRR;
-			checks.push({ label: 'Target Return', match: dealIRRpct >= bbIRRpct, want: bbIRRpct.toFixed(1) + '%+', got: dealIRRpct ? dealIRRpct.toFixed(1) + '%' : '---' });
-		}
-		if (bb.strategies?.length > 0) {
-			checks.push({ label: 'Strategy', match: bb.strategies.includes(d.strategy), want: bb.strategies.join(', '), got: d.strategy || '---' });
-		}
-		if (bb.maxLockup) {
-			const maxLock = parseFloat(bb.maxLockup);
-			const holdYrs = parseFloat(d.holdPeriod) || 0;
-			checks.push({ label: 'Hold Period', match: holdYrs <= maxLock, want: maxLock + ' yrs max', got: d.holdPeriod ? formatHold(d.holdPeriod) : '---' });
-		}
-		if (bb.distributions && d.distributions && d.distributions !== 'Unknown') {
-			const distRank = { monthly: 1, quarterly: 2, 'semi-annually': 3, annually: 4 };
-			const bbDR = distRank[(bb.distributions || '').toLowerCase()] || 99;
-			const dealDR = distRank[(d.distributions || '').toLowerCase()] || 99;
-			checks.push({ label: 'Distributions', match: dealDR <= bbDR, want: bb.distributions, got: d.distributions });
-		}
-		if (bb.goal || bb._branch) {
-			const branch = bb._branch || bb.goal || '';
-			let goalMatch = false;
-			let goalGot = '';
-			if (branch === 'cashflow') {
-				const hasDist = d.distributions && d.distributions !== 'Unknown' && d.distributions !== 'None';
-				goalMatch = !!(hasDist || (d.cashOnCash > 0) || (d.preferredReturn > 0));
-				const parts = [];
-				if (d.preferredReturn > 0) parts.push(fmt(d.preferredReturn, 'pct') + ' pref');
-				if (d.cashOnCash > 0) parts.push(fmt(d.cashOnCash, 'pct') + ' CoC');
-				if (hasDist) parts.push(d.distributions.toLowerCase() + ' dist.');
-				goalGot = goalMatch ? parts.join(', ') : 'No regular income';
-			} else if (branch === 'tax') {
-				goalMatch = !!d.firstYrDepreciation;
-				goalGot = d.firstYrDepreciation ? d.firstYrDepreciation + ' yr-1 depr.' : 'No depreciation data';
-			} else if (branch === 'growth') {
-				goalMatch = !!((d.equityMultiple >= 1.5) || (d.targetIRR && (d.targetIRR > 1 ? d.targetIRR : d.targetIRR * 100) >= 15));
-				const gParts = [];
-				if (d.equityMultiple) gParts.push(fmt(d.equityMultiple, 'multiple') + ' multiple');
-				if (d.targetIRR) gParts.push(fmt(d.targetIRR, 'pct') + ' IRR');
-				goalGot = gParts.length > 0 ? gParts.join(' / ') : 'No growth metrics';
-			}
-			const goalLabels = { cashflow: 'Income / Cash Flow', tax: 'Tax Benefits', growth: 'Growth / Appreciation' };
-			checks.push({ label: 'Goal Alignment', match: goalMatch, want: goalLabels[branch] || branch, got: goalGot || '---' });
-		}
-		if (bb.capital90Day) {
-			const cap = parseFloat(bb.capital90Day);
-			if (cap && d.investmentMinimum) {
-				checks.push({ label: 'Capital Fit', match: d.investmentMinimum <= cap, want: 'Up to ' + bbFmtMoney(cap) + ' (90-day)', got: fmt(d.investmentMinimum, 'money') + ' min' });
-			}
-		}
-		return checks;
-	}
-
 	// ===== Toast =====
 	function showShareToast(msg) {
 		toastMessage = msg;
@@ -935,18 +653,13 @@
 	// ===== Share Actions =====
 	function shareDealEmail() {
 		if (!deal || !browser) return;
-		const url = window.location.href;
-		const subject = encodeURIComponent(`Check out this deal: ${deal.investmentName}`);
-		const body = encodeURIComponent(`I found this deal on GYC Dealflow and thought you might be interested:\n\n${deal.investmentName}\n${url}\n\nYou can sign up for free to see deal details, pitch decks, and more.`);
-		window.open(`mailto:?subject=${subject}&body=${body}`);
+		window.open(buildDealShareMailtoHref(deal, window.location.href));
 		shareDropdownOpen = false;
 	}
 
 	function shareDealText() {
 		if (!deal || !browser) return;
-		const url = window.location.href;
-		const text = encodeURIComponent(`Check out this deal on GYC Dealflow: ${deal.investmentName} - ${url}`);
-		window.open(`sms:?&body=${text}`);
+		window.open(buildDealShareSmsHref(deal, window.location.href));
 		shareDropdownOpen = false;
 	}
 
@@ -969,8 +682,7 @@
 		inviteCode = null;
 
 		const stored = currentSessionUser();
-		const userName = stored.name || stored.firstName || (stored.email ? stored.email.split('@')[0] : 'Someone');
-		const baseUrl = `${window.location.origin}/deal/${deal.id}`;
+		const baseUrl = getDealUrl(window.location.origin, deal);
 
 		// Try to get an invite code from API
 		fetch('/api/invite', {
@@ -992,6 +704,10 @@
 		showInviteModal = true;
 	}
 
+	function closeInviteModal() {
+		showInviteModal = false;
+	}
+
 	function copyInviteLink() {
 		if (!browser) return;
 		navigator.clipboard.writeText(inviteUrl).then(() => {
@@ -1007,30 +723,15 @@
 		deckViewed = true;
 	}
 
-	function getDeckPreviewUrl(url) {
-		if (!url) return null;
-		// Google Drive file -> preview embed
-		if (url.includes('google.com/file') || url.includes('drive.google.com')) {
-			const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-			if (match) return `https://drive.google.com/file/d/${match[1]}/preview`;
-		}
-		// Dropbox -> raw content
-		if (url.includes('dropbox.com')) {
-			return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', '');
-		}
-		// Direct PDF or other URLs
-		if (url.endsWith('.pdf') || url.includes('.pdf?')) {
-			return url;
-		}
-		// Google Docs viewer fallback for other URLs
-		return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
-	}
-
 	function openDeckViewer() {
 		if (!deal?.deckUrl) return;
 		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to view the investment deck and track document engagement.' })) return;
 		showDeckViewer = true;
 		trackDeckView();
+	}
+
+	function closeDeckViewer() {
+		showDeckViewer = false;
 	}
 
 	function openDocumentRow(row) {
@@ -1122,6 +823,10 @@
 		}
 	}
 
+	function closeEnrichModal() {
+		showEnrichModal = false;
+	}
+
 	async function confirmEnrichment() {
 		if (!deal || !enrichmentData) return;
 		enrichSaving = true;
@@ -1157,11 +862,15 @@
 		const stored = currentSessionUser();
 		claimName = stored.name || '';
 		claimEmail = stored.email || '';
-		claimCompany = deal.managementCompany || '';
+		claimCompany = dealOperatorName || deal.managementCompany || '';
 		claimRole = '';
 		claimSubmitting = false;
 		claimSuccess = false;
 		showClaimModal = true;
+	}
+
+	function closeClaimModal() {
+		showClaimModal = false;
 	}
 
 	async function submitClaim() {
@@ -1194,265 +903,7 @@
 	}
 
 	// ===== DD Checklist =====
-	const DD_CHECKLIST_CREDIT = {
-		label: 'Debt/Credit Fund Template',
-		sections: [
-			{ title: 'Firm Basics', questions: [
-				{ q: 'What is the management company name?', autoField: 'managementCompany' },
-				{ q: 'Who is the CEO or primary decision-maker?', autoField: 'ceo' },
-				{ q: 'Who are the key team members beyond the CEO?' },
-				{ q: 'When was the firm founded?', autoField: 'mcFoundingYear' },
-				{ q: 'How many employees does the management firm have?' },
-				{ q: "What is the firm's AUM (assets under management)?", autoField: 'fundAUM', format: 'money' },
-				{ q: 'How many funds or vehicles have they launched to date?' },
-				{ q: 'Has the manager ever lost investor capital?' },
-				{ q: 'Is there a key person succession/backup plan in place?' },
-				{ q: 'Are there any pending litigation issues?' }
-			]},
-			{ title: 'Fund Basics', questions: [
-				{ q: 'What is the name of the fund?', autoField: 'investmentName' },
-				{ q: 'What is the story of the fund?' },
-				{ q: "What is the fund's investment strategy?", autoField: 'investmentStrategy' },
-				{ q: 'When was the fund founded?' },
-				{ q: 'How many investors are in the fund?' },
-				{ q: 'What is the max AUM allowed inside this fund?' },
-				{ q: 'What is the current AUM of this fund?', autoField: 'fundAUM', format: 'money' },
-				{ q: 'What specific asset classes does the fund focus on?', autoField: 'assetClass' },
-				{ q: 'How has the fund strategy shifted since inception?' },
-				{ q: 'How much does the sponsor co-invest in this fund?' },
-				{ q: 'What geographic markets does the fund operate in?', autoField: 'investingGeography' },
-				{ q: 'How diversified is the fund by geography?' },
-				{ q: 'How diversified is the fund by borrower/loan/project type?' },
-				{ q: 'What percentage is concentrated in any single borrower or project?' }
-			]},
-			{ title: 'Fund Performance & Structure', questions: [
-				{ q: 'What is the target IRR?', autoField: 'targetIRR', format: 'pct' },
-				{ q: 'What is the preferred return offered?', autoField: 'preferredReturn', format: 'pct' },
-				{ q: "What was the fund's return in 2024?" },
-				{ q: "What was the fund's return in 2023?" },
-				{ q: "What was the fund's return in 2022?" },
-				{ q: 'How often are returns distributed?', autoField: 'distributions' },
-				{ q: 'What is the current leverage ratio of the fund?' },
-				{ q: 'What is the maximum leverage permitted by the fund documents?' },
-				{ q: 'What is the fee structure (management, performance, other)?' },
-				{ q: 'Is the fund open-ended or closed-ended?' },
-				{ q: 'Has the fund experienced any capital calls or pauses in distributions?' }
-			]},
-			{ title: 'Loan Details', questions: [
-				{ q: 'How are loans underwritten -- what credit criteria are used?' },
-				{ q: 'Who on the sponsor team handles acquisitions?' },
-				{ q: 'What are the typical borrower profiles?' },
-				{ q: 'Are the loans senior secured, mezzanine, or unsecured?', autoField: 'debtPosition' },
-				{ q: 'How many loans are currently in the portfolio?', autoField: 'loanCount' },
-				{ q: 'What is the average loan size?' },
-				{ q: 'What is the average loan term?' },
-				{ q: 'Are the loans secured and/or personally guaranteed?' },
-				{ q: 'How is downside risk mitigated (personal guarantees, collateral, etc.)?' },
-				{ q: 'What happens if the loan defaults or goes into foreclosure?' },
-				{ q: 'What is the historical default rate?' },
-				{ q: 'What is the average loan-to-value (LTV)?', autoField: 'avgLoanLTV', format: 'pct' },
-				{ q: 'What is the maximum LTV allowed in the PPM?' },
-				{ q: 'What is the typical interest rate charged to borrowers?' },
-				{ q: 'Who services the loans?' },
-				{ q: 'What percent of your borrowers are repeat?' }
-			]},
-			{ title: 'Investor Experience', questions: [
-				{ q: 'What accreditation status is required?', autoField: 'availableTo' },
-				{ q: 'What is the minimum investment?', autoField: 'investmentMinimum', format: 'money' },
-				{ q: 'What is the lock-up period?', autoField: 'holdPeriod', format: 'years' },
-				{ q: 'What is the redemption policy & cadence?' },
-				{ q: 'Does the fund issue K-1s or 1099s?' },
-				{ q: 'Are investor earnings taxed as ordinary income, capital gains, or something else?' },
-				{ q: 'Is the fund subject to UBIT in a self-directed IRA?' },
-				{ q: 'Is there a compounding or DRIP option available?' },
-				{ q: 'How frequent are updates provided from management?' },
-				{ q: 'Were tax forms sent before April 1st last year?' },
-				{ q: 'Are financials audited by a third-party CPA?', autoField: 'financials' },
-				{ q: 'What fund administration tools or platforms are used?' },
-				{ q: 'How regularly do you update & provide access to a loan tape & fund financials?' }
-			]},
-			{ title: 'External Due Diligence (LP Led)', questions: [
-				{ q: 'Do we have a strong relationship with the sponsor?' },
-				{ q: 'Were you initially referred to this sponsor from someone you know, like, trust?' },
-				{ q: 'Do you know investors that have invested with this operator in the past with positive results?' },
-				{ q: 'Does Google search show any negative/positive publicity in past 12 months?' },
-				{ q: 'Does the sponsor have an InvestClearly profile and are all reviews positive?' },
-				{ q: 'Is the sponsor active on LinkedIn or other professional platforms?' },
-				{ q: 'What do WE believe the biggest risks in the deal are?' }
-			]}
-		]
-	};
-
-	const DD_CHECKLIST_SYNDICATION = {
-		label: 'Multi-Family Syndication Template',
-		sections: [
-			{ title: 'Executive Summary', questions: [
-				{ q: 'What is the name of the deal?', autoField: 'investmentName' },
-				{ q: 'Minimum Investment', autoField: 'investmentMinimum', format: 'money' },
-				{ q: 'Target Hold', autoField: 'holdPeriod', format: 'years' },
-				{ q: 'Target IRR', autoField: 'targetIRR', format: 'pct' },
-				{ q: 'Target Cash-on-Cash Return', autoField: 'cashOnCash', format: 'pct' },
-				{ q: 'Is there a preferred return?', autoField: 'preferredReturn', format: 'pct' },
-				{ q: 'Target Equity Multiple', autoField: 'equityMultiple', format: 'multiple' },
-				{ q: 'Is this a 506B or 506C?', autoField: 'offeringType' },
-				{ q: 'Target Equity Raise', autoField: 'offeringSize', format: 'money' },
-				{ q: 'Basic business plan summary', autoField: 'investmentStrategy' }
-			]},
-			{ title: 'Firm Basics', questions: [
-				{ q: 'What is the management company name?', autoField: 'managementCompany' },
-				{ q: 'When was the firm founded?', autoField: 'mcFoundingYear' },
-				{ q: 'Who is the CEO or primary decision-maker?', autoField: 'ceo' },
-				{ q: "What is the firm's AUM?", autoField: 'fundAUM', format: 'money' },
-				{ q: 'How many units does the firm currently have under management?' },
-				{ q: 'How many deals has the sponsor acquired?' },
-				{ q: 'How many deals have gone full-cycle?' },
-				{ q: 'What is the average IRR of full-cycle deals?' },
-				{ q: 'What is the average Equity Multiple of full-cycle deals?' },
-				{ q: 'How many employees does the management firm have?' },
-				{ q: 'Do we have a strong relationship with the sponsor?' },
-				{ q: 'Were you initially referred to this sponsor from someone you know, like, trust?' },
-				{ q: 'Do you know investors that have invested with this operator in the past?' },
-				{ q: 'Does Google search show any negative/positive publicity?' },
-				{ q: 'Does the sponsor have any negative/positive reviews on InvestClearly?' }
-			]},
-			{ title: 'Deal Basics', questions: [
-				{ q: 'What is the address of the property?', autoField: 'address' },
-				{ q: 'Number of units' },
-				{ q: 'When was the property built?' },
-				{ q: 'What is the class of the property?' },
-				{ q: 'What is the current occupancy?' },
-				{ q: 'How does the sponsor plan to grow NOI?' },
-				{ q: '% of non-renovated units (value-add potential)' },
-				{ q: 'Avg Rating & Reviews of the property' },
-				{ q: 'What is the going-in cap rate?' },
-				{ q: 'What is the assumed cap rate at sale?' },
-				{ q: 'What is the loan size?' },
-				{ q: 'Is the interest rate fixed or variable?' },
-				{ q: 'What is the interest rate?' },
-				{ q: 'What is the combined LTC or LTV?' },
-				{ q: 'What is the loan term?' }
-			]},
-			{ title: 'Deal Fees & Economics', questions: [
-				{ q: 'What is the LP / GP profit split?', autoField: 'lpGpSplit' },
-				{ q: "What is the sponsor's acquisition fee?" },
-				{ q: "What is the sponsor's annual Asset Management Fee?" },
-				{ q: "What is the sponsor's transaction fee for refi or disposition?" },
-				{ q: "What is the sponsor's construction management fee?" },
-				{ q: 'What is the property management fee?' },
-				{ q: 'Is the sponsor charging a marketing, admin, or other fee?' }
-			]},
-			{ title: 'Deal Details (Asked on Intro Call)', questions: [
-				{ q: 'Can you describe your due diligence process to acquire this property?' },
-				{ q: 'What major systems will need to be replaced during hold period?' },
-				{ q: 'Will onsite staff be retained or new staff brought in?' },
-				{ q: 'Will property management be in-house or 3rd party?' },
-				{ q: 'What are the annual rent growth assumptions for the 1st 5 years?' },
-				{ q: 'What are the annual expense growth assumptions?' },
-				{ q: 'What % of the equity raise is set aside as reserves?' },
-				{ q: 'What cashflow should I expect in the 1st year?' },
-				{ q: 'How much depreciation should I expect in year 1 and 2?', autoField: 'firstYrDepreciation' },
-				{ q: 'Is the target IRR dependent on a refinance?' },
-				{ q: 'What do you believe the biggest risks in the deal are?' }
-			]},
-			{ title: 'Management Firm Deep Dive', questions: [
-				{ q: 'Has the firm ever paused distributions?' },
-				{ q: 'Has the firm ever issued a capital call?' },
-				{ q: 'Has the firm ever lost investor capital?' },
-				{ q: 'What % of your investors are repeat investors?' },
-				{ q: 'What date did you get your K-1s out over the last 2 years?' },
-				{ q: 'Who would take over management if the CEO passed away?' },
-				{ q: 'How much is the firm or the CEO investing in this deal?', autoField: 'sponsorInDeal', format: 'pct' },
-				{ q: 'How frequent do you expect to send out email updates?' },
-				{ q: 'Have you or are you currently in any litigation?' }
-			]},
-			{ title: 'Post-Research Questions', questions: [
-				{ q: 'What do WE believe the biggest risks in the deal are?' },
-				{ q: 'Do we believe the sponsor wealthy enough to save the deal if things go wrong?' }
-			]}
-		]
-	};
-
-	function getChecklistForDeal(d) {
-		return isDebtOrLendingDeal(d) ? DD_CHECKLIST_CREDIT : DD_CHECKLIST_SYNDICATION;
-	}
-
-	function getAutoValue(d, field, format) {
-		if (!field) return null;
-		const val = d[field];
-		if (val === undefined || val === null || val === '' || val === 0) return null;
-		if (format === 'pct') return fmt(val, 'pct');
-		if (format === 'money') return fmt(val, 'money');
-		if (format === 'multiple') return fmt(val, 'multiple');
-		if (format === 'years') return formatHold(val);
-		return String(val);
-	}
-
-	function calcDDProgress(cl, answers, d) {
-		let total = 0, answered = 0;
-		for (let si = 0; si < cl.sections.length; si++) {
-			for (let qi = 0; qi < cl.sections[si].questions.length; qi++) {
-				total++;
-				const q = cl.sections[si].questions[qi];
-				const key = `s${si}q${qi}`;
-				const autoVal = q.autoField ? getAutoValue(d, q.autoField, q.format) : null;
-				if (autoVal || answers[key]) answered++;
-			}
-		}
-		return { answered, total, pct: total > 0 ? Math.round((answered / total) * 100) : 0 };
-	}
-
 	// ===== Goal Path =====
-	function normalizeGoalBranch(value) {
-		const normalized = String(value || '').trim().toLowerCase();
-		if (!normalized) return null;
-		if (normalized === 'cashflow' || normalized.includes('cash')) return 'cashflow';
-		if (normalized === 'growth' || normalized.includes('growth') || normalized.includes('equity')) return 'growth';
-		if (normalized === 'tax' || normalized.includes('tax')) return 'tax';
-		return null;
-	}
-
-	function suffixToMultiplier(suffix) {
-		const normalized = String(suffix || '').trim().toLowerCase();
-		if (normalized === 'k') return 1000;
-		if (normalized === 'm') return 1000000;
-		if (normalized === 'b') return 1000000000;
-		return 1;
-	}
-
-	function parseTargetAmount(text) {
-		if (!text) return null;
-
-		const cleaned = String(text)
-			.replace(/\/yr|\/mo|\+/gi, '')
-			.trim();
-		if (!cleaned) return null;
-
-		const rangeParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean);
-		const lowerBound = rangeParts[0] || cleaned;
-		const upperBound = rangeParts[1] || '';
-		const lowerMatch = lowerBound.match(/\$?([\d,.]+)\s*(k|m|b)?/i);
-		if (!lowerMatch) return null;
-
-		const inheritedSuffix = lowerMatch[2] || upperBound.match(/\$?[\d,.]+\s*(k|m|b)/i)?.[1] || '';
-		const numericValue = parseFloat(lowerMatch[1].replace(/,/g, ''));
-		if (!Number.isFinite(numericValue)) return null;
-
-		return numericValue * suffixToMultiplier(inheritedSuffix);
-	}
-
-	function fmtGoalMoney(val) {
-		if (!val || Number.isNaN(val)) return '$0';
-		if (val >= 1e6) return '$' + (val / 1e6).toFixed(1) + 'M';
-		if (val >= 1e3) return '$' + Math.round(val / 1e3).toLocaleString() + 'K';
-		return '$' + Math.round(val).toLocaleString();
-	}
-
-	function formatTargetDisplay(amount, branch) {
-		const formatted = fmtGoalMoney(amount);
-		if (branch === 'cashflow' || branch === 'tax') return formatted + '/yr';
-		return formatted;
-	}
-
 	function setUserGoal(goal) {
 		const normalizedGoal = normalizeGoalBranch(goal);
 		if (!normalizedGoal) return;
@@ -1516,19 +967,10 @@
 	function requestIntroduction() {
 		if (!deal) return;
 		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to request an introduction to the sponsor.' })) return;
-		// Check if already requested
-		if (browser && readScopedDealString('gycIntroRequested')) {
-			showShareToast("You've already requested an intro for this deal.");
+		const gate = getDealIntroductionRequestGate(deal.id);
+		if (!gate.ok) {
+			showShareToast(gate.message || 'Introduction requests are unavailable right now.');
 			return;
-		}
-		// Rate limit: 3 intros per day
-		if (browser) {
-			const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
-			const todayCount = parseInt(readUserScopedString(todayKey, '0'), 10);
-			if (todayCount >= 3) {
-				showShareToast("You've reached the daily limit of 3 introduction requests. Try again tomorrow.");
-				return;
-			}
 		}
 		introMessage = '';
 		introSending = false;
@@ -1536,54 +978,25 @@
 		showIntroModal = true;
 	}
 
+	function closeIntroModal() {
+		showIntroModal = false;
+	}
+
 	async function submitIntroRequest() {
 		if (!deal || introSending) return;
 		introSending = true;
-		try {
-			const stored = currentSessionUser();
-			const sponsors = deal.sponsors || [];
-			const op = sponsors.find(s => s.role === 'operator');
-			const opName = op ? op.name : (deal.managementCompany || '');
-			const opCeo = op ? (op.ceo || '') : (deal.ceo || '');
-
-			const r = await fetch('/api/intro-request', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
-				body: JSON.stringify({
-					dealId: deal.id,
-					dealName: deal.investmentName,
-					operatorName: opName,
-					operatorCeo: opCeo,
-					managementCompanyId: deal.managementCompanyId || '',
-					message: introMessage
-				})
-			});
-			const data = await r.json();
-			if (data.success) {
-				// Store in scoped browser state for dedup
-				if (browser) {
-					writeScopedDealString('gycIntroRequested', Date.now().toString());
-					const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
-					writeUserScopedString(todayKey, (parseInt(readUserScopedString(todayKey, '0'), 10) + 1).toString());
-					// Store in gycIntroRequests array
-					try {
-						let intros = readUserScopedJson('gycIntroRequests', []);
-						if (!Array.isArray(intros)) intros = [];
-						intros.push({ dealId: deal.id, deal: deal.investmentName, company: opName, userEmail: stored.email || '', timestamp: Date.now() });
-						writeUserScopedJson('gycIntroRequests', intros);
-					} catch {}
-				}
-				introRequested = true;
-				introSuccess = true;
-				// Advance stage to Connect
-				if (currentStageIdx < 2) {
-					dealStages.setStage(deal.id, 'connect');
-				}
-			} else {
-				showShareToast('Something went wrong. Please try again.');
+		const result = await submitDealIntroductionRequest({
+			deal,
+			message: introMessage
+		});
+		if (result.success) {
+			introRequested = true;
+			introSuccess = true;
+			if (currentStageIdx < 2) {
+				dealStages.setStage(deal.id, 'connect');
 			}
-		} catch {
-			showShareToast('Something went wrong. Please try again.');
+		} else {
+			showShareToast(result.error || 'Something went wrong. Please try again.');
 		}
 		introSending = false;
 	}
@@ -1599,102 +1012,29 @@
 			return;
 		}
 		if (!deal) { alert('Deal data not available.'); return; }
-		const d = deal;
 		const stored = currentSessionUser();
-		const bb = buyBox || {};
-		const rpU = (stored.name || stored.firstName || 'Investor').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-		const rpD = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-		function rF(v, t) { if (v == null || v === '' || v === '---') return '\u2014'; if (t === 'pct') { const n = typeof v === 'number' ? v : parseFloat(v); if (isNaN(n)) return '\u2014'; return (n > 1 ? n : n * 100).toFixed(1) + '%'; } if (t === 'money') { const n = typeof v === 'string' ? parseFloat(v.replace(/[$,]/g, '')) : v; if (isNaN(n)) return '\u2014'; if (n >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B'; if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M'; if (n >= 1e3) return '$' + Math.round(n).toLocaleString(); return '$' + n.toLocaleString(); } if (t === 'multiple') { const n = typeof v === 'number' ? v : parseFloat(v); if (isNaN(n)) return '\u2014'; return n.toFixed(2) + 'x'; } return String(v); }
-		const gL = { passive_income:'Cash Flow', reduce_taxes:'Tax Optimization', build_wealth:'Equity Growth', cashflow:'Cash Flow', tax:'Tax Optimization', growth:'Equity Growth' };
-		let h = '';
-		h += '<div class="rs"><h2>1. My Investment Criteria</h2><table class="rt"><tbody>';
-		h += '<tr><td class="l">Investment Goal</td><td>' + (gL[bb._branch]||gL[bb.goal]||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Asset Classes</td><td>' + ((bb.assetClasses||[]).join(', ')||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Strategies</td><td>' + ((bb.strategies||[]).join(', ')||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Check Size</td><td>' + (bb.checkSize?rF(bb.checkSize,'money'):'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Max Lockup</td><td>' + (bb.maxLockup?bb.maxLockup+' years':'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Distribution Pref</td><td>' + (bb.distributions||'\u2014') + '</td></tr>';
-		h += '</tbody></table></div>';
-		const rpSp = d.sponsors||[]; const rpOp = rpSp.find(s => s.role==='operator')||null;
-		const rpOpN = rpOp?(rpOp.name||rpOp.company||''):(d.managementCompany||d.sponsor||'\u2014');
-		h += '<div class="rs"><h2>2. Deal Overview</h2><table class="rt"><tbody>';
-		h += '<tr><td class="l">Deal Name</td><td>' + (d.investmentName||d.name||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Operator</td><td>' + rpOpN + '</td></tr>';
-		h += '<tr><td class="l">Asset Class</td><td>' + (d.assetClass||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Deal Type</td><td>' + (d.dealType||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Strategy</td><td>' + (d.strategy||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Target IRR</td><td>' + (d.targetIRR?rF(d.targetIRR,'pct'):'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Pref Return</td><td>' + (d.preferredReturn?rF(d.preferredReturn,'pct'):'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Cash-on-Cash</td><td>' + (d.cashOnCash?rF(d.cashOnCash,'pct'):'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Equity Multiple</td><td>' + (d.equityMultiple?rF(d.equityMultiple,'multiple'):'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Hold Period</td><td>' + (d.holdPeriod?d.holdPeriod+' Years':'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Offering Size</td><td>' + (d.offeringSize?rF(d.offeringSize,'money'):'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Min Investment</td><td>' + (d.investmentMinimum?rF(d.investmentMinimum,'money'):'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Distributions</td><td>' + (d.distributions||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Debt Position</td><td>' + (d.debtPosition||'\u2014') + '</td></tr>';
-		h += '<tr><td class="l">Offering Type</td><td>' + (d.offeringType||'\u2014') + '</td></tr>';
-		h += '</tbody></table></div>';
-		const bbCh = buyBoxChecks;
-		if (bbCh.length > 0) {
-			const mc = bbCh.filter(c=>c.match).length;
-			h += '<div class="rs"><h2>3. Buy Box Alignment <span class="mb">' + mc + '/' + bbCh.length + ' match</span></h2><table class="rt"><tbody>';
-			bbCh.forEach(c => { const ic = c.match?'<span class="cy">\u2713</span>':'<span class="cn">\u2717</span>'; h += '<tr><td style="width:24px;text-align:center;">'+ic+'</td><td class="l">'+c.label+'</td><td>'+(c.got||'\u2014')+(c.want?' (want: '+c.want+')':'')+'</td></tr>'; });
-			h += '</tbody></table></div>';
-		} else { h += '<div class="rs"><h2>3. Buy Box Alignment</h2><p class="mu">Set up your Buy Box to see alignment.</p></div>'; }
-		const rpFit = dealFit;
-		h += '<div class="rs"><h2>4. Deal Fit Analysis</h2>';
-		if (rpFit) {
-			h += '<p style="font-weight:700;color:'+rpFit.verdictColor+';margin-bottom:8px;">'+rpFit.verdict+' (score: '+(rpFit.score>=0?'+':'')+rpFit.score+')</p>';
-			if (rpFit.fits.length) { h += '<p style="font-weight:600;margin-bottom:4px;color:#16a34a;">Strengths</p><ul class="rl">'; rpFit.fits.forEach(f => { h += '<li>'+f+'</li>'; }); h += '</ul>'; }
-			if (rpFit.warnings.length) { h += '<p style="font-weight:600;margin:8px 0 4px;color:#dc2626;">Concerns</p><ul class="rl">'; rpFit.warnings.forEach(w => { h += '<li>'+w+'</li>'; }); h += '</ul>'; }
-		} else { h += '<p class="mu">Insufficient data to analyze deal fit.</p>'; }
-		h += '</div>';
-		h += '<div class="rs"><h2>5. Fee Structure</h2>';
-		if (d.fees) { h += '<p>' + String(d.fees).replace(/\n/g,'<br>') + '</p>'; } else { h += '<p class="mu">Fee data not available for this deal.</p>'; }
-		h += '</div>';
-		const rpCfR = cfRows;
-		h += '<div class="rs"><h2>6. Projected Cash Flow</h2>';
-		if (rpCfR.length > 0) {
-			const inv = cfInvestment;
-			h += '<p class="mu" style="margin-bottom:8px;">Based on '+rF(inv,'money')+' invested at '+rF(cfYieldRate,'pct')+' '+(isCredit?'yield':'pref return')+' over '+cfHold+' years</p>';
-			h += '<table class="rt cf"><thead><tr><th>Year</th><th>Distributions</th><th>Capital Return</th><th>Cumulative</th><th>Note</th></tr></thead><tbody>';
-			rpCfR.forEach(r => { h += '<tr><td>Year '+r.year+'</td><td>'+rF(r.dist,'money')+'</td><td>'+(r.capReturn>0?rF(r.capReturn,'money'):'\u2014')+'</td><td>'+rF(r.cumDist,'money')+'</td><td>'+(r.note||'')+'</td></tr>'; });
-			h += '</tbody></table><p style="margin-top:8px;font-size:13px;"><strong>Total Cash Returned:</strong> '+rF(cfTotalCash,'money')+' &nbsp; <strong>Avg Cash-on-Cash:</strong> '+cfAvgCoC.toFixed(1)+'%</p>';
-		} else { h += '<p class="mu">Projected cash flow data not available.</p>'; }
-		h += '</div>';
-		h += '<div class="rs"><h2>7. Background Check Summary</h2>';
-		if (bgCheck) {
-			const bg = bgCheck;
-			const sLabel = bg.overallStatus==='clear'?'Clear':bg.overallStatus==='flagged'?'Flagged':'Pending';
-			const sCol = bg.overallStatus==='clear'?'#16a34a':bg.overallStatus==='flagged'?'#dc2626':'#f59e0b';
-			h += '<p style="margin-bottom:8px;"><strong>Overall Status:</strong> <span style="color:'+sCol+';font-weight:700;">'+sLabel+'</span></p>';
-			const bgI = [{label:'SEC Registration',val:bg.secRegistration},{label:'Legal / Litigation',val:bg.legalHistory},{label:'Regulatory',val:bg.regulatoryHistory},{label:'Bankruptcy',val:bg.bankruptcy}];
-			h += '<table class="rt"><tbody>';
-			bgI.forEach(c => { if (c.val != null) { const s = typeof c.val==='string'?c.val:(c.val?.status||'pending'); const col = s==='clear'?'#16a34a':s==='flagged'?'#dc2626':'#f59e0b'; h += '<tr><td class="l">'+c.label+'</td><td style="color:'+col+';font-weight:600;">'+s.charAt(0).toUpperCase()+s.slice(1)+'</td></tr>'; } });
-			h += '</tbody></table>';
-			if (bg.notes) h += '<p style="margin-top:8px;font-size:12px;color:#666;">'+bg.notes+'</p>';
-		} else { h += '<p class="mu">Background check data not available.</p>'; }
-		h += '</div>';
-		if (!isCredit && stResults) {
-			const st = stResults;
-			h += '<div class="rs"><h2>8. Stress Test Scenario</h2>';
-			h += '<p class="mu" style="margin-bottom:8px;">Rent Growth: '+stRentGrowth+'% | Exit Cap: '+stExitCap+'% | Vacancy: '+stVacancy+'% | Interest: '+stInterest+'% | Hold: '+stHold+' yrs</p>';
-			h += '<table class="rt"><tbody>';
-			h += '<tr><td class="l">Projected IRR</td><td>'+(st.irr*100).toFixed(1)+'%</td></tr>';
-			h += '<tr><td class="l">Equity Multiple</td><td>'+st.em.toFixed(2)+'x</td></tr>';
-			h += '<tr><td class="l">Avg Annual Cash Flow</td><td>'+rF(st.annualCF,'money')+'</td></tr>';
-			h += '<tr><td class="l">Total Distributions</td><td>'+rF(st.totalDist,'money')+'</td></tr>';
-			h += '<tr><td class="l">Sale Proceeds</td><td>'+rF(st.saleProceeds,'money')+'</td></tr>';
-			h += '<tr><td class="l">Total Return</td><td>'+rF(st.totalReturn,'money')+'</td></tr>';
-			h += '</tbody></table></div>';
-		}
-		const css = '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif; color: #1a1a1a; line-height: 1.5; padding: 40px; max-width: 800px; margin: 0 auto; } .rh { text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #51be7b; } .rh h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 28px; font-weight: 400; margin-bottom: 4px; } .rh .dn { font-size: 18px; color: #51be7b; font-weight: 600; margin-bottom: 8px; } .rh .mt { font-size: 12px; color: #888; } .rh .br { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; } .rs { margin-bottom: 28px; page-break-inside: avoid; } .rs h2 { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1a1a1a; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e5e5; } .mb { font-size: 12px; font-weight: 700; color: #51be7b; text-transform: none; letter-spacing: 0; margin-left: 8px; } .rt { width: 100%; border-collapse: collapse; font-size: 13px; } .rt td, .rt th { padding: 6px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; } .rt .l { color: #666; font-weight: 500; width: 40%; } .rt th { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: #888; border-bottom: 2px solid #e5e5e5; } .cf td:not(:first-child), .cf th:not(:first-child) { text-align: right; } .cy { color: #51be7b; font-weight: 700; font-size: 16px; } .cn { color: #d04040; font-weight: 700; font-size: 16px; } .rl { padding-left: 20px; font-size: 13px; } .rl li { margin-bottom: 4px; } .mu { color: #888; font-size: 12px; } .rf { text-align: center; margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #aaa; } @media print { body { padding: 20px; } .no-print { display: none !important; } @page { margin: 0.75in; } }';
-		const full = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Investment Report \u2014 '+(d.investmentName||d.name||'Deal')+'</title><style>'+css+'</style></head><body>'
-			+ '<div class="rh"><div class="br">Grow Your Cashflow</div><h1>Investment Report</h1><div class="dn">'+(d.investmentName||d.name||'Deal')+'</div><div class="mt">Prepared for '+rpU+' &middot; '+rpD+'</div></div>'
-			+ h
-			+ '<div class="rf">Generated by GYC Dealflow &middot; growyourcashflow.io</div>'
-			+ '<div class="no-print" style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:12px 32px;background:#51be7b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Save as PDF</button></div>'
-			+ '</body></html>';
+		const full = buildInvestmentReportHtml({
+			deal,
+			buyBox,
+			buyBoxChecks,
+			dealFit,
+			cfRows,
+			cfInvestment,
+			cfYieldRate,
+			cfHold,
+			cfTotalCash,
+			cfAvgCoC,
+			bgCheck,
+			isCredit,
+			stResults,
+			stRentGrowth,
+			stExitCap,
+			stVacancy,
+			stInterest,
+			stHold,
+			reportUserName: (stored.name || stored.firstName || 'Investor').split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+			reportDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+		});
 		const rw = window.open('', '_blank');
 		if (rw) { rw.document.write(full); rw.document.close(); setTimeout(() => { rw.print(); }, 500); }
 		else { alert('Please allow popups to generate your investment report.'); }
@@ -1736,7 +1076,7 @@
 
 		// Load deck-viewed and intro-requested state
 		deckViewed = !!readScopedDealString('gycDeckViewed');
-		introRequested = !!readScopedDealString('gycIntroRequested');
+		introRequested = hasRequestedDealIntroduction(deal.id);
 
 		// Load investment goal from storage
 		try {
@@ -1847,12 +1187,12 @@
 					<div class="deal-header-inner">
 						<div class="hero-left">
 							<h1 class="deal-name">{deal.investmentName}</h1>
-							<div class="deal-company">by <a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}">{deal.managementCompany || 'Unknown'}</a></div>
+							<div class="deal-company">by <a href={dealOperatorHref}>{dealOperatorName || 'Unknown'}</a></div>
 
 							<!-- Badges -->
 							<div class="deal-badges">
 								{#if isCredit}
-									<span class="deal-badge asset-class">{creditBadgeLabel(deal)}</span>
+									<span class="deal-badge asset-class">{getDealCreditBadgeLabel(deal)}</span>
 								{:else if deal.assetClass}
 									<span class="deal-badge asset-class">{deal.assetClass}</span>
 								{/if}
@@ -1885,18 +1225,18 @@
 
 							<!-- Strategy Summary -->
 							{#if deal.investmentStrategy}
-								<div class="hero-summary">{heroSummary(deal)}</div>
+								<div class="hero-summary">{getDealHeroSummary(deal)}</div>
 							{/if}
 
 							<!-- Operated by -->
-							{#if deal.managementCompany}
+							{#if dealOperatorName}
 								<div class="hero-operator-line">
 									<span class="hero-operator-label">Operated by</span>
-									<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="hero-operator-link">
-										<span class="hero-operator-avatar">{getInitials(deal.managementCompany)}</span>
-										{deal.managementCompany}
-										{#if deal.mcFoundingYear}
-											<span class="hero-operator-years">&middot; {new Date().getFullYear() - deal.mcFoundingYear}+ yrs</span>
+									<a href={dealOperatorHref} class="hero-operator-link">
+										<span class="hero-operator-avatar">{getInitials(dealOperatorName)}</span>
+										{dealOperatorName}
+										{#if dealOperator.foundingYear}
+											<span class="hero-operator-years">&middot; {new Date().getFullYear() - dealOperator.foundingYear}+ yrs</span>
 										{/if}
 									</a>
 								</div>
@@ -2102,7 +1442,7 @@
 					<!-- Right column: Who's Behind the Deal + Documents -->
 					<div>
 						<!-- Who's Behind the Deal -->
-						{#if deal.managementCompany}
+						{#if dealOperatorName}
 							<div class="section">
 								<div class="section-header">
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -2110,25 +1450,25 @@
 								</div>
 								<div class="section-body">
 									<div class="operator-card-content">
-										<div class="operator-avatar">{getInitials(deal.managementCompany)}</div>
+										<div class="operator-avatar">{getInitials(dealOperatorName)}</div>
 										<div class="operator-info">
-											<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="operator-name">{deal.managementCompany}</a>
-											{#if deal.ceo}<div class="operator-ceo">{deal.ceo}</div>{/if}
-											{#if deal.mcFoundingYear}<div class="operator-meta">Founded {deal.mcFoundingYear}</div>{/if}
+											<a href={dealOperatorHref} class="operator-name">{dealOperatorName}</a>
+											{#if dealOperatorCeo}<div class="operator-ceo">{dealOperatorCeo}</div>{/if}
+											{#if dealOperator.foundingYear}<div class="operator-meta">Founded {dealOperator.foundingYear}</div>{/if}
 										</div>
 									</div>
 									<div class="rail-fact-list">
-										{#if deal.ceo}
-											<div class="rail-fact"><span>Lead</span><strong>{deal.ceo}</strong></div>
+										{#if dealOperatorCeo}
+											<div class="rail-fact"><span>Lead</span><strong>{dealOperatorCeo}</strong></div>
 										{/if}
-										{#if deal.mcFoundingYear}
-											<div class="rail-fact"><span>Track Record</span><strong>{new Date().getFullYear() - deal.mcFoundingYear}+ years</strong></div>
+										{#if dealOperator.foundingYear}
+											<div class="rail-fact"><span>Track Record</span><strong>{new Date().getFullYear() - dealOperator.foundingYear}+ years</strong></div>
 										{/if}
 										{#if deal.fundAUM}
 											<div class="rail-fact"><span>AUM</span><strong>{fmt(deal.fundAUM, 'money')}</strong></div>
 										{/if}
 									</div>
-									<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="operator-link">View Sponsor Profile &rarr;</a>
+									<a href={dealOperatorHref} class="operator-link">View Sponsor Profile &rarr;</a>
 									{#if gpOwnsDeal}
 										<button class="operator-link operator-link-btn" onclick={openClaimModal}>Manage Deal</button>
 									{/if}
@@ -2537,7 +1877,7 @@
 										<tr class="sim-current-row">
 											<td class="sim-td left">
 												<div class="sim-deal-name current">{deal.investmentName}</div>
-												<div class="sim-deal-company">{deal.managementCompany || ''}</div>
+												<div class="sim-deal-company">{dealOperatorName || ''}</div>
 												<span class="sim-badge current">THIS DEAL</span>
 											</td>
 											<td class="sim-td">{deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '---'}</td>
@@ -2547,10 +1887,11 @@
 											<td class="sim-td">{deal.holdPeriod ? deal.holdPeriod + ' Yrs' : '---'}</td>
 										</tr>
 										{#each similarDeals as sd}
+											{@const similarDealOperator = getDealOperator(sd)}
 											<tr class="sim-peer-row">
 												<td class="sim-td left">
 													<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
-													<div class="sim-deal-company">{sd.managementCompany || ''}</div>
+													<div class="sim-deal-company">{similarDealOperator.name || ''}</div>
 												</td>
 												<td class="sim-td">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</td>
 												<td class="sim-td">{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</td>
@@ -2567,7 +1908,7 @@
 									<div class="similar-mobile-header">
 										<div class="similar-mobile-copy">
 											<div class="sim-deal-name current">{deal.investmentName}</div>
-											<div class="sim-deal-company">{deal.managementCompany || ''}</div>
+											<div class="sim-deal-company">{dealOperatorName || ''}</div>
 											<span class="sim-badge current">THIS DEAL</span>
 										</div>
 									</div>
@@ -2594,11 +1935,12 @@
 									</details>
 								</article>
 								{#each similarDeals as sd}
+									{@const similarDealOperator = getDealOperator(sd)}
 									<article class="similar-mobile-card">
 										<div class="similar-mobile-header">
 											<div class="similar-mobile-copy">
 												<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
-												<div class="sim-deal-company">{sd.managementCompany || ''}</div>
+												<div class="sim-deal-company">{similarDealOperator.name || ''}</div>
 											</div>
 										</div>
 										<div class="similar-mobile-primary">
@@ -2686,7 +2028,7 @@
 				{/if}
 
 				<!-- ==================== BACKGROUND CHECK ==================== -->
-				{#if deal.managementCompanyId}
+				{#if dealOperatorManagementCompanyId}
 					<div class="section flow-order-90" use:loadWhenVisible={setBgCheckSectionVisible}>
 						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Sponsor Background Report</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div>
 						<div class="section-body bg-check-body" class:gated={!isPaid && !$isAdmin}>
@@ -2720,7 +2062,7 @@
 										<div class="bg-empty-text">Couldn’t load background check.</div>
 										<button class="bg-run-cta" onclick={() => loadBackgroundCheck(true)}>Try Again</button>
 									</div>
-								{:else if bgCheck}{@const sources = [{ label: 'SEC EDGAR', status: bgCheck.sec_status, detail: `${bgCheck.sec_filings_count || 0} filing(s)`, url: bgCheck.sec_url },{ label: 'FINRA BrokerCheck', status: bgCheck.finra_status, detail: bgCheck.finra_found ? (bgCheck.finra_disclosures > 0 ? `${bgCheck.finra_disclosures} disclosure(s)` : 'No disclosures') : 'Not registered', url: 'https://brokercheck.finra.org/' },{ label: 'IAPD', status: bgCheck.iapd_status, detail: bgCheck.iapd_found ? (bgCheck.iapd_disclosures > 0 ? `${bgCheck.iapd_disclosures} disclosure(s)` : 'Clean') : 'Not found', url: 'https://adviserinfo.sec.gov/' },{ label: 'OFAC', status: bgCheck.ofac_status, detail: bgCheck.ofac_found ? 'Match found' : 'Clear', url: 'https://sanctionssearch.ofac.treas.gov/' },{ label: 'Courts', status: bgCheck.court_status, detail: `${bgCheck.court_cases_count || 0} case(s)`, url: null }]}<div class="bg-sources">{#each sources as src}<div class="bg-source-badge {bgStatusClass(src.status)}"><span class="bg-source-label">{src.label}</span><span class="bg-source-detail">{src.detail}</span>{#if src.url}<a href={src.url} target="_blank" rel="noopener" class="bg-source-link" title="Verify externally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>{/if}</div>{/each}</div>{#if bgCheck.flags && bgCheck.flags.length > 0}<div class="bg-flags">{#each bgCheck.flags as flag}<div class="bg-flag-item"><strong>{flag.source}:</strong> {flag.message}</div>{/each}</div>{/if}<div class="bg-footer"><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-full-report">View Full Report &rarr;</a>{#if bgCheck.run_at}<span class="bg-run-date">Checked: {new Date(bgCheck.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>{/if}</div>{:else}<div class="bg-empty"><div class="bg-empty-text">No background check has been run yet.</div><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-run-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a></div>{/if}
+								{:else if bgCheck}{@const sources = [{ label: 'SEC EDGAR', status: bgCheck.sec_status, detail: `${bgCheck.sec_filings_count || 0} filing(s)`, url: bgCheck.sec_url },{ label: 'FINRA BrokerCheck', status: bgCheck.finra_status, detail: bgCheck.finra_found ? (bgCheck.finra_disclosures > 0 ? `${bgCheck.finra_disclosures} disclosure(s)` : 'No disclosures') : 'Not registered', url: 'https://brokercheck.finra.org/' },{ label: 'IAPD', status: bgCheck.iapd_status, detail: bgCheck.iapd_found ? (bgCheck.iapd_disclosures > 0 ? `${bgCheck.iapd_disclosures} disclosure(s)` : 'Clean') : 'Not found', url: 'https://adviserinfo.sec.gov/' },{ label: 'OFAC', status: bgCheck.ofac_status, detail: bgCheck.ofac_found ? 'Match found' : 'Clear', url: 'https://sanctionssearch.ofac.treas.gov/' },{ label: 'Courts', status: bgCheck.court_status, detail: `${bgCheck.court_cases_count || 0} case(s)`, url: null }]}<div class="bg-sources">{#each sources as src}<div class="bg-source-badge {bgStatusClass(src.status)}"><span class="bg-source-label">{src.label}</span><span class="bg-source-detail">{src.detail}</span>{#if src.url}<a href={src.url} target="_blank" rel="noopener" class="bg-source-link" title="Verify externally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>{/if}</div>{/each}</div>{#if bgCheck.flags && bgCheck.flags.length > 0}<div class="bg-flags">{#each bgCheck.flags as flag}<div class="bg-flag-item"><strong>{flag.source}:</strong> {flag.message}</div>{/each}</div>{/if}<div class="bg-footer"><a href={dealOperatorHref + '#bgReportSection'} class="bg-full-report">View Full Report &rarr;</a>{#if bgCheck.run_at}<span class="bg-run-date">Checked: {new Date(bgCheck.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>{/if}</div>{:else}<div class="bg-empty"><div class="bg-empty-text">No background check has been run yet.</div><a href={dealOperatorHref + '#bgReportSection'} class="bg-run-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a></div>{/if}
 							</div>
 						</div>
 					</div>
@@ -2891,273 +2233,58 @@
 {/if}
 
 <!-- ==================== PUBLIC AUTH MODAL ==================== -->
-{#if showAuthModal}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) closeAuthModal(); }}>
-		<div class="modal-container auth-modal">
-			<button class="modal-close" onclick={closeAuthModal}>&times;</button>
-			{#if authSent}
-				<div class="modal-success">
-					<div class="modal-success-icon">
-						<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-					</div>
-					<div class="modal-success-title">Check your email</div>
-					<div class="modal-success-text">We sent you a magic link so you can finish creating your free account and pick up right where you left off.</div>
-					<button class="modal-btn-primary" onclick={closeAuthModal}>Close</button>
-				</div>
-			{:else}
-				<div class="auth-modal-header">
-					<div class="auth-modal-title">{authModalTitle}</div>
-					<div class="auth-modal-copy">{authModalBody}</div>
-				</div>
-				<div class="modal-field">
-					<label class="modal-label" for="auth-email">Email address</label>
-					<input id="auth-email" type="email" class="modal-input" placeholder="you@example.com" bind:value={authEmail} onkeydown={(e) => { if (e.key === 'Enter') submitAuthModal(); }} />
-				</div>
-				{#if authError}
-					<div class="auth-modal-error">{authError}</div>
-				{/if}
-				<div class="modal-actions">
-					<button class="modal-btn-secondary" onclick={closeAuthModal}>Cancel</button>
-					<button class="modal-btn-primary" onclick={submitAuthModal} disabled={authSending}>{authSending ? 'Sending...' : 'Continue'}</button>
-				</div>
-			{/if}
-		</div>
-	</div>
-{/if}
-
-<!-- ==================== INTRO REQUEST MODAL ==================== -->
-{#if showIntroModal && deal}
-	{@const sponsors = deal.sponsors || []}
-	{@const op = sponsors.find(s => s.role === 'operator') || (deal.managementCompany ? { name: deal.managementCompany, ceo: deal.ceo, foundingYear: deal.mcFoundingYear, website: deal.mcWebsite } : null)}
-	{@const opName = op ? op.name : (deal.managementCompany || 'the operator')}
-	{@const opCeo = op ? (op.ceo || '') : (deal.ceo || '')}
-	{@const opYears = op && op.foundingYear ? ((new Date().getFullYear()) - op.foundingYear) + '+ years' : ''}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showIntroModal = false; }}>
-		<div class="modal-container">
-			<button class="modal-close" onclick={() => showIntroModal = false}>&times;</button>
-			{#if introSuccess}
-				<div class="modal-success">
-					<div class="modal-success-icon">
-						<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-					</div>
-					<div class="modal-success-title">You're all set</div>
-					<div class="modal-success-text">Pascal will personally introduce you to {opName}. Check your email -- you'll be CC'd on the intro.</div>
-					<button class="modal-btn-primary" style="background:var(--text-dark);" onclick={() => showIntroModal = false}>Back to Deal</button>
-				</div>
-			{:else}
-				<div class="modal-header-centered">
-					<div class="modal-avatar">{getInitials(opName)}</div>
-					<div class="modal-avatar-name">{opName}</div>
-					<div class="modal-avatar-meta">
-						{#if opCeo}<span>{opCeo}</span>{/if}
-						{#if opCeo && opYears}<span>&middot;</span>{/if}
-						{#if opYears}<span>{opYears}</span>{/if}
-						{#if op?.website}
-							{#if opCeo || opYears}<span>&middot;</span>{/if}
-							<a href={op.website} target="_blank" rel="noopener" class="modal-avatar-link">Website</a>
-						{/if}
-					</div>
-				</div>
-				<div class="modal-body-text">
-					We'll connect you with {opName} for <strong>{deal.investmentName}</strong>. Pascal will make a personal email introduction on your behalf.
-				</div>
-				<div class="modal-field">
-					<label class="modal-label" for="intro-message">Message to Operator (optional)</label>
-					<textarea id="intro-message" class="modal-textarea" rows="3" placeholder="Hi, I'm interested in learning more about this opportunity..." bind:value={introMessage}></textarea>
-				</div>
-				<div class="modal-actions">
-					<button class="modal-btn-secondary" onclick={() => showIntroModal = false}>Cancel</button>
-					<button class="modal-btn-primary" onclick={submitIntroRequest} disabled={introSending}>
-						{introSending ? 'Requesting...' : 'Request Introduction'}
-					</button>
-				</div>
-				<div class="modal-footer-note">
-					3 introductions available per day
-				</div>
-			{/if}
-		</div>
-	</div>
-{/if}
-
-<!-- ==================== INVITE CO-INVESTORS MODAL ==================== -->
-{#if showInviteModal && deal}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showInviteModal = false; }}>
-		<div class="modal-container">
-			<div class="modal-header-row">
-				<div class="modal-title">Invite a Co-Investor</div>
-				<button class="modal-close-inline" onclick={() => showInviteModal = false}>&times;</button>
-			</div>
-			<div class="modal-body-text" style="margin-bottom:20px;">
-				Share a personal invite link for <strong>{deal.investmentName}</strong>. Your friend will see the deal and can sign up to save it.
-			</div>
-			<div class="invite-link-row">
-				<input type="text" class="modal-input invite-link-input" readonly value={inviteUrl} onclick={(e) => e.target.select()} />
-				<button class="modal-btn-primary invite-copy-btn" onclick={copyInviteLink}>Copy Link</button>
-			</div>
-			<div class="modal-field" style="margin-top:16px;">
-				<label class="modal-label" for="invite-email">Email a friend directly (optional)</label>
-				<input id="invite-email" type="email" class="modal-input" placeholder="friend@example.com" bind:value={inviteEmail} />
-			</div>
-			<div class="modal-field">
-				<label class="modal-label" for="invite-message">Personal message (optional)</label>
-				<textarea id="invite-message" class="modal-textarea" rows="2" placeholder="Hey, check out this deal..." bind:value={inviteMessage}></textarea>
-			</div>
-			<div class="invite-share-row">
-				<a href="mailto:{inviteEmail}?subject={inviteEmailSubject}&body={inviteEmailBody}" class="invite-share-btn">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-					Email
-				</a>
-				<a href="sms:?&body={inviteSmsBody}" class="invite-share-btn">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-					Text
-				</a>
-			</div>
-		</div>
-	</div>
-{/if}
-
-<!-- ==================== CLAIM DEAL MODAL ==================== -->
-{#if showClaimModal && deal}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showClaimModal = false; }}>
-		<div class="modal-container">
-			<div class="modal-header-row">
-				<div class="modal-title">Claim This Deal</div>
-				<button class="modal-close-inline" onclick={() => showClaimModal = false}>&times;</button>
-			</div>
-			{#if claimSuccess}
-				<div class="modal-success" style="padding:24px 0;">
-					<div class="modal-success-icon">
-						<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="32" height="32"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-					</div>
-					<div class="modal-success-title">Claim submitted!</div>
-					<div class="modal-success-text">We'll review and get back to you within 24 hours.</div>
-					<button class="modal-btn-primary" style="margin-top:16px;" onclick={() => showClaimModal = false}>Close</button>
-				</div>
-			{:else}
-				<div class="modal-body-text" style="margin-bottom:20px;">
-					Claim <strong>{deal.investmentName}</strong> to manage your deal listing, see investor interest, and respond to questions.
-				</div>
-				<div class="claim-user-card">
-					<div class="claim-user-name">{claimName}</div>
-					<div class="claim-user-email">{claimEmail}</div>
-					{#if claimCompany}<div class="claim-user-company">{claimCompany}</div>{/if}
-				</div>
-				<div class="modal-field">
-					<label class="modal-label" for="claim-role">Your Role</label>
-					<select id="claim-role" class="modal-select" bind:value={claimRole} required>
-						<option value="">Select your role...</option>
-						<option value="founder">Founder / CEO</option>
-						<option value="ir">IR / Investor Relations</option>
-						<option value="partner">Managing Partner</option>
-						<option value="authorized">Authorized Representative</option>
-					</select>
-				</div>
-				<button class="modal-btn-claim" onclick={submitClaim} disabled={claimSubmitting || !claimRole}>
-					{claimSubmitting ? 'Submitting...' : 'Submit Claim'}
-				</button>
-			{/if}
-		</div>
-	</div>
-{/if}
-
-<!-- ==================== DECK VIEWER MODAL ==================== -->
-{#if showDeckViewer && deal?.deckUrl}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="deck-viewer-overlay" onclick={(e) => { if (e.target === e.currentTarget) showDeckViewer = false; }}>
-		<div class="deck-viewer-modal">
-			<div class="deck-viewer-header">
-				<span class="deck-viewer-title">{deal.investmentName} - Investment Deck</span>
-				<div class="deck-viewer-actions">
-					<a href={deal.deckUrl} target="_blank" rel="noopener" class="deck-viewer-download">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-						Download
-					</a>
-					<button class="deck-viewer-close" onclick={() => showDeckViewer = false}>&times;</button>
-				</div>
-			</div>
-			<div class="deck-viewer-body">
-				<iframe
-					src={deckPreviewUrl}
-					title="Deck Viewer"
-					class="deck-viewer-iframe"
-					allowfullscreen
-					sandbox="allow-scripts allow-same-origin allow-popups"
-				></iframe>
-			</div>
-		</div>
-	</div>
-{/if}
-
-<!-- ==================== ENRICHMENT WIZARD MODAL ==================== -->
-{#if showEnrichModal && $isAdmin && deal}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showEnrichModal = false; }}>
-		<div class="modal-container" style="max-width:560px;">
-			<div class="modal-header-row">
-				<div class="modal-title">Enrich from Deck</div>
-				<button class="modal-close-inline" onclick={() => showEnrichModal = false}>&times;</button>
-			</div>
-			{#if enrichSuccess}
-				<div class="modal-success" style="padding:24px 0;">
-					<div class="modal-success-icon">
-						<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="32" height="32"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-					</div>
-					<div class="modal-success-title">Enrichment saved!</div>
-					<div class="modal-success-text">Deal data has been updated with the confirmed fields.</div>
-					<button class="modal-btn-primary" style="margin-top:16px;" onclick={() => showEnrichModal = false}>Close</button>
-				</div>
-			{:else if enrichmentData === null}
-				<div style="text-align:center;padding:40px 0;">
-					<div class="enrich-spinner"></div>
-					<div style="color:var(--text-muted);font-size:13px;margin-top:12px;">Extracting data from deck...</div>
-				</div>
-			{:else if Object.keys(enrichmentData).filter(k => enrichmentData[k] != null && ENRICHMENT_FIELD_LABELS[k]).length === 0}
-				<div style="text-align:center;padding:32px 0;">
-					<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="32" height="32"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-					<div style="color:var(--text-muted);font-size:14px;margin-top:12px;">No extractable fields found in the deck.</div>
-					<button class="modal-btn-secondary" style="margin-top:16px;" onclick={() => showEnrichModal = false}>Close</button>
-				</div>
-			{:else}
-				<div class="enrich-wizard">
-					<div class="enrich-header">
-						<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="28" height="28"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-						<div>
-							<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Review Extracted Fields</div>
-							<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">{Object.keys(enrichChecked).length} fields extracted. Uncheck any you want to skip.</div>
-						</div>
-					</div>
-					<div class="enrich-fields">
-						{#each Object.entries(enrichmentData).filter(([k, v]) => v != null && ENRICHMENT_FIELD_LABELS[k]) as [key, value]}
-							<div class="enrich-field">
-								<label class="enrich-checkbox">
-									<input type="checkbox" bind:checked={enrichChecked[key]} />
-								</label>
-								<span class="enrich-field-label">{ENRICHMENT_FIELD_LABELS[key]}</span>
-								<span class="enrich-field-value">{formatEnrichmentValue(key, value)}</span>
-							</div>
-						{/each}
-					</div>
-					<div class="enrich-actions">
-						<button class="modal-btn-secondary" onclick={() => showEnrichModal = false}>Skip</button>
-						<button class="modal-btn-primary" onclick={confirmEnrichment} disabled={enrichSaving} style="flex:1;">
-							{enrichSaving ? 'Saving...' : 'Confirm & Save'}
-						</button>
-					</div>
-				</div>
-			{/if}
-		</div>
-	</div>
-{/if}
+<DealModalLayer
+	{deal}
+	{showAuthModal}
+	{authSent}
+	{authModalTitle}
+	{authModalBody}
+	bind:authEmail
+	{authSending}
+	{authError}
+	{closeAuthModal}
+	{submitAuthModal}
+	{showIntroModal}
+	{dealOperator}
+	{dealOperatorName}
+	{dealOperatorCeo}
+	{introSuccess}
+	bind:introMessage
+	{introSending}
+	{closeIntroModal}
+	{submitIntroRequest}
+	{showInviteModal}
+	{inviteUrl}
+	bind:inviteEmail
+	bind:inviteMessage
+	{inviteEmailSubject}
+	{inviteEmailBody}
+	{inviteSmsBody}
+	{closeInviteModal}
+	{copyInviteLink}
+	{showClaimModal}
+	{claimName}
+	{claimEmail}
+	{claimCompany}
+	bind:claimRole
+	{claimSubmitting}
+	{claimSuccess}
+	{closeClaimModal}
+	{submitClaim}
+	{showDeckViewer}
+	{deckPreviewUrl}
+	{closeDeckViewer}
+	{showEnrichModal}
+	isAdmin={$isAdmin}
+	{enrichmentData}
+	{enrichSuccess}
+	bind:enrichChecked
+	{enrichSaving}
+	{closeEnrichModal}
+	{confirmEnrichment}
+	{formatEnrichmentValue}
+	enrichmentFieldLabels={ENRICHMENT_FIELD_LABELS}
+/>
 
 <style>
 	/* ===== Layout ===== */
@@ -4068,7 +3195,6 @@
 		.claim-deal-banner { flex-direction: column; text-align: center; }
 		.deck-viewed-prompt { flex-direction: column; text-align: center; gap: 8px; }
 		.peer-count-label { width: 100%; margin-left: 0; }
-		.modal-container { max-width: 100%; border-radius: 16px; }
 	}
 	@media (max-width: 480px) {
 		.metrics-strip { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
@@ -4086,7 +3212,6 @@
 		.sp-avatar { width: 26px; height: 26px; font-size: 9px; }
 		.dd-perspective-links { flex-direction: column; }
 		.btn-link { font-size: 11px; }
-		.modal-overlay { padding: 12px; }
 	}
 
 	/* ===== Cash Flow Projection ===== */
@@ -4473,13 +3598,6 @@
 		.gp-share-row { flex-direction: column; }
 		.gp-share-copy { width: 100%; text-align: center; }
 		.fit-verdict { flex-direction: column; gap: 8px; padding: 12px 16px; }
-		.modal-container { max-width: 95vw; padding: 24px; }
-		.invite-link-row { flex-direction: column; }
-		.invite-copy-btn { width: 100%; }
-		.invite-share-row { flex-direction: column; }
-		.invite-share-btn { width: 100%; }
-		.modal-actions { flex-direction: column-reverse; }
-		.modal-btn-secondary, .modal-btn-primary { width: 100%; }
 	}
 
 	/* ===== Toast Notification ===== */
@@ -4504,359 +3622,6 @@
 	}
 	@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 	@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(-50%) translateY(20px); } }
-
-	/* ===== Modal Overlay & Container ===== */
-	.modal-overlay {
-		position: fixed;
-		top: 0; left: 0; right: 0; bottom: 0;
-		background: rgba(0,0,0,0.55);
-		backdrop-filter: blur(4px);
-		-webkit-backdrop-filter: blur(4px);
-		z-index: 1100;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 20px;
-		opacity: 0;
-		animation: modalFadeIn 0.25s ease forwards;
-	}
-	@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-	@keyframes modalSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-
-	.modal-container {
-		background: #fff;
-		border-radius: 20px;
-		max-width: 440px;
-		width: 100%;
-		box-shadow: 0 24px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05);
-		overflow: hidden;
-		padding: 32px;
-		animation: modalSlideUp 0.3s ease forwards;
-		position: relative;
-	}
-	.auth-modal-header { margin-bottom: 20px; }
-	.auth-modal-title { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); letter-spacing: -0.4px; }
-	.auth-modal-copy { margin-top: 8px; font-family: var(--font-body); font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
-	.auth-modal-error { margin-bottom: 12px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: #dc2626; }
-
-	.modal-close {
-		position: absolute;
-		top: 16px;
-		right: 16px;
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--text-muted);
-		font-size: 20px;
-		line-height: 1;
-		width: 32px; height: 32px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: background 0.15s;
-	}
-	.modal-close:hover { background: rgba(0,0,0,0.05); }
-
-	.modal-close-inline {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--text-muted);
-		font-size: 20px;
-		line-height: 1;
-	}
-	.modal-close-inline:hover { color: var(--text-dark); }
-
-	.modal-header-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 12px;
-	}
-	.modal-title {
-		font-family: var(--font-display, var(--font-headline));
-		font-size: 20px;
-		font-weight: 800;
-		color: var(--text-dark);
-	}
-
-	.modal-header-centered {
-		padding: 8px 0 0;
-		text-align: center;
-	}
-	.modal-avatar {
-		width: 72px;
-		height: 72px;
-		border-radius: 50%;
-		background: linear-gradient(135deg, #0f2027, #1a3a4a);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-family: var(--font-ui);
-		font-size: 22px;
-		font-weight: 700;
-		color: #fff;
-		margin: 0 auto 16px;
-		box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-	}
-	.modal-avatar-name {
-		font-family: var(--font-ui);
-		font-size: 20px;
-		font-weight: 800;
-		color: var(--text-dark);
-		margin-bottom: 4px;
-	}
-	.modal-avatar-meta {
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-muted);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		flex-wrap: wrap;
-		margin-bottom: 16px;
-	}
-	.modal-avatar-link {
-		color: var(--primary);
-		text-decoration: none;
-		font-weight: 600;
-	}
-
-	.modal-body-text {
-		font-family: var(--font-body);
-		font-size: 14px;
-		color: var(--text-secondary);
-		line-height: 1.6;
-		text-align: center;
-	}
-	.modal-body-text strong { color: var(--text-dark); }
-
-	.modal-field {
-		margin-bottom: 16px;
-	}
-	.modal-label {
-		display: block;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-		margin-bottom: 6px;
-	}
-	.modal-input {
-		width: 100%;
-		padding: 10px 12px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-dark);
-		background: var(--bg-page, #f5f5f5);
-		box-sizing: border-box;
-	}
-	.modal-input:focus { border-color: var(--primary); outline: none; }
-
-	.modal-textarea {
-		width: 100%;
-		padding: 10px 12px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-dark);
-		resize: vertical;
-		box-sizing: border-box;
-	}
-	.modal-textarea:focus { border-color: var(--primary); outline: none; }
-
-	.modal-select {
-		width: 100%;
-		padding: 10px 12px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-dark);
-		background: var(--bg-page, #f5f5f5);
-		box-sizing: border-box;
-	}
-
-	.modal-radio-group {
-		display: flex;
-		gap: 16px;
-		flex-wrap: wrap;
-	}
-	.modal-radio {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--text-dark);
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		cursor: pointer;
-	}
-	.modal-radio input[type="radio"] { accent-color: var(--primary); }
-
-	.modal-actions {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin-top: 20px;
-	}
-	.modal-btn-secondary {
-		padding: 14px 24px;
-		background: none;
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 600;
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: all 0.15s;
-		white-space: nowrap;
-	}
-	.modal-btn-secondary:hover { border-color: var(--text-muted); }
-
-	.modal-btn-primary {
-		flex: 1;
-		padding: 14px 24px;
-		background: var(--primary);
-		color: #fff;
-		border: none;
-		border-radius: 12px;
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.15s;
-		box-shadow: 0 2px 8px rgba(81,190,123,0.3);
-	}
-	.modal-btn-primary:hover:not(:disabled) { background: #3dbd6d; box-shadow: 0 4px 16px rgba(81,190,123,0.4); }
-	.modal-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-
-	.modal-footer-note {
-		text-align: center;
-		padding-top: 12px;
-		font-family: var(--font-body);
-		font-size: 11px;
-		color: var(--text-muted);
-	}
-
-	/* Modal Success State */
-	.modal-success {
-		text-align: center;
-		padding: 16px 0;
-	}
-	.modal-success-icon {
-		width: 64px;
-		height: 64px;
-		border-radius: 50%;
-		background: rgba(81,190,123,0.1);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin: 0 auto 20px;
-	}
-	.modal-success-title {
-		font-family: var(--font-ui);
-		font-size: 20px;
-		font-weight: 800;
-		color: var(--text-dark);
-		margin-bottom: 8px;
-	}
-	.modal-success-text {
-		font-family: var(--font-body);
-		font-size: 14px;
-		color: var(--text-secondary);
-		line-height: 1.6;
-		max-width: 320px;
-		margin: 0 auto 20px;
-	}
-
-	/* ===== Invite Modal Specifics ===== */
-	.invite-link-row {
-		display: flex;
-		gap: 8px;
-		margin-bottom: 16px;
-	}
-	.invite-link-input {
-		flex: 1;
-		min-width: 0;
-		font-size: 12px !important;
-	}
-	.invite-copy-btn {
-		flex-shrink: 0;
-		white-space: nowrap;
-	}
-	.invite-share-row {
-		display: flex;
-		gap: 8px;
-		margin-top: 16px;
-	}
-	.invite-share-btn {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		padding: 10px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--text-secondary);
-		text-decoration: none;
-		transition: background 0.15s;
-	}
-	.invite-share-btn:hover { background: var(--bg-page, #f5f5f5); }
-
-	/* ===== Claim Modal Specifics ===== */
-	.claim-user-card {
-		background: var(--bg-page, #f5f5f5);
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		padding: 14px 16px;
-		margin-bottom: 20px;
-	}
-	.claim-user-name {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-		margin-bottom: 2px;
-	}
-	.claim-user-email {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-muted);
-	}
-	.claim-user-company {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-muted);
-		margin-top: 2px;
-	}
-	.modal-btn-claim {
-		width: 100%;
-		padding: 14px;
-		background: #2563eb;
-		color: #fff;
-		border: none;
-		border-radius: 10px;
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		cursor: pointer;
-		transition: background 0.15s;
-	}
-	.modal-btn-claim:hover:not(:disabled) { background: #1d4ed8; }
-	.modal-btn-claim:disabled { opacity: 0.5; cursor: not-allowed; }
 
 	/* ===== Summary Rows & Fees ===== */
 	.summary-row { display: flex; gap: 12px; margin-bottom: 12px; }
@@ -4919,90 +3684,6 @@
 		box-shadow: 0 1px 3px rgba(81,190,123,0.3);
 	}
 
-	/* ===== Deck Viewer Modal ===== */
-	.deck-viewer-overlay {
-		position: fixed;
-		top: 0; left: 0; right: 0; bottom: 0;
-		background: rgba(0,0,0,0.75);
-		z-index: 1000;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 24px;
-	}
-	.deck-viewer-modal {
-		background: var(--bg-card, #fff);
-		border-radius: 12px;
-		width: 100%;
-		max-width: 1100px;
-		height: 85vh;
-		display: flex;
-		flex-direction: column;
-		box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-		overflow: hidden;
-	}
-	.deck-viewer-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 14px 20px;
-		border-bottom: 1px solid var(--border);
-		flex-shrink: 0;
-	}
-	.deck-viewer-title {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.deck-viewer-actions {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-	.deck-viewer-download {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		padding: 6px 14px;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--primary);
-		text-decoration: none;
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		transition: background 0.15s;
-	}
-	.deck-viewer-download:hover { background: var(--bg-cream, #f8f8f6); }
-	.deck-viewer-close {
-		width: 32px;
-		height: 32px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: none;
-		border: none;
-		font-size: 24px;
-		color: var(--text-muted);
-		cursor: pointer;
-		border-radius: 6px;
-		transition: background 0.15s;
-	}
-	.deck-viewer-close:hover { background: var(--bg-cream, #f8f8f6); color: var(--text-dark); }
-	.deck-viewer-body {
-		flex: 1;
-		overflow: hidden;
-	}
-	.deck-viewer-iframe {
-		width: 100%;
-		height: 100%;
-		border: none;
-	}
-
 	/* ===== Doc item enhancements ===== */
 	.doc-item-row {
 		display: flex;
@@ -5029,71 +3710,8 @@
 	}
 	.doc-enrich-btn:hover { background: rgba(59,130,246,0.1); }
 
-	/* ===== Enrichment Wizard ===== */
-	.enrich-wizard { text-align: left; }
-	.enrich-header {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		margin-bottom: 16px;
-	}
-	.enrich-fields {
-		max-height: 360px;
-		overflow-y: auto;
-		border: 1px solid var(--border-light, #eee);
-		border-radius: 8px;
-	}
-	.enrich-field {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 10px 14px;
-		border-bottom: 1px solid var(--border-light, #eee);
-	}
-	.enrich-field:last-child { border-bottom: none; }
-	.enrich-checkbox input {
-		width: 16px;
-		height: 16px;
-		accent-color: var(--primary);
-		cursor: pointer;
-	}
-	.enrich-field-label {
-		flex: 0 0 130px;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
-	}
-	.enrich-field-value {
-		flex: 1;
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-dark);
-	}
-	.enrich-actions {
-		display: flex;
-		gap: 10px;
-		margin-top: 16px;
-	}
-	.enrich-spinner {
-		width: 32px;
-		height: 32px;
-		border: 3px solid var(--border);
-		border-top-color: var(--primary);
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-		margin: 0 auto;
-	}
-	@keyframes spin { to { transform: rotate(360deg); } }
-
 	@media (max-width: 768px) {
-		.deck-viewer-overlay { padding: 8px; }
-		.deck-viewer-modal { height: 90vh; }
-		.deck-viewer-title { font-size: 12px; }
 		.doc-item-row { flex-direction: column; }
-		.enrich-field-label { flex: 0 0 100px; font-size: 10px; }
 	}
 
 </style>

@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { getDealOperatorName } from '$lib/utils/dealSponsors.js';
 
 	let { deals = [] } = $props();
 
@@ -139,7 +140,7 @@
 			marker.bindPopup(
 				`<div style="font-family:var(--font-ui);min-width:200px;">
 					<a href="/deal/${deal.id}" style="font-weight:700;font-size:14px;display:block;color:#1a7a5a;text-decoration:underline;margin-bottom:6px;">${deal.investmentName}</a>
-					<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Sponsor:</strong> ${deal.managementCompany || 'N/A'}</div>
+					<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Sponsor:</strong> ${getDealOperatorName(deal, 'N/A')}</div>
 					<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Asset Class:</strong> ${deal.assetClass || 'N/A'}</div>
 					<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Target IRR:</strong> ${fmtPct(deal.targetIRR)}</div>
 					<div style="font-size:12px;color:#607179;"><strong>Location:</strong> ${deal.location || deal.investingGeography || 'N/A'}</div>

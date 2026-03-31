@@ -3,6 +3,7 @@
 // Auth: Bearer token + authorized_emails check (same pattern as management-companies settings)
 
 import { getAdminClient, setCors, ADMIN_EMAILS } from '../_supabase.js';
+import { resolveDealWorkflowMutation, slugify } from '../../src/lib/utils/dealWorkflow.js';
 
 const FIELD_MAP = {
   // camelCase (client) → snake_case (DB)
@@ -14,6 +15,7 @@ const FIELD_MAP = {
   targetIRR: 'target_irr',
   preferredReturn: 'preferred_return',
   cashOnCash: 'cash_on_cash',
+  cashYield: 'cash_yield',
   equityMultiple: 'equity_multiple',
   investmentMinimum: 'investment_minimum',
   holdPeriod: 'hold_period_years',
@@ -25,12 +27,29 @@ const FIELD_MAP = {
   lpGpSplit: 'lp_gp_split',
   fees: 'fees',
   financials: 'financials',
+  shortSummary: 'short_summary',
+  coverImageUrl: 'cover_image_url',
+  heroMediaUrl: 'hero_media_url',
+  riskNotes: 'risk_notes',
+  downsideNotes: 'downside_notes',
+  deckUrl: 'deck_url',
+  ppmUrl: 'ppm_url',
+  subAgreementUrl: 'sub_agreement_url',
+  feeSummary: 'fee_summary',
+  taxCharacteristics: 'tax_characteristics',
+  operatorBackground: 'operator_background',
+  keyDates: 'key_dates',
+  primarySourceContext: 'primary_source_context',
+  primarySourceUrl: 'primary_source_url',
+  sponsorName: 'sponsor_name',
+  slug: 'slug',
   investingGeography: 'investing_geography',
   instrument: 'instrument',
   debtPosition: 'debt_position',
   fundAUM: 'fund_aum',
   redemption: 'redemption',
   sponsorCoinvest: 'sponsor_in_deal_pct',
+  sponsorInDeal: 'sponsor_in_deal_pct',
   taxForm: 'tax_form',
   propertyAddress: 'property_address',
   unitCount: 'unit_count',
@@ -51,10 +70,65 @@ const FIELD_MAP = {
   capitalEventFeePct: 'capital_event_fee_pct',
   dispositionFeePct: 'disposition_fee_pct',
   constructionMgmtFeePct: 'construction_mgmt_fee_pct',
+  tags: 'tags',
   // Special fields
   status: 'status',
   gpReviewedAt: 'gp_reviewed_at',
+  lifecycleStatus: 'lifecycle_status',
+  isVisibleToUsers: 'is_visible_to_users',
 };
+
+const NUMERIC_FIELD_KEYS = new Set([
+  'targetIRR',
+  'preferredReturn',
+  'cashOnCash',
+  'cashYield',
+  'equityMultiple',
+  'investmentMinimum',
+  'holdPeriod',
+  'offeringSize',
+  'purchasePrice',
+  'fundAUM',
+  'sponsorCoinvest',
+  'sponsorInDeal',
+  'unitCount',
+  'yearBuilt',
+  'squareFootage',
+  'occupancyPct',
+  'acquisitionLoan',
+  'loanToValue',
+  'loanRate',
+  'loanTermYears',
+  'loanIOYears',
+  'capexBudget',
+  'closingCosts',
+  'acquisitionFeePct',
+  'assetMgmtFeePct',
+  'propertyMgmtFeePct',
+  'capitalEventFeePct',
+  'dispositionFeePct',
+  'constructionMgmtFeePct',
+]);
+
+function normalizeValue(key, value) {
+  if (value === undefined) return value;
+  if (key === 'tags') {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item || '').trim()).filter(Boolean);
+    }
+    return String(value || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  if (NUMERIC_FIELD_KEYS.has(key)) {
+    if (value === null || value === '') return null;
+    const numericValue =
+      typeof value === 'number' ? value : Number(String(value).replace(/,/g, '').trim());
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+  return value;
+}
 
 export default async function handler(req, res) {
   setCors(res);
@@ -78,10 +152,10 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  // Fetch deal to get management_company_id
+  // Fetch deal to get management_company_id and current workflow fields
   const { data: deal, error: dealError } = await supabase
     .from('opportunities')
-    .select('id, management_company_id')
+    .select('*')
     .eq('id', id)
     .single();
 
@@ -116,7 +190,7 @@ export default async function handler(req, res) {
 
   for (const [camelKey, snakeKey] of Object.entries(FIELD_MAP)) {
     if (camelKey in body) {
-      updates[snakeKey] = body[camelKey];
+      updates[snakeKey] = normalizeValue(camelKey, body[camelKey]);
       updated.push(camelKey);
     }
   }
@@ -125,15 +199,40 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No valid fields to update' });
   }
 
-  const { error: updateError } = await supabase
+  if (updates.investment_name && !updates.slug) {
+    updates.slug = slugify(updates.investment_name);
+  }
+  if (!updates.sponsor_name && body.sponsorName !== undefined) {
+    updates.sponsor_name = String(body.sponsorName || '').trim();
+  }
+
+  if (updates.lifecycle_status !== undefined || updates.is_visible_to_users !== undefined) {
+    const resolution = resolveDealWorkflowMutation(deal, updates);
+    if (resolution.error) {
+      return res.status(400).json({ error: resolution.error });
+    }
+    updates.lifecycle_status = resolution.lifecycleStatus;
+    updates.is_visible_to_users = resolution.isVisibleToUsers;
+  }
+
+  const { data: updatedDeal, error: updateError } = await supabase
     .from('opportunities')
     .update(updates)
-    .eq('id', id);
+    .eq('id', id)
+    .select('*')
+    .single();
 
   if (updateError) {
     console.error('Deal update failed:', updateError);
     return res.status(500).json({ error: 'Failed to save deal' });
   }
 
-  return res.status(200).json({ success: true, updated });
+  return res.status(200).json({
+    success: true,
+    updated,
+    deal: {
+      ...updatedDeal,
+      slug: updatedDeal?.slug || slugify(updatedDeal?.investment_name || '')
+    }
+  });
 }

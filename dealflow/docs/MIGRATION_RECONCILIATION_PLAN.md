@@ -18,6 +18,9 @@ live environments. The right path is forward-only and explicit.
   even before the historical debt is fully reconciled
 - `047_reconcile_intro_requests.sql` now reconciles the `intro_requests` table
   forward-only so live and fresh environments can converge on the same shape
+- `048_reconcile_onboarding_activity.sql` now reconciles the useful parts of
+  the duplicate `031` lineage forward-only without reintroducing the deprecated
+  goals -> buy_box write coupling
 
 ## Current known debt
 
@@ -78,4 +81,7 @@ After the baseline exists:
 1. Decide whether `031_activity_columns_and_v1v2_migration.sql` should remain
    purely historical or be partially superseded by a cleaner backfill strategy.
 2. Generate a post-reconciliation baseline schema file for fresh environments.
-3. Move CI from guardrail mode to strict mode.
+3. Reconcile the remaining duplicate-prefix lineages (`022`, `025`, `026`,
+   `030`, `039`) with either forward-only repair migrations or an archived
+   baseline split.
+4. Move CI from guardrail mode to strict mode.

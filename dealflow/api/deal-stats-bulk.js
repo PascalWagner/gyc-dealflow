@@ -25,10 +25,13 @@ export default async function handler(req, res) {
     // Transform from array of rows to { dealId: { saved, vetting, invested } } map
     const dealStats = {};
     for (const row of (data || [])) {
+      const reviewCount = row.review || row.interested || 0;
+      const vettingCount = (row.connect || 0) + (row.decide || 0) || row.duediligence || 0;
+      const investedCount = row.invested || row.portfolio || 0;
       dealStats[row.deal_id] = {
-        saved: row.interested || 0,
-        vetting: row.duediligence || 0,
-        invested: row.portfolio || 0
+        saved: reviewCount,
+        vetting: vettingCount,
+        invested: investedCount
       };
     }
 

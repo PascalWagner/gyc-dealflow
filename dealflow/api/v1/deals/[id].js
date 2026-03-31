@@ -3,6 +3,7 @@
 
 import { getAdminClient } from '../../_supabase.js';
 import { verifyApiKey, logRequest, setApiCors, apiError } from '../_auth.js';
+import { formatPublicDeal } from '../deals/shared.js';
 
 export default async function handler(req, res) {
   setApiCors(res);
@@ -36,6 +37,7 @@ export default async function handler(req, res) {
           aum, description, booking_url, full_cycle_deals
         )
       `)
+      .eq('is_visible_to_users', true)
       .eq('id', id)
       .single();
 
@@ -55,6 +57,7 @@ export default async function handler(req, res) {
     const { data: children } = await supabase
       .from('opportunities')
       .select('id, share_class_label, investment_name, target_irr, preferred_return, investment_minimum, hold_period_years, lp_gp_split, cash_on_cash, financials')
+      .eq('is_visible_to_users', true)
       .eq('parent_deal_id', id);
 
     if (children && children.length > 0) {
@@ -71,73 +74,7 @@ export default async function handler(req, res) {
       }));
     }
 
-    const mc = deal.management_company || {};
-    const result = {
-      id: deal.id,
-      deal_number: deal.deal_number,
-      name: deal.investment_name,
-      asset_class: deal.asset_class,
-      deal_type: deal.deal_type,
-      status: deal.status,
-
-      target_irr: deal.target_irr,
-      equity_multiple: deal.equity_multiple,
-      preferred_return: deal.preferred_return,
-      cash_on_cash: deal.cash_on_cash,
-      investment_minimum: deal.investment_minimum,
-      lp_gp_split: deal.lp_gp_split,
-      hold_period_years: deal.hold_period_years,
-      sponsor_co_invest_pct: deal.sponsor_in_deal_pct,
-      fees: deal.fees || [],
-
-      offering_type: deal.offering_type,
-      offering_size: deal.offering_size,
-      investment_strategy: deal.investment_strategy,
-      strategy: deal.strategy,
-      instrument: deal.instrument,
-      distributions: deal.distributions,
-      financials: deal.financials,
-      available_to: deal.available_to,
-      first_yr_depreciation: deal.first_yr_depreciation,
-      vertical_integration: deal.vertical_integration,
-
-      geography: deal.investing_geography,
-      location: deal.location,
-      property_address: deal.property_address,
-
-      debt_position: deal.debt_position,
-      fund_aum: deal.fund_aum,
-      loan_count: deal.loan_count,
-      avg_loan_ltv: deal.avg_loan_ltv,
-
-      operator: mc.id ? {
-        id: mc.id,
-        name: mc.operator_name,
-        ceo: mc.ceo,
-        website: mc.website,
-        linkedin: mc.linkedin_ceo,
-        invest_clearly_profile: mc.invest_clearly_profile,
-        founding_year: mc.founding_year,
-        type: mc.type,
-        asset_classes: mc.asset_classes || [],
-        total_investors: mc.total_investors,
-        headquarters: mc.headquarters,
-        aum: mc.aum,
-        description: mc.description,
-        booking_url: mc.booking_url,
-        full_cycle_deals: mc.full_cycle_deals || null
-      } : null,
-
-      share_classes: shareClasses,
-
-      sec_cik: deal.sec_cik || null,
-      date_of_first_sale: deal.date_of_first_sale,
-      total_amount_sold: deal.total_amount_sold,
-      total_investors: deal.total_investors,
-
-      added_date: deal.added_date,
-      updated_at: deal.updated_at
-    };
+    const result = formatPublicDeal(deal, { shareClasses });
 
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
     logRequest(auth.keyRecord, req, 200, startTime);

@@ -7,6 +7,7 @@
 	import LegacyOnboardingFlow from '$lib/components/onboarding/LegacyOnboardingFlow.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 	import {
 		getStoredSessionUser,
 		isMember
@@ -20,11 +21,12 @@
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
+	import { buildInvestedPortfolio } from '$lib/utils/investedPortfolio.js';
 
 	let hasPlan = $state(false);
 	let loading = $state(true);
 	let plan = $state(null);
-	let portfolio = $state([]);
+	let portfolioDetails = $state([]);
 	let showWizard = $state(false);
 	let saving = $state(false);
 	let saveMsg = $state('');
@@ -37,6 +39,15 @@
 	let portfolioPlan = $state(null);
 	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
 	const nativeCompanionMode = browser && isNativeApp();
+	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
+	const portfolioView = $derived.by(() =>
+		buildInvestedPortfolio({
+			stageMap: $dealStages || {},
+			deals: $deals || [],
+			portfolio: portfolioDetails
+		})
+	);
+	const portfolio = $derived.by(() => portfolioView.entries);
 
 	const canViewAnalytics = $derived($isMember);
 
@@ -445,6 +456,17 @@
 		}, 3000);
 	}
 
+	function syncPlanState() {
+		if (!browser) return;
+		const snapshot = getUserScopedCacheSnapshot();
+		portfolioDetails = snapshot.portfolio;
+		reportUser = getStoredSessionUser();
+		portfolioPlan = snapshot.portfolioPlan;
+		wizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
+		plan = wizardData;
+		hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
+	}
+
 	function printPlan() {
 		if (browser) window.print();
 	}
@@ -841,7 +863,7 @@
 		};
 	});
 
-	onMount(async () => {
+	onMount(() => {
 		if (!browser) return;
 		shouldOpenWizardFromLocation = shouldAutoOpenWizard();
 		const params = new URLSearchParams(window.location.search);
@@ -849,53 +871,59 @@
 		wizardBranch = params.get('branch') || '';
 		wizardFlowKey = params.get('flow') || '';
 		wizardForceEdit = ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase());
-		const snapshot = getUserScopedCacheSnapshot();
-		portfolio = snapshot.portfolio;
-		reportUser = getStoredSessionUser();
-		portfolioPlan = snapshot.portfolioPlan;
-		wizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
-		plan = wizardData;
-		hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
+		syncPlanState();
+		fetchDeals().catch(() => {});
 
-		try {
-			const stored = getStoredSessionUser();
-			if (!stored?.token) {
-				loading = false;
-				if (shouldOpenWizardFromLocation || !hasPlan) openWizard(wizardForceEdit);
-				return;
-			}
-			const realUser = currentAdminRealUser();
-			const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== stored.email.toLowerCase();
-			const buyBoxUrl = new URL('/api/buybox', window.location.origin);
-			buyBoxUrl.searchParams.set('email', stored.email);
-			if (isAdminImpersonation) buyBoxUrl.searchParams.set('admin', 'true');
-			const controller = new AbortController();
-			const timeout = window.setTimeout(() => controller.abort(), 8000);
+		const handleScopedStateUpdate = () => {
+			syncPlanState();
+		};
+		window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
 
-			const response = await fetch(buyBoxUrl.pathname + buyBoxUrl.search, {
-				headers: { Authorization: `Bearer ${stored.token}` },
-				signal: controller.signal
-			});
-			window.clearTimeout(timeout);
-
-			if (response.ok) {
-				const data = await response.json();
-				if (data?.buyBox && Object.keys(data.buyBox).length > 0) {
-					wizardData = normalizeWizardData(data.buyBox);
-					plan = wizardData;
-					hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
+		void (async () => {
+			try {
+				const stored = getStoredSessionUser();
+				if (!stored?.token) {
+					loading = false;
+					if (shouldOpenWizardFromLocation || !hasPlan) openWizard(wizardForceEdit);
+					return;
 				}
+				const realUser = currentAdminRealUser();
+				const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== stored.email.toLowerCase();
+				const buyBoxUrl = new URL('/api/buybox', window.location.origin);
+				buyBoxUrl.searchParams.set('email', stored.email);
+				if (isAdminImpersonation) buyBoxUrl.searchParams.set('admin', 'true');
+				const controller = new AbortController();
+				const timeout = window.setTimeout(() => controller.abort(), 8000);
+
+				const response = await fetch(buyBoxUrl.pathname + buyBoxUrl.search, {
+					headers: { Authorization: `Bearer ${stored.token}` },
+					signal: controller.signal
+				});
+				window.clearTimeout(timeout);
+
+				if (response.ok) {
+					const data = await response.json();
+					if (data?.buyBox && Object.keys(data.buyBox).length > 0) {
+						wizardData = normalizeWizardData(data.buyBox);
+						plan = wizardData;
+						hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
+					}
+				}
+			} catch (error) {
+				console.warn('Failed to load plan:', error);
+			} finally {
+				loading = false;
+				if (!hasPlan && !wizardStage && !wizardFlowKey) {
+					goto('/onboarding/plan', { replaceState: true });
+					return;
+				}
+				if ((shouldOpenWizardFromLocation || !hasPlan) && !showWizard) openWizard(wizardForceEdit && hasPlan);
 			}
-		} catch (error) {
-			console.warn('Failed to load plan:', error);
-		} finally {
-			loading = false;
-			if (!hasPlan && !wizardStage && !wizardFlowKey) {
-				goto('/onboarding/plan', { replaceState: true });
-				return;
-			}
-			if ((shouldOpenWizardFromLocation || !hasPlan) && !showWizard) openWizard(wizardForceEdit && hasPlan);
-		}
+		})();
+
+		return () => {
+			window.removeEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
+		};
 	});
 </script>
 

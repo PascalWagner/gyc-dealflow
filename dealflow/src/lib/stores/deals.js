@@ -44,7 +44,7 @@ function persistStageCache(value) {
 
 const COMPARE_STORAGE_KEY = 'gycCompareDealIds';
 const DEAL_FLOW_VIEW_MODE_STORAGE_KEY = 'gycDealFlowViewMode';
-const VIEW_MODES = ['grid', 'compare', 'location'];
+const VIEW_MODES = ['grid', 'compare', 'map'];
 
 export const MAX_COMPARE_DEALS = 3;
 export const MAX_DECISION_COMPARE = MAX_COMPARE_DEALS;
@@ -67,7 +67,7 @@ function normalizeCompareDealIds(value) {
 
 function normalizeDealFlowViewMode(value) {
 	const normalized = String(value || '').trim().toLowerCase();
-	if (normalized === 'map') return 'location';
+	if (normalized === 'location') return 'map';
 	return VIEW_MODES.includes(normalized) ? normalized : 'grid';
 }
 
@@ -270,13 +270,10 @@ export const memberDealsRefreshing = writable(false);
 export const memberDealsError = writable(null);
 export const memberDealsMeta = writable(buildMemberMeta());
 
-export const networkCounts = writable({});
-
 const browseTotalCount = writable(null);
 
 let catalogLoaded = false;
 let catalogPromise = null;
-let networkCountsLoaded = false;
 let activeMemberRequestId = 0;
 
 function adjustBrowseCount(previousStage, nextStage) {
@@ -489,21 +486,6 @@ export function resetMemberDeals() {
 	memberDealsMeta.set(buildMemberMeta());
 }
 
-export async function fetchNetworkCounts(force = false) {
-	if (!browser) return;
-	if (networkCountsLoaded && !force) return;
-
-	try {
-		const res = await fetch('/api/network?action=counts');
-		if (!res.ok) throw new Error('Failed to load network counts');
-		const data = await res.json();
-		networkCounts.set(data || {});
-		networkCountsLoaded = true;
-	} catch (error) {
-		console.warn('Network counts failed:', error.message);
-	}
-}
-
 async function getMemberDealsAuthHeaders() {
 	if (!browser) return {};
 
@@ -686,8 +668,6 @@ export async function fetchMemberDeals(options = {}) {
 	}
 
 	try {
-		fetchNetworkCounts().catch(() => {});
-
 		const data = await queryMemberDeals({
 			...options,
 			scope,

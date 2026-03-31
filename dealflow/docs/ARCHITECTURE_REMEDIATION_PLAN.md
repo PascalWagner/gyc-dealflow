@@ -17,6 +17,8 @@ high-velocity but drift-prone into a safer, more durable shape.
 - Track known historical debt in a checked-in reconciliation manifest.
 - Run migration guardrails in CI so new drift is blocked before full repair.
 - Reconcile live environments with one forward-only migration pack.
+- Reconcile duplicate data/backfill lineages without reviving deprecated
+  ownership couplings.
 - Create a clean future baseline after reconciliation.
 
 ## Phase 3: Data ownership cleanup
@@ -44,6 +46,8 @@ high-velocity but drift-prone into a safer, more durable shape.
 ## Phase 6: Quality gates
 
 - Add migration auditing to CI.
+- Add architecture size budgets for the routes and APIs we intentionally turned
+  into thin orchestrators, so god files do not silently regrow.
 - Add auth integration coverage.
 - Add contract tests for public APIs.
 - Add integration coverage for sync-heavy routes.

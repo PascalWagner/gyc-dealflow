@@ -3,7 +3,7 @@
     "title": "Cashflow Academy",
     "description": "Structured course content for the GYC Cashflow Academy",
     "version": 1,
-    "lastUpdated": "2026-03-27"
+    "lastUpdated": "2026-03-31"
   },
   "sections": [
     {
@@ -35,6 +35,36 @@
       "featured": true
     },
     {
+      "id": "strategy-012",
+      "section": "strategy",
+      "module": "Getting Started",
+      "lesson_title": "Welcome to the Course",
+      "description": "A short orientation to the course structure, learning path, and what to focus on first as you move through the academy.",
+      "youtubeId": "_ivzzmkVtQ4",
+      "order_index": 1.1,
+      "duration": "9 min"
+    },
+    {
+      "id": "strategy-013",
+      "section": "strategy",
+      "module": "Getting Started",
+      "lesson_title": "Understanding the Players in Passive Investing",
+      "description": "A simple map of the key roles in passive investing, from LPs and sponsors to operators, lenders, and other stakeholders.",
+      "youtubeId": "31MeoDcwJXQ",
+      "order_index": 1.2,
+      "duration": "12 min"
+    },
+    {
+      "id": "strategy-014",
+      "section": "strategy",
+      "module": "Getting Started",
+      "lesson_title": "Embracing Your Role As A Money Manager",
+      "description": "A mindset lesson on taking ownership of capital allocation decisions and approaching investing like a thoughtful money manager.",
+      "youtubeId": "Z6o05fE7jnE",
+      "order_index": 1.3,
+      "duration": "9 min"
+    },
+    {
       "id": "strategy-002",
       "section": "strategy",
       "module": "Getting Started",
@@ -43,6 +73,26 @@
       "youtubeId": "ScMzIvxBSi4",
       "order_index": 2,
       "duration": "18 min"
+    },
+    {
+      "id": "strategy-015",
+      "section": "strategy",
+      "module": "Investment Thesis",
+      "lesson_title": "Overview | Hone Your Thesis",
+      "description": "An overview of how to sharpen your investment criteria so you can evaluate opportunities with more clarity and consistency.",
+      "youtubeId": "SU-3z6HSF5I",
+      "order_index": 2.1,
+      "duration": "4 min"
+    },
+    {
+      "id": "strategy-016",
+      "section": "strategy",
+      "module": "Investment Thesis",
+      "lesson_title": "Refining Your Investment Thesis",
+      "description": "How to pressure-test and refine your thesis as you gain experience, see more deals, and clarify your long-term goals.",
+      "youtubeId": "n26rrKOgc9s",
+      "order_index": 2.2,
+      "duration": "5 min"
     },
     {
       "id": "strategy-003",
@@ -55,6 +105,16 @@
       "duration": "22 min"
     },
     {
+      "id": "strategy-017",
+      "section": "strategy",
+      "module": "Asset Classes",
+      "lesson_title": "What Are Alternative Investments",
+      "description": "A primer on alternative investments, what qualifies as an alternative, and why these assets can play a role in a diversified portfolio.",
+      "youtubeId": "fWvuCWJtGG4",
+      "order_index": 3.1,
+      "duration": "10 min"
+    },
+    {
       "id": "strategy-004",
       "section": "strategy",
       "module": "Asset Classes",
@@ -63,6 +123,36 @@
       "youtubeId": "2Vv-BfVoq4g",
       "order_index": 4,
       "duration": "25 min"
+    },
+    {
+      "id": "strategy-018",
+      "section": "strategy",
+      "module": "Asset Classes",
+      "lesson_title": "Funds vs Syndications",
+      "description": "A practical comparison of funds and syndications, including how each structure works and when one may fit better than the other.",
+      "youtubeId": "ainJXyIk9PQ",
+      "order_index": 4.1,
+      "duration": "9 min"
+    },
+    {
+      "id": "strategy-019",
+      "section": "strategy",
+      "module": "Asset Classes",
+      "lesson_title": "Risk & The Capital Stack",
+      "description": "An explanation of how risk changes across the capital stack and what that means for return expectations and investor positioning.",
+      "youtubeId": "W24lfMeJj8A",
+      "order_index": 4.2,
+      "duration": "13 min"
+    },
+    {
+      "id": "strategy-020",
+      "section": "strategy",
+      "module": "Asset Classes",
+      "lesson_title": "The 5 Value Creation Strategies",
+      "description": "A breakdown of five common ways operators create value in real estate investments and how each strategy affects risk and upside.",
+      "youtubeId": "TGMyCVD-mGU",
+      "order_index": 4.3,
+      "duration": "9 min"
     },
     {
       "id": "strategy-005",
@@ -95,6 +185,26 @@
       "duration": "24 min"
     },
     {
+      "id": "strategy-021",
+      "section": "strategy",
+      "module": "Portfolio Strategy",
+      "lesson_title": "Overview | Assess Your Target",
+      "description": "A portfolio-planning overview focused on defining your targets so your allocation decisions line up with your goals.",
+      "youtubeId": "lxg95vEVO9U",
+      "order_index": 7.1,
+      "duration": "2 min"
+    },
+    {
+      "id": "strategy-022",
+      "section": "strategy",
+      "module": "Portfolio Strategy",
+      "lesson_title": "Overview | Create An Allocation",
+      "description": "A practical walkthrough of how to build an allocation plan across investment buckets, time horizons, and risk profiles.",
+      "youtubeId": "vc1tABmjbf4",
+      "order_index": 7.2,
+      "duration": "4 min"
+    },
+    {
       "id": "strategy-008",
       "section": "strategy",
       "module": "Portfolio Strategy",
@@ -103,6 +213,36 @@
       "youtubeId": "JGwWNGJdvx8",
       "order_index": 8,
       "duration": "28 min"
+    },
+    {
+      "id": "strategy-009",
+      "section": "strategy",
+      "module": "Asset Classes",
+      "lesson_title": "7 Advantages of Alternative Investments",
+      "description": "A quick breakdown of how alternative investments can support diversification, cash flow, inflation protection, and long-term portfolio resilience.",
+      "youtubeId": "qthre9LQBks",
+      "order_index": 8.1,
+      "duration": "11 min"
+    },
+    {
+      "id": "strategy-010",
+      "section": "strategy",
+      "module": "Portfolio Strategy",
+      "lesson_title": "The Money Pie | The Only 3 Outcomes When Investing",
+      "description": "A simple framework for understanding the three core outcomes every investment can produce and how that shapes allocation and portfolio decisions.",
+      "youtubeId": "YVK3cZRtowY",
+      "order_index": 8.2,
+      "duration": "14 min"
+    },
+    {
+      "id": "strategy-011",
+      "section": "strategy",
+      "module": "Asset Classes",
+      "lesson_title": "Asset Class Review",
+      "description": "A high-level review of major asset classes, how they differ, and where each can fit within a thoughtful investment strategy.",
+      "youtubeId": "dpU7VxTOVtk",
+      "order_index": 8.3,
+      "duration": "22 min"
     },
     {
       "id": "dealflow-001",
@@ -115,6 +255,56 @@
       "duration": "21 min"
     },
     {
+      "id": "dealflow-009",
+      "section": "deal-flow",
+      "module": "Sourcing Deals",
+      "lesson_title": "Overview | Identify Opportunities",
+      "description": "An overview of how to spot promising opportunities, narrow the universe, and focus your attention on deals worth deeper review.",
+      "youtubeId": "wZWhUTA357w",
+      "order_index": 9.1,
+      "duration": "3 min"
+    },
+    {
+      "id": "dealflow-010",
+      "section": "deal-flow",
+      "module": "Sourcing Deals",
+      "lesson_title": "Building Your Pipeline",
+      "description": "How to build a repeatable deal pipeline so opportunities keep flowing without relying on random outreach or one-off luck.",
+      "youtubeId": "ee5vzoeNV9I",
+      "order_index": 9.2,
+      "duration": "11 min"
+    },
+    {
+      "id": "dealflow-011",
+      "section": "deal-flow",
+      "module": "Sourcing Deals",
+      "lesson_title": "Managing Deal Flow",
+      "description": "A practical look at how to organize inbound opportunities, maintain momentum, and keep your pipeline moving without overwhelm.",
+      "youtubeId": "IwP6nLFClCo",
+      "order_index": 9.3,
+      "duration": "4 min"
+    },
+    {
+      "id": "dealflow-012",
+      "section": "deal-flow",
+      "module": "Sourcing Deals",
+      "lesson_title": "Why Deal Flow Is The Foundation For Investment Success",
+      "description": "Why consistent access to quality deal flow shapes long-term investing results and helps you make stronger decisions over time.",
+      "youtubeId": "-HKW5B3Af84",
+      "order_index": 9.4,
+      "duration": "7 min"
+    },
+    {
+      "id": "dealflow-013",
+      "section": "deal-flow",
+      "module": "Sourcing Deals",
+      "lesson_title": "Deal Flow Diplomacy | How to Decline Offers Without Closing Doors",
+      "description": "How to turn down deals gracefully while preserving relationships and keeping the door open for better-fit opportunities later.",
+      "youtubeId": "w1VXLmZEuXQ",
+      "order_index": 9.5,
+      "duration": "6 min"
+    },
+    {
       "id": "dealflow-002",
       "section": "deal-flow",
       "module": "Sourcing Deals",
@@ -123,6 +313,16 @@
       "youtubeId": "YQHsXMglC9A",
       "order_index": 10,
       "duration": "26 min"
+    },
+    {
+      "id": "dealflow-014",
+      "section": "deal-flow",
+      "module": "Sourcing Deals",
+      "lesson_title": "Introduction To Vetting Operators",
+      "description": "An introduction to assessing operators, including what to look for early and how to separate strong sponsors from weak ones.",
+      "youtubeId": "4punR111vHw",
+      "order_index": 10.1,
+      "duration": "7 min"
     },
     {
       "id": "dealflow-003",
@@ -145,6 +345,46 @@
       "duration": "16 min"
     },
     {
+      "id": "dealflow-015",
+      "section": "deal-flow",
+      "module": "Deal Screening",
+      "lesson_title": "Overview | Evaluate Deals",
+      "description": "A high-level framework for evaluating deals so you can move from initial interest to focused, disciplined screening.",
+      "youtubeId": "C0WChru4DRc",
+      "order_index": 12.1,
+      "duration": "4 min"
+    },
+    {
+      "id": "dealflow-016",
+      "section": "deal-flow",
+      "module": "Deal Screening",
+      "lesson_title": "Common Red Flags & Warning Signs",
+      "description": "A guide to the warning signs that often show up early in weak opportunities, questionable assumptions, or poorly aligned deals.",
+      "youtubeId": "sxOIzbJkk9U",
+      "order_index": 12.2,
+      "duration": "14 min"
+    },
+    {
+      "id": "dealflow-017",
+      "section": "deal-flow",
+      "module": "Deal Screening",
+      "lesson_title": "Ideal Deal Deck Components",
+      "description": "The core components a strong investment deck should include so you can quickly judge clarity, completeness, and professionalism.",
+      "youtubeId": "1ZMj-vRHCfw",
+      "order_index": 12.3,
+      "duration": "14 min"
+    },
+    {
+      "id": "dealflow-018",
+      "section": "deal-flow",
+      "module": "Deal Screening",
+      "lesson_title": "Good vs Bad Investment Decks",
+      "description": "A comparison of strong and weak deck presentation so you can spot quality signals and identify what may be missing or misleading.",
+      "youtubeId": "Mhm7u1OFz1U",
+      "order_index": 12.4,
+      "duration": "7 min"
+    },
+    {
       "id": "dealflow-005",
       "section": "deal-flow",
       "module": "Deal Screening",
@@ -153,6 +393,36 @@
       "youtubeId": "RgKAFK5djSk",
       "order_index": 13,
       "duration": "22 min"
+    },
+    {
+      "id": "dealflow-019",
+      "section": "deal-flow",
+      "module": "Deal Screening",
+      "lesson_title": "Understanding Risks in Passive Investing",
+      "description": "A practical overview of the main risk categories passive investors face and how to think about them before committing capital.",
+      "youtubeId": "ZU8hcallDX8",
+      "order_index": 13.1,
+      "duration": "12 min"
+    },
+    {
+      "id": "dealflow-020",
+      "section": "deal-flow",
+      "module": "Deal Screening",
+      "lesson_title": "Analyzing The Right Financial Metrics",
+      "description": "Which financial metrics matter most when screening deals and how to avoid being distracted by numbers that look impressive but say little.",
+      "youtubeId": "3rJKwu_SF2I",
+      "order_index": 13.2,
+      "duration": "7 min"
+    },
+    {
+      "id": "dealflow-021",
+      "section": "deal-flow",
+      "module": "Deal Screening",
+      "lesson_title": "Common \"Gotchas\" In Passive Investing",
+      "description": "Common pitfalls that catch passive investors off guard and what to watch for before you move from interest to commitment.",
+      "youtubeId": "223iJ3UobpQ",
+      "order_index": 13.3,
+      "duration": "16 min"
     },
     {
       "id": "dealflow-006",
@@ -215,6 +485,46 @@
       "duration": "23 min"
     },
     {
+      "id": "execution-009",
+      "section": "execution",
+      "module": "Due Diligence",
+      "lesson_title": "The Due Diligence Spectrum",
+      "description": "A framework for thinking about diligence as a spectrum, from quick screening to deeper validation as conviction increases.",
+      "youtubeId": "vlqAJBEsfQs",
+      "order_index": 19.1,
+      "duration": "16 min"
+    },
+    {
+      "id": "execution-010",
+      "section": "execution",
+      "module": "Due Diligence",
+      "lesson_title": "Overview | Validate with Feedback",
+      "description": "An overview of how to use outside input, experience, and trusted feedback loops to validate assumptions before moving forward.",
+      "youtubeId": "oI-rYMhAEvM",
+      "order_index": 19.2,
+      "duration": "3 min"
+    },
+    {
+      "id": "execution-011",
+      "section": "execution",
+      "module": "Due Diligence",
+      "lesson_title": "Conducting Effective Reference Checks",
+      "description": "How to run stronger reference checks, ask better questions, and use qualitative feedback to de-risk investment decisions.",
+      "youtubeId": "YxAm0pvwRXw",
+      "order_index": 19.3,
+      "duration": "10 min"
+    },
+    {
+      "id": "execution-012",
+      "section": "execution",
+      "module": "Due Diligence",
+      "lesson_title": "Understanding Fees In Real Estate Investments",
+      "description": "A breakdown of common fees in real estate investments and how fee structures can affect alignment, net returns, and risk.",
+      "youtubeId": "dgFqqhezprY",
+      "order_index": 19.4,
+      "duration": "11 min"
+    },
+    {
       "id": "execution-004",
       "section": "execution",
       "module": "Closing & Funding",
@@ -223,6 +533,26 @@
       "youtubeId": "M7lc1UVf-VE",
       "order_index": 20,
       "duration": "15 min"
+    },
+    {
+      "id": "execution-013",
+      "section": "execution",
+      "module": "Closing & Funding",
+      "lesson_title": "Overview | Execute the Plan",
+      "description": "A high-level walkthrough of turning your investment plan into action once diligence is complete and decisions are ready to be implemented.",
+      "youtubeId": "zelS0E186CE",
+      "order_index": 20.1,
+      "duration": "2 min"
+    },
+    {
+      "id": "execution-014",
+      "section": "execution",
+      "module": "Closing & Funding",
+      "lesson_title": "How To Use The LP Investment Schedule",
+      "description": "How to use an LP investment schedule to stay organized across opportunities, commitments, timing, and follow-through.",
+      "youtubeId": "KJbjaJR9iOg",
+      "order_index": 20.2,
+      "duration": "6 min"
     },
     {
       "id": "execution-005",

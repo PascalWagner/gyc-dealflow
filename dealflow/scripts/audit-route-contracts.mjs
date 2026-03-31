@@ -25,8 +25,12 @@ const officeHoursPage = read('src/routes/app/office-hours/+page.svelte');
 const resourcesPage = read('src/routes/app/resources/+page.svelte');
 const settingsPage = read('src/routes/app/settings/+page.svelte');
 const marketIntelApi = read('api/market-intel.js');
+const dealsApi = read('api/deals.js');
+const publicDealsApi = read('api/v1/deals.js');
+const publicDealDetailApi = read('api/v1/deals/[id].js');
 const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
+const dealDetailPage = read('src/routes/deal/[id]/+page.svelte');
 const taxPrepPage = read('src/routes/app/tax-prep/+page.svelte');
 const academyPage = read('src/routes/app/academy/+page.svelte');
 const incomeFundPage = read('src/routes/app/income-fund/+page.svelte');
@@ -40,16 +44,36 @@ const sidebar = read('src/lib/components/Sidebar.svelte');
 const filterBar = read('src/lib/components/FilterBar.svelte');
 const swipeFeed = read('src/lib/components/SwipeFeed.svelte');
 const compareView = read('src/lib/components/CompareView.svelte');
+const dealCard = read('src/lib/components/DealCard.svelte');
+const dealMap = read('src/lib/components/DealMap.svelte');
 const supabaseApi = read('api/_supabase.js');
 const userdataApi = read('api/userdata.js');
 const userdataRead = read('api/userdata/read.js');
 const userdataWrite = read('api/userdata/write.js');
 const buyboxApi = read('api/buybox.js');
 const eventsApi = read('api/events.js');
+const adminManageApi = read('api/admin-manage.js');
+const adminManageActions = read('api/admin-manage/actions.js');
+const adminSaasMetricsApi = read('api/admin-saas-metrics.js');
+const memberDealsApi = read('api/member/deals.js');
+const memberDealsRepo = read('api/member/deals/repository.js');
+const memberDealsTransform = read('api/member/deals/transform.js');
+const memberDealsFilters = read('api/member/deals/filters.js');
 const gpDealPerformanceApi = read('api/gp-deal-performance.js');
 const userScopedState = read('src/lib/utils/userScopedState.js');
 const smokeSpec = read('tests/session-persona.smoke.spec.ts');
 const layoutCss = read('src/lib/css/layout.css');
+const dealAnalysis = read('src/lib/utils/dealAnalysis.js');
+const dealIntroRequests = read('src/lib/utils/dealIntroRequests.js');
+const dealflowWorkspaceState = read('src/lib/utils/dealflowWorkspaceState.js');
+const dealOpportunityUtils = read('src/lib/utils/dealOpportunity.js');
+const dealDetailSignals = read('src/lib/utils/dealDetailSignals.js');
+const dealDueDiligenceUtils = read('src/lib/utils/dealDueDiligence.js');
+const dealReportUtils = read('src/lib/utils/dealReport.js');
+const dealSponsorsUtils = read('src/lib/utils/dealSponsors.js');
+const dealDetailUiUtils = read('src/lib/utils/dealDetailUi.js');
+const dealWorkflowUtils = read('src/lib/utils/dealWorkflow.js');
+const publicDealsShared = read('api/v1/deals/shared.js');
 
 function assertNoDerivedFunctionCalls(source, fileLabel, names) {
 	for (const name of names) {
@@ -91,6 +115,34 @@ assert(
 assert(
 	dealFlowPage.includes('class="deals-grid ly-grid"'),
 	'Deal Flow page must use the shared grid primitive for deal cards.'
+);
+assert(
+	dealFlowPage.includes("from '$lib/utils/dealflowWorkspaceState.js'") &&
+		dealFlowPage.includes('normalizeDealflowUiState') &&
+		dealFlowPage.includes('buildDealflowUiStateSnapshot'),
+	'Deal Flow page must reuse the shared dealflowWorkspaceState helpers for workspace serialization and restoration.'
+);
+for (const name of [
+	'emptyScrollPositions',
+	'normalizeDealFlowUiState',
+	'getBuyBoxCheckSize',
+	'getBuyBoxSelections'
+]) {
+	assert(
+		!dealFlowPage.includes(`function ${name}`),
+		`Deal Flow page must not define ${name} inline once the shared workspace-state utility exists.`
+	);
+}
+assert(
+	!dealFlowPage.includes('const stageDescriptions = {'),
+	'Deal Flow page must not define stage copy inline once the shared workspace-state utility exists.'
+);
+assert(
+	dealflowWorkspaceState.includes('export const DEALFLOW_STAGE_CONTENT') &&
+		dealflowWorkspaceState.includes('export function normalizeDealflowUiState') &&
+		dealflowWorkspaceState.includes('export function buildDealflowUiStateSnapshot') &&
+		dealflowWorkspaceState.includes('export function getBuyBoxSelections'),
+	'dealflowWorkspaceState utility must own the Deal Flow stage copy and workspace state normalization helpers.'
 );
 assert(
 	operatorsPage.includes('href={getOperatorHref(c)}'),
@@ -156,9 +208,178 @@ assert(
 	'Events API must require verified identity and explicit admin impersonation.'
 );
 assert(
+	adminManageApi.includes("from './admin-manage/actions.js'") &&
+		adminManageApi.includes('verifyAdmin(req)'),
+	'Admin manage API must be a thin verified-admin wrapper around the shared action map.'
+);
+assert(
+	adminManageActions.includes('catalogActions') &&
+		adminManageActions.includes('qualityActions') &&
+		adminManageActions.includes('userActions') &&
+		adminManageActions.includes('analyticsActions') &&
+		adminManageActions.includes('schemaActions'),
+	'Admin manage actions must be composed from domain modules.'
+);
+assert(
+	adminSaasMetricsApi.includes("from './admin-manage/users.js'") &&
+		adminSaasMetricsApi.includes('verifyAdmin(req)'),
+	'Legacy admin-saas-metrics endpoint must reuse the shared user metrics module behind admin auth.'
+);
+assert(
+	memberDealsApi.includes("from './deals/repository.js'") &&
+		memberDealsApi.includes("from './deals/transform.js'") &&
+		memberDealsApi.includes("from './deals/filters.js'"),
+	'Member deals API must delegate to modular repository/transform/filter layers.'
+);
+assert(
+	dealsApi.includes("from './member/deals/transform.js'") &&
+		dealsApi.includes('transformDeals(') &&
+		!dealsApi.includes('function computeStaleness('),
+	'Primary deals API must reuse the shared member-deals transform instead of rebuilding the normalized read model inline.'
+);
+assert(
+	memberDealsRepo.includes(".is('parent_deal_id', null)") &&
+		memberDealsRepo.includes(".in('deal_id', parentIds)") &&
+		memberDealsRepo.includes(".eq('asset_class', normalizedQuery.assetClass)") &&
+		memberDealsRepo.includes(".eq('status', normalizedQuery.status)") &&
+		memberDealsRepo.includes("applyDbSort(") &&
+		memberDealsTransform.includes('historicalReturns') &&
+		memberDealsFilters.includes('paginateDeals'),
+	'Member deals data path must fetch top-level deals, scope sponsor reads to the current dataset, push deterministic filters/sorting into the repository layer, and keep transform/pagination modular.'
+);
+assert(
+	publicDealsApi.includes("from './deals/shared.js'") &&
+		publicDealDetailApi.includes("from '../deals/shared.js'") &&
+		publicDealsShared.includes('export function formatPublicDeal') &&
+		publicDealsShared.includes('export function computePublicDealStaleness'),
+	'Public v1 deals APIs must share one formatter/staleness module instead of duplicating public deal serialization logic.'
+);
+assert(
 	gpDealPerformanceApi.includes("from '../src/lib/utils/dealflow-contract.js'") &&
 		gpDealPerformanceApi.includes('normalizeStage('),
 	'GP deal performance API must use the shared dealflow stage contract.'
+);
+assert(
+	dealDetailPage.includes("from '$lib/utils/dealOpportunity.js'") &&
+		dealDetailPage.includes('buildGoalProgress({ deal, buyBox, goalBranch })') &&
+		dealDetailPage.includes('buildBuyBoxChecks(deal, buyBox)'),
+	'Deal detail page must delegate opportunity-card view models to the shared dealOpportunity utility.'
+);
+for (const name of [
+	'getCompleteness',
+	'checkStaleness',
+	'buildBuyBoxLite',
+	'computeBuyBoxChecks',
+	'parseTargetAmount',
+	'formatTargetDisplay'
+]) {
+	assert(
+		!dealDetailPage.includes(`function ${name}`),
+		`Deal detail page must not define ${name} inline once the shared opportunity utility exists.`
+	);
+}
+assert(
+	dealOpportunityUtils.includes('export function getDealCompleteness') &&
+		dealOpportunityUtils.includes('export function buildGoalProgress') &&
+		dealOpportunityUtils.includes('export function buildBuyBoxChecks') &&
+		dealOpportunityUtils.includes('export function summarizeBuyBoxScore'),
+		'dealOpportunity utility must own completeness, goal progress, and buy-box matching helpers.'
+);
+assert(
+	dealDetailPage.includes("from '$lib/utils/dealDetailSignals.js'") &&
+		dealDetailPage.includes('buildDocumentRows(deal)') &&
+		dealDetailPage.includes('buildKeyRiskItems(deal, dealFit, isStale)'),
+	'Deal detail page must delegate geography, document, fee, and risk signal view models to the shared detail-signals utility.'
+);
+for (const name of [
+	'normalizeStateCode',
+	'getDealStateCodes',
+	'buildGeographyLabel',
+	'buildDocumentRows',
+	'buildSecFilingSummary',
+	'buildFeeRows',
+	'buildOperatorTrackRecordRows',
+	'buildInvestClearlyPreview',
+	'buildKeyRiskItems'
+]) {
+	assert(
+		!dealDetailPage.includes(`function ${name}`),
+		`Deal detail page must not define ${name} inline once the shared detail-signals utility exists.`
+	);
+}
+assert(
+	dealDetailSignals.includes('export function getDealStateCodes') &&
+		dealDetailSignals.includes('export function buildSecFilingSummary') &&
+		dealDetailSignals.includes('export function buildInvestClearlyPreview'),
+		'dealDetailSignals utility must own deal geography, filing, and admin preview read-model helpers.'
+);
+assert(
+	dealDetailPage.includes("from '$lib/utils/dealDueDiligence.js'") &&
+		dealDetailPage.includes('getChecklistForDeal(deal)') &&
+		dealDetailPage.includes('calcDDProgress(checklist, ddAnswers, deal)'),
+	'Deal detail page must delegate due-diligence templates and progress helpers to the shared DD utility.'
+);
+for (const name of ['getChecklistForDeal', 'getAutoValue', 'calcDDProgress']) {
+	assert(
+		!dealDetailPage.includes(`function ${name}`),
+		`Deal detail page must not define ${name} inline once the shared DD utility exists.`
+	);
+}
+assert(
+	dealDueDiligenceUtils.includes('export const DD_CHECKLIST_CREDIT') &&
+		dealDueDiligenceUtils.includes('export const DD_CHECKLIST_SYNDICATION') &&
+		dealDueDiligenceUtils.includes('export function calcDDProgress'),
+		'dealDueDiligence utility must own the DD templates and progress calculation helpers.'
+);
+assert(
+	dealDetailPage.includes("from '$lib/utils/dealReport.js'") &&
+		dealDetailPage.includes('buildInvestmentReportHtml({'),
+	'Deal detail page must delegate investment report HTML building to the shared dealReport utility.'
+);
+assert(
+	!dealDetailPage.includes("const gL = { passive_income:'Cash Flow'"),
+	'Deal detail page must not keep the old inline report builder constants once the report utility exists.'
+);
+assert(
+	dealReportUtils.includes('export function buildInvestmentReportHtml') &&
+		dealReportUtils.includes("from '$lib/utils/dealSponsors.js'"),
+	'dealReport utility must own the report HTML builder and resolve operator names through the shared sponsor utility.'
+);
+assert(
+	dealDetailPage.includes("from '$lib/utils/dealDetailUi.js'") &&
+		dealDetailPage.includes('getDeckPreviewUrl(deal.deckUrl)') &&
+		dealDetailPage.includes('buildDealInviteSharePayload({ deal, viewerName: inviteUserName, inviteUrl })'),
+	'Deal detail page must delegate hero/share/document helper logic to the shared dealDetailUi utility.'
+);
+for (const name of ['creditBadgeLabel', 'heroSummary', 'getDeckPreviewUrl']) {
+	assert(
+		!dealDetailPage.includes(`function ${name}`),
+		`Deal detail page must not define ${name} inline once the shared detail UI utility exists.`
+	);
+}
+assert(
+	dealDetailUiUtils.includes('export function getDealCreditBadgeLabel') &&
+		dealDetailUiUtils.includes('export function buildDealShareMailtoHref') &&
+		dealDetailUiUtils.includes('export function getDeckPreviewUrl'),
+	'dealDetailUi utility must own canonical hero/share/deck helper functions.'
+);
+assert(
+	dealSponsorsUtils.includes('export function getDealOperator') &&
+		dealSponsorsUtils.includes('export function getDealOperatorName'),
+	'dealSponsors utility must expose the shared canonical operator resolution helpers.'
+);
+assert(
+	dealDetailPage.includes("from '$lib/utils/dealIntroRequests.js'") &&
+		dealDetailPage.includes('submitDealIntroductionRequest({') &&
+		dealDetailPage.includes('getDealIntroductionRequestGate(deal.id)') &&
+		dealIntroRequests.includes("from '$lib/utils/dealSponsors.js'") &&
+		dealAnalysis.includes("from '$lib/utils/dealSponsors.js'") &&
+		dealCard.includes("from '$lib/utils/dealSponsors.js'") &&
+		dealMap.includes("from '$lib/utils/dealSponsors.js'") &&
+		memberDealsTransform.includes("from '../../../src/lib/utils/dealSponsors.js'") &&
+		memberDealsFilters.includes("from '../../../src/lib/utils/dealSponsors.js'") &&
+		dealWorkflowUtils.includes("from './dealSponsors.js'"),
+	'Deal detail, intro requests, analysis, cards, maps, workflow, and member deal transforms/filters must reuse the shared dealSponsors helper instead of duplicating sponsor fallbacks.'
 );
 assert(
 	userScopedState.includes('STATIC_SCOPED_KEYS') &&
@@ -395,3 +616,5 @@ console.log('- Sponsor and Person do not call rune-derived values like functions
 console.log('- Smoke coverage exists for Operators -> Sponsor -> Person');
 console.log('- Mobile navigation defaults to no hamburger on route pages');
 console.log('- Route pages opt into the shared layout shell');
+console.log('- Admin APIs share the verified admin action and metrics modules');
+console.log('- Member deals API uses the modular query/transform/filter pipeline');
