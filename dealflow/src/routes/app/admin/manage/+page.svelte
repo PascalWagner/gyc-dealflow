@@ -302,7 +302,7 @@
 		}
 
 		if (activeTab === 'deals' && result.data?.id) {
-			await goto(`/deal-review?id=${encodeURIComponent(result.data.id)}`);
+			await goto(`/deal-review?id=${encodeURIComponent(result.data.id)}&from=queue&step=intake`);
 			return;
 		}
 
@@ -416,7 +416,7 @@
 	}
 
 	function openDealEditor(row) {
-		goto(`/deal-review?id=${encodeURIComponent(row.id)}`);
+		goto(`/deal-review?id=${encodeURIComponent(row.id)}&from=queue&step=intake`);
 	}
 </script>
 

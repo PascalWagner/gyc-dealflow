@@ -6,7 +6,13 @@
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
-	import { getFreshSessionToken, isAdmin, isGP } from '$lib/stores/auth.js';
+	import {
+		ensureSessionUserToken,
+		getFreshSessionToken,
+		getStoredSessionUser,
+		isAdmin,
+		isGP
+	} from '$lib/stores/auth.js';
 	import {
 		buildDealReviewCompletenessModel,
 		buildDealReviewPayload,
@@ -23,6 +29,7 @@
 		resolveDealVisibility,
 		slugify
 	} from '$lib/utils/dealWorkflow.js';
+	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
 
 	function formatDateTime(value) {
 		if (!value) return 'Not yet saved';
@@ -43,6 +50,14 @@
 	let saveMessage = $state('');
 	let dirty = $state(false);
 	let deal = $state(null);
+	let deckInputEl = $state(null);
+	let ppmInputEl = $state(null);
+	let deckFile = $state(null);
+	let deckFileBase64 = $state('');
+	let ppmFile = $state(null);
+	let ppmFileBase64 = $state('');
+	let uploadError = $state('');
+	let uploadState = $state('idle');
 	let form = $state(createEmptyDealReviewForm());
 	let fieldWarnings = $state({});
 	let fieldErrors = $state({});
@@ -53,14 +68,21 @@
 	let autoExtractionHandled = $state(false);
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
+	const reviewStep = $derived($page.url.searchParams.get('step') === 'intake' ? 'intake' : 'review');
 	const shouldAutoExtract = $derived($page.url.searchParams.get('extract') === '1');
 	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
+	const cameFromQueue = $derived($page.url.searchParams.get('from') === 'queue');
 	const completeness = $derived(computeDealCompleteness(buildDealReviewCompletenessModel(form, deal)));
 	const lifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
 	const isVisibleToUsers = $derived(resolveDealVisibility(deal || {}));
 	const canPublishFromQueue = $derived(!completeness.hasBlockingIssues);
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
+	const pageSubtitle = $derived(
+		reviewStep === 'intake'
+			? 'Upload the source documents first, then review and clean up the extracted deal details.'
+			: 'Fix missing fields, tighten source context, and move the deal toward publishing with confidence.'
+	);
 	const hasSourceDocuments = $derived(
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
 	);
@@ -104,12 +126,167 @@
 		saveMessage = '';
 	}
 
+	function buildReviewHref({ step = 'review', extract = false, from = '' } = {}) {
+		const params = new URLSearchParams({ id: dealId });
+		if (from) params.set('from', from);
+		if (step === 'intake') params.set('step', 'intake');
+		if (extract) params.set('extract', '1');
+		return `/deal-review?${params.toString()}`;
+	}
+
 	function clearExtractionFlags() {
 		if (!browser) return;
 		const nextUrl = new URL(window.location.href);
 		nextUrl.searchParams.delete('extract');
 		nextUrl.searchParams.delete('from');
+		nextUrl.searchParams.delete('step');
 		window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+	}
+
+	async function readFileAsBase64(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (event) => {
+				const value = String(event?.target?.result || '');
+				resolve(value.includes(',') ? value.split(',')[1] : value);
+			};
+			reader.onerror = () => reject(new Error('Could not read file.'));
+			reader.readAsDataURL(file);
+		});
+	}
+
+	async function setUploadFile(file, type) {
+		if (!file) return;
+		if (file.size > 25 * 1024 * 1024) {
+			uploadError = 'File too large. Maximum size is 25MB.';
+			return;
+		}
+
+		const base64 = await readFileAsBase64(file);
+		if (type === 'deck') {
+			deckFile = file;
+			deckFileBase64 = base64;
+		} else {
+			ppmFile = file;
+			ppmFileBase64 = base64;
+		}
+		uploadError = '';
+	}
+
+	function handleDrop(event, type) {
+		event.preventDefault();
+		const [file] = event.dataTransfer?.files || [];
+		if (file) {
+			void setUploadFile(file, type);
+		}
+	}
+
+	function getActorFromSession() {
+		const session = getStoredSessionUser() || {};
+		const realAdmin = currentAdminRealUser();
+		const actorEmail = String(realAdmin?.email || session.email || '').trim().toLowerCase();
+		const actorName = String(
+			realAdmin?.name ||
+			realAdmin?.fullName ||
+			session.name ||
+			session.fullName ||
+			''
+		).trim();
+		const managementCompanyId = session.managementCompany?.id || session.managementCompanyId || null;
+
+		return {
+			session,
+			actorEmail,
+			actorName,
+			managementCompanyId
+		};
+	}
+
+	async function uploadDocument({ base64, file, docType, actor }) {
+		if (!file || !base64) return null;
+		if (!actor.session?.token) {
+			return 'Your session is missing the upload token needed for documents.';
+		}
+
+		const response = await fetch('/api/deck-upload', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${actor.session.token}`
+			},
+			body: JSON.stringify({
+				dealId,
+				dealName: docType === 'ppm' ? `${form.investmentName || deal?.investmentName || deal?.investment_name || 'Deal'} - PPM` : form.investmentName || deal?.investmentName || deal?.investment_name || 'Deal',
+				filedata: base64,
+				filename: file.name,
+				docType,
+				userEmail: actor.actorEmail,
+				userName: actor.actorName,
+				companyId: actor.managementCompanyId || ''
+			})
+		});
+
+		if (response.ok) return null;
+		const data = await response.json().catch(() => ({}));
+		return data?.error || `Could not upload the ${docType.toUpperCase()} file.`;
+	}
+
+	async function continueFromIntake({ autoExtract = true } = {}) {
+		if (!dealId || uploadState === 'running') return;
+
+		const hasExistingSource = Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url);
+		if (autoExtract && !deckFile && !ppmFile && !hasExistingSource) {
+			uploadError = 'Upload a deck or PPM before starting extraction, or continue to review manually.';
+			return;
+		}
+
+		uploadState = 'running';
+		uploadError = '';
+
+		try {
+			if (deckFile || ppmFile) {
+				const actor = getActorFromSession();
+				if (actor.session?.token) {
+					const tokenState = await ensureSessionUserToken(actor.session);
+					if (tokenState?.session) {
+						actor.session = tokenState.session;
+					}
+				}
+
+				const warnings = [];
+				const deckWarning = await uploadDocument({
+					base64: deckFileBase64,
+					file: deckFile,
+					docType: 'deck',
+					actor
+				});
+				if (deckWarning) warnings.push(deckWarning);
+
+				const ppmWarning = await uploadDocument({
+					base64: ppmFileBase64,
+					file: ppmFile,
+					docType: 'ppm',
+					actor
+				});
+				if (ppmWarning) warnings.push(ppmWarning);
+
+				if (warnings.length > 0) {
+					throw new Error(warnings.join('\n'));
+				}
+			}
+
+			await loadDeal();
+			autoExtractionHandled = false;
+			await goto(buildReviewHref({ step: 'review', extract: autoExtract, from: cameFromQueue ? 'queue' : 'intake' }), {
+				replaceState: true,
+				noScroll: true,
+				keepFocus: true
+			});
+		} catch (error) {
+			uploadError = error?.message || 'Could not attach the source documents.';
+		} finally {
+			uploadState = 'idle';
+		}
 	}
 
 	async function loadDeal() {
@@ -323,19 +500,19 @@
 <PageContainer className="deal-review-page ly-page-stack">
 	<PageHeader
 		title={deal ? form.investmentName || 'Untitled deal' : 'Deal Review'}
-		subtitle="Fix missing fields, tighten source context, and move the deal toward publishing with confidence."
+		subtitle={pageSubtitle}
 		className="deal-review-header"
 	>
 		<div slot="actions" class="header-actions">
 			<button type="button" class="ghost-btn" onclick={() => goto(backHref)}>
 				{backLabel}
 			</button>
-			{#if dealId}
+			{#if dealId && reviewStep === 'review'}
 				<a class="ghost-btn" href={`/deal/${dealId}`}>Open Deal</a>
+				<button type="button" class="primary-btn" onclick={saveDeal} disabled={loading || saving || !dirty}>
+					{saving ? 'Saving...' : dirty ? 'Save changes' : 'Saved'}
+				</button>
 			{/if}
-			<button type="button" class="primary-btn" onclick={saveDeal} disabled={loading || saving || !dirty}>
-				{saving ? 'Saving...' : dirty ? 'Save changes' : 'Saved'}
-			</button>
 		</div>
 	</PageHeader>
 
@@ -351,169 +528,320 @@
 			</div>
 		</div>
 	{:else}
-		<div class="review-layout">
-			<form class="editor-stack" onsubmit={(event) => { event.preventDefault(); saveDeal(); }}>
-				{#if cameFromIntake || extractionState !== 'idle' || extractionSummary}
-					<div class={`intake-banner intake-banner--${extractionState === 'error' ? 'error' : extractionState === 'running' ? 'working' : 'ready'}`}>
-						<div class="intake-banner__header">
-							<div>
-								<div class="intake-banner__eyebrow">Step 2 of 2</div>
-								<h2>Review extracted deal details</h2>
-							</div>
-							{#if hasSourceDocuments}
-								<button
-									type="button"
-									class="ghost-btn"
-									onclick={runExtraction}
-									disabled={extractionState === 'running' || saving}
-								>
-									{extractionState === 'running' ? 'Extracting...' : 'Run extraction again'}
-								</button>
-							{/if}
-						</div>
+		{#if reviewStep === 'intake'}
+			<div class="intake-layout">
+				<section class="intake-screen">
+					<div class="intake-screen__header">
+						<div class="intake-screen__eyebrow">Step 1 of 2</div>
+						<h2>Upload the deck and PPM first</h2>
+						<p>
+							Attach the source documents for this deal, then move into review after we extract what we can.
+						</p>
+					</div>
 
-						{#if extractionState === 'running'}
-							<p>We’re extracting fields from the uploaded deck and PPM now. Stay on this page and review the details as they come in.</p>
-						{:else if extractionState === 'error'}
-							<p>{extractionError}</p>
-						{:else if extractionSummary}
-							<p>
-								We found {extractionSummary.fieldsFound} candidate fields and applied {extractionSummary.fieldsApplied}
-								to the draft. Review each section below before publishing.
-							</p>
-							{#if extractionSummary.steps.length > 0}
-								<div class="intake-step-list">
-									{#each extractionSummary.steps as step}
-										<div class="intake-step-chip">
-											<strong>{step.step || 'step'}</strong>
-											<span>{step.fields_found || 0} fields</span>
-										</div>
-									{/each}
+					<div class="intake-screen__status-grid">
+						<div class="doc-status-card">
+							<div class="doc-status-card__label">Investment Deck</div>
+							<div class="doc-status-card__value">
+								{deckFile ? deckFile.name : deal?.deckUrl || deal?.deck_url ? 'Already attached' : 'Not uploaded'}
+							</div>
+						</div>
+						<div class="doc-status-card">
+							<div class="doc-status-card__label">PPM</div>
+							<div class="doc-status-card__value">
+								{ppmFile ? ppmFile.name : deal?.ppmUrl || deal?.ppm_url ? 'Already attached' : 'Not uploaded'}
+							</div>
+						</div>
+					</div>
+
+					<div class="intake-upload-grid">
+						<div class="intake-upload-card">
+							<div class="intake-upload-card__title">Deck</div>
+							<div
+								class="add-deal-modal__dropzone"
+								class:is-active={Boolean(deckFile)}
+								role="button"
+								tabindex="0"
+								onclick={() => deckInputEl?.click()}
+								onkeydown={(event) => {
+									if (event.key === 'Enter' || event.key === ' ') {
+										event.preventDefault();
+										deckInputEl?.click();
+									}
+								}}
+								ondragover={(event) => event.preventDefault()}
+								ondrop={(event) => handleDrop(event, 'deck')}
+							>
+								<div class="add-deal-modal__drop-icon">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+										<polyline points="17 8 12 3 7 8"></polyline>
+										<line x1="12" y1="3" x2="12" y2="15"></line>
+									</svg>
 								</div>
-							{/if}
-						{:else}
-							<p>
-								This deal came in through the intake flow. Review the extracted details, fill any gaps, and publish only when you trust the record.
-							</p>
-						{/if}
-					</div>
-				{/if}
-
-				{#if saveError}
-					<div class="message-banner message-banner--error">{saveError}</div>
-				{/if}
-				{#if saveMessage}
-					<div class="message-banner message-banner--success">{saveMessage}</div>
-				{/if}
-				{#if schemaWarnings.length > 0}
-					<div class="message-banner message-banner--warning">
-						Some imported values do not match the canonical field options yet. Review the highlighted structured fields before publishing.
-					</div>
-				{/if}
-
-				{#each dealReviewSections as section}
-					<section class="editor-card">
-						<div class="card-heading">
-							<div>
-								<h2>{section.title}</h2>
-								<p>{section.description}</p>
+								<div class="add-deal-modal__drop-copy">
+									{#if deckFile}
+										<strong>{deckFile.name}</strong> <span>({(deckFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+									{:else if deal?.deckUrl || deal?.deck_url}
+										<strong>Deck already attached</strong> <span>Click to replace it</span>
+									{:else}
+										Drop a PDF here or click to upload
+									{/if}
+								</div>
 							</div>
+							<input
+								bind:this={deckInputEl}
+								type="file"
+								accept=".pdf,.doc,.docx,.pptx,.ppt,.xlsx"
+								class="add-deal-modal__file-input"
+								onchange={(event) => setUploadFile(event.currentTarget.files?.[0], 'deck')}
+							>
 						</div>
-						<div class="field-grid">
-							{#each section.fields as fieldKey}
-								<FieldRenderer
-									field={dealFieldConfig[fieldKey]}
-									value={form[fieldKey]}
-									error={fieldErrors[fieldKey] || ''}
-									warning={fieldWarnings[fieldKey] || ''}
-									onupdate={(nextValue) => updateField(fieldKey, nextValue)}
-									onaction={fieldKey === 'slug' ? generateSlug : null}
-								/>
-							{/each}
+
+						<div class="intake-upload-card">
+							<div class="intake-upload-card__title">PPM</div>
+							<div
+								class="add-deal-modal__dropzone"
+								class:is-active={Boolean(ppmFile)}
+								role="button"
+								tabindex="0"
+								onclick={() => ppmInputEl?.click()}
+								onkeydown={(event) => {
+									if (event.key === 'Enter' || event.key === ' ') {
+										event.preventDefault();
+										ppmInputEl?.click();
+									}
+								}}
+								ondragover={(event) => event.preventDefault()}
+								ondrop={(event) => handleDrop(event, 'ppm')}
+							>
+								<div class="add-deal-modal__drop-icon">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+										<polyline points="17 8 12 3 7 8"></polyline>
+										<line x1="12" y1="3" x2="12" y2="15"></line>
+									</svg>
+								</div>
+								<div class="add-deal-modal__drop-copy">
+									{#if ppmFile}
+										<strong>{ppmFile.name}</strong> <span>({(ppmFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+									{:else if deal?.ppmUrl || deal?.ppm_url}
+										<strong>PPM already attached</strong> <span>Click to replace it</span>
+									{:else}
+										Drop a PDF here or click to upload
+									{/if}
+								</div>
+							</div>
+							<input
+								bind:this={ppmInputEl}
+								type="file"
+								accept=".pdf,.doc,.docx"
+								class="add-deal-modal__file-input"
+								onchange={(event) => setUploadFile(event.currentTarget.files?.[0], 'ppm')}
+							>
+						</div>
+					</div>
+
+					{#if uploadError}
+						<div class="message-banner message-banner--error">{uploadError}</div>
+					{/if}
+
+					<div class="intake-screen__actions">
+						<button
+							type="button"
+							class="ghost-btn"
+							onclick={() => continueFromIntake({ autoExtract: false })}
+							disabled={uploadState === 'running'}
+						>
+							{uploadState === 'running' ? 'Working...' : 'Review Manually'}
+						</button>
+						<button
+							type="button"
+							class="primary-btn"
+							onclick={() => continueFromIntake({ autoExtract: true })}
+							disabled={uploadState === 'running'}
+						>
+							{uploadState === 'running' ? 'Uploading...' : 'Upload & Extract'}
+						</button>
+					</div>
+				</section>
+			</div>
+		{:else}
+			<div class="review-layout">
+				<form class="editor-stack" onsubmit={(event) => { event.preventDefault(); saveDeal(); }}>
+					{#if cameFromIntake || cameFromQueue || extractionState !== 'idle' || extractionSummary}
+						<div class={`intake-banner intake-banner--${extractionState === 'error' ? 'error' : extractionState === 'running' ? 'working' : 'ready'}`}>
+							<div class="intake-banner__header">
+								<div>
+									<div class="intake-banner__eyebrow">Step 2 of 2</div>
+									<h2>Review extracted deal details</h2>
+								</div>
+								<div class="intake-banner__actions">
+									{#if cameFromQueue}
+										<button
+											type="button"
+											class="ghost-btn"
+											onclick={() => goto(buildReviewHref({ step: 'intake', from: 'queue' }), { replaceState: true, noScroll: true, keepFocus: true })}
+										>
+											Back to Uploads
+										</button>
+									{/if}
+									{#if hasSourceDocuments}
+										<button
+											type="button"
+											class="ghost-btn"
+											onclick={runExtraction}
+											disabled={extractionState === 'running' || saving}
+										>
+											{extractionState === 'running' ? 'Extracting...' : 'Run extraction again'}
+										</button>
+									{/if}
+								</div>
+							</div>
+
+							{#if extractionState === 'running'}
+								<p>We’re extracting fields from the uploaded deck and PPM now. Stay on this page and review the details as they come in.</p>
+							{:else if extractionState === 'error'}
+								<p>{extractionError}</p>
+							{:else if extractionSummary}
+								<p>
+									We found {extractionSummary.fieldsFound} candidate fields and applied {extractionSummary.fieldsApplied}
+									to the draft. Review each section below before publishing.
+								</p>
+								{#if extractionSummary.steps.length > 0}
+									<div class="intake-step-list">
+										{#each extractionSummary.steps as step}
+											<div class="intake-step-chip">
+												<strong>{step.step || 'step'}</strong>
+												<span>{step.fields_found || 0} fields</span>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							{:else}
+								<p>
+									Review the extracted details, fill any gaps, and publish only when you trust the record.
+								</p>
+							{/if}
+						</div>
+					{/if}
+
+					{#if saveError}
+						<div class="message-banner message-banner--error">{saveError}</div>
+					{/if}
+					{#if saveMessage}
+						<div class="message-banner message-banner--success">{saveMessage}</div>
+					{/if}
+					{#if schemaWarnings.length > 0}
+						<div class="message-banner message-banner--warning">
+							Some imported values do not match the canonical field options yet. Review the highlighted structured fields before publishing.
+						</div>
+					{/if}
+
+					{#each dealReviewSections as section}
+						<section class="editor-card">
+							<div class="card-heading">
+								<div>
+									<h2>{section.title}</h2>
+									<p>{section.description}</p>
+								</div>
+							</div>
+							<div class="field-grid">
+								{#each section.fields as fieldKey}
+									<FieldRenderer
+										field={dealFieldConfig[fieldKey]}
+										value={form[fieldKey]}
+										error={fieldErrors[fieldKey] || ''}
+										warning={fieldWarnings[fieldKey] || ''}
+										onupdate={(nextValue) => updateField(fieldKey, nextValue)}
+										onaction={fieldKey === 'slug' ? generateSlug : null}
+									/>
+								{/each}
+							</div>
+						</section>
+					{/each}
+
+					<div class="form-footer">
+						<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || saving}>
+							Reset unsaved changes
+						</button>
+						<button type="submit" class="primary-btn" disabled={saving}>
+							{saving ? 'Saving...' : 'Save deal'}
+						</button>
+					</div>
+				</form>
+
+				<aside class="review-sidebar">
+					<section class="sidebar-card sidebar-card--score">
+						<div class="sidebar-eyebrow">Completeness</div>
+						<div class="score-row">
+							<div class="score-value">{completeness.completenessScore}%</div>
+							<span class={`readiness-badge tone-${completeness.hasBlockingIssues ? 'blocked' : 'ready'}`}>
+								{completeness.hasBlockingIssues ? 'Blocked' : completeness.readinessLabel}
+							</span>
+						</div>
+						<div class="progress-shell" aria-hidden="true">
+							<div class="progress-fill" style={`width:${completeness.completenessScore}%`}></div>
+						</div>
+						<p class="sidebar-copy">{completeness.readinessLabel}</p>
+					</section>
+
+					<section class="sidebar-card">
+						<div class="sidebar-block">
+							<div class="sidebar-label">Lifecycle status</div>
+							<span class={`status-pill tone-${lifecycleTone(lifecycleStatus)}`}>
+								{DEAL_LIFECYCLE_LABELS[lifecycleStatus] || lifecycleStatus}
+							</span>
+						</div>
+						<div class="sidebar-block">
+							<div class="sidebar-label">Catalog state</div>
+							<div class="sidebar-value">{isVisibleToUsers ? 'Live in Deal Flow' : 'Not published yet'}</div>
+						</div>
+						<div class="sidebar-block">
+							<div class="sidebar-label">Last updated</div>
+							<div class="sidebar-value">{formatDateTime(deal?.updatedAt || deal?.updated_at || deal?.createdAt || deal?.created_at)}</div>
 						</div>
 					</section>
-				{/each}
 
-				<div class="form-footer">
-					<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || saving}>
-						Reset unsaved changes
-					</button>
-					<button type="submit" class="primary-btn" disabled={saving}>
-						{saving ? 'Saving...' : 'Save deal'}
-					</button>
-				</div>
-			</form>
-
-			<aside class="review-sidebar">
-				<section class="sidebar-card sidebar-card--score">
-					<div class="sidebar-eyebrow">Completeness</div>
-					<div class="score-row">
-						<div class="score-value">{completeness.completenessScore}%</div>
-						<span class={`readiness-badge tone-${completeness.hasBlockingIssues ? 'blocked' : 'ready'}`}>
-							{completeness.hasBlockingIssues ? 'Blocked' : completeness.readinessLabel}
-						</span>
-					</div>
-					<div class="progress-shell" aria-hidden="true">
-						<div class="progress-fill" style={`width:${completeness.completenessScore}%`}></div>
-					</div>
-					<p class="sidebar-copy">{completeness.readinessLabel}</p>
-				</section>
-
-				<section class="sidebar-card">
-					<div class="sidebar-block">
-						<div class="sidebar-label">Lifecycle status</div>
-						<span class={`status-pill tone-${lifecycleTone(lifecycleStatus)}`}>
-							{DEAL_LIFECYCLE_LABELS[lifecycleStatus] || lifecycleStatus}
-						</span>
-					</div>
-					<div class="sidebar-block">
-						<div class="sidebar-label">Catalog state</div>
-						<div class="sidebar-value">{isVisibleToUsers ? 'Live in Deal Flow' : 'Not published yet'}</div>
-					</div>
-					<div class="sidebar-block">
-						<div class="sidebar-label">Last updated</div>
-						<div class="sidebar-value">{formatDateTime(deal?.updatedAt || deal?.updated_at || deal?.createdAt || deal?.created_at)}</div>
-					</div>
-				</section>
-
-				<section class="sidebar-card">
-					<div class="sidebar-label">Required gaps</div>
-					{#if completeness.missingRequiredFields.length > 0}
-						<ul class="checklist">
-							{#each completeness.missingRequiredFields as field}
-								<li>{field}</li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="sidebar-copy">All required fields are present. This deal is ready to be published from the queue.</p>
-					{/if}
-				</section>
-
-				<section class="sidebar-card">
-					<div class="sidebar-label">Recommended improvements</div>
-					{#if completeness.missingRecommendedFields.length > 0}
-						<ul class="checklist checklist--muted">
-							{#each completeness.missingRecommendedFields as field}
-								<li>{field}</li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="sidebar-copy">Recommended fields look complete.</p>
-					{/if}
-				</section>
-
-				<section class="sidebar-card sidebar-card--note">
-					<div class="sidebar-label">Publishing rule</div>
-					<p class="sidebar-copy">
-						{#if canPublishFromQueue}
-							This deal can be published from the queue once you are comfortable making it live.
+					<section class="sidebar-card">
+						<div class="sidebar-label">Required gaps</div>
+						{#if completeness.missingRequiredFields.length > 0}
+							<ul class="checklist">
+								{#each completeness.missingRequiredFields as field}
+									<li>{field}</li>
+								{/each}
+							</ul>
 						{:else}
-							This deal should stay unpublished until every required field above is filled in.
+							<p class="sidebar-copy">All required fields are present. This deal is ready to be published from the queue.</p>
 						{/if}
-					</p>
-				</section>
-			</aside>
-		</div>
+					</section>
+
+					<section class="sidebar-card">
+						<div class="sidebar-label">Recommended improvements</div>
+						{#if completeness.missingRecommendedFields.length > 0}
+							<ul class="checklist checklist--muted">
+								{#each completeness.missingRecommendedFields as field}
+									<li>{field}</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="sidebar-copy">Recommended fields look complete.</p>
+						{/if}
+					</section>
+
+					<section class="sidebar-card sidebar-card--note">
+						<div class="sidebar-label">Publishing rule</div>
+						<p class="sidebar-copy">
+							{#if canPublishFromQueue}
+								This deal can be published from the queue once you are comfortable making it live.
+							{:else}
+								This deal should stay unpublished until every required field above is filled in.
+							{/if}
+						</p>
+					</section>
+				</aside>
+			</div>
+		{/if}
 	{/if}
 </PageContainer>
 
@@ -532,6 +860,93 @@
 		grid-template-columns: minmax(0, 1.45fr) minmax(300px, 360px);
 		gap: 20px;
 		align-items: start;
+	}
+
+	.intake-layout {
+		display: flex;
+		justify-content: center;
+	}
+
+	.intake-screen {
+		width: min(100%, 900px);
+		padding: 24px;
+		border-radius: 22px;
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 251, 0.98)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.12), transparent 40%);
+		border: 1px solid rgba(31, 81, 89, 0.1);
+		box-shadow: 0 16px 34px rgba(16, 37, 42, 0.05);
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+	}
+
+	.intake-screen__header h2 {
+		margin: 0;
+		font-family: var(--font-ui);
+		font-size: 28px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.intake-screen__header p {
+		margin: 10px 0 0;
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+		max-width: 680px;
+	}
+
+	.intake-screen__eyebrow {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin-bottom: 10px;
+	}
+
+	.intake-screen__status-grid,
+	.intake-upload-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 14px;
+	}
+
+	.doc-status-card,
+	.intake-upload-card {
+		padding: 16px;
+		border-radius: 18px;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		background: rgba(255, 255, 255, 0.82);
+	}
+
+	.doc-status-card__label,
+	.intake-upload-card__title {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin-bottom: 10px;
+	}
+
+	.doc-status-card__value {
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--text-dark);
+		line-height: 1.5;
+	}
+
+	.intake-screen__actions,
+	.intake-banner__actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 12px;
+		flex-wrap: wrap;
 	}
 
 	.editor-stack,
@@ -919,6 +1334,11 @@
 		.review-sidebar {
 			order: -1;
 		}
+
+		.intake-screen__status-grid,
+		.intake-upload-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	@media (max-width: 720px) {
@@ -931,13 +1351,23 @@
 		}
 
 		.header-actions,
-		.form-footer {
+		.form-footer,
+		.intake-screen__actions,
+		.intake-banner__actions {
 			align-items: stretch;
 		}
 
 		.ghost-btn,
 		.primary-btn {
 			width: 100%;
+		}
+
+		.intake-screen {
+			padding: 20px;
+		}
+
+		.intake-screen__header h2 {
+			font-size: 24px;
 		}
 	}
 </style>
