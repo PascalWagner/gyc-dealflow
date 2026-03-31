@@ -11,12 +11,11 @@
 	} from '$lib/utils/dealWorkflow.js';
 
 	let activeTab = $state('deals');
-	const tabs = ['deals', 'operators', 'users', 'intros', 'submissions'];
+	const tabs = ['deals', 'operators', 'users', 'intros'];
 	const tabLabels = {
 		operators: 'Operators',
 		deals: 'Deals',
 		users: 'Users',
-		submissions: 'Uploads',
 		intros: 'Intros'
 	};
 
@@ -131,32 +130,6 @@
 				}
 			} catch {
 				dealWorkflowRows = [];
-			}
-			loading = false;
-			return;
-		}
-
-		if (activeTab === 'submissions') {
-			try {
-				const resp = await fetch('/api/deal-submissions?dealId=all');
-				const data = await resp.json();
-				const submissions = data.submissions || [];
-				tableColumns = ['Deal', 'User', 'Type', 'Status', 'Date'];
-				tableData = submissions.map((submission) => ({
-					cols: [
-						submission.dealName || submission.dealId,
-						submission.email || '--',
-						submission.type || '--',
-						submission.status || 'pending',
-						submission.createdAt ? new Date(submission.createdAt).toLocaleDateString() : '--'
-					],
-					id: submission.id
-				}));
-				tableTotal = submissions.length;
-				resultCount = `${submissions.length} submissions`;
-			} catch {
-				tableData = [];
-				resultCount = 'Error loading';
 			}
 			loading = false;
 			return;
