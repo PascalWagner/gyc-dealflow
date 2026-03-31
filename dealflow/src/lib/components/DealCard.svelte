@@ -32,7 +32,6 @@
 		'textarea',
 		'summary',
 		'[role="button"]',
-		'[role="link"]',
 		'[data-card-control="true"]'
 	].join(', ');
 
@@ -150,6 +149,15 @@
 	const heroImg = $derived(deal.propertyImageUrl || getDealHeroImage(deal) || deal.imageUrl || '');
 	const historicalReturns = $derived(getDealHistoricalReturns(deal));
 	const showReturnsMiniChart = $derived(isDebtOrLendingDeal(deal) && historicalReturns.length >= 2);
+	const heroStyle = $derived.by(() => {
+		if (showReturnsMiniChart) {
+			return 'background:linear-gradient(160deg, #071419 0%, #12313a 52%, #1d4f5a 100%);';
+		}
+		if (heroImg) {
+			return `background:linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.5) 100%), url(${heroImg});background-size:cover;background-position:center;`;
+		}
+		return `background:${hero.gradient};`;
+	});
 	const managerTier = $derived(getManagerTier(deal));
 	const strategySummary = $derived(getStrategySummary(deal));
 	const fundingPct = $derived(deal.pctFunded ? Math.min(Number(deal.pctFunded), 100) : 0);
@@ -198,7 +206,8 @@
 	<div
 		class="card-hero"
 		class:has-returns-chart={showReturnsMiniChart}
-		style="background:{heroImg ? `linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.5) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}"
+		class:returns-hero={showReturnsMiniChart}
+		style={heroStyle}
 	>
 		<div class="hero-badges">
 			<span class="badge">{deal.assetClass || 'Real Estate'}</span>
@@ -460,6 +469,11 @@
 		max-width: calc(100% - 18px);
 	}
 
+	.card-hero.returns-hero {
+		background-size: cover;
+		background-position: center;
+	}
+
 	.hero-badges {
 		display: flex;
 		gap: 6px;
@@ -522,6 +536,13 @@
 		pointer-events: none;
 	}
 
+	.card-hero.returns-hero .hero-returns {
+		left: 12px;
+		right: 12px;
+		width: auto;
+		height: 112px;
+	}
+
 	.hero-irr {
 		position: relative;
 		z-index: 1;
@@ -533,6 +554,11 @@
 	.hero-irr.has-returns-chart {
 		max-width: 40%;
 		padding-bottom: 4px;
+	}
+
+	.card-hero.returns-hero .hero-irr.has-returns-chart {
+		max-width: none;
+		padding-bottom: 0;
 	}
 
 	.irr-value {
@@ -906,6 +932,13 @@
 			bottom: 10px;
 			width: min(58%, 212px);
 			height: 94px;
+		}
+
+		.card-hero.returns-hero .hero-returns {
+			left: 10px;
+			right: 10px;
+			width: auto;
+			height: 98px;
 		}
 
 		.hero-irr.has-returns-chart {

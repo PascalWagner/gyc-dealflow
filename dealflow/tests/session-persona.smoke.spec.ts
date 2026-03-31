@@ -134,12 +134,20 @@ async function installCoreApiMocks(page: Page) {
 				management_company_id: SPONSOR_ID,
 				ceo: PERSON_NAME,
 				investmentName: 'Yield Street Industrial Fund',
-				assetClass: 'Industrial',
+				assetClass: 'Private Debt / Credit',
 				dealType: 'Fund',
+				strategy: 'Lending',
 				targetIRR: 0.19,
 				preferredReturn: 0.08,
 				investmentMinimum: 5000,
-				status: 'Open'
+				status: 'Open',
+				historicalReturns: [
+					{ year: 2021, value: 13.8 },
+					{ year: 2022, value: 15.1 },
+					{ year: 2023, value: 14.6 },
+					{ year: 2024, value: 16.4 },
+					{ year: 2025, value: 15.8 }
+				]
 			},
 			{
 				id: 'deal-yield-2',
@@ -571,6 +579,22 @@ test.describe('session and persona smoke', () => {
 
 		await page.locator('.deal-card').first().locator('.card-title').click();
 		await expect(page).toHaveURL(/\/deal\/deal-yield-1$/);
+	});
+
+	test('lending funds replace the hero image with the returns display', async ({ page }) => {
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}));
+
+		await page.goto('/app/deals');
+
+		const firstHero = page.locator('.deal-card').first().locator('.card-hero');
+		await expect(firstHero).toHaveClass(/returns-hero/);
+		await expect(firstHero.locator('.hero-returns')).toBeVisible();
+		await expect(firstHero).not.toHaveAttribute('style', /url\(/);
 	});
 
 	test('deal card footer controls act locally without opening the detail page', async ({ page }) => {
