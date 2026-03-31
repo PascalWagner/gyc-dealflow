@@ -2,9 +2,19 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
+	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { getFreshSessionToken, isAdmin, isGP } from '$lib/stores/auth.js';
+	import {
+		buildDealReviewCompletenessModel,
+		buildDealReviewPayload,
+		createDealReviewFormFromDeal,
+		createEmptyDealReviewForm,
+		dealFieldConfig,
+		dealReviewSections,
+		getDealReviewFieldWarning
+	} from '$lib/utils/dealReviewSchema.js';
 	import {
 		computeDealCompleteness,
 		DEAL_LIFECYCLE_LABELS,
@@ -13,200 +23,10 @@
 		slugify
 	} from '$lib/utils/dealWorkflow.js';
 
-	function createEmptyForm() {
-		return {
-			investmentName: '',
-			sponsorName: '',
-			slug: '',
-			assetClass: '',
-			dealType: '',
-			offeringType: '',
-			availableTo: '',
-			status: '',
-			shortSummary: '',
-			investmentStrategy: '',
-			investmentMinimum: '',
-			targetIRR: '',
-			cashYield: '',
-			preferredReturn: '',
-			equityMultiple: '',
-			holdPeriod: '',
-			lpGpSplit: '',
-			investingGeography: '',
-			feeSummary: '',
-			redemption: '',
-			financials: '',
-			taxCharacteristics: '',
-			coverImageUrl: '',
-			heroMediaUrl: '',
-			riskNotes: '',
-			downsideNotes: '',
-			deckUrl: '',
-			primarySourceUrl: '',
-			primarySourceContext: '',
-			operatorBackground: '',
-			keyDates: '',
-			tags: ''
-		};
-	}
-
-	function readField(source, ...keys) {
-		for (const key of keys) {
-			const value = source?.[key];
-			if (value !== undefined && value !== null) return value;
-		}
-		return '';
-	}
-
-	function formatTextValue(value) {
-		if (value === null || value === undefined) return '';
-		if (Array.isArray(value)) return value.join(', ');
-		return String(value);
-	}
-
-	function formatNumberValue(value) {
-		if (value === null || value === undefined || value === '') return '';
-		return String(value);
-	}
-
 	function formatDateTime(value) {
 		if (!value) return 'Not yet saved';
 		const date = new Date(value);
 		return Number.isNaN(date.getTime()) ? 'Not yet saved' : date.toLocaleString();
-	}
-
-	function createFormFromDeal(source) {
-		return {
-			investmentName: formatTextValue(readField(source, 'investmentName', 'investment_name', 'name')),
-			sponsorName: formatTextValue(
-				readField(
-					source,
-					'sponsorName',
-					'sponsor_name',
-					'managementCompany',
-					'management_company_name'
-				)
-			),
-			slug: formatTextValue(readField(source, 'slug')) || slugify(readField(source, 'investmentName', 'investment_name', 'name')),
-			assetClass: formatTextValue(readField(source, 'assetClass', 'asset_class')),
-			dealType: formatTextValue(readField(source, 'dealType', 'deal_type')),
-			offeringType: formatTextValue(readField(source, 'offeringType', 'offering_type')),
-			availableTo: formatTextValue(readField(source, 'availableTo', 'available_to')),
-			status: formatTextValue(readField(source, 'status', 'offeringStatus', 'offering_status')),
-			shortSummary: formatTextValue(readField(source, 'shortSummary', 'short_summary')),
-			investmentStrategy: formatTextValue(readField(source, 'investmentStrategy', 'investment_strategy', 'strategy')),
-			investmentMinimum: formatNumberValue(readField(source, 'investmentMinimum', 'investment_minimum', 'minimumInvestment')),
-			targetIRR: formatNumberValue(readField(source, 'targetIRR', 'target_irr')),
-			cashYield: formatNumberValue(readField(source, 'cashYield', 'cash_yield', 'cashOnCash', 'cash_on_cash')),
-			preferredReturn: formatNumberValue(readField(source, 'preferredReturn', 'preferred_return')),
-			equityMultiple: formatNumberValue(readField(source, 'equityMultiple', 'equity_multiple')),
-			holdPeriod: formatNumberValue(readField(source, 'holdPeriod', 'hold_period_years')),
-			lpGpSplit: formatTextValue(readField(source, 'lpGpSplit', 'lp_gp_split')),
-			investingGeography: formatTextValue(readField(source, 'investingGeography', 'investing_geography', 'location')),
-			feeSummary: formatTextValue(readField(source, 'feeSummary', 'fee_summary')),
-			redemption: formatTextValue(readField(source, 'redemption')),
-			financials: formatTextValue(readField(source, 'financials')),
-			taxCharacteristics: formatTextValue(readField(source, 'taxCharacteristics', 'tax_characteristics')),
-			coverImageUrl: formatTextValue(readField(source, 'coverImageUrl', 'cover_image_url', 'property_image_url', 'image_url')),
-			heroMediaUrl: formatTextValue(readField(source, 'heroMediaUrl', 'hero_media_url')),
-			riskNotes: formatTextValue(readField(source, 'riskNotes', 'risk_notes')),
-			downsideNotes: formatTextValue(readField(source, 'downsideNotes', 'downside_notes')),
-			deckUrl: formatTextValue(readField(source, 'deckUrl', 'deck_url')),
-			primarySourceUrl: formatTextValue(readField(source, 'primarySourceUrl', 'primary_source_url')),
-			primarySourceContext: formatTextValue(readField(source, 'primarySourceContext', 'primary_source_context')),
-			operatorBackground: formatTextValue(readField(source, 'operatorBackground', 'operator_background')),
-			keyDates: formatTextValue(readField(source, 'keyDates', 'key_dates')),
-			tags: formatTextValue(readField(source, 'tags'))
-		};
-	}
-
-	function buildCompletenessDeal(formState, existingDeal) {
-		return {
-			investmentName: formState.investmentName,
-			sponsorName: formState.sponsorName,
-			slug: formState.slug || slugify(formState.investmentName),
-			assetClass: formState.assetClass,
-			shortSummary: formState.shortSummary,
-			investmentMinimum: formState.investmentMinimum,
-			status: formState.status,
-			coverImageUrl: formState.coverImageUrl,
-			heroMediaUrl: formState.heroMediaUrl,
-			targetIRR: formState.targetIRR,
-			cashYield: formState.cashYield,
-			preferredReturn: formState.preferredReturn,
-			equityMultiple: formState.equityMultiple,
-			riskNotes: formState.riskNotes,
-			downsideNotes: formState.downsideNotes,
-			deckUrl: formState.deckUrl,
-			primarySourceUrl: formState.primarySourceUrl,
-			primarySourceContext: formState.primarySourceContext,
-			holdPeriod: formState.holdPeriod,
-			investingGeography: formState.investingGeography,
-			feeSummary: formState.feeSummary,
-			redemption: formState.redemption,
-			financials: formState.financials,
-			taxCharacteristics: formState.taxCharacteristics,
-			tags: formState.tags
-				.split(',')
-				.map((item) => item.trim())
-				.filter(Boolean),
-			investmentStrategy: formState.investmentStrategy,
-			operatorBackground: formState.operatorBackground,
-			keyDates: formState.keyDates,
-			updatedAt: existingDeal?.updatedAt || existingDeal?.updated_at || null
-		};
-	}
-
-	function toOptionalNumber(value) {
-		if (value === null || value === undefined || value === '') return null;
-		const numericValue =
-			typeof value === 'number' ? value : Number(String(value).replace(/,/g, '').trim());
-		return Number.isFinite(numericValue) ? numericValue : null;
-	}
-
-	function toOptionalString(value) {
-		const stringValue = String(value || '').trim();
-		return stringValue;
-	}
-
-	function buildSavePayload(formState) {
-		return {
-			investmentName: toOptionalString(formState.investmentName),
-			sponsorName: toOptionalString(formState.sponsorName),
-			slug: toOptionalString(formState.slug) || slugify(formState.investmentName),
-			assetClass: toOptionalString(formState.assetClass),
-			dealType: toOptionalString(formState.dealType),
-			offeringType: toOptionalString(formState.offeringType),
-			availableTo: toOptionalString(formState.availableTo),
-			status: toOptionalString(formState.status),
-			shortSummary: toOptionalString(formState.shortSummary),
-			investmentStrategy: toOptionalString(formState.investmentStrategy),
-			investmentMinimum: toOptionalNumber(formState.investmentMinimum),
-			targetIRR: toOptionalNumber(formState.targetIRR),
-			cashYield: toOptionalNumber(formState.cashYield),
-			preferredReturn: toOptionalNumber(formState.preferredReturn),
-			equityMultiple: toOptionalNumber(formState.equityMultiple),
-			holdPeriod: toOptionalNumber(formState.holdPeriod),
-			lpGpSplit: toOptionalString(formState.lpGpSplit),
-			investingGeography: toOptionalString(formState.investingGeography),
-			feeSummary: toOptionalString(formState.feeSummary),
-			redemption: toOptionalString(formState.redemption),
-			financials: toOptionalString(formState.financials),
-			taxCharacteristics: toOptionalString(formState.taxCharacteristics),
-			coverImageUrl: toOptionalString(formState.coverImageUrl),
-			heroMediaUrl: toOptionalString(formState.heroMediaUrl),
-			riskNotes: toOptionalString(formState.riskNotes),
-			downsideNotes: toOptionalString(formState.downsideNotes),
-			deckUrl: toOptionalString(formState.deckUrl),
-			primarySourceUrl: toOptionalString(formState.primarySourceUrl),
-			primarySourceContext: toOptionalString(formState.primarySourceContext),
-			operatorBackground: toOptionalString(formState.operatorBackground),
-			keyDates: toOptionalString(formState.keyDates),
-			tags: formState.tags
-				.split(',')
-				.map((item) => item.trim())
-				.filter(Boolean)
-		};
 	}
 
 	function lifecycleTone(status) {
@@ -222,30 +42,53 @@
 	let saveMessage = $state('');
 	let dirty = $state(false);
 	let deal = $state(null);
-	let form = $state(createEmptyForm());
+	let form = $state(createEmptyDealReviewForm());
+	let fieldWarnings = $state({});
+	let fieldErrors = $state({});
 	let previousDealId = $state('');
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
-	const completeness = $derived(computeDealCompleteness(buildCompletenessDeal(form, deal)));
+	const completeness = $derived(computeDealCompleteness(buildDealReviewCompletenessModel(form, deal)));
 	const lifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
 	const isVisibleToUsers = $derived(resolveDealVisibility(deal || {}));
 	const canPublishFromQueue = $derived(!completeness.hasBlockingIssues);
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
+	const schemaWarnings = $derived(
+		Object.entries(fieldWarnings).filter(([, message]) => Boolean(message))
+	);
 
 	function markDirty() {
 		dirty = true;
 		saveMessage = '';
 	}
 
-	function generateSlug() {
-		form.slug = slugify(form.investmentName);
+	function updateField(fieldKey, nextValue) {
+		form = {
+			...form,
+			[fieldKey]: nextValue
+		};
+		fieldErrors = {
+			...fieldErrors,
+			[fieldKey]: ''
+		};
+		fieldWarnings = {
+			...fieldWarnings,
+			[fieldKey]: getDealReviewFieldWarning(fieldKey, nextValue)
+		};
 		markDirty();
+	}
+
+	function generateSlug() {
+		updateField('slug', slugify(form.investmentName));
 	}
 
 	function resetForm() {
 		if (!deal) return;
-		form = createFormFromDeal(deal);
+		const hydrated = createDealReviewFormFromDeal(deal);
+		form = hydrated.form;
+		fieldWarnings = hydrated.warnings;
+		fieldErrors = {};
 		dirty = false;
 		saveError = '';
 		saveMessage = '';
@@ -275,7 +118,10 @@
 			}
 
 			deal = payload.deal;
-			form = createFormFromDeal(payload.deal);
+			const hydrated = createDealReviewFormFromDeal(payload.deal);
+			form = hydrated.form;
+			fieldWarnings = hydrated.warnings;
+			fieldErrors = {};
 			dirty = false;
 			saveError = '';
 		} catch (error) {
@@ -288,6 +134,14 @@
 
 	async function saveDeal() {
 		if (!dealId || saving) return;
+
+		const { payload: nextPayload, errors } = buildDealReviewPayload(form);
+		if (Object.keys(errors).length > 0) {
+			fieldErrors = errors;
+			saveError = 'Fix the highlighted fields before saving.';
+			saveMessage = '';
+			return;
+		}
 
 		saving = true;
 		saveError = '';
@@ -303,16 +157,32 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token}`
 				},
-				body: JSON.stringify(buildSavePayload(form))
+				body: JSON.stringify(nextPayload)
 			});
 			const payload = await response.json().catch(() => ({}));
 
 			if (!response.ok || !payload?.deal) {
+				if (payload?.fieldErrors && typeof payload.fieldErrors === 'object') {
+					const nextFieldErrors = { ...payload.fieldErrors };
+					if (nextFieldErrors.managementCompanyId && !nextFieldErrors.sponsor) {
+						nextFieldErrors.sponsor = nextFieldErrors.managementCompanyId;
+					}
+					if (nextFieldErrors.sponsorName && !nextFieldErrors.sponsor) {
+						nextFieldErrors.sponsor = nextFieldErrors.sponsorName;
+					}
+					fieldErrors = {
+						...fieldErrors,
+						...nextFieldErrors
+					};
+				}
 				throw new Error(payload?.error || 'Failed to save deal.');
 			}
 
 			deal = payload.deal;
-			form = createFormFromDeal(payload.deal);
+			const hydrated = createDealReviewFormFromDeal(payload.deal);
+			form = hydrated.form;
+			fieldWarnings = hydrated.warnings;
+			fieldErrors = {};
 			dirty = false;
 			saveMessage = 'Deal saved.';
 		} catch (error) {
@@ -370,224 +240,41 @@
 		</div>
 	{:else}
 		<div class="review-layout">
-			<form class="editor-stack" oninput={markDirty} onchange={markDirty} onsubmit={(event) => { event.preventDefault(); saveDeal(); }}>
+			<form class="editor-stack" onsubmit={(event) => { event.preventDefault(); saveDeal(); }}>
 				{#if saveError}
 					<div class="message-banner message-banner--error">{saveError}</div>
 				{/if}
 				{#if saveMessage}
 					<div class="message-banner message-banner--success">{saveMessage}</div>
 				{/if}
+				{#if schemaWarnings.length > 0}
+					<div class="message-banner message-banner--warning">
+						Some imported values do not match the canonical field options yet. Review the highlighted structured fields before publishing.
+					</div>
+				{/if}
 
-				<section class="editor-card">
-					<div class="card-heading">
-						<div>
-							<h2>Core deal profile</h2>
-							<p>These fields drive the queue score and the basic user-facing listing quality.</p>
+				{#each dealReviewSections as section}
+					<section class="editor-card">
+						<div class="card-heading">
+							<div>
+								<h2>{section.title}</h2>
+								<p>{section.description}</p>
+							</div>
 						</div>
-					</div>
-					<div class="field-grid">
-						<label class="field field--span-2">
-							<span>Deal name</span>
-							<input bind:value={form.investmentName} placeholder="Sunrise Multifamily Fund II" />
-						</label>
-						<label class="field">
-							<span>Sponsor</span>
-							<input bind:value={form.sponsorName} placeholder="Operator or sponsor entity" />
-						</label>
-						<label class="field">
-							<span>Asset class</span>
-							<input bind:value={form.assetClass} placeholder="Multifamily, debt fund, industrial..." />
-						</label>
-						<label class="field field--span-2">
-							<span class="field-label-row">
-								<span>Slug</span>
-								<button type="button" class="inline-btn" onclick={generateSlug}>Generate from name</button>
-							</span>
-							<input bind:value={form.slug} placeholder="sunrise-multifamily-fund-ii" />
-						</label>
-						<label class="field">
-							<span>Deal type</span>
-							<input bind:value={form.dealType} placeholder="Fund, syndication, JV..." />
-						</label>
-						<label class="field">
-							<span>Offering type</span>
-							<input bind:value={form.offeringType} placeholder="506(c), evergreen, note..." />
-						</label>
-						<label class="field">
-							<span>Offering status</span>
-							<input bind:value={form.status} placeholder="Draft, open, fully funded..." />
-						</label>
-						<label class="field">
-							<span>Available to</span>
-							<input bind:value={form.availableTo} placeholder="Accredited investors, members..." />
-						</label>
-						<label class="field">
-							<span>Minimum investment</span>
-							<input bind:value={form.investmentMinimum} type="number" min="0" step="1000" placeholder="50000" />
-						</label>
-						<label class="field">
-							<span>Geography / market</span>
-							<input bind:value={form.investingGeography} placeholder="Dallas-Fort Worth, Southeast US..." />
-						</label>
-						<label class="field field--span-2">
-							<span>Short summary</span>
-							<textarea
-								bind:value={form.shortSummary}
-								rows="4"
-								placeholder="What is the deal, why does it exist, and what should an investor understand immediately?"
-							></textarea>
-						</label>
-						<label class="field field--span-2">
-							<span>Strategy / tags context</span>
-							<textarea
-								bind:value={form.investmentStrategy}
-								rows="3"
-								placeholder="Value-add multifamily in growth markets, bridge lending, income-focused note strategy..."
-							></textarea>
-						</label>
-					</div>
-				</section>
-
-				<section class="editor-card">
-					<div class="card-heading">
-						<div>
-							<h2>Returns and economics</h2>
-							<p>Capture the payout profile, time horizon, fees, and any LP terms that matter for review.</p>
+						<div class="field-grid">
+							{#each section.fields as fieldKey}
+								<FieldRenderer
+									field={dealFieldConfig[fieldKey]}
+									value={form[fieldKey]}
+									error={fieldErrors[fieldKey] || ''}
+									warning={fieldWarnings[fieldKey] || ''}
+									onupdate={(nextValue) => updateField(fieldKey, nextValue)}
+									onaction={fieldKey === 'slug' ? generateSlug : null}
+								/>
+							{/each}
 						</div>
-					</div>
-					<div class="field-grid">
-						<label class="field">
-							<span>Target IRR</span>
-							<input bind:value={form.targetIRR} type="number" step="0.1" placeholder="15" />
-						</label>
-						<label class="field">
-							<span>Cash yield</span>
-							<input bind:value={form.cashYield} type="number" step="0.1" placeholder="8" />
-						</label>
-						<label class="field">
-							<span>Preferred return</span>
-							<input bind:value={form.preferredReturn} type="number" step="0.1" placeholder="8" />
-						</label>
-						<label class="field">
-							<span>Equity multiple</span>
-							<input bind:value={form.equityMultiple} type="number" step="0.01" placeholder="2.0" />
-						</label>
-						<label class="field">
-							<span>Hold period (years)</span>
-							<input bind:value={form.holdPeriod} type="number" step="0.1" placeholder="5" />
-						</label>
-						<label class="field">
-							<span>LP / GP split</span>
-							<input bind:value={form.lpGpSplit} placeholder="80/20 after pref" />
-						</label>
-						<label class="field field--span-2">
-							<span>Fee summary</span>
-							<textarea
-								bind:value={form.feeSummary}
-								rows="3"
-								placeholder="Acquisition, asset management, disposition, promote..."
-							></textarea>
-						</label>
-						<label class="field">
-							<span>Liquidity / redemption terms</span>
-							<textarea bind:value={form.redemption} rows="3" placeholder="Lockup, redemption windows, gates..." ></textarea>
-						</label>
-						<label class="field">
-							<span>Audited / financials</span>
-							<input bind:value={form.financials} placeholder="Audited, unaudited, quarterly reviewed..." />
-						</label>
-						<label class="field field--span-2">
-							<span>Tax characteristics</span>
-							<textarea
-								bind:value={form.taxCharacteristics}
-								rows="3"
-								placeholder="K-1 timing, depreciation profile, 1099, state filing considerations..."
-							></textarea>
-						</label>
-					</div>
-				</section>
-
-				<section class="editor-card">
-					<div class="card-heading">
-						<div>
-							<h2>Risk and diligence notes</h2>
-							<p>Use this section to make the review trustworthy, not just complete.</p>
-						</div>
-					</div>
-					<div class="field-grid">
-						<label class="field field--span-2">
-							<span>Risk notes</span>
-							<textarea
-								bind:value={form.riskNotes}
-								rows="4"
-								placeholder="Market, leverage, execution, concentration, sponsor, or structure risks..."
-							></textarea>
-						</label>
-						<label class="field field--span-2">
-							<span>Downside notes</span>
-							<textarea
-								bind:value={form.downsideNotes}
-								rows="4"
-								placeholder="What happens if underwriting assumptions miss? How is downside absorbed?"
-							></textarea>
-						</label>
-						<label class="field field--span-2">
-							<span>Operator background</span>
-							<textarea
-								bind:value={form.operatorBackground}
-								rows="4"
-								placeholder="Track record, experience, prior exits, team credibility, and relevant context..."
-							></textarea>
-						</label>
-						<label class="field field--span-2">
-							<span>Key dates</span>
-							<textarea
-								bind:value={form.keyDates}
-								rows="3"
-								placeholder="Launch date, target close, first distribution, extension options, maturity..."
-							></textarea>
-						</label>
-					</div>
-				</section>
-
-				<section class="editor-card">
-					<div class="card-heading">
-						<div>
-							<h2>Media and source context</h2>
-							<p>Every publishable deal needs evidence, a usable hero asset, and enough source context to trust the entry.</p>
-						</div>
-					</div>
-					<div class="field-grid">
-						<label class="field">
-							<span>Cover image URL</span>
-							<input bind:value={form.coverImageUrl} placeholder="https://..." />
-						</label>
-						<label class="field">
-							<span>Hero media URL</span>
-							<input bind:value={form.heroMediaUrl} placeholder="https://..." />
-						</label>
-						<label class="field">
-							<span>Deck URL</span>
-							<input bind:value={form.deckUrl} placeholder="https://..." />
-						</label>
-						<label class="field">
-							<span>Primary source URL</span>
-							<input bind:value={form.primarySourceUrl} placeholder="https://..." />
-						</label>
-						<label class="field field--span-2">
-							<span>Primary source / CTA context</span>
-							<textarea
-								bind:value={form.primarySourceContext}
-								rows="3"
-								placeholder="What is the source of truth here and what should a user do next?"
-							></textarea>
-						</label>
-						<label class="field field--span-2">
-							<span>Tags / strategy keywords</span>
-							<input bind:value={form.tags} placeholder="Income, Sunbelt, GP co-invest, debt, multifamily" />
-						</label>
-					</div>
-				</section>
+					</section>
+				{/each}
 
 				<div class="form-footer">
 					<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || saving}>
@@ -879,6 +566,12 @@
 		background: rgba(22, 122, 82, 0.1);
 		color: #167a52;
 		border: 1px solid rgba(22, 122, 82, 0.16);
+	}
+
+	.message-banner--warning {
+		background: rgba(214, 140, 69, 0.12);
+		color: #8c581f;
+		border: 1px solid rgba(214, 140, 69, 0.18);
 	}
 
 	.score-row {

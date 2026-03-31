@@ -4,10 +4,12 @@
 
 import { getAdminClient, setCors, ADMIN_EMAILS } from '../_supabase.js';
 import { resolveDealWorkflowMutation, slugify } from '../../src/lib/utils/dealWorkflow.js';
+import { normalizeDealReviewPatch } from '../../src/lib/utils/dealReviewSchema.js';
 
 const FIELD_MAP = {
   // camelCase (client) → snake_case (DB)
   investmentName: 'investment_name',
+  managementCompanyId: 'management_company_id',
   assetClass: 'asset_class',
   dealType: 'deal_type',
   strategy: 'strategy',
@@ -112,6 +114,10 @@ const NUMERIC_FIELD_KEYS = new Set([
 
 function normalizeValue(key, value) {
   if (value === undefined) return value;
+  if (key === 'managementCompanyId') {
+    const trimmed = String(value || '').trim();
+    return trimmed || null;
+  }
   if (key === 'tags') {
     if (Array.isArray(value)) {
       return value.map((item) => String(item || '').trim()).filter(Boolean);
@@ -185,12 +191,57 @@ export default async function handler(req, res) {
 
   // Build update object from whitelisted fields
   const body = req.body || {};
+  const { values: normalizedBody, errors: reviewFieldErrors } = normalizeDealReviewPatch(body);
+  if (Object.keys(reviewFieldErrors).length > 0) {
+    return res.status(400).json({
+      error: 'Invalid deal update',
+      fieldErrors: reviewFieldErrors
+    });
+  }
+
+  const candidateBody = {
+    ...body,
+    ...normalizedBody
+  };
+
+  if (candidateBody.createManagementCompany === true && !candidateBody.managementCompanyId && candidateBody.sponsorName) {
+    const { data: createdCompany, error: createCompanyError } = await supabase
+      .from('management_companies')
+      .insert({ operator_name: candidateBody.sponsorName })
+      .select('id, operator_name')
+      .single();
+
+    if (createCompanyError || !createdCompany) {
+      return res.status(500).json({ error: 'Failed to create sponsor record' });
+    }
+
+    candidateBody.managementCompanyId = createdCompany.id;
+    candidateBody.sponsorName = createdCompany.operator_name;
+
+    await supabase
+      .from('operator_permissions')
+      .upsert({ management_company_id: createdCompany.id }, { onConflict: 'management_company_id' })
+      .catch(() => {});
+  } else if (candidateBody.managementCompanyId) {
+    const { data: linkedCompany, error: linkedCompanyError } = await supabase
+      .from('management_companies')
+      .select('id, operator_name')
+      .eq('id', candidateBody.managementCompanyId)
+      .single();
+
+    if (linkedCompanyError || !linkedCompany) {
+      return res.status(400).json({ error: 'Selected sponsor record was not found' });
+    }
+
+    candidateBody.sponsorName = linkedCompany.operator_name;
+  }
+
   const updates = {};
   const updated = [];
 
   for (const [camelKey, snakeKey] of Object.entries(FIELD_MAP)) {
-    if (camelKey in body) {
-      updates[snakeKey] = normalizeValue(camelKey, body[camelKey]);
+    if (camelKey in candidateBody) {
+      updates[snakeKey] = normalizeValue(camelKey, candidateBody[camelKey]);
       updated.push(camelKey);
     }
   }
@@ -202,8 +253,8 @@ export default async function handler(req, res) {
   if (updates.investment_name && !updates.slug) {
     updates.slug = slugify(updates.investment_name);
   }
-  if (!updates.sponsor_name && body.sponsorName !== undefined) {
-    updates.sponsor_name = String(body.sponsorName || '').trim();
+  if (!updates.sponsor_name && candidateBody.sponsorName !== undefined) {
+    updates.sponsor_name = String(candidateBody.sponsorName || '').trim();
   }
 
   if (updates.lifecycle_status !== undefined || updates.is_visible_to_users !== undefined) {
