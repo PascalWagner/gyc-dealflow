@@ -998,20 +998,8 @@
 							<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
 						{/if}
 					</div>
-		{:else if showSwipeFeed}
-			<SwipeFeed
-				deals={filteredDeals}
-				compareIds={$compareDealIds}
-				getActionModel={getDealCardActionModelForCard}
-				getUtilityAnalytics={getDealUtilityAnalyticsForCard}
-				{pendingFooterActionByDealId}
-				isCompareAtLimit={isDealCompareAtLimit}
-				onutilityaction={handleDealCardUtilityAction}
-				onfooteraction={handleDealCardFooterAction}
-				oncardview={trackDealView}
-			/>
-		{:else}
-			<div class="deals-grid ly-grid">
+				{:else}
+					<div class="deals-grid ly-grid">
 						{#each filteredDeals as deal (deal.id)}
 							{@const actionModel = getDealCardActionModelForCard(deal)}
 							{@const utilityAction = actionModel.utilityAction}
@@ -1037,6 +1025,18 @@
 				{/if}
 			</div>
 		</div>
+	{:else if showSwipeFeed}
+		<SwipeFeed
+			deals={filteredDeals}
+			compareIds={$compareDealIds}
+			getActionModel={getDealCardActionModelForCard}
+			getUtilityAnalytics={getDealUtilityAnalyticsForCard}
+			{pendingFooterActionByDealId}
+			isCompareAtLimit={isDealCompareAtLimit}
+			onutilityaction={handleDealCardUtilityAction}
+			onfooteraction={handleDealCardFooterAction}
+			oncardview={trackDealView}
+		/>
 	{:else if filteredDeals.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
