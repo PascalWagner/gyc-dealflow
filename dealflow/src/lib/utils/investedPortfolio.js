@@ -1,4 +1,5 @@
 import { normalizeStage } from '$lib/utils/dealflow-contract.js';
+import { getPendingReviewBadgeLabel } from '$lib/utils/dealSubmission.js';
 
 function firstNonEmpty(...values) {
 	for (const value of values) {
@@ -59,6 +60,11 @@ export function normalizePortfolioRecord(record = {}) {
 		entityInvestedInto: record.entityInvestedInto || record.entity_invested_into || '',
 		holdPeriod: record.holdPeriod || record.hold_period || '',
 		notes: record.notes || '',
+		lifecycleStatus: record.lifecycleStatus || record.lifecycle_status || '',
+		isPendingReview: Boolean(record.isPendingReview),
+		reviewStatusLabel: record.reviewStatusLabel || '',
+		countsTowardPortfolioMetrics: record.countsTowardPortfolioMetrics !== false,
+		displayStatus: record.displayStatus || record.status || 'Active',
 		_missingDetails: Boolean(record._missingDetails),
 		_source: record._source || 'details'
 	};
@@ -99,6 +105,13 @@ export function buildInvestedPortfolio({ stageMap = {}, deals = [], portfolio = 
 		.map((dealId) => {
 			const detailRecord = detailsByDealId.get(dealId);
 			const deal = dealById.get(dealId) || {};
+			const lifecycleStatus = firstNonEmpty(detailRecord?.lifecycleStatus, deal.lifecycleStatus, deal.lifecycle_status);
+			const isPendingReview =
+				lifecycleStatus
+					? lifecycleStatus !== 'published'
+					: String(detailRecord?.status || '').trim().toLowerCase() === 'pending';
+			const displayStatus = isPendingReview ? getPendingReviewBadgeLabel(lifecycleStatus) : (detailRecord?.status || 'Active');
+			const countsTowardPortfolioMetrics = !isPendingReview && String(displayStatus).trim().toLowerCase() !== 'pending';
 
 			return normalizePortfolioRecord({
 				id: detailRecord?.id || `invested_${dealId}`,
@@ -128,6 +141,11 @@ export function buildInvestedPortfolio({ stageMap = {}, deals = [], portfolio = 
 				entityInvestedInto: detailRecord?.entityInvestedInto || '',
 				holdPeriod: firstNonEmpty(detailRecord?.holdPeriod, deal.holdPeriod, deal.hold_period),
 				notes: detailRecord?.notes || '',
+				lifecycleStatus,
+				isPendingReview,
+				reviewStatusLabel: isPendingReview ? getPendingReviewBadgeLabel(lifecycleStatus) : '',
+				countsTowardPortfolioMetrics,
+				displayStatus,
 				_missingDetails: !detailRecord,
 				_source: detailRecord ? 'details' : 'stage'
 			});
@@ -136,6 +154,8 @@ export function buildInvestedPortfolio({ stageMap = {}, deals = [], portfolio = 
 
 	return {
 		entries,
+		metricEntries: entries.filter((record) => record.countsTowardPortfolioMetrics),
+		pendingEntries: entries.filter((record) => record.isPendingReview),
 		missingDetails: entries.filter((record) => record._missingDetails),
 		investedDealIds
 	};

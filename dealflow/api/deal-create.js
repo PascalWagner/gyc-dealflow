@@ -1,109 +1,267 @@
-// Vercel Serverless Function: Create a new deal (user-submitted)
-// Allows any authenticated user to submit a deal to the database
-// (no admin auth required — deals are created with user_submitted=true)
+// Vercel Serverless Function: Create or link a deal from member intake
+// Authenticated users can either create a new deal submission or attach an
+// existing deal to themselves. All intake actions are attributed for admin
+// analytics and routed into the standard deal review workflow.
 
-import { getAdminClient, setCors, rateLimit } from './_supabase.js';
+import { ADMIN_EMAILS, getAdminClient, rateLimit, setCors } from './_supabase.js';
+import { buildAccessModel } from '../src/lib/auth/access-model.js';
 import { buildNewDealDefaults, normalizeLifecycleStatus } from '../src/lib/utils/dealWorkflow.js';
+import {
+	normalizeSubmissionIntent,
+	normalizeSubmissionKind,
+	normalizeSubmissionSurface
+} from '../src/lib/utils/dealSubmission.js';
+
+function normalizeEmail(value) {
+	return String(value || '').trim().toLowerCase();
+}
+
+function normalizeDisplayText(value) {
+	return String(value || '').trim();
+}
+
+function inferSubmitterRole(accessModel) {
+	if (accessModel?.roleFlags?.admin) return 'admin';
+	if (accessModel?.roleFlags?.gp) return 'gp';
+	return 'lp';
+}
+
+async function resolveSubmitterContext(supabase, user) {
+	const email = normalizeEmail(user?.email);
+	let profile = null;
+
+	if (user?.id) {
+		const { data } = await supabase
+			.from('user_profiles')
+			.select('id, email, full_name, management_company_id, is_admin')
+			.eq('id', user.id)
+			.maybeSingle();
+		profile = data || null;
+	}
+
+	let managementCompanyId = profile?.management_company_id || null;
+	if (!managementCompanyId && email) {
+		const { data: company } = await supabase
+			.from('management_companies')
+			.select('id')
+			.contains('authorized_emails', [email])
+			.limit(1)
+			.maybeSingle();
+		managementCompanyId = company?.id || null;
+	}
+
+	const accessModel = buildAccessModel({
+		email,
+		is_admin: profile?.is_admin === true || ADMIN_EMAILS.includes(email),
+		management_company_id: managementCompanyId,
+		managementCompany: managementCompanyId ? { id: managementCompanyId } : null
+	});
+
+	return {
+		userId: user?.id || profile?.id || null,
+		email,
+		name: normalizeDisplayText(profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''),
+		managementCompanyId,
+		role: inferSubmitterRole(accessModel)
+	};
+}
+
+async function logDealSubmission(supabase, submission = {}) {
+	await supabase.from('deck_submissions').insert({
+		deal_id: submission.dealId || null,
+		deal_name: submission.dealName || '',
+		deck_url: '',
+		doc_type: '',
+		notes: submission.notes || '',
+		submitted_by_id: submission.submitter?.userId || null,
+		submitted_by_name: submission.submitter?.name || '',
+		submitted_by_email: submission.submitter?.email || '',
+		submitted_by_role: submission.submitter?.role || 'admin',
+		submission_kind: normalizeSubmissionKind(submission.submissionKind, 'new_deal'),
+		submission_intent: normalizeSubmissionIntent(submission.intent, 'interested'),
+		entry_surface: normalizeSubmissionSurface(submission.surface, 'deal_flow'),
+		created_new_deal: submission.createdNewDeal === true,
+		linked_existing_deal: submission.linkedExistingDeal === true
+	});
+}
 
 export default async function handler(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!rateLimit(req, res, { maxRequests: 10 })) return;
+	setCors(res);
+	if (req.method === 'OPTIONS') return res.status(200).end();
+	if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+	if (!rateLimit(req, res, { maxRequests: 10 })) return;
 
-  try {
-    const { investmentName, sponsor, website, lifecycleStatus, userEmail, userName } = req.body;
+	try {
+		const authHeader = req.headers.authorization || '';
+		if (!authHeader.startsWith('Bearer ')) {
+			return res.status(401).json({ error: 'Authorization token required' });
+		}
 
-    if (!investmentName || !sponsor) {
-      return res.status(400).json({ error: 'Investment name and sponsor are required' });
-    }
+		const token = authHeader.replace('Bearer ', '').trim();
+		const supabase = getAdminClient();
+		const {
+			data: { user },
+			error: authError
+		} = await supabase.auth.getUser(token);
 
-    const supabase = getAdminClient();
+		if (authError || !user?.email) {
+			return res.status(401).json({ error: 'Invalid or expired token' });
+		}
 
-    // 1. Find or create the management company (operator)
-    let mcId = null;
-    const { data: existingMc } = await supabase
-      .from('management_companies')
-      .select('id')
-      .ilike('operator_name', sponsor.trim())
-      .limit(1)
-      .single();
+		const {
+			existingDealId,
+			investmentName,
+			sponsor,
+			website,
+			lifecycleStatus,
+			intent,
+			entrySurface
+		} = req.body || {};
 
-    if (existingMc) {
-      mcId = existingMc.id;
-    } else {
-      const { data: newMc, error: mcErr } = await supabase
-        .from('management_companies')
-        .insert({
-          operator_name: sponsor.trim(),
-          website: website || null
-        })
-        .select('id')
-        .single();
-      if (mcErr) {
-        console.error('Failed to create operator:', mcErr.message);
-      } else {
-        mcId = newMc.id;
-      }
-    }
+		const normalizedIntent = normalizeSubmissionIntent(intent, 'interested');
+		const normalizedSurface = normalizeSubmissionSurface(entrySurface, 'deal_flow');
+		const submitter = await resolveSubmitterContext(supabase, user);
 
-    // 2. Create the deal
-    const requestedLifecycleStatus = normalizeLifecycleStatus(lifecycleStatus || 'draft');
+		const trimmedExistingDealId = normalizeDisplayText(existingDealId);
+		if (trimmedExistingDealId) {
+			const { data: existingDeal, error: existingDealError } = await supabase
+				.from('opportunities')
+				.select('id, investment_name, sponsor_name, lifecycle_status')
+				.eq('id', trimmedExistingDealId)
+				.maybeSingle();
 
-    const { data: deal, error: dealErr } = await supabase
-      .from('opportunities')
-      .insert({
-        ...buildNewDealDefaults({
-          investment_name: investmentName.trim(),
-          sponsor_name: sponsor.trim()
-        }),
-        investment_name: investmentName.trim(),
-        management_company_id: mcId,
-        sponsor_name: sponsor.trim(),
-        lifecycle_status: requestedLifecycleStatus,
-        is_visible_to_users: requestedLifecycleStatus === 'published',
-        status: 'Open to Invest',
-        added_date: new Date().toISOString().split('T')[0]
-      })
-      .select('id, investment_name')
-      .single();
+			if (existingDealError || !existingDeal) {
+				return res.status(404).json({ error: 'Existing deal not found' });
+			}
 
-    if (dealErr) {
-      console.error('Failed to create deal:', dealErr.message);
-      return res.status(500).json({ error: 'Failed to create deal: ' + dealErr.message });
-    }
+			await logDealSubmission(supabase, {
+				dealId: existingDeal.id,
+				dealName: existingDeal.investment_name || investmentName || '',
+				submitter,
+				submissionKind: 'existing_deal_link',
+				intent: normalizedIntent,
+				surface: normalizedSurface,
+				createdNewDeal: false,
+				linkedExistingDeal: true,
+				notes: 'User linked an existing deal from intake'
+			}).catch((error) => {
+				console.warn('Existing deal intake log failed:', error?.message || error);
+			});
 
-    // 3. Link operator as primary sponsor
-    if (mcId && deal) {
-      await supabase.from('deal_sponsors').insert({
-        deal_id: deal.id,
-        company_id: mcId,
-        role: 'sponsor',
-        is_primary: true,
-        display_order: 0
-      }).catch(() => {});
-    }
+			return res.status(200).json({
+				success: true,
+				dealId: existingDeal.id,
+				investmentName: existingDeal.investment_name,
+				sponsorName: existingDeal.sponsor_name || '',
+				lifecycleStatus: existingDeal.lifecycle_status || 'published',
+				managementCompanyId: null,
+				createdNewDeal: false,
+				linkedExistingDeal: true
+			});
+		}
 
-    // 4. Log submission
-    if (userEmail) {
-      await supabase.from('deck_submissions').insert({
-        deal_id: deal.id,
-        deal_name: investmentName,
-        notes: 'User-submitted deal',
-        submitted_by_email: userEmail,
-        submitted_by_name: userName || ''
-      }).catch(() => {});
-    }
+		const trimmedName = normalizeDisplayText(investmentName);
+		const trimmedSponsor = normalizeDisplayText(sponsor);
+		const trimmedWebsite = normalizeDisplayText(website);
 
-    return res.status(200).json({
-      success: true,
-      dealId: deal.id,
-      investmentName: deal.investment_name,
-      managementCompanyId: mcId
-    });
+		if (!trimmedName || !trimmedSponsor) {
+			return res.status(400).json({ error: 'Investment name and sponsor are required' });
+		}
 
-  } catch (error) {
-    console.error('Deal create error:', error);
-    return res.status(500).json({ error: 'Failed to create deal' });
-  }
+		let managementCompanyId = null;
+		const { data: existingCompany } = await supabase
+			.from('management_companies')
+			.select('id')
+			.ilike('operator_name', trimmedSponsor)
+			.limit(1)
+			.maybeSingle();
+
+		if (existingCompany?.id) {
+			managementCompanyId = existingCompany.id;
+		} else {
+			const { data: newCompany, error: companyError } = await supabase
+				.from('management_companies')
+				.insert({
+					operator_name: trimmedSponsor,
+					website: trimmedWebsite || null
+				})
+				.select('id')
+				.single();
+
+			if (companyError) {
+				console.error('Failed to create operator:', companyError.message);
+			} else {
+				managementCompanyId = newCompany.id;
+			}
+		}
+
+		const requestedLifecycleStatus = normalizeLifecycleStatus(lifecycleStatus || 'in_review');
+
+		const { data: deal, error: dealError } = await supabase
+			.from('opportunities')
+			.insert({
+				...buildNewDealDefaults({
+					investment_name: trimmedName,
+					sponsor_name: trimmedSponsor
+				}),
+				investment_name: trimmedName,
+				management_company_id: managementCompanyId,
+				sponsor_name: trimmedSponsor,
+				lifecycle_status: requestedLifecycleStatus,
+				is_visible_to_users: requestedLifecycleStatus === 'published',
+				status: 'Open to Invest',
+				added_date: new Date().toISOString().split('T')[0],
+				submission_intent: normalizedIntent,
+				submission_surface: normalizedSurface,
+				submitted_by_id: submitter.userId,
+				submitted_by_name: submitter.name || '',
+				submitted_by_email: submitter.email || '',
+				submitted_by_role: submitter.role
+			})
+			.select('id, investment_name, sponsor_name, lifecycle_status')
+			.single();
+
+		if (dealError || !deal?.id) {
+			console.error('Failed to create deal:', dealError?.message || dealError);
+			return res.status(500).json({ error: `Failed to create deal: ${dealError?.message || 'Unknown error'}` });
+		}
+
+		if (managementCompanyId) {
+			await supabase.from('deal_sponsors').insert({
+				deal_id: deal.id,
+				company_id: managementCompanyId,
+				role: 'sponsor',
+				is_primary: true,
+				display_order: 0
+			}).catch(() => {});
+		}
+
+		await logDealSubmission(supabase, {
+			dealId: deal.id,
+			dealName: trimmedName,
+			submitter,
+			submissionKind: 'new_deal',
+			intent: normalizedIntent,
+			surface: normalizedSurface,
+			createdNewDeal: true,
+			linkedExistingDeal: false,
+			notes: 'User-submitted deal intake'
+		}).catch((error) => {
+			console.warn('Deal intake log failed:', error?.message || error);
+		});
+
+		return res.status(200).json({
+			success: true,
+			dealId: deal.id,
+			investmentName: deal.investment_name,
+			sponsorName: deal.sponsor_name || trimmedSponsor,
+			lifecycleStatus: deal.lifecycle_status || requestedLifecycleStatus,
+			managementCompanyId,
+			createdNewDeal: true,
+			linkedExistingDeal: false
+		});
+	} catch (error) {
+		console.error('Deal create error:', error);
+		return res.status(500).json({ error: 'Failed to create deal' });
+	}
 }

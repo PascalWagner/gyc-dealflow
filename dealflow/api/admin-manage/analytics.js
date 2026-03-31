@@ -1,5 +1,110 @@
 import { QUALITY_FIELDS, computeQuality } from './quality.js';
 import { filterTrackedLpProfiles } from './users.js';
+import { ADMIN_EMAILS } from '../_supabase.js';
+
+const SUBMISSION_ROLE_ORDER = ['admin', 'gp', 'lp'];
+const SUBMISSION_ROLE_LABELS = {
+  admin: 'Admin',
+  gp: 'GP',
+  lp: 'LP'
+};
+
+function normalizeSubmissionRole(role, email = '') {
+  const normalized = String(role || '').trim().toLowerCase();
+  if (SUBMISSION_ROLE_ORDER.includes(normalized)) return normalized;
+  if (ADMIN_EMAILS.includes(String(email || '').trim().toLowerCase())) return 'admin';
+  return 'admin';
+}
+
+function buildRoleCounts(rows = [], resolver = () => 'admin') {
+  const counts = Object.fromEntries(SUBMISSION_ROLE_ORDER.map((role) => [role, 0]));
+
+  for (const row of rows) {
+    const role = normalizeSubmissionRole(resolver(row), row?.submitted_by_email || row?.submittedByEmail || '');
+    counts[role] += 1;
+  }
+
+  return counts;
+}
+
+function roleBreakdownList(counts = {}, total = 0) {
+  return SUBMISSION_ROLE_ORDER.map((role) => {
+    const count = Number(counts[role] || 0);
+    return {
+      role,
+      label: SUBMISSION_ROLE_LABELS[role],
+      count,
+      pct: total > 0 ? Math.round((count / total) * 100) : 0
+    };
+  });
+}
+
+function countRowsInRange(rows = [], week, { dateField = 'created_at', roleField = 'submitted_by_role' } = {}) {
+  const counts = Object.fromEntries(SUBMISSION_ROLE_ORDER.map((role) => [role, 0]));
+
+  for (const row of rows) {
+    const dateValue = row?.[dateField];
+    if (!dateValue || dateValue < week.start || dateValue >= week.end) continue;
+    const role = normalizeSubmissionRole(row?.[roleField], row?.submitted_by_email || '');
+    counts[role] += 1;
+  }
+
+  return counts;
+}
+
+function buildDealSubmissionAttribution({ weeks = [], deals = [], submissions = [] } = {}) {
+  const canonicalDeals = (deals || []).filter((deal) => !deal?.parent_deal_id);
+  const addActionRows = (submissions || []).filter((row) =>
+    ['new_deal', 'existing_deal_link'].includes(String(row?.submission_kind || '').trim().toLowerCase())
+  );
+
+  const uniqueDealRoleCounts = buildRoleCounts(canonicalDeals, (row) => row?.submitted_by_role);
+  const addActionRoleCounts = buildRoleCounts(addActionRows, (row) => row?.submitted_by_role);
+  const totalUniqueDeals = canonicalDeals.length;
+  const totalAddActions = addActionRows.length;
+  const communityUniqueDeals = (uniqueDealRoleCounts.gp || 0) + (uniqueDealRoleCounts.lp || 0);
+
+  return {
+    summary: {
+      totalUniqueDeals,
+      totalAddActions,
+      communityPct: totalUniqueDeals > 0 ? Math.round((communityUniqueDeals / totalUniqueDeals) * 100) : 0,
+      adminPct: totalUniqueDeals > 0 ? Math.round(((uniqueDealRoleCounts.admin || 0) / totalUniqueDeals) * 100) : 0,
+      gpPct: totalUniqueDeals > 0 ? Math.round(((uniqueDealRoleCounts.gp || 0) / totalUniqueDeals) * 100) : 0,
+      lpPct: totalUniqueDeals > 0 ? Math.round(((uniqueDealRoleCounts.lp || 0) / totalUniqueDeals) * 100) : 0
+    },
+    uniqueByRole: roleBreakdownList(uniqueDealRoleCounts, totalUniqueDeals),
+    actionsByRole: roleBreakdownList(addActionRoleCounts, totalAddActions),
+    weeklyUnique: weeks.map((week) => ({
+      label: week.label,
+      ...countRowsInRange(canonicalDeals, week, {
+        dateField: 'created_at',
+        roleField: 'submitted_by_role'
+      })
+    })),
+    weeklyActions: weeks.map((week) => ({
+      label: week.label,
+      ...countRowsInRange(addActionRows, week, {
+        dateField: 'created_at',
+        roleField: 'submitted_by_role'
+      })
+    })),
+    recentSubmissions: addActionRows
+      .slice()
+      .sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')))
+      .slice(0, 12)
+      .map((row) => ({
+        id: row.id,
+        dealName: row.deal_name || 'Unknown deal',
+        submittedByName: row.submitted_by_name || row.submitted_by_email || 'Unknown submitter',
+        submittedByRole: normalizeSubmissionRole(row.submitted_by_role, row.submitted_by_email),
+        submissionKind: row.submission_kind || '',
+        submissionIntent: row.submission_intent || '',
+        entrySurface: row.entry_surface || '',
+        createdAt: row.created_at
+      }))
+  };
+}
 
 async function growthMetrics(supabase) {
   const now = new Date();
@@ -18,17 +123,22 @@ async function growthMetrics(supabase) {
 
   const qualityKeys = QUALITY_FIELDS.map((field) => field.key).join(', ');
 
-  const [usersRes, operatorsRes, dealsRes, stagesRes] = await Promise.all([
+  const [usersRes, operatorsRes, dealsRes, stagesRes, submissionsRes] = await Promise.all([
     supabase.from('user_profiles').select('id, email, is_admin, created_at', { count: 'exact' }),
     supabase.from('management_companies').select('id, created_at', { count: 'exact' }),
-    supabase.from('opportunities').select(`id, added_date, status, ${qualityKeys}`, { count: 'exact' }),
+    supabase.from('opportunities').select(`id, added_date, created_at, parent_deal_id, status, submitted_by_role, submitted_by_email, ${qualityKeys}`, { count: 'exact' }),
     supabase.from('user_deal_stages').select('id, stage, updated_at', { count: 'exact' })
+    ,
+    supabase
+      .from('deck_submissions')
+      .select('id, deal_id, deal_name, created_at, submitted_by_name, submitted_by_email, submitted_by_role, submission_kind, submission_intent, entry_surface')
   ]);
 
   const users = filterTrackedLpProfiles(usersRes.data || []);
   const operators = operatorsRes.data || [];
   const deals = dealsRes.data || [];
   const stages = stagesRes.data || [];
+  const submissions = submissionsRes.data || [];
 
   const activeDeals = deals.filter((deal) => deal.status !== 'Archived');
   const completenessScores = activeDeals.map((deal) => computeQuality(deal).pct);
@@ -99,6 +209,11 @@ async function growthMetrics(supabase) {
   const dealsCumulative = cumulativeByWeek(activeDeals, 'added_date');
 
   const portfolioStages = stages.filter((stage) => stage.stage === 'invested' || stage.stage === 'portfolio');
+  const dealSubmissionAttribution = buildDealSubmissionAttribution({
+    weeks,
+    deals,
+    submissions
+  });
 
   function growthRate(series) {
     const current = series[series.length - 1] || 0;
@@ -215,6 +330,7 @@ async function growthMetrics(supabase) {
       lpDealRatio,
       constraint
     },
+    dealSubmissionAttribution,
     weekLabels: weeks.map((week) => week.label),
     series: {
       lps: lpsByWeek,

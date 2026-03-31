@@ -26,7 +26,7 @@
 		MAX_COMPARE_DEALS,
 		STAGE_META
 	} from '$lib/stores/deals.js';
-	import { accessTier, getStoredSessionUser, isAdmin } from '$lib/stores/auth.js';
+	import { accessTier, getStoredSessionUser } from '$lib/stores/auth.js';
 	import {
 		buildDealCardCompareAnalyticsPayload,
 		buildDealCardFooterAnalyticsPayload,
@@ -406,6 +406,31 @@
 
 	function handleAddDeal() {
 		showAddDealModal = true;
+	}
+
+	async function handleAddDealSubmitted(detail = {}) {
+		const targetTab = String(detail.stage || '').trim().toLowerCase();
+		const dealName = detail.dealName || 'Your deal';
+
+		if (targetTab && DEALFLOW_UI_STAGE_TABS.has(targetTab)) {
+			await switchTab(targetTab);
+		}
+
+		await fetchMemberDeals({
+			scope: 'browse',
+			limit: $memberDealsMeta.limit || 24,
+			offset: 0,
+			...getEffectiveBrowseFilters(),
+			sortBy,
+			showArchived,
+			force: true
+		}).catch(() => {});
+
+		showPageNotice(
+			targetTab === 'invested'
+				? `${dealName} is now in Invested.`
+				: `${dealName} is now in Review.`
+		);
 	}
 
 	function showPageNotice(message) {
@@ -882,7 +907,7 @@
 	});
 </script>
 
-<svelte:head><title>Deal Flow | GYC</title></svelte:head>
+<svelte:head><title>Deals | GYC</title></svelte:head>
 
 <PageContainer className="deals-page">
 	<div class="deals-shell ly-page-stack">
@@ -890,7 +915,7 @@
 			{#if isMobile}
 				<div class="mobile-toolbar">
 					<div class="mobile-pipeline-row">
-						<div class="mobile-pipeline-label deals-page-title deals-page-title-mobile">Dealflow</div>
+						<div class="mobile-pipeline-label deals-page-title deals-page-title-mobile">Deals</div>
 						<div class="mobile-pipeline-right">
 							<div class="mobile-pipeline-control">
 								<PipelineTabs
@@ -934,7 +959,7 @@
 				<div class="desktop-toolbar">
 					<div class="desktop-toolbar-row desktop-toolbar-row-primary">
 						<div class="toolbar-stage-group">
-							<div class="deals-page-title">Dealflow</div>
+							<div class="deals-page-title">Deals</div>
 							<div class="toolbar-stage-tabs">
 								<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
 							</div>
@@ -957,7 +982,7 @@
 							{sortBy}
 							{showArchived}
 							{buyBoxApplied}
-							showAddDeal={$isAdmin}
+							showAddDeal={true}
 							onadddeal={handleAddDeal}
 							onchange={handleFilterChange}
 							onclear={clearFilters}
@@ -1173,7 +1198,11 @@
 />
 
 {#if showAddDealModal}
-	<AddDealModal onclose={() => showAddDealModal = false} />
+	<AddDealModal
+		entrySurface="deal_flow"
+		onclose={() => (showAddDealModal = false)}
+		onsubmitted={handleAddDealSubmitted}
+	/>
 {/if}
 
 <!-- Daily Limit Modal -->

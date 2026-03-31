@@ -238,11 +238,24 @@ export async function handleUserdataPost(req, res, supabase, user) {
     result = upserted;
   } else {
     const recordId = data._recordId;
-    if (recordId) {
+    let effectiveRecordId = recordId;
+
+    if (!effectiveRecordId && type === 'portfolio' && fields.deal_id) {
+      const { data: existingRecord } = await db
+        .from(table)
+        .select('id')
+        .eq('user_id', effectiveUser.id)
+        .eq('deal_id', fields.deal_id)
+        .limit(1)
+        .maybeSingle();
+      effectiveRecordId = existingRecord?.id || '';
+    }
+
+    if (effectiveRecordId) {
       const { data: updated, error } = await db
         .from(table)
         .update(fields)
-        .eq('id', recordId)
+        .eq('id', effectiveRecordId)
         .eq('user_id', effectiveUser.id)
         .select()
         .single();

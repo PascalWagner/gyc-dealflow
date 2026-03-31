@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const supabase = getAdminClient();
     let query = supabase
       .from('deck_submissions')
-      .select('id, deal_id, deal_name, deck_url, notes, submitted_by_email, submitted_by_name, created_at')
+      .select('id, deal_id, deal_name, deck_url, doc_type, notes, submitted_by_email, submitted_by_name, submitted_by_role, submission_kind, submission_intent, entry_surface, created_at')
       .order('created_at', { ascending: false });
 
     // If dealId is 'all', return all submissions (admin view); otherwise filter by deal

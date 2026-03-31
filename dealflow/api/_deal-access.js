@@ -126,10 +126,18 @@ function readRequestedImpersonationEmail(req) {
 	return headerEmail || '';
 }
 
-export function applyPublishedCatalogQuery(query) {
-	return query
-		.in('lifecycle_status', ['published', 'archived'])
-		.eq('is_visible_to_users', true);
+export function applyPublishedCatalogQuery(query, viewerContext = {}) {
+	if (viewerContext.isAdmin) return query;
+
+	const conditions = ['and(lifecycle_status.in.(published,archived),is_visible_to_users.eq.true)'];
+	if (viewerContext.viewerManagementCompanyId) {
+		conditions.push(`management_company_id.eq.${viewerContext.viewerManagementCompanyId}`);
+	}
+	if (viewerContext.email) {
+		conditions.push(`submitted_by_email.eq.${viewerContext.email}`);
+	}
+
+	return query.or(conditions.join(','));
 }
 
 export function applyDealVisibilityQuery(query, viewerContext = {}) {

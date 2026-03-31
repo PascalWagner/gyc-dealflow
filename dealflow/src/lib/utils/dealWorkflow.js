@@ -1,10 +1,19 @@
 import { getDealOperatorName } from './dealSponsors.js';
+import {
+	DEAL_SUBMISSION_INTENT_LABELS,
+	DEAL_SUBMISSION_SURFACE_LABELS,
+	DEAL_SUBMITTER_ROLE_LABELS,
+	normalizeSubmissionIntent,
+	normalizeSubmissionSurface,
+	normalizeSubmitterRole
+} from './dealSubmission.js';
 
-export const DEAL_LIFECYCLE_STATUSES = ['draft', 'in_review', 'published', 'do_not_publish'];
+export const DEAL_LIFECYCLE_STATUSES = ['draft', 'in_review', 'approved', 'published', 'do_not_publish'];
 
 export const DEAL_LIFECYCLE_LABELS = {
 	draft: 'Draft',
 	in_review: 'In Review',
+	approved: 'Approved',
 	published: 'Published',
 	do_not_publish: 'Do Not Publish'
 };
@@ -12,8 +21,9 @@ export const DEAL_LIFECYCLE_LABELS = {
 export const DEAL_LIFECYCLE_SORT_ORDER = {
 	draft: 0,
 	in_review: 1,
-	published: 2,
-	do_not_publish: 3
+	approved: 2,
+	published: 3,
+	do_not_publish: 4
 };
 
 export const DEAL_CATALOG_STATE_LABELS = {
@@ -77,7 +87,6 @@ export function slugify(value = '') {
 export function normalizeLifecycleStatus(value, fallback = 'draft') {
 	const normalized = normalizeToken(value);
 	if (DEAL_LIFECYCLE_STATUSES.includes(normalized)) return normalized;
-	if (normalized === 'approved') return 'in_review';
 	if (normalized === 'inreview') return 'in_review';
 	if (normalized === 'active' || normalized === 'live') return 'published';
 	if (normalized === 'review') return 'in_review';
@@ -92,9 +101,6 @@ export function resolveDealLifecycleStatus(deal) {
 	const explicit = normalizeToken(firstMeaningfulValue(deal, ['lifecycle_status', 'lifecycleStatus']));
 	if (DEAL_LIFECYCLE_STATUSES.includes(explicit)) {
 		return explicit;
-	}
-	if (explicit === 'approved') {
-		return 'in_review';
 	}
 	if (explicit === 'archived') {
 		return 'published';
@@ -339,14 +345,32 @@ export function buildDealWorkflowRecord(deal) {
 	const catalogState = resolveDealCatalogState(deal);
 	const completeness = computeDealCompleteness(deal);
 	const updatedAt = firstMeaningfulValue(deal, ['updated_at', 'updatedAt', 'added_date', 'addedDate']) || null;
+	const submissionIntent = normalizeSubmissionIntent(
+		firstMeaningfulValue(deal, ['submission_intent', 'submissionIntent']),
+		'interested'
+	);
+	const submissionSurface = normalizeSubmissionSurface(
+		firstMeaningfulValue(deal, ['submission_surface', 'submissionSurface']),
+		'admin'
+	);
+	const submittedByRole = normalizeSubmitterRole(
+		firstMeaningfulValue(deal, ['submitted_by_role', 'submittedByRole']),
+		'admin'
+	);
+	const submittedByName = firstMeaningfulValue(deal, ['submitted_by_name', 'submittedByName']) || '';
+	const submittedByEmail = firstMeaningfulValue(deal, ['submitted_by_email', 'submittedByEmail']) || '';
 	const visibilityDisabledReason =
 		lifecycleStatus === 'do_not_publish'
 			? 'Do Not Publish deals stay hidden from the catalog'
 			: (!isVisibleToUsers && completeness.hasBlockingIssues
 				? 'Cannot publish until required fields are complete'
-				: (!isVisibleToUsers && lifecycleStatus !== 'in_review'
-					? 'Move deal to In Review before publishing'
-					: null));
+				: (!isVisibleToUsers && lifecycleStatus === 'draft'
+					? 'Move deal to In Review before approving it'
+					: (!isVisibleToUsers && lifecycleStatus === 'in_review'
+						? 'Approve deal before publishing it'
+						: (!isVisibleToUsers && lifecycleStatus === 'approved'
+							? 'Approved deals stay hidden until you publish them'
+							: null))));
 
 	return {
 		...deal,
@@ -357,6 +381,14 @@ export function buildDealWorkflowRecord(deal) {
 		isVisibleToUsers,
 		catalogState,
 		catalogStateLabel: DEAL_CATALOG_STATE_LABELS[catalogState] || DEAL_CATALOG_STATE_LABELS.not_published,
+		submissionIntent,
+		submissionIntentLabel: DEAL_SUBMISSION_INTENT_LABELS[submissionIntent] || DEAL_SUBMISSION_INTENT_LABELS.interested,
+		submissionSurface,
+		submissionSurfaceLabel: DEAL_SUBMISSION_SURFACE_LABELS[submissionSurface] || DEAL_SUBMISSION_SURFACE_LABELS.admin,
+		submittedByRole,
+		submittedByRoleLabel: DEAL_SUBMITTER_ROLE_LABELS[submittedByRole] || DEAL_SUBMITTER_ROLE_LABELS.admin,
+		submittedByName,
+		submittedByEmail,
 		updatedAt,
 		...completeness,
 		readyToPublish:
@@ -441,7 +473,7 @@ export function resolveDealWorkflowMutation(currentDeal, requestedUpdates = {}) 
 	} else if (explicitVisibility === false) {
 		isVisibleToUsers = false;
 		if (explicitLifecycle === undefined && existingLifecycleStatus === 'published') {
-			lifecycleStatus = 'in_review';
+			lifecycleStatus = 'approved';
 		}
 	}
 

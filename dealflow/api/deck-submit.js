@@ -5,6 +5,12 @@
 // 2. Creates a record in the Supabase deck_submissions table
 
 import { getAdminClient, setCors } from './_supabase.js';
+import {
+  normalizeSubmissionIntent,
+  normalizeSubmissionKind,
+  normalizeSubmissionSurface,
+  normalizeSubmitterRole
+} from '../src/lib/utils/dealSubmission.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -12,7 +18,19 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { dealId, dealName, deckUrl, notes, userEmail, userName, docType } = req.body;
+    const {
+      dealId,
+      dealName,
+      deckUrl,
+      notes,
+      userEmail,
+      userName,
+      docType,
+      submissionIntent,
+      entrySurface,
+      submissionKind,
+      submittedByRole
+    } = req.body;
 
     if (!deckUrl) {
       return res.status(400).json({ error: 'Deck URL is required' });
@@ -66,9 +84,16 @@ export default async function handler(req, res) {
       deal_id: dealId || null,
       deal_name: dealName || '',
       deck_url: deckUrl,
+      doc_type: String(docType || 'deck').trim().toLowerCase(),
       notes: notes || '',
       submitted_by_email: userEmail || '',
-      submitted_by_name: userName || ''
+      submitted_by_name: userName || '',
+      submitted_by_role: normalizeSubmitterRole(submittedByRole, 'admin'),
+      submission_kind: normalizeSubmissionKind(submissionKind, 'document_upload'),
+      submission_intent: normalizeSubmissionIntent(submissionIntent, 'interested'),
+      entry_surface: normalizeSubmissionSurface(entrySurface, 'deal_flow'),
+      created_new_deal: false,
+      linked_existing_deal: Boolean(dealId)
     });
 
     if (insertErr) {

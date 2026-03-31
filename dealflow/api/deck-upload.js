@@ -11,7 +11,52 @@
 import { ADMIN_EMAILS, getAdminClient, setCors } from './_supabase.js';
 import { getLatestGpAgreement, hasCurrentGpAgreement } from './_gp-agreement.js';
 import { extractFromPdf, runEnrichmentCascade } from './_enrichment.js';
+import { buildAccessModel } from '../src/lib/auth/access-model.js';
 import { buildNewDealDefaults } from '../src/lib/utils/dealWorkflow.js';
+import {
+  normalizeSubmissionIntent,
+  normalizeSubmissionKind,
+  normalizeSubmissionSurface
+} from '../src/lib/utils/dealSubmission.js';
+
+function inferSubmitterRole(accessModel) {
+  if (accessModel?.roleFlags?.admin) return 'admin';
+  if (accessModel?.roleFlags?.gp) return 'gp';
+  return 'lp';
+}
+
+async function resolveSubmitterRole(supabase, user) {
+  const email = String(user?.email || '').trim().toLowerCase();
+  let managementCompanyId = null;
+  let isAdmin = ADMIN_EMAILS.includes(email);
+
+  if (user?.id) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('management_company_id, is_admin')
+      .eq('id', user.id)
+      .maybeSingle();
+    managementCompanyId = profile?.management_company_id || null;
+    if (profile?.is_admin === true) isAdmin = true;
+  }
+
+  if (!managementCompanyId && email) {
+    const { data: company } = await supabase
+      .from('management_companies')
+      .select('id')
+      .contains('authorized_emails', [email])
+      .limit(1)
+      .maybeSingle();
+    managementCompanyId = company?.id || null;
+  }
+
+  return inferSubmitterRole(buildAccessModel({
+    email,
+    is_admin: isAdmin,
+    management_company_id: managementCompanyId,
+    managementCompany: managementCompanyId ? { id: managementCompanyId } : null
+  }));
+}
 
 export default async function handler(req, res) {
   setCors(res);
@@ -19,7 +64,20 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { dealId, dealName, filedata, filename, notes, userEmail, userName, docType, companyId } = req.body;
+    const {
+      dealId,
+      dealName,
+      filedata,
+      filename,
+      notes,
+      userEmail,
+      userName,
+      docType,
+      companyId,
+      submissionIntent,
+      entrySurface,
+      submissionKind
+    } = req.body;
 
     if (!filedata || !filename) {
       return res.status(400).json({ error: 'File data and filename are required' });
@@ -42,15 +100,15 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Upload email must match authenticated user' });
     }
 
-    if (!isAdminUpload) {
+    const effectiveUserEmail = user.email;
+    const effectiveUserName = userName || user.user_metadata?.full_name || user.user_metadata?.name || '';
+    const submitterRole = await resolveSubmitterRole(supabase, user);
+    if (submitterRole === 'gp' && !isAdminUpload) {
       const agreement = await getLatestGpAgreement(supabase, user.id);
       if (!hasCurrentGpAgreement(agreement)) {
         return res.status(403).json({ error: 'A current signed operator listing agreement is required before uploading deal materials.' });
       }
     }
-
-    const effectiveUserEmail = user.email;
-    const effectiveUserName = userName || user.user_metadata?.full_name || user.user_metadata?.name || '';
     const cleanDealName = (dealName || 'Unknown').replace(/[^a-zA-Z0-9\s\-]/g, '').trim();
     const storagePath = `deals/${dealId || 'unlinked'}/${cleanDealName} - ${filename}`;
 
@@ -131,9 +189,17 @@ export default async function handler(req, res) {
       deal_id: dealId || null,
       deal_name: dealName || '',
       deck_url: deckUrl,
+      doc_type: String(docType || 'deck').trim().toLowerCase(),
       notes: notes || '',
+      submitted_by_id: user.id || null,
       submitted_by_email: effectiveUserEmail || '',
-      submitted_by_name: effectiveUserName || ''
+      submitted_by_name: effectiveUserName || '',
+      submitted_by_role: submitterRole,
+      submission_kind: normalizeSubmissionKind(submissionKind, 'document_upload'),
+      submission_intent: normalizeSubmissionIntent(submissionIntent, 'interested'),
+      entry_surface: normalizeSubmissionSurface(entrySurface, 'deal_flow'),
+      created_new_deal: false,
+      linked_existing_deal: Boolean(dealId)
     });
 
     // 4. Send notification email via Resend

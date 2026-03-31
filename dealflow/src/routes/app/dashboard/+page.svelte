@@ -3,12 +3,13 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
-	import { user } from '$lib/stores/auth.js';
+	import { user, getFreshSessionToken } from '$lib/stores/auth.js';
+	import AddDealModal from '$lib/components/AddDealModal.svelte';
 	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { getUserScopedCacheSnapshot } from '$lib/utils/userScopedState.js';
-	import { buildInvestedPortfolio } from '$lib/utils/investedPortfolio.js';
+	import { buildInvestedPortfolio, normalizePortfolioRecord } from '$lib/utils/investedPortfolio.js';
 
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
@@ -18,6 +19,7 @@
 	let goals = $state(null);
 	let distributions = $state([]);
 	let portfolioPlan = $state(null);
+	let showAddDealModal = $state(false);
 	const portfolioView = $derived.by(() =>
 		buildInvestedPortfolio({
 			stageMap: $dealStages || {},
@@ -25,16 +27,17 @@
 			portfolio: portfolioDetails
 		})
 	);
-	const portfolio = $derived.by(() => portfolioView.entries);
+	const metricPortfolio = $derived.by(() => portfolioView.metricEntries || []);
+	const pendingEntries = $derived.by(() => portfolioView.pendingEntries || []);
 
 	// Derived
 	const branch = $derived(wizardData._branch || '');
 	const hasGoals = $derived(Boolean(goals && goals.targetIncome > 0));
 	const hasGoalContext = $derived(Boolean(branch) || hasGoals);
 	const hasCompletedDashboardPlan = $derived.by(() => hasCompletedPlan(wizardData || {}, portfolioPlan));
-	const totalInvested = $derived(portfolio.reduce((sum, investment) => sum + (parseFloat(investment.amountInvested) || 0), 0));
-	const totalDistributions = $derived(portfolio.reduce((sum, investment) => sum + (parseFloat(investment.distributionsReceived) || 0), 0));
-	const activeInvestments = $derived(portfolio.filter((investment) => investment.status === 'Active' || investment.status === 'Distributing').length);
+	const totalInvested = $derived(metricPortfolio.reduce((sum, investment) => sum + (parseFloat(investment.amountInvested) || 0), 0));
+	const totalDistributions = $derived(metricPortfolio.reduce((sum, investment) => sum + (parseFloat(investment.distributionsReceived) || 0), 0));
+	const activeInvestments = $derived(metricPortfolio.filter((investment) => investment.status === 'Active' || investment.status === 'Distributing').length);
 	const targetIncome = $derived(hasGoals ? goals.targetIncome : 0);
 	const currentIncome = $derived.by(() => {
 		let income = 0;
@@ -53,9 +56,9 @@
 					1
 			);
 			income = Math.round((totalDistributionAmount / months) * 12);
-		} else if (totalDistributions > 0 && portfolio.length > 0) {
+		} else if (totalDistributions > 0 && metricPortfolio.length > 0) {
 			let oldestInvestment = null;
-			portfolio.forEach((investment) => {
+			metricPortfolio.forEach((investment) => {
 				if (!investment.dateInvested) return;
 				const investmentDate = new Date(investment.dateInvested);
 				if (!oldestInvestment || investmentDate < oldestInvestment) oldestInvestment = investmentDate;
@@ -125,6 +128,15 @@
 				href: '/app/deals?tab=review'
 			});
 		}
+		if (pendingEntries.length > 0) {
+			items.push({
+				icon: 'plan',
+				text: `<strong>${pendingEntries.length} invested deal${pendingEntries.length !== 1 ? 's are' : ' is'} pending review</strong> — visible in your portfolio now, but not counted in totals yet`,
+				link: 'Open Portfolio',
+				page: 'portfolio',
+				href: '/app/portfolio'
+			});
+		}
 		return items;
 	});
 	const primaryAction = $derived.by(() => actionItems[0] || null);
@@ -147,7 +159,7 @@
 		goto(hasCompletedDashboardPlan ? '/app/plan?edit=1' : '/onboarding/plan');
 	}
 
-	function syncDashboardState() {
+	async function syncDashboardState() {
 		if (!browser) return;
 		const snapshot = getUserScopedCacheSnapshot();
 		portfolioDetails = snapshot.portfolio;
@@ -155,13 +167,34 @@
 		goals = snapshot.goals;
 		distributions = snapshot.distributions;
 		portfolioPlan = snapshot.portfolioPlan;
+
+		const token = await getFreshSessionToken();
+		if (!token) return;
+
+		try {
+			const portfolioResponse = await fetch('/api/userdata?type=portfolio', {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			if (!portfolioResponse.ok) return;
+			const portfolioData = await portfolioResponse.json();
+			if (Array.isArray(portfolioData?.records)) {
+				portfolioDetails = portfolioData.records.map((record) => normalizePortfolioRecord(record));
+			}
+		} catch (error) {
+			console.warn('Dashboard portfolio sync failed:', error);
+		}
+	}
+
+	async function handleDashboardDealSubmission() {
+		await fetchDeals({ force: true }).catch(() => {});
+		await syncDashboardState();
 	}
 
 	onMount(() => {
 		if (!browser) return;
-		syncDashboardState();
+		void syncDashboardState();
 		const handleScopedStateUpdate = () => {
-			syncDashboardState();
+			void syncDashboardState();
 		};
 		window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
 		return () => {
@@ -174,13 +207,13 @@
 	});
 </script>
 
+<svelte:head>
+	<title>Home | GYC</title>
+</svelte:head>
+
 <PageContainer className="dashboard-shell ly-page-stack">
-	<PageHeader title="Dashboard" className="dashboard-page-header">
-		<nav slot="secondaryRow" class="ly-dashboard-tabs" aria-label="Dashboard sections">
-			<a href="/app/dashboard" class="ly-dashboard-tab active">Overview</a>
-			<a href="/app/portfolio" class="ly-dashboard-tab">Portfolio</a>
-			<a href="/app/plan" class="ly-dashboard-tab">My Plan</a>
-		</nav>
+	<PageHeader title="Home" className="dashboard-page-header">
+		<button slot="actions" class="btn-primary" onclick={() => (showAddDealModal = true)}>Add Deal</button>
 	</PageHeader>
 
 	<div class="content-area">
@@ -208,6 +241,13 @@
 					<div class="dash-hero-pct">{goalProgress}%</div>
 				</div>
 				<div class="dash-hero-stats">{statsLine}</div>
+			</div>
+		{/if}
+
+		{#if pendingEntries.length > 0}
+			<div class="dashboard-pending-note">
+				<strong>{pendingEntries.length} invested deal{pendingEntries.length !== 1 ? 's are' : ' is'} pending review.</strong>
+				They are visible in your portfolio now and will count toward roll-up metrics after review is complete.
 			</div>
 		{/if}
 
@@ -273,6 +313,14 @@
 	</div>
 </PageContainer>
 
+{#if showAddDealModal}
+	<AddDealModal
+		entrySurface="dashboard"
+		onclose={() => (showAddDealModal = false)}
+		onsubmitted={handleDashboardDealSubmission}
+	/>
+{/if}
+
 <style>
 	.content-area {
 		min-width: 0;
@@ -318,6 +366,16 @@
 		align-items: flex-start;
 		gap: 14px;
 		margin-top: 28px;
+	}
+	.dashboard-pending-note {
+		margin: 18px 0 0;
+		padding: 14px 18px;
+		border-radius: 18px;
+		background: rgba(245, 158, 11, 0.08);
+		border: 1px solid rgba(245, 158, 11, 0.18);
+		font-size: 14px;
+		line-height: 1.6;
+		color: #7c5a00;
 	}
 	.dashboard-onboarding-link {
 		font-family: var(--font-ui);

@@ -32,7 +32,12 @@ async function listDealsWorkflow(supabase, body) {
 				row.sponsorName,
 				row.slug,
 				row.status,
-				row.lifecycleStatus
+				row.lifecycleStatus,
+				row.submittedByName,
+				row.submittedByEmail,
+				row.submittedByRoleLabel,
+				row.submissionSurfaceLabel,
+				row.submissionIntentLabel
 			]
 				.some((value) => String(value || '').toLowerCase().includes(needle))
 		);
@@ -40,18 +45,19 @@ async function listDealsWorkflow(supabase, body) {
 
 	rows.sort(compareDealWorkflowRecords);
 
-		return {
-			data: rows,
-			total: rows.length,
-			stats: {
-				totalDeals: rows.length,
-				draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
-				inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
-				published: rows.filter((row) => row.lifecycleStatus === 'published' && row.catalogState !== 'archived').length,
-				doNotPublish: rows.filter((row) => row.lifecycleStatus === 'do_not_publish').length,
-				archived: rows.filter((row) => row.catalogState === 'archived').length,
-				missingRequiredFields: rows.filter((row) => row.hasBlockingIssues).length,
-				readyToPublish: rows.filter((row) => row.readyToPublish).length
+	return {
+		data: rows,
+		total: rows.length,
+		stats: {
+			totalDeals: rows.length,
+			draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
+			inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
+			approved: rows.filter((row) => row.lifecycleStatus === 'approved').length,
+			published: rows.filter((row) => row.lifecycleStatus === 'published' && row.catalogState !== 'archived').length,
+			doNotPublish: rows.filter((row) => row.lifecycleStatus === 'do_not_publish').length,
+			archived: rows.filter((row) => row.catalogState === 'archived').length,
+			missingRequiredFields: rows.filter((row) => row.hasBlockingIssues).length,
+			readyToPublish: rows.filter((row) => row.readyToPublish).length
 			}
 		};
 	}

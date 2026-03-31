@@ -38,6 +38,7 @@ export default async function handler(req, res) {
 			{
 				include506b: canUseInternalView,
 				viewerManagementCompanyId: viewerContext.viewerManagementCompanyId,
+				viewerEmail: viewerContext.email,
 				isAdmin: canUseInternalView,
 				publishedOnly: !canUseInternalView
 			}
