@@ -403,12 +403,12 @@
 
 	.dashboard-onboarding-card {
 		max-width: 520px;
-		margin: 36px auto 0;
+		margin: 36px 0 0;
 		padding: 36px 28px;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		text-align: center;
+		text-align: left;
 	}
 	.dashboard-onboarding-icon {
 		display: inline-flex;
@@ -429,7 +429,7 @@
 	}
 	.dashboard-onboarding-copy {
 		max-width: 420px;
-		margin: 12px auto 0;
+		margin: 12px 0 0;
 		font-family: var(--font-body);
 		font-size: 15px;
 		line-height: 1.65;
@@ -438,7 +438,7 @@
 	.dashboard-onboarding-actions {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		align-items: flex-start;
 		gap: 14px;
 		margin-top: 28px;
 	}
