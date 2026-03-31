@@ -47,7 +47,7 @@
 		buildSecFilingSummary,
 		getDealStateCodes
 	} from '$lib/utils/dealDetailSignals.js';
-	import { calcDDProgress, getChecklistForDeal } from '$lib/utils/dealDueDiligence.js';
+	import { calcDDProgress, getAutoValue, getChecklistForDeal } from '$lib/utils/dealDueDiligence.js';
 	import {
 		buildDealInviteSharePayload,
 		buildDealShareMailtoHref,

@@ -199,7 +199,7 @@ export function calcDDProgress(checklist, answers = {}, deal) {
 	return { answered, total, pct: total > 0 ? Math.round((answered / total) * 100) : 0 };
 }
 
-function getAutoValue(deal, field, format) {
+export function getAutoValue(deal, field, format) {
 	if (!field) return null;
 	const value = deal?.[field];
 	if (value === undefined || value === null || value === '' || value === 0) return null;
