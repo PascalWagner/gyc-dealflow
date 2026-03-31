@@ -431,24 +431,6 @@
 					</p>
 				</section>
 
-				<div class="toolbar">
-					<div class="search-wrap">
-						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
-							<circle cx="11" cy="11" r="8" />
-							<line x1="21" y1="21" x2="16.65" y2="16.65" />
-						</svg>
-						<input type="text" placeholder="Search..." bind:value={searchQuery} oninput={searchDebounce} />
-					</div>
-					{#if showCreateButton}
-						<button class="action-btn primary" onclick={createNew}>+ Add New</button>
-					{/if}
-					{#if showDealTools}
-						<button class="action-btn secondary" onclick={cleanupStart}>Data Cleanup</button>
-						<button class="action-btn secondary" onclick={deckFinderStart}>Deck Finder</button>
-					{/if}
-					<span class="result-count">{filteredDealRows.length} deals in queue</span>
-				</div>
-
 				<div class="stats-grid">
 					<div class="stat-card">
 						<div class="stat-label">Total Deals</div>
@@ -474,6 +456,24 @@
 						<div class="stat-label">Archived</div>
 						<div class="stat-value">{dealStats.archived}</div>
 					</div>
+				</div>
+
+				<div class="toolbar">
+					<div class="search-wrap">
+						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input type="text" placeholder="Search..." bind:value={searchQuery} oninput={searchDebounce} />
+					</div>
+					{#if showCreateButton}
+						<button class="action-btn primary" onclick={createNew}>+ Add New</button>
+					{/if}
+					{#if showDealTools}
+						<button class="action-btn secondary" onclick={cleanupStart}>Data Cleanup</button>
+						<button class="action-btn secondary" onclick={deckFinderStart}>Deck Finder</button>
+					{/if}
+					<span class="result-count">{filteredDealRows.length} deals in queue</span>
 				</div>
 
 				<div class="filter-row">
