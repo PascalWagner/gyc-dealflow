@@ -280,7 +280,7 @@
 >
 	<div
 		class="card-hero"
-		class:lending-hero={heroConfig.variant === 'lending-returns'}
+		class:lending-hero={heroConfig.variant === 'lending-returns' || heroConfig.variant === 'lending-empty'}
 		style={heroConfig.backgroundStyle}
 	>
 		<div class="hero-badges" aria-label="Deal tags">
@@ -296,6 +296,14 @@
 			{#if heroConfig.variant === 'lending-returns'}
 				<div class="hero-returns-surface" aria-hidden="true">
 					<DealReturnsMiniChart series={heroConfig.returnsSeries} variant="hero" />
+				</div>
+			{:else if heroConfig.variant === 'lending-empty'}
+				<div class="hero-empty-surface" aria-hidden="true">
+					<div class="hero-empty-watermark">{heroConfig.icon}</div>
+					<div class="hero-empty-copy">
+						<span class="hero-empty-label">5 Year Returns</span>
+						<strong>{heroConfig.emptyMessage}</strong>
+					</div>
 				</div>
 			{:else if heroConfig.variant === 'fallback' && heroConfig.icon}
 				<div class="hero-icon">{heroConfig.icon}</div>
@@ -592,6 +600,57 @@
 		height: 100%;
 		min-height: 0;
 		pointer-events: none;
+	}
+
+	.hero-empty-surface {
+		position: relative;
+		z-index: 1;
+		height: 100%;
+		min-height: 0;
+		border-radius: 14px;
+		overflow: hidden;
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%),
+			rgba(7, 20, 25, 0.16);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+		display: flex;
+		align-items: flex-end;
+		padding: 12px;
+		pointer-events: none;
+	}
+
+	.hero-empty-watermark {
+		position: absolute;
+		right: 10px;
+		top: 8px;
+		font-size: 42px;
+		opacity: 0.1;
+		filter: grayscale(1) brightness(1.8);
+	}
+
+	.hero-empty-copy {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		max-width: 152px;
+	}
+
+	.hero-empty-label {
+		font-family: var(--font-ui);
+		font-size: 8px;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.48);
+	}
+
+	.hero-empty-copy strong {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		line-height: 1.35;
+		font-weight: 700;
+		color: rgba(255, 255, 255, 0.94);
 	}
 
 	.hero-headline {

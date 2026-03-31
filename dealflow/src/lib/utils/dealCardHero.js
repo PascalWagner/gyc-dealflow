@@ -157,7 +157,22 @@ export function getDealCardHeroConfig(deal = {}) {
 			headlineValue: headline.value,
 			headlineLabel: headline.label,
 			returnsSeries: historicalReturns,
-			imageUrl: ''
+			imageUrl: '',
+			emptyMessage: ''
+		};
+	}
+
+	if (isLendingDeal) {
+		return {
+			variant: 'lending-empty',
+			badges,
+			icon: heroPreset.icon,
+			backgroundStyle: 'background:linear-gradient(160deg, #071419 0%, #12313a 52%, #1d4f5a 100%);',
+			headlineValue: headline.value,
+			headlineLabel: headline.label,
+			returnsSeries: [],
+			imageUrl: '',
+			emptyMessage: 'Annual return history unavailable'
 		};
 	}
 
@@ -170,7 +185,8 @@ export function getDealCardHeroConfig(deal = {}) {
 			headlineValue: headline.value,
 			headlineLabel: headline.label,
 			returnsSeries: [],
-			imageUrl: actualImageUrl
+			imageUrl: actualImageUrl,
+			emptyMessage: ''
 		};
 	}
 
@@ -182,6 +198,7 @@ export function getDealCardHeroConfig(deal = {}) {
 		headlineValue: headline.value,
 		headlineLabel: headline.label,
 		returnsSeries: [],
-		imageUrl: ''
+		imageUrl: '',
+		emptyMessage: ''
 	};
 }
