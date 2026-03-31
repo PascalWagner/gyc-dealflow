@@ -310,6 +310,17 @@ export const dealFieldConfig = {
 		readIdFrom: ['managementCompanyId', 'management_company_id'],
 		readNameFrom: ['sponsorName', 'sponsor_name', 'managementCompany', 'management_company_name', 'sponsor']
 	},
+	companyWebsite: {
+		key: 'companyWebsite',
+		label: 'Management company website',
+		type: 'string_free',
+		input: 'url',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: 'https://...',
+		helperText: 'Use the sponsor or management company website, not a third-party marketplace listing.',
+		readFrom: ['companyWebsite', 'mcWebsite', 'website']
+	},
 	assetClass: {
 		key: 'assetClass',
 		label: 'Asset class',
@@ -669,6 +680,7 @@ export const dealReviewSections = [
 		fields: [
 			'investmentName',
 			'sponsor',
+			'companyWebsite',
 			'assetClass',
 			'slug',
 			'dealType',
@@ -965,6 +977,10 @@ export function normalizeDealReviewPatch(body = {}) {
 
 	if ('createManagementCompany' in body) {
 		normalized.createManagementCompany = body.createManagementCompany === true;
+	}
+
+	if ('companyWebsite' in body) {
+		normalized.companyWebsite = String(body.companyWebsite || '').trim();
 	}
 
 	return { values: normalized, errors };

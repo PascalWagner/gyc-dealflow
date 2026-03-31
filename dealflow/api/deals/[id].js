@@ -203,11 +203,19 @@ export default async function handler(req, res) {
     ...body,
     ...normalizedBody
   };
+  const requestedSponsorName = String(candidateBody.sponsorName || '').trim();
+  const requestedCompanyWebsite =
+    'companyWebsite' in candidateBody ? String(candidateBody.companyWebsite || '').trim() : undefined;
+  let touchedManagementCompany = false;
+  let resolvedCompanyWebsite = deal.management_company?.website || '';
 
-  if (candidateBody.createManagementCompany === true && !candidateBody.managementCompanyId && candidateBody.sponsorName) {
+  if (candidateBody.createManagementCompany === true && !candidateBody.managementCompanyId && requestedSponsorName) {
     const { data: createdCompany, error: createCompanyError } = await supabase
       .from('management_companies')
-      .insert({ operator_name: candidateBody.sponsorName })
+      .insert({
+        operator_name: requestedSponsorName,
+        website: requestedCompanyWebsite || null
+      })
       .select('id, operator_name')
       .single();
 
@@ -217,6 +225,8 @@ export default async function handler(req, res) {
 
     candidateBody.managementCompanyId = createdCompany.id;
     candidateBody.sponsorName = createdCompany.operator_name;
+    touchedManagementCompany = true;
+    resolvedCompanyWebsite = requestedCompanyWebsite || '';
 
     await supabase
       .from('operator_permissions')
@@ -225,7 +235,7 @@ export default async function handler(req, res) {
   } else if (candidateBody.managementCompanyId) {
     const { data: linkedCompany, error: linkedCompanyError } = await supabase
       .from('management_companies')
-      .select('id, operator_name')
+      .select('id, operator_name, website')
       .eq('id', candidateBody.managementCompanyId)
       .single();
 
@@ -233,7 +243,33 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Selected sponsor record was not found' });
     }
 
-    candidateBody.sponsorName = linkedCompany.operator_name;
+    const companyPatch = {};
+    if (requestedSponsorName && requestedSponsorName !== linkedCompany.operator_name) {
+      companyPatch.operator_name = requestedSponsorName;
+    }
+    if (requestedCompanyWebsite !== undefined) {
+      companyPatch.website = requestedCompanyWebsite || null;
+    }
+
+    let nextCompany = linkedCompany;
+    if (Object.keys(companyPatch).length > 0) {
+      const { data: updatedCompany, error: updateCompanyError } = await supabase
+        .from('management_companies')
+        .update(companyPatch)
+        .eq('id', linkedCompany.id)
+        .select('id, operator_name, website')
+        .single();
+
+      if (updateCompanyError || !updatedCompany) {
+        return res.status(500).json({ error: 'Failed to update sponsor record' });
+      }
+
+      nextCompany = updatedCompany;
+      touchedManagementCompany = true;
+    }
+
+    candidateBody.sponsorName = nextCompany.operator_name;
+    resolvedCompanyWebsite = nextCompany.website || '';
   }
 
   const updates = {};
@@ -244,6 +280,10 @@ export default async function handler(req, res) {
       updates[snakeKey] = normalizeValue(camelKey, candidateBody[camelKey]);
       updated.push(camelKey);
     }
+  }
+
+  if (Object.keys(updates).length === 0 && touchedManagementCompany) {
+    updates.updated_at = new Date().toISOString();
   }
 
   if (Object.keys(updates).length === 0) {
@@ -283,7 +323,9 @@ export default async function handler(req, res) {
     updated,
     deal: {
       ...updatedDeal,
-      slug: updatedDeal?.slug || slugify(updatedDeal?.investment_name || '')
+      slug: updatedDeal?.slug || slugify(updatedDeal?.investment_name || ''),
+      mcWebsite: resolvedCompanyWebsite,
+      companyWebsite: resolvedCompanyWebsite
     }
   });
 }

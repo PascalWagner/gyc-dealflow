@@ -112,6 +112,19 @@
 		markDirty();
 	}
 
+	function updateIntakeSponsorName(nextName) {
+		const sponsor = form.sponsor || { id: '', name: '', createIfMissing: false };
+		const trimmedName = String(nextName || '').trim();
+		const keepLinkedRecord =
+			Boolean(sponsor.id) &&
+			trimmedName.toLowerCase() === String(sponsor.name || '').trim().toLowerCase();
+		updateField('sponsor', {
+			id: keepLinkedRecord ? sponsor.id : '',
+			name: nextName,
+			createIfMissing: !keepLinkedRecord && Boolean(trimmedName)
+		});
+	}
+
 	function generateSlug() {
 		updateField('slug', slugify(form.investmentName));
 	}
@@ -245,6 +258,8 @@
 		uploadError = '';
 
 		try {
+			await saveIntakeDetails();
+
 			if (deckFile || ppmFile) {
 				const actor = getActorFromSession();
 				if (actor.session?.token) {
@@ -288,6 +303,42 @@
 		} finally {
 			uploadState = 'idle';
 		}
+	}
+
+	async function saveIntakeDetails() {
+		const sponsorName = String(form.sponsor?.name || '').trim();
+		const intakePayload = {
+			investmentName: form.investmentName,
+			sponsorName,
+			managementCompanyId: String(form.sponsor?.id || '').trim(),
+			createManagementCompany: Boolean(sponsorName && !String(form.sponsor?.id || '').trim()),
+			companyWebsite: form.companyWebsite,
+			slug: form.slug || slugify(form.investmentName)
+		};
+
+		const token = await getFreshSessionToken();
+		if (!token) throw new Error('You need an active session to continue.');
+
+		const response = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify(intakePayload)
+		});
+		const payload = await response.json().catch(() => ({}));
+
+		if (!response.ok || !payload?.deal) {
+			throw new Error(payload?.error || 'Could not save the intake details.');
+		}
+
+		deal = payload.deal;
+		const hydrated = createDealReviewFormFromDeal(payload.deal);
+		form = hydrated.form;
+		fieldWarnings = hydrated.warnings;
+		fieldErrors = {};
+		dirty = false;
 	}
 
 	async function loadDeal() {
@@ -534,10 +585,45 @@
 				<section class="intake-screen">
 					<div class="intake-screen__header">
 						<div class="intake-screen__eyebrow">Step 1 of 2</div>
-						<h2>Upload the deck and PPM first</h2>
+						<h2>Set the deal up, then upload the source files</h2>
 						<p>
-							Attach the source documents for this deal, then move into review after we extract what we can.
+							Capture the investment name, management company, sponsor website, and source documents first. Then move into review after we extract what we can.
 						</p>
+					</div>
+
+					<div class="intake-basics-grid">
+						<label class="intake-field intake-field--span-2">
+							<span>Investment name</span>
+							<input
+								type="text"
+								value={form.investmentName}
+								placeholder="Sunrise Multifamily Fund II"
+								oninput={(event) => updateField('investmentName', event.currentTarget.value)}
+							>
+							<small>This should be the exact name you want to review and eventually publish.</small>
+						</label>
+
+						<label class="intake-field">
+							<span>Management company</span>
+							<input
+								type="text"
+								value={form.sponsor?.name || ''}
+								placeholder="Blue Bay Capital"
+								oninput={(event) => updateIntakeSponsorName(event.currentTarget.value)}
+							>
+							<small>Use the sponsor or operator name. We’ll link or create the company record from here.</small>
+						</label>
+
+						<label class="intake-field">
+							<span>Company website</span>
+							<input
+								type="url"
+								value={form.companyWebsite || ''}
+								placeholder="https://..."
+								oninput={(event) => updateField('companyWebsite', event.currentTarget.value)}
+							>
+							<small>Use the sponsor’s main website so the review step has a trustworthy reference point.</small>
+						</label>
 					</div>
 
 					<div class="intake-screen__status-grid">
@@ -557,7 +643,7 @@
 
 					<div class="intake-upload-grid">
 						<div class="intake-upload-card">
-							<div class="intake-upload-card__title">Deck</div>
+							<div class="intake-upload-card__title">Investment deck</div>
 							<div
 								class="add-deal-modal__dropzone"
 								class:is-active={Boolean(deckFile)}
@@ -913,6 +999,52 @@
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 14px;
+	}
+
+	.intake-basics-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 14px;
+	}
+
+	.intake-field {
+		display: grid;
+		gap: 8px;
+		padding: 16px;
+		border-radius: 18px;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		background: rgba(255, 255, 255, 0.82);
+	}
+
+	.intake-field--span-2 {
+		grid-column: 1 / -1;
+	}
+
+	.intake-field span {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.intake-field input {
+		width: 100%;
+		box-sizing: border-box;
+		padding: 12px 14px;
+		border-radius: 14px;
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.96);
+		font-family: var(--font-body);
+		font-size: 15px;
+		color: var(--text-dark);
+	}
+
+	.intake-field small {
+		font-size: 12px;
+		line-height: 1.5;
+		color: var(--text-secondary);
 	}
 
 	.doc-status-card,
@@ -1336,6 +1468,7 @@
 			order: -1;
 		}
 
+		.intake-basics-grid,
 		.intake-screen__status-grid,
 		.intake-upload-grid {
 			grid-template-columns: 1fr;

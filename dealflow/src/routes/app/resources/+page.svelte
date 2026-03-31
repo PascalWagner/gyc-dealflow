@@ -48,6 +48,19 @@
 		return '';
 	}
 
+	function handleThumbnailError(event, video) {
+		const image = event.currentTarget;
+		if (!image || !video?.youtubeId) return;
+		if (image.dataset.fallbackApplied === 'hq') {
+			image.onerror = null;
+			image.src = `https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`;
+			image.dataset.fallbackApplied = 'mq';
+			return;
+		}
+		image.src = `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`;
+		image.dataset.fallbackApplied = 'hq';
+	}
+
 	function isPlayable(video) {
 		return Boolean(video?.playable || video?.youtubeId || video?.url);
 	}
@@ -197,7 +210,7 @@
 					>
 						<div class="resource-thumb">
 							{#if getThumbnail(video)}
-								<img src={getThumbnail(video)} alt="" loading="lazy" />
+								<img src={getThumbnail(video)} alt="" loading="lazy" onerror={(event) => handleThumbnailError(event, video)} />
 							{:else}
 								<div class="resource-thumb-fallback">
 									<span>{video.category}</span>
@@ -399,6 +412,8 @@
 		gap: 18px;
 	}
 	.resource-card {
+		appearance: none;
+		-webkit-appearance: none;
 		padding: 0;
 		border: 1px solid var(--border);
 		border-radius: 20px;
@@ -410,6 +425,8 @@
 	.resource-thumb {
 		position: relative;
 		padding-bottom: 56.25%;
+		overflow: hidden;
+		line-height: 0;
 		background:
 			linear-gradient(135deg, rgba(81, 190, 123, 0.14), rgba(23, 52, 58, 0.2)),
 			linear-gradient(160deg, #17343a, #102529);
@@ -419,7 +436,10 @@
 		inset: 0;
 		width: 100%;
 		height: 100%;
+		display: block;
 		object-fit: cover;
+		object-position: center;
+		transform: scale(1.02);
 	}
 	.play-overlay {
 		position: absolute;
