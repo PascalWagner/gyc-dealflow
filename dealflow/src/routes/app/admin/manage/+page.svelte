@@ -355,12 +355,6 @@
 		return rows.filter((row) => matchesDealFilter(row, filterKey)).length;
 	}
 
-	function lifecycleTone(status) {
-		if (status === 'published') return 'published';
-		if (status === 'do_not_publish') return 'do-not-publish';
-		return 'working';
-	}
-
 	function readinessTone(row) {
 		if (row.hasBlockingIssues) return 'blocked';
 		if (row.completenessScore >= 90) return 'ready';
@@ -459,6 +453,15 @@
 					</div>
 				</div>
 
+				<div class="filter-row">
+					{#each dealFilterOptions as option}
+						<button class="filter-chip" class:active={dealFilter === option.key} onclick={() => (dealFilter = option.key)}>
+							<span>{option.label}</span>
+							<span class="filter-chip__count">{option.count}</span>
+						</button>
+					{/each}
+				</div>
+
 				<div class="toolbar">
 					<div class="search-wrap">
 						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
@@ -477,15 +480,6 @@
 					<span class="result-count">{filteredDealRows.length} deals in queue</span>
 				</div>
 
-				<div class="filter-row">
-					{#each dealFilterOptions as option}
-						<button class="filter-chip" class:active={dealFilter === option.key} onclick={() => (dealFilter = option.key)}>
-							<span>{option.label}</span>
-							<span class="filter-chip__count">{option.count}</span>
-						</button>
-					{/each}
-				</div>
-
 				{#if loading}
 					<div class="loading-msg">
 						<div class="sk-bar"></div>
@@ -498,8 +492,7 @@
 							<table class="workflow-table">
 								<thead>
 									<tr>
-										<th>Deal Name</th>
-										<th>Sponsor</th>
+										<th>Deal</th>
 										<th>Completeness</th>
 										<th>Lifecycle Status</th>
 										<th>Edit</th>
@@ -510,17 +503,13 @@
 										<tr class:is-pending={rowActionPendingId === row.id}>
 											<td>
 												<div class="deal-cell">
+													<div class="deal-sponsor">{row.sponsorName || 'Unknown sponsor'}</div>
 													<div class="deal-name">{row.dealName}</div>
-													<div class="deal-meta">
-														{row.slug ? `/${row.slug}` : 'No slug yet'}
-														{#if row.updatedAt}
-															<span>&middot; Updated {formatShortDate(row.updatedAt)}</span>
-														{/if}
+													<div class="deal-meta">{row.slug ? `/${row.slug}` : 'No slug yet'}</div>
+													<div class="deal-updated">
+														Updated {formatShortDate(row.updatedAt)}
 													</div>
 												</div>
-											</td>
-											<td>
-												<div class="sponsor-cell">{row.sponsorName || 'Unknown sponsor'}</div>
 											</td>
 											<td>
 												<div class="completeness-cell">
@@ -540,12 +529,6 @@
 											</td>
 											<td>
 												<div class="lifecycle-cell">
-													<div class="lifecycle-badges">
-														<span class={`status-pill tone-${lifecycleTone(row.lifecycleStatus)}`}>{formatLifecycleLabel(row.lifecycleStatus)}</span>
-														{#if row.catalogState === 'archived'}
-															<span class="status-pill tone-archived">Archived</span>
-														{/if}
-													</div>
 													<select
 														class="lifecycle-select"
 														value={row.lifecycleStatus}
@@ -924,30 +907,36 @@
 	tr:hover { background: rgba(247, 250, 251, 0.85); }
 	.workflow-table tr.is-pending { opacity: 0.7; }
 
-	.deal-cell { min-width: 220px; }
+	.deal-cell {
+		min-width: 260px;
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+	}
+
+	.deal-sponsor {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.2px;
+		color: var(--text-secondary);
+	}
+
 	.deal-name {
 		font-family: var(--font-ui);
-		font-size: 14px;
+		font-size: 15px;
 		font-weight: 800;
 		color: var(--text-dark);
 		line-height: 1.3;
-		margin-bottom: 4px;
 	}
 
 	.deal-meta,
+	.deal-updated,
 	.issue-fallback,
 	.completeness-copy {
 		font-size: 12px;
 		color: var(--text-muted);
 		line-height: 1.45;
-	}
-
-	.sponsor-cell {
-		min-width: 140px;
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
 	}
 
 	.completeness-cell {
@@ -984,7 +973,6 @@
 	}
 
 	.readiness-badge,
-	.status-pill,
 	.issue-chip {
 		display: inline-flex;
 		align-items: center;
@@ -1039,34 +1027,7 @@
 	.lifecycle-cell {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
-		min-width: 150px;
-	}
-
-	.lifecycle-badges {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-	}
-
-	.status-pill.tone-published {
-		background: rgba(22, 122, 82, 0.12);
-		color: #167a52;
-	}
-
-	.status-pill.tone-working {
-		background: rgba(31, 81, 89, 0.1);
-		color: #1f5159;
-	}
-
-	.status-pill.tone-do-not-publish {
-		background: rgba(194, 65, 68, 0.14);
-		color: #b42328;
-	}
-
-	.status-pill.tone-archived {
-		background: rgba(107, 114, 128, 0.14);
-		color: #475467;
+		min-width: 160px;
 	}
 
 	.lifecycle-select {

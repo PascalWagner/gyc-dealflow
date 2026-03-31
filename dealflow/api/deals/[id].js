@@ -169,6 +169,8 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Deal not found' });
   }
 
+  const availableColumns = new Set(Object.keys(deal || {}));
+
   // Verify: user must be in authorized_emails for this deal's company, or be admin
   const isAdmin = ADMIN_EMAILS.includes(user.email.toLowerCase());
 
@@ -274,15 +276,20 @@ export default async function handler(req, res) {
 
   const updates = {};
   const updated = [];
+  const omitted = [];
 
   for (const [camelKey, snakeKey] of Object.entries(FIELD_MAP)) {
     if (camelKey in candidateBody) {
+      if (!availableColumns.has(snakeKey)) {
+        omitted.push(camelKey);
+        continue;
+      }
       updates[snakeKey] = normalizeValue(camelKey, candidateBody[camelKey]);
       updated.push(camelKey);
     }
   }
 
-  if (Object.keys(updates).length === 0 && touchedManagementCompany) {
+  if (Object.keys(updates).length === 0 && touchedManagementCompany && availableColumns.has('updated_at')) {
     updates.updated_at = new Date().toISOString();
   }
 
@@ -290,10 +297,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No valid fields to update' });
   }
 
-  if (updates.investment_name && !updates.slug) {
+  if (updates.investment_name && !updates.slug && availableColumns.has('slug')) {
     updates.slug = slugify(updates.investment_name);
   }
-  if (!updates.sponsor_name && candidateBody.sponsorName !== undefined) {
+  if (availableColumns.has('sponsor_name') && !updates.sponsor_name && candidateBody.sponsorName !== undefined) {
     updates.sponsor_name = String(candidateBody.sponsorName || '').trim();
   }
 
@@ -321,6 +328,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     success: true,
     updated,
+    omitted,
     deal: {
       ...updatedDeal,
       slug: updatedDeal?.slug || slugify(updatedDeal?.investment_name || ''),
