@@ -11,7 +11,10 @@ export async function resolveDealViewerContext(req, { supabase = getAdminClient(
 		return {
 			token: '',
 			user: null,
+			actorEmail: '',
 			email: '',
+			isImpersonating: false,
+			actorIsAdmin: false,
 			isAdmin: false,
 			viewerManagementCompanyId: null
 		};
@@ -26,14 +29,17 @@ export async function resolveDealViewerContext(req, { supabase = getAdminClient(
 			return {
 				token,
 				user: null,
+				actorEmail: '',
 				email: '',
+				isImpersonating: false,
+				actorIsAdmin: false,
 				isAdmin: false,
 				viewerManagementCompanyId: null
 			};
 		}
 
-		const email = String(user.email || '').trim().toLowerCase();
-		let isAdmin = ADMIN_EMAILS.includes(email);
+		const actorEmail = String(user.email || '').trim().toLowerCase();
+		let actorIsAdmin = ADMIN_EMAILS.includes(actorEmail);
 		let viewerManagementCompanyId = null;
 
 		if (user.id) {
@@ -43,37 +49,87 @@ export async function resolveDealViewerContext(req, { supabase = getAdminClient(
 				.eq('id', user.id)
 				.maybeSingle();
 
-			if (profile?.is_admin === true) isAdmin = true;
+			if (profile?.is_admin === true) actorIsAdmin = true;
 			viewerManagementCompanyId = profile?.management_company_id || null;
 		}
 
-		if (!viewerManagementCompanyId && email) {
+		if (!viewerManagementCompanyId && actorEmail) {
 			const { data: company } = await supabase
 				.from('management_companies')
 				.select('id')
-				.contains('authorized_emails', [email])
+				.contains('authorized_emails', [actorEmail])
 				.limit(1)
 				.maybeSingle();
 
 			viewerManagementCompanyId = company?.id || null;
 		}
 
+		let effectiveEmail = actorEmail;
+		let effectiveIsAdmin = actorIsAdmin;
+		const requestedImpersonationEmail = readRequestedImpersonationEmail(req);
+
+		if (actorIsAdmin && requestedImpersonationEmail && requestedImpersonationEmail !== actorEmail) {
+			effectiveEmail = requestedImpersonationEmail;
+			effectiveIsAdmin = false;
+			viewerManagementCompanyId = null;
+
+			const { data: impersonatedProfile } = await supabase
+				.from('user_profiles')
+				.select('management_company_id')
+				.eq('email', requestedImpersonationEmail)
+				.maybeSingle();
+
+			viewerManagementCompanyId = impersonatedProfile?.management_company_id || null;
+
+			if (!viewerManagementCompanyId) {
+				const { data: company } = await supabase
+					.from('management_companies')
+					.select('id')
+					.contains('authorized_emails', [requestedImpersonationEmail])
+					.limit(1)
+					.maybeSingle();
+
+				viewerManagementCompanyId = company?.id || null;
+			}
+		}
+
 		return {
 			token,
 			user,
-			email,
-			isAdmin,
+			actorEmail,
+			email: effectiveEmail,
+			isImpersonating: effectiveEmail !== actorEmail,
+			actorIsAdmin,
+			isAdmin: effectiveIsAdmin,
 			viewerManagementCompanyId
 		};
 	} catch {
 		return {
 			token,
 			user: null,
+			actorEmail: '',
 			email: '',
+			isImpersonating: false,
+			actorIsAdmin: false,
 			isAdmin: false,
 			viewerManagementCompanyId: null
 		};
 	}
+}
+
+function readRequestedImpersonationEmail(req) {
+	const queryEmail = String(req?.query?.email || '').trim().toLowerCase();
+	const queryAdmin = String(req?.query?.admin || '').trim().toLowerCase();
+	if (queryAdmin === 'true' && queryEmail) return queryEmail;
+
+	const headerEmail = String(req?.headers?.['x-impersonate-email'] || '').trim().toLowerCase();
+	return headerEmail || '';
+}
+
+export function applyPublishedCatalogQuery(query) {
+	return query
+		.eq('lifecycle_status', 'published')
+		.eq('is_visible_to_users', true);
 }
 
 export function applyDealVisibilityQuery(query, viewerContext = {}) {

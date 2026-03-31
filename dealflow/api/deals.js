@@ -10,6 +10,7 @@
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
 import {
   applyDealVisibilityQuery,
+  applyPublishedCatalogQuery,
   canViewerAccessDeal,
   canViewerAccessRestricted506bDeal,
   resolveDealViewerContext
@@ -87,21 +88,20 @@ export default async function handler(req, res) {
 
     // Run deals + sponsors queries in parallel (was sequential — ~2x faster)
     const [dealsResult, sponsorsResult] = await Promise.all([
-      applyDealVisibilityQuery(
+      applyPublishedCatalogQuery(
         supabase
-        .from('opportunities')
-        .select(`
-          *,
-          management_company:management_companies (
-            id, operator_name, ceo, website, linkedin_ceo,
-            invest_clearly_profile, founding_year, type, asset_classes,
-            total_investors, authorized_emails, booking_url,
-            ir_contact_name, ir_contact_email, full_cycle_deals
-          )
-        `)
-        .not('investment_name', 'eq', '')
-        .order('added_date', { ascending: false }),
-        viewerContext
+          .from('opportunities')
+          .select(`
+            *,
+            management_company:management_companies (
+              id, operator_name, ceo, website, linkedin_ceo,
+              invest_clearly_profile, founding_year, type, asset_classes,
+              total_investors, authorized_emails, booking_url,
+              ir_contact_name, ir_contact_email, full_cycle_deals
+            )
+          `)
+          .not('investment_name', 'eq', '')
+          .order('added_date', { ascending: false })
       ),
 
       // Sponsors: fetch in parallel instead of after deals

@@ -10,6 +10,7 @@
 	import DealModalLayer from '$lib/components/deal/DealModalLayer.svelte';
 	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember, isGP } from '$lib/stores/auth.js';
 	import {
+		applyAdminImpersonationToUrl,
 		currentAdminRealUser,
 		readUserScopedJson,
 		readUserScopedString,
@@ -1049,7 +1050,10 @@
 
 		if (!deal && token && dealId) {
 			try {
-				const resp = await fetch(`/api/deals?id=${encodeURIComponent(dealId)}`, { headers });
+				const dealUrl = new URL('/api/deals', window.location.origin);
+				dealUrl.searchParams.set('id', dealId);
+				applyAdminImpersonationToUrl(dealUrl);
+				const resp = await fetch(`${dealUrl.pathname}${dealUrl.search}`, { headers });
 				if (resp.ok) {
 					const data = await resp.json();
 					if (data?.deal) {

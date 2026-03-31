@@ -46,6 +46,7 @@ export function includesLoose(haystack, needle) {
 export function normalizeMemberDealsQuery(query = {}) {
 	return {
 		scope: String(query.scope || 'browse').trim().toLowerCase(),
+		internal: query.internal === 'true',
 		ids: parseList(query.ids),
 		excludedIds: new Set(parseList(query.exclude_ids)),
 		search: String(query.q || '').trim(),

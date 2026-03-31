@@ -1,10 +1,9 @@
 import {
-	ADMIN_EMAILS,
 	getAdminClient,
-	resolveUserFromAccessToken,
 	rateLimit,
 	setCors
 } from '../_supabase.js';
+import { resolveDealViewerContext } from '../_deal-access.js';
 import { filterDeals, paginateDeals } from './deals/filters.js';
 import { normalizeMemberDealsQuery } from './deals/query.js';
 import { fetchMemberDealDataset } from './deals/repository.js';
@@ -22,28 +21,26 @@ export default async function handler(req, res) {
 	}
 
 	try {
-		const { user } = await resolveUserFromAccessToken(token);
-		if (!user?.email) {
+		const adminClient = getAdminClient();
+		const normalizedQuery = normalizeMemberDealsQuery(req.query || {});
+		const viewerContext = await resolveDealViewerContext(req, { supabase: adminClient });
+		if (!viewerContext?.email) {
 			return res.status(401).json({ error: 'Invalid or expired token' });
 		}
 
-		const adminClient = getAdminClient();
-		const profileResult = user.id
-			? await adminClient.from('user_profiles').select('is_admin, management_company_id').eq('id', user.id).maybeSingle()
-			: { data: null, error: null };
-
-		if (profileResult?.error) throw profileResult.error;
-
-		const isAdmin =
-			Boolean(profileResult?.data?.is_admin) ||
-			ADMIN_EMAILS.includes(String(user.email || '').trim().toLowerCase());
-		const viewerManagementCompanyId = profileResult?.data?.management_company_id || null;
-		const normalizedQuery = normalizeMemberDealsQuery(req.query || {});
+		const canUseInternalView = Boolean(
+			normalizedQuery.internal && viewerContext.actorIsAdmin && !viewerContext.isImpersonating
+		);
 
 		const { parentDeals, childShareClasses, sponsorRows } = await fetchMemberDealDataset(
 			adminClient,
 			normalizedQuery,
-			{ include506b: isAdmin, viewerManagementCompanyId, isAdmin }
+			{
+				include506b: canUseInternalView,
+				viewerManagementCompanyId: viewerContext.viewerManagementCompanyId,
+				isAdmin: canUseInternalView,
+				publishedOnly: !canUseInternalView
+			}
 		);
 
 		const transformedDeals = transformDeals(parentDeals, childShareClasses, sponsorRows);

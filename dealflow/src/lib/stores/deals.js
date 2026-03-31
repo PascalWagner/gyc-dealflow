@@ -7,6 +7,7 @@ import {
 	setStoredSessionUser
 } from '$lib/stores/auth.js';
 import {
+	applyAdminImpersonationToUrl,
 	applyAdminImpersonationToPayload,
 	currentSessionEmail,
 	isScopedImpersonationActive,
@@ -36,7 +37,7 @@ export const OUTCOME_STAGES = OUTCOME_UI_STAGES;
 export const ALL_STAGES = [...PIPELINE_STAGES, ...OUTCOME_STAGES];
 export const MEMBER_DEALS_PAGE_SIZE = 24;
 const MEMBER_DEALS_CACHE_REVALIDATE_COOLDOWN_MS = 15000;
-const MEMBER_DEALS_CACHE_KEY_PREFIX = 'member-deals';
+const MEMBER_DEALS_CACHE_KEY_PREFIX = 'member-deals-v2';
 
 function persistStageCache(value) {
 	writeScopedJson('gycDealStages', value, { email: currentSessionEmail() });
@@ -162,6 +163,7 @@ function normalizeIdList(value) {
 function sanitizeMemberDealsOptions(options = {}) {
 	return {
 		scope: options.scope || 'browse',
+		internal: Boolean(options.internal),
 		limit: Number(options.limit || MEMBER_DEALS_PAGE_SIZE),
 		ids: normalizeIdList(options.ids),
 		excludeIds: normalizeIdList(options.excludeIds),
@@ -510,7 +512,7 @@ export async function fetchDeals({ force = false } = {}) {
 		dealsError.set(null);
 
 		try {
-			const res = await fetch('/api/member/deals?scope=catalog', {
+			const res = await fetch(buildMemberDealsUrl({ scope: 'catalog' }), {
 				headers: await getMemberDealsAuthHeaders()
 			});
 			if (!res.ok) {
@@ -535,32 +537,39 @@ export async function fetchDeals({ force = false } = {}) {
 }
 
 function buildMemberDealsUrl(options = {}) {
-	const params = new URLSearchParams();
-	params.set('scope', options.scope || 'browse');
-	params.set('limit', String(options.limit || MEMBER_DEALS_PAGE_SIZE));
-	params.set('offset', String(options.offset || 0));
+	const baseOrigin = browser ? window.location.origin : 'http://localhost';
+	const url = new URL('/api/member/deals', baseOrigin);
+	url.searchParams.set('scope', options.scope || 'browse');
+	url.searchParams.set('limit', String(options.limit || MEMBER_DEALS_PAGE_SIZE));
+	url.searchParams.set('offset', String(options.offset || 0));
 
-	if (options.ids?.length) params.set('ids', options.ids.join(','));
-	if (options.excludeIds?.length) params.set('exclude_ids', options.excludeIds.join(','));
-	if (options.search) params.set('q', options.search);
-	if (options.assetClass) params.set('asset_class', options.assetClass);
-	if (options.assetClassIn?.length) params.set('asset_class_in', options.assetClassIn.join(','));
-	if (options.dealType) params.set('deal_type', options.dealType);
-	if (options.dealTypeIn?.length) params.set('deal_type_in', options.dealTypeIn.join(','));
-	if (options.strategy) params.set('strategy', options.strategy);
-	if (options.strategyIn?.length) params.set('strategy_in', options.strategyIn.join(','));
-	if (options.status) params.set('status', options.status);
-	if (options.distributions) params.set('distributions', options.distributions);
-	if (options.maxInvest) params.set('max_minimum', options.maxInvest);
-	if (options.maxLockup) params.set('max_hold_years', options.maxLockup);
-	if (options.minIRR) params.set('min_irr', options.minIRR);
-	if (options.sortBy) params.set('sort', options.sortBy);
-	if (options.showArchived) params.set('include_archived', 'true');
-	if (options.company) params.set('company', options.company);
-	if (options.managementCompanyId) params.set('management_company_id', options.managementCompanyId);
-	if (options.matchAnyStrategyOrDealType) params.set('match_any_strategy_or_deal_type', 'true');
+	if (options.ids?.length) url.searchParams.set('ids', options.ids.join(','));
+	if (options.excludeIds?.length) url.searchParams.set('exclude_ids', options.excludeIds.join(','));
+	if (options.search) url.searchParams.set('q', options.search);
+	if (options.assetClass) url.searchParams.set('asset_class', options.assetClass);
+	if (options.assetClassIn?.length) url.searchParams.set('asset_class_in', options.assetClassIn.join(','));
+	if (options.dealType) url.searchParams.set('deal_type', options.dealType);
+	if (options.dealTypeIn?.length) url.searchParams.set('deal_type_in', options.dealTypeIn.join(','));
+	if (options.strategy) url.searchParams.set('strategy', options.strategy);
+	if (options.strategyIn?.length) url.searchParams.set('strategy_in', options.strategyIn.join(','));
+	if (options.status) url.searchParams.set('status', options.status);
+	if (options.distributions) url.searchParams.set('distributions', options.distributions);
+	if (options.maxInvest) url.searchParams.set('max_minimum', options.maxInvest);
+	if (options.maxLockup) url.searchParams.set('max_hold_years', options.maxLockup);
+	if (options.minIRR) url.searchParams.set('min_irr', options.minIRR);
+	if (options.sortBy) url.searchParams.set('sort', options.sortBy);
+	if (options.showArchived) url.searchParams.set('include_archived', 'true');
+	if (options.company) url.searchParams.set('company', options.company);
+	if (options.managementCompanyId) url.searchParams.set('management_company_id', options.managementCompanyId);
+	if (options.matchAnyStrategyOrDealType) url.searchParams.set('match_any_strategy_or_deal_type', 'true');
+	if (options.internal) url.searchParams.set('internal', 'true');
 
-	return `/api/member/deals?${params.toString()}`;
+	if (browser) {
+		applyAdminImpersonationToUrl(url);
+		return `${url.pathname}${url.search}`;
+	}
+
+	return `/api/member/deals?${url.searchParams.toString()}`;
 }
 
 export async function queryMemberDeals(options = {}) {

@@ -55,22 +55,11 @@
 	const dealFilterOptions = $derived.by(() => [
 		{ key: 'all', label: 'All', count: dealWorkflowRows.length },
 		{ key: 'hidden', label: 'Hidden', count: countDealRows(dealWorkflowRows, 'hidden') },
-		{ key: 'visible', label: 'Visible', count: countDealRows(dealWorkflowRows, 'visible') },
 		{ key: 'draft', label: 'Draft', count: countDealRows(dealWorkflowRows, 'draft') },
 		{ key: 'in_review', label: 'In Review', count: countDealRows(dealWorkflowRows, 'in_review') },
 		{ key: 'approved', label: 'Approved', count: countDealRows(dealWorkflowRows, 'approved') },
 		{ key: 'published', label: 'Published', count: countDealRows(dealWorkflowRows, 'published') },
-		{ key: 'archived', label: 'Archived', count: countDealRows(dealWorkflowRows, 'archived') },
-		{
-			key: 'missing_required',
-			label: 'Missing Required Fields',
-			count: countDealRows(dealWorkflowRows, 'missing_required')
-		},
-		{
-			key: 'ready_to_publish',
-			label: 'Ready to Publish',
-			count: countDealRows(dealWorkflowRows, 'ready_to_publish')
-		}
+		{ key: 'archived', label: 'Archived', count: countDealRows(dealWorkflowRows, 'archived') }
 	]);
 
 	onMount(() => {
@@ -368,9 +357,10 @@
 		return {
 			totalDeals: rows.length,
 			hidden: rows.filter((row) => !row.isVisibleToUsers).length,
-			visible: rows.filter((row) => row.isVisibleToUsers).length,
-			missingRequiredFields: rows.filter((row) => row.hasBlockingIssues).length,
-			readyToPublish: rows.filter((row) => row.readyToPublish).length,
+			draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
+			inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
+			approved: rows.filter((row) => row.lifecycleStatus === 'approved').length,
+			archived: rows.filter((row) => row.lifecycleStatus === 'archived').length,
 			published: rows.filter((row) => row.lifecycleStatus === 'published' && row.isVisibleToUsers).length
 		};
 	}
@@ -379,18 +369,12 @@
 		switch (filterKey) {
 			case 'hidden':
 				return !row.isVisibleToUsers;
-			case 'visible':
-				return row.isVisibleToUsers;
 			case 'draft':
 			case 'in_review':
 			case 'approved':
 			case 'published':
 			case 'archived':
 				return row.lifecycleStatus === filterKey;
-			case 'missing_required':
-				return row.hasBlockingIssues;
-			case 'ready_to_publish':
-				return row.readyToPublish;
 			default:
 				return true;
 		}
@@ -444,7 +428,7 @@
 	}
 
 	function visibilityLabel(row) {
-		return row.isVisibleToUsers ? 'Visible to users' : 'Hidden from users';
+		return row.isVisibleToUsers ? 'Live in catalog' : 'Hidden from catalog';
 	}
 
 	function updateDealWorkflowRow(nextRow) {
@@ -543,7 +527,7 @@
 					<div class="queue-banner__eyebrow">Deal QA Work Queue</div>
 					<div class="queue-banner__title">Review imported deals, fill the gaps, then publish only what is trustworthy.</div>
 					<p class="queue-banner__copy">
-						Hidden drafts surface first. Use completeness, missing-field chips, lifecycle status, and the visibility toggle together to move one deal at a time from intake to publish-ready.
+						Hidden drafts surface first. Use completeness, row-level QA issues, lifecycle status, and the catalog toggle together to move one deal at a time from intake to published.
 					</p>
 				</section>
 
@@ -557,16 +541,16 @@
 						<div class="stat-value">{dealStats.hidden}</div>
 					</div>
 					<div class="stat-card">
-						<div class="stat-label">Visible</div>
-						<div class="stat-value">{dealStats.visible}</div>
+						<div class="stat-label">Draft</div>
+						<div class="stat-value">{dealStats.draft}</div>
 					</div>
 					<div class="stat-card">
-						<div class="stat-label">Missing Required Fields</div>
-						<div class="stat-value">{dealStats.missingRequiredFields}</div>
+						<div class="stat-label">In Review</div>
+						<div class="stat-value">{dealStats.inReview}</div>
 					</div>
 					<div class="stat-card">
-						<div class="stat-label">Ready to Publish</div>
-						<div class="stat-value">{dealStats.readyToPublish}</div>
+						<div class="stat-label">Approved</div>
+						<div class="stat-value">{dealStats.approved}</div>
 					</div>
 					<div class="stat-card">
 						<div class="stat-label">Published</div>
@@ -679,12 +663,12 @@
 													<span class="visibility-track">
 														<span class="visibility-knob"></span>
 													</span>
-													<span class="visibility-text">
-														<span class="visibility-label">{visibilityLabel(row)}</span>
-														<span class="visibility-sub">
-															{row.visibilityDisabledReason || (row.isVisibleToUsers ? 'Published live' : 'Not visible on user surfaces')}
+														<span class="visibility-text">
+															<span class="visibility-label">{visibilityLabel(row)}</span>
+															<span class="visibility-sub">
+																{row.visibilityDisabledReason || (row.isVisibleToUsers ? 'Included in member-facing Deal Flow' : 'Excluded from member-facing Deal Flow')}
+															</span>
 														</span>
-													</span>
 												</button>
 											</td>
 											<td>

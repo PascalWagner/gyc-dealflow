@@ -92,7 +92,8 @@
 				search: trimmed,
 				scope: 'browse',
 				limit: 8,
-				showArchived: true
+				showArchived: true,
+				internal: true
 			});
 
 			if (requestId !== searchRequestId) return;

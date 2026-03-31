@@ -1,5 +1,5 @@
 import { CHILD_SHARE_CLASS_SELECT, DEAL_SELECT, SPONSOR_SELECT } from './constants.js';
-import { applyDealVisibilityQuery } from '../../_deal-access.js';
+import { applyDealVisibilityQuery, applyPublishedCatalogQuery } from '../../_deal-access.js';
 
 const DEAL_RELATION_BATCH_SIZE = 75;
 
@@ -100,7 +100,7 @@ function applyDbSort(query, normalizedQuery) {
 export async function fetchMemberDealDataset(
 	adminClient,
 	normalizedQuery,
-	{ include506b = false, viewerManagementCompanyId = null, isAdmin = false } = {}
+	{ include506b = false, viewerManagementCompanyId = null, isAdmin = false, publishedOnly = false } = {}
 ) {
 	let parentQuery = adminClient
 		.from('opportunities')
@@ -108,7 +108,9 @@ export async function fetchMemberDealDataset(
 		.is('parent_deal_id', null)
 		.not('investment_name', 'eq', '');
 
-	parentQuery = applyDealVisibilityQuery(parentQuery, { isAdmin, viewerManagementCompanyId });
+	parentQuery = publishedOnly
+		? applyPublishedCatalogQuery(parentQuery)
+		: applyDealVisibilityQuery(parentQuery, { isAdmin, viewerManagementCompanyId });
 	parentQuery = applyDbFilters(parentQuery, normalizedQuery, { include506b });
 	parentQuery = parentQuery ? applyDbSort(parentQuery, normalizedQuery) : parentQuery;
 	if (!parentQuery) {
@@ -133,13 +135,23 @@ export async function fetchMemberDealDataset(
 
 	const [childShareClasses, sponsorRows] = await Promise.all([
 		fetchInChunks(parentIds, (batchIds) =>
-			applyDealVisibilityQuery(
-				adminClient
-					.from('opportunities')
-					.select(CHILD_SHARE_CLASS_SELECT)
-					.in('parent_deal_id', batchIds)
-					.order('created_at', { ascending: true }),
-				{ isAdmin, viewerManagementCompanyId }
+			(
+				publishedOnly
+					? applyPublishedCatalogQuery(
+						adminClient
+							.from('opportunities')
+							.select(CHILD_SHARE_CLASS_SELECT)
+							.in('parent_deal_id', batchIds)
+							.order('created_at', { ascending: true })
+					)
+					: applyDealVisibilityQuery(
+						adminClient
+							.from('opportunities')
+							.select(CHILD_SHARE_CLASS_SELECT)
+							.in('parent_deal_id', batchIds)
+							.order('created_at', { ascending: true }),
+						{ isAdmin, viewerManagementCompanyId }
+					)
 			)
 		),
 		fetchInChunks(parentIds, (batchIds) =>
