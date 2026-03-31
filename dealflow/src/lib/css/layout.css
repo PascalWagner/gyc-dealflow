@@ -16,6 +16,7 @@
 	--ly-gap-lg: 24px;
 	--ly-gap-xl: 32px;
 	--ly-gap-2xl: 48px;
+	--ly-page-section-gap: 24px;
 }
 
 .ly-app-shell,
@@ -73,7 +74,7 @@
 
 .ly-page-stack {
 	display: grid;
-	gap: var(--ly-page-stack-gap, var(--ly-gap-xl));
+	gap: var(--ly-page-stack-gap, var(--ly-page-section-gap));
 	min-width: 0;
 }
 
@@ -82,6 +83,10 @@
 	gap: var(--ly-gap-md);
 	margin-bottom: var(--ly-gap-lg);
 	min-width: 0;
+}
+
+.ly-page-stack > .ly-page-header {
+	margin-bottom: 0;
 }
 
 .ly-page-header-main {
