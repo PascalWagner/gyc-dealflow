@@ -928,17 +928,11 @@
 </script>
 
 <svelte:head>
-	<title>My Plan | GYC</title>
+	<title>Plan | GYC</title>
 </svelte:head>
 
 <PageContainer className="plan-shell ly-page-stack">
-	<PageHeader title="My Plan" className="dashboard-page-header">
-		<nav slot="secondaryRow" class="ly-dashboard-tabs" aria-label="Dashboard sections">
-			<a href="/app/dashboard" class="ly-dashboard-tab" data-sveltekit-reload>Overview</a>
-			<a href="/app/portfolio" class="ly-dashboard-tab" data-sveltekit-reload>Portfolio</a>
-			<a href="/app/plan" class="ly-dashboard-tab active" data-sveltekit-reload>My Plan</a>
-		</nav>
-	</PageHeader>
+	<PageHeader title="Plan" className="dashboard-page-header" />
 
 	<div class="plan-page">
 	{#if saveMsg && !(showWizard || !hasPlan)}

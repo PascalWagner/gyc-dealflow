@@ -28,7 +28,7 @@
 
 		return [
 			{
-				label: 'My Dashboard',
+				label: 'Tools',
 				items: MORE_DASHBOARD_ITEMS.map((item) => ({ href: item.href, label: item.label, icon: item.moreIcon }))
 			},
 			{
