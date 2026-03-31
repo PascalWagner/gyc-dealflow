@@ -6,6 +6,10 @@
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
 import { getLatestGpAgreement, hasCurrentGpAgreement } from './_gp-agreement.js';
+import {
+  loadManagementCompanyTeamContacts,
+  saveManagementCompanyTeamContacts
+} from './_management-company-contacts.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -47,6 +51,7 @@ export default async function handler(req, res) {
 
       // Get linked company (if any)
       let company = null;
+      let teamContacts = [];
       if (profile.management_company_id) {
         const { data: mc } = await supabase
           .from('management_companies')
@@ -54,6 +59,15 @@ export default async function handler(req, res) {
           .eq('id', profile.management_company_id)
           .single();
         company = mc;
+        const contactState = await loadManagementCompanyTeamContacts(supabase, {
+          managementCompanyId: profile.management_company_id,
+          company: mc,
+          user: {
+            name: profile.full_name,
+            email: profile.email
+          }
+        });
+        teamContacts = contactState.contacts;
       }
 
       // Check if they have any deals
@@ -88,6 +102,7 @@ export default async function handler(req, res) {
           presentationInterest: profile.presentation_interest
         },
         company,
+        teamContacts,
         dealCount,
         hasBuyBox: !!(buyBox && buyBox.completed_at),
         agreementStatus: {
@@ -203,27 +218,54 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, step: 2, companyId });
       }
 
-      // Step: ir-contact (Phase 2b)
-      if (step === 'ir-contact') {
+      // Step: team-contacts / ir-contact (Phase 2b)
+      if (step === 'team-contacts' || step === 'ir-contact') {
         if (!profile.management_company_id) {
           return res.status(400).json({ error: 'Company not set up yet' });
         }
 
-        await supabase
-          .from('management_companies')
-          .update({
-            ir_contact_name: data.irContactName,
-            ir_contact_email: data.irContactEmail,
-            booking_url: data.bookingUrl || null
-          })
-          .eq('id', profile.management_company_id);
+        const nextTeamContacts = Array.isArray(data?.teamContacts)
+          ? data.teamContacts
+          : [{
+              firstName: data?.irContactFirstName,
+              lastName: data?.irContactLastName,
+              email: data?.irContactEmail,
+              phone: data?.irContactPhone,
+              role: data?.role || 'Investor Relations',
+              linkedinUrl: data?.irLinkedin,
+              isPrimary: true,
+              isInvestorRelations: true,
+              calendarUrl: data?.bookingUrl
+            }];
+
+        let contactState;
+        try {
+          contactState = await saveManagementCompanyTeamContacts(supabase, {
+            managementCompanyId: profile.management_company_id,
+            contacts: nextTeamContacts
+          });
+        } catch (contactError) {
+          if (contactError?.validation) {
+            return res.status(400).json({
+              error: contactError.message,
+              contactErrors: contactError.validation.errors || [],
+              formError: contactError.validation.formError || contactError.message
+            });
+          }
+          throw contactError;
+        }
 
         await supabase
           .from('user_profiles')
           .update({ gp_onboarding_step: 3 })
           .eq('id', profile.id);
 
-        return res.status(200).json({ success: true, step: 3 });
+        return res.status(200).json({
+          success: true,
+          step: 3,
+          teamContacts: contactState.contacts,
+          storageMode: contactState.storageMode
+        });
       }
 
       // Step: deal-uploaded (Phase 3 — just advance step, deal creation is separate)

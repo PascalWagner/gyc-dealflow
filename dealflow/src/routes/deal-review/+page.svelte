@@ -3,9 +3,26 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onDestroy, onMount } from 'svelte';
+	import DealOnboardingProgress from '$lib/components/deal-review/DealOnboardingProgress.svelte';
+	import DealSourceRail from '$lib/components/deal-review/DealSourceRail.svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
+	import KeyDetailsStage from '$lib/components/deal-review/stages/KeyDetailsStage.svelte';
+	import RiskSourceValidationStage from '$lib/components/deal-review/RiskSourceValidationStage.svelte';
+	import SecVerificationStage from '$lib/components/deal-review/SecVerificationStage.svelte';
+	import TeamContactsStage from '$lib/components/onboarding/TeamContactsStage.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import {
+		buildFallbackTeamContacts,
+		normalizeTeamContacts,
+		pickInvestorRelationsContact,
+		pickPrimaryTeamContact,
+		validateTeamContacts
+	} from '$lib/onboarding/teamContacts.js';
+	import {
+		isResolvedSecVerificationStatus,
+		SEC_VERIFICATION_LABELS
+	} from '$lib/sec/verification.js';
 	import {
 		ensureSessionUserToken,
 		getFreshSessionToken,
@@ -22,6 +39,18 @@
 		dealReviewSections,
 		getDealReviewFieldWarning
 	} from '$lib/utils/dealReviewSchema.js';
+	import {
+		buildDealOnboardingFlow,
+		DEAL_ONBOARDING_BRANCH_LABELS,
+		DEAL_ONBOARDING_BRANCHES,
+		getDealOnboardingFieldGroups,
+		getDealOnboardingStageById,
+		getDealOnboardingStages,
+		getNextOnboardingStage,
+		getPreviousOnboardingStage,
+		isValidOnboardingStage,
+		resolveDealOnboardingBranch
+	} from '$lib/utils/dealOnboardingFlow.js';
 	import {
 		computeDealCompleteness,
 		DEAL_CATALOG_STATE_LABELS,
@@ -42,6 +71,65 @@
 		if (status === 'published') return 'published';
 		if (status === 'do_not_publish') return 'do-not-publish';
 		return 'working';
+	}
+
+	function listFromValue(value) {
+		if (Array.isArray(value)) {
+			return value.map((item) => String(item || '').trim()).filter(Boolean);
+		}
+		return String(value || '')
+			.split('\n')
+			.map((item) => item.trim())
+			.filter(Boolean);
+	}
+
+	function listToTextarea(value = []) {
+		return listFromValue(value).join('\n');
+	}
+
+	function updateListState(kind, rawValue) {
+		const nextList = listFromValue(rawValue);
+		if (kind === 'source') {
+			sourceRiskFactors = nextList;
+		} else {
+			highlightedRisks = nextList;
+		}
+		markDirty();
+	}
+
+	function getStageHref(stage, { extract = false, from = '' } = {}) {
+		const params = new URLSearchParams({ id: dealId });
+		params.set('stage', stage);
+		if (from) params.set('from', from);
+		if (extract) params.set('extract', '1');
+		return `/deal-review?${params.toString()}`;
+	}
+
+	function getStageFieldGroups(stage) {
+		return getDealOnboardingFieldGroups(stage, { branch: branchInfo.branch, source: onboardingSource });
+	}
+
+	function getBranchOptions() {
+		return Object.values(DEAL_ONBOARDING_BRANCHES);
+	}
+
+	function setManualBranch(branch) {
+		manualBranch = branch;
+		markDirty();
+	}
+
+	function buildOperatorValidationHref() {
+		const contact = irTeamContact || primaryTeamContact;
+		if (!contact?.email) return '';
+		const subject = encodeURIComponent(`Deal validation request: ${form.investmentName || deal?.investment_name || 'Investment details'}`);
+		const body = encodeURIComponent(
+			`Hi ${contact.firstName || ''},\n\n` +
+			`I help clients understand private investments and I’m reviewing ${form.investmentName || deal?.investment_name || 'this opportunity'} for our platform.\n\n` +
+			`I’d love to confirm whether the information we currently have is accurate, and whether you would prefer your deals to remain hidden from the public or be discoverable by other LPs researching your company.\n\n` +
+			`Could you please review the deck/PPM details and let me know if anything should be corrected?\n\n` +
+			`Thank you,\nPascal`
+		);
+		return `mailto:${encodeURIComponent(contact.email)}?subject=${subject}&body=${body}`;
 	}
 
 	let loading = $state(true);
@@ -72,8 +160,18 @@
 	let intakeSponsorOpen = $state(false);
 	let intakeSponsorBlurTimer = $state(null);
 	let intakeSponsorSearchTimer = $state(null);
+	let teamContacts = $state([]);
+	let teamContactsError = $state('');
+	let teamContactsSaveState = $state('idle');
+	let secVerificationContext = $state(null);
+	let sourceRiskFactors = $state([]);
+	let highlightedRisks = $state([]);
+	let riskFactorDraft = $state('');
+	let highlightedRiskDraft = $state('');
+	let manualBranch = $state('');
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
+	const requestedStage = $derived($page.url.searchParams.get('stage') || '');
 	const reviewStep = $derived($page.url.searchParams.get('step') === 'intake' ? 'intake' : 'review');
 	const shouldAutoExtract = $derived($page.url.searchParams.get('extract') === '1');
 	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
@@ -82,12 +180,55 @@
 	const lifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
 	const catalogState = $derived(resolveDealCatalogState(deal || {}));
 	const canPublishFromQueue = $derived(!completeness.hasBlockingIssues);
+	const onboardingSource = $derived({
+		...(deal || {}),
+		...form,
+		sponsorName: form.sponsor?.name || deal?.sponsor_name || deal?.sponsorName || '',
+		managementCompanyId: form.sponsor?.id || deal?.management_company_id || deal?.managementCompanyId || '',
+		branch: manualBranch || deal?.deal_branch || deal?.dealBranch || '',
+		dealBranch: manualBranch || deal?.deal_branch || deal?.dealBranch || ''
+	});
+	const branchInfo = $derived(resolveDealOnboardingBranch(onboardingSource));
+	const onboardingStages = $derived(getDealOnboardingStages({ branch: branchInfo.branch, source: onboardingSource }));
+	const activeStage = $derived.by(() => {
+		if (reviewStep === 'intake') return 'intake';
+		return isValidOnboardingStage(requestedStage) ? requestedStage : 'sec';
+	});
+	const activeStageConfig = $derived(getDealOnboardingStageById(activeStage, { branch: branchInfo.branch, source: onboardingSource }));
+	const previousStage = $derived(getPreviousOnboardingStage(activeStage, branchInfo.branch));
+	const nextStage = $derived(getNextOnboardingStage(activeStage, branchInfo.branch));
+	const completedStageIds = $derived(
+		onboardingStages
+			.filter((stage) => stage.index < onboardingStages.findIndex((candidate) => candidate.id === activeStage))
+			.map((stage) => stage.id)
+	);
+	const onboardingFlow = $derived(buildDealOnboardingFlow(onboardingSource, { branch: branchInfo.branch }));
+	const teamContactsValidation = $derived(validateTeamContacts(teamContacts));
+	const primaryTeamContact = $derived(pickPrimaryTeamContact(teamContacts));
+	const irTeamContact = $derived(pickInvestorRelationsContact(teamContacts));
+	const secStatus = $derived(secVerificationContext?.view?.currentStatus || 'pending');
+	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
+	const summaryPublishReady = $derived(onboardingFlow.isPublishReady && teamContactsValidation.valid && secGateResolved);
+	const reviewerSelfContact = $derived.by(() => {
+		const session = getStoredSessionUser() || {};
+		const realAdmin = currentAdminRealUser() || {};
+		const fullName = String(realAdmin.name || realAdmin.fullName || session.name || session.fullName || '').trim();
+		const [firstName = '', ...rest] = fullName.split(/\s+/).filter(Boolean);
+		return {
+			firstName,
+			lastName: rest.join(' '),
+			email: String(realAdmin.email || session.email || '').trim().toLowerCase(),
+			role: 'Investor Relations',
+			isPrimary: true,
+			isInvestorRelations: true
+		};
+	});
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
 	const pageSubtitle = $derived(
 		reviewStep === 'intake'
 			? 'Upload the source documents first, then review and clean up the extracted deal details.'
-			: 'Fix missing fields, tighten source context, and move the deal toward publishing with confidence.'
+			: activeStageConfig?.description || 'Fix missing fields, tighten source context, and move the deal toward publishing with confidence.'
 	);
 	const hasSourceDocuments = $derived(
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
@@ -243,10 +384,11 @@
 		saveMessage = '';
 	}
 
-	function buildReviewHref({ step = 'review', extract = false, from = '' } = {}) {
+	function buildReviewHref({ stage = 'sec', extract = false, from = '' } = {}) {
 		const params = new URLSearchParams({ id: dealId });
+		params.set('stage', stage);
 		if (from) params.set('from', from);
-		if (step === 'intake') params.set('step', 'intake');
+		if (stage === 'intake') params.set('step', 'intake');
 		if (extract) params.set('extract', '1');
 		return `/deal-review?${params.toString()}`;
 	}
@@ -255,8 +397,6 @@
 		if (!browser) return;
 		const nextUrl = new URL(window.location.href);
 		nextUrl.searchParams.delete('extract');
-		nextUrl.searchParams.delete('from');
-		nextUrl.searchParams.delete('step');
 		window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
 	}
 
@@ -396,7 +536,7 @@
 
 			await loadDeal();
 			autoExtractionHandled = false;
-			await goto(buildReviewHref({ step: 'review', extract: autoExtract, from: cameFromQueue ? 'queue' : 'intake' }), {
+			await goto(buildReviewHref({ stage: 'sec', extract: autoExtract, from: cameFromQueue ? 'queue' : 'intake' }), {
 				replaceState: true,
 				noScroll: true,
 				keepFocus: true
@@ -445,6 +585,118 @@
 		dirty = false;
 	}
 
+	function getManagementCompanyId() {
+		return String(
+			form.sponsor?.id
+			|| deal?.management_company_id
+			|| deal?.managementCompanyId
+			|| ''
+		).trim();
+	}
+
+	async function loadTeamContacts() {
+		teamContactsError = '';
+		const managementCompanyId = getManagementCompanyId();
+		if (!managementCompanyId) {
+			teamContacts = buildFallbackTeamContacts({
+				user: getStoredSessionUser() || {}
+			});
+			return;
+		}
+
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active session to load sponsor contacts.');
+
+			const response = await fetch(`/api/management-companies/${encodeURIComponent(managementCompanyId)}/settings`, {
+				headers: {
+					Authorization: `Bearer ${token}`
+				}
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(payload?.error || 'Could not load the management company contacts.');
+			}
+
+			teamContacts = normalizeTeamContacts(payload.teamContacts || payload.team_contacts || [], {
+				fallbackContact: buildFallbackTeamContacts({
+					user: getStoredSessionUser() || {}
+				})[0] || null,
+				ensureOne: true
+			});
+		} catch (error) {
+			teamContactsError = error?.message || 'Could not load management company contacts.';
+			teamContacts = buildFallbackTeamContacts({
+				user: getStoredSessionUser() || {}
+			});
+		}
+	}
+
+	async function saveTeamContacts() {
+		const validation = validateTeamContacts(teamContacts);
+		if (!validation.valid) {
+			teamContactsError = validation.formError || 'Fix the team contacts before continuing.';
+			return false;
+		}
+
+		const managementCompanyId = getManagementCompanyId();
+		if (!managementCompanyId) {
+			teamContactsError = 'Link the deal to a management company before saving team contacts.';
+			return false;
+		}
+
+		teamContactsSaveState = 'running';
+		teamContactsError = '';
+
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active session to save sponsor contacts.');
+
+			const response = await fetch(`/api/management-companies/${encodeURIComponent(managementCompanyId)}/settings`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					teamContacts: validation.contacts
+				})
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(payload?.formError || payload?.error || 'Could not save the team contacts.');
+			}
+
+			teamContacts = normalizeTeamContacts(payload.teamContacts || payload.team_contacts || validation.contacts, {
+				ensureOne: true
+			});
+			teamContactsSaveState = 'success';
+			return true;
+		} catch (error) {
+			teamContactsSaveState = 'error';
+			teamContactsError = error?.message || 'Could not save the team contacts.';
+			return false;
+		}
+	}
+
+	async function loadSecVerificationSummary() {
+		if (!dealId || reviewStep === 'intake') return;
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) return;
+			const response = await fetch(`/api/sec-verification?dealId=${encodeURIComponent(dealId)}`, {
+				headers: {
+					Authorization: `Bearer ${token}`
+				}
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) return;
+			secVerificationContext = payload;
+		} catch {
+			// Keep the stage non-blocking if the SEC summary cannot be prefetched.
+		}
+	}
+
 	async function loadDeal() {
 		if (!dealId) {
 			loadError = 'Pick a deal from Manage Data to start review.';
@@ -473,11 +725,23 @@
 			form = hydrated.form;
 			fieldWarnings = hydrated.warnings;
 			fieldErrors = {};
+			manualBranch = payload.deal?.deal_branch || payload.deal?.dealBranch || '';
+			sourceRiskFactors = Array.isArray(payload.deal?.source_risk_factors)
+				? payload.deal.source_risk_factors
+				: Array.isArray(payload.deal?.sourceRiskFactors)
+					? payload.deal.sourceRiskFactors
+					: [];
+			highlightedRisks = Array.isArray(payload.deal?.highlighted_risks)
+				? payload.deal.highlighted_risks
+				: Array.isArray(payload.deal?.highlightedRisks)
+					? payload.deal.highlightedRisks
+					: [];
 			dirty = false;
 			saveError = '';
 			if (!shouldAutoExtract) {
 				extractionError = '';
 			}
+			await Promise.all([loadTeamContacts(), loadSecVerificationSummary()]);
 		} catch (error) {
 			loadError = error?.message || 'Failed to load deal.';
 			deal = null;
@@ -486,24 +750,33 @@
 		}
 	}
 
-	async function saveDeal() {
-		if (!dealId || saving) return;
+	async function saveDeal({ quiet = false } = {}) {
+		if (!dealId || saving) return false;
 
 		const { payload: nextPayload, errors } = buildDealReviewPayload(form);
 		if (Object.keys(errors).length > 0) {
 			fieldErrors = errors;
 			saveError = 'Fix the highlighted fields before saving.';
 			saveMessage = '';
-			return;
+			return false;
 		}
 
 		saving = true;
 		saveError = '';
-		saveMessage = '';
+		if (!quiet) {
+			saveMessage = '';
+		}
 
 		try {
 			const token = await getFreshSessionToken();
 			if (!token) throw new Error('You need an active session to save deals.');
+
+			const requestBody = {
+				...nextPayload,
+				dealBranch: manualBranch || branchInfo.branch,
+				sourceRiskFactors,
+				highlightedRisks
+			};
 
 			const response = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
 				method: 'PATCH',
@@ -511,7 +784,7 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token}`
 				},
-				body: JSON.stringify(nextPayload)
+				body: JSON.stringify(requestBody)
 			});
 			const payload = await response.json().catch(() => ({}));
 
@@ -538,9 +811,24 @@
 			fieldWarnings = hydrated.warnings;
 			fieldErrors = {};
 			dirty = false;
-			saveMessage = 'Deal saved.';
+			manualBranch = payload.deal?.deal_branch || payload.deal?.dealBranch || manualBranch || branchInfo.branch;
+			sourceRiskFactors = Array.isArray(payload.deal?.source_risk_factors)
+				? payload.deal.source_risk_factors
+				: Array.isArray(payload.deal?.sourceRiskFactors)
+					? payload.deal.sourceRiskFactors
+					: sourceRiskFactors;
+			highlightedRisks = Array.isArray(payload.deal?.highlighted_risks)
+				? payload.deal.highlighted_risks
+				: Array.isArray(payload.deal?.highlightedRisks)
+					? payload.deal.highlightedRisks
+					: highlightedRisks;
+			if (!quiet) {
+				saveMessage = 'Deal saved.';
+			}
+			return true;
 		} catch (error) {
 			saveError = error?.message || 'Failed to save deal.';
+			return false;
 		} finally {
 			saving = false;
 		}
@@ -623,6 +911,46 @@
 		}
 	}
 
+	async function saveCurrentStage(stage = activeStage) {
+		if (stage === 'intake') {
+			await saveIntakeDetails();
+			return true;
+		}
+		if (stage === 'team') {
+			return await saveTeamContacts();
+		}
+		if (stage === 'sec') {
+			if (!secGateResolved) {
+				saveError = `Resolve SEC issuer verification first. Current state: ${SEC_VERIFICATION_LABELS[secStatus] || 'Pending'}.`;
+				return false;
+			}
+			return true;
+		}
+		return await saveDeal({ quiet: true });
+	}
+
+	async function navigateToStage(stage, { from = '' } = {}) {
+		if (!dealId) return;
+		const targetStage = stage;
+		if (!targetStage || targetStage === activeStage) return;
+
+		const currentIndex = onboardingStages.findIndex((candidate) => candidate.id === activeStage);
+		const targetIndex = onboardingStages.findIndex((candidate) => candidate.id === targetStage);
+		const movingForward = targetIndex > currentIndex;
+
+		if (movingForward) {
+			const ok = await saveCurrentStage(activeStage);
+			if (!ok) return;
+		}
+
+		saveError = '';
+		await goto(getStageHref(targetStage, { from: from || (cameFromQueue ? 'queue' : cameFromIntake ? 'intake' : '') }), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
+	}
+
 	onMount(async () => {
 		previousDealId = dealId;
 		await loadDeal();
@@ -691,16 +1019,24 @@
 	{:else}
 		{#if reviewStep === 'intake'}
 			<div class="intake-layout">
-				<section class="intake-screen">
-					<div class="intake-screen__header">
-						<div class="intake-screen__eyebrow">Step 1 of 2</div>
-						<h2>Set the deal up, then upload the source files</h2>
-						<p>
-							Capture the investment name, management company, sponsor website, and source documents first. Then move into review after we extract what we can.
-						</p>
-					</div>
+				<div class="intake-stack">
+					<DealOnboardingProgress
+						stages={onboardingStages}
+						currentStage="intake"
+						completedStages={[]}
+						onselect={() => {}}
+					/>
 
-					<div class="intake-basics-grid">
+					<section class="intake-screen">
+						<div class="intake-screen__header">
+							<div class="intake-screen__eyebrow">Step 1 of {onboardingStages.length}</div>
+							<h2>Set the deal up, then upload the source files</h2>
+							<p>
+								Capture the investment name, management company, sponsor website, and source documents first. Then move into SEC verification and review after we extract what we can.
+							</p>
+						</div>
+
+						<div class="intake-basics-grid">
 						<label class="intake-field intake-field--span-2">
 							<span>Investment name</span>
 							<input
@@ -769,7 +1105,7 @@
 						</label>
 					</div>
 
-					<div class="intake-screen__status-grid">
+						<div class="intake-screen__status-grid">
 						<div class="doc-status-card">
 							<div class="doc-status-card__label">Investment Deck</div>
 							<div class="doc-status-card__value">
@@ -796,7 +1132,7 @@
 						</div>
 					</div>
 
-					<div class="intake-upload-grid">
+						<div class="intake-upload-grid">
 						<div class="intake-upload-card">
 							<div class="intake-upload-card__title">Investment deck</div>
 							<div
@@ -884,11 +1220,11 @@
 						</div>
 					</div>
 
-					{#if uploadError}
-						<div class="message-banner message-banner--error">{uploadError}</div>
-					{/if}
+						{#if uploadError}
+							<div class="message-banner message-banner--error">{uploadError}</div>
+						{/if}
 
-					<div class="intake-screen__actions">
+						<div class="intake-screen__actions">
 						<button
 							type="button"
 							class="ghost-btn"
@@ -905,8 +1241,9 @@
 						>
 							{uploadState === 'running' ? 'Uploading...' : 'Upload & Extract'}
 						</button>
-					</div>
-				</section>
+						</div>
+					</section>
+				</div>
 			</div>
 		{:else}
 			<div class="review-layout">
@@ -915,15 +1252,15 @@
 						<div class={`intake-banner intake-banner--${extractionState === 'error' ? 'error' : extractionState === 'running' ? 'working' : 'ready'}`}>
 							<div class="intake-banner__header">
 								<div>
-									<div class="intake-banner__eyebrow">Step 2 of 2</div>
-									<h2>Review extracted deal details</h2>
+									<div class="intake-banner__eyebrow">{activeStageConfig?.label || 'Review'}</div>
+									<h2>{activeStageConfig?.title || 'Review extracted deal details'}</h2>
 								</div>
 								<div class="intake-banner__actions">
 									{#if cameFromQueue}
 										<button
 											type="button"
 											class="ghost-btn"
-											onclick={() => goto(buildReviewHref({ step: 'intake', from: 'queue' }), { replaceState: true, noScroll: true, keepFocus: true })}
+											onclick={() => goto(buildReviewHref({ stage: 'intake', from: 'queue' }), { replaceState: true, noScroll: true, keepFocus: true })}
 										>
 											Back to Uploads
 										</button>
@@ -980,40 +1317,252 @@
 						</div>
 					{/if}
 
-					{#each dealReviewSections as section}
+					<DealOnboardingProgress
+						stages={onboardingStages}
+						currentStage={activeStage}
+						completedStages={completedStageIds}
+						onselect={(stageId) => navigateToStage(stageId)}
+					/>
+
+					{#if activeStage === 'sec'}
+						<SecVerificationStage
+							dealId={dealId}
+							deal={deal}
+							onchange={(nextContext) => {
+								secVerificationContext = nextContext;
+							}}
+						/>
+					{:else if activeStage === 'team'}
+						<TeamContactsStage
+							contacts={teamContacts}
+							error={teamContactsError}
+							selfContact={reviewerSelfContact}
+							onchange={(nextContacts) => {
+								teamContacts = nextContacts;
+								teamContactsError = '';
+								dirty = true;
+								saveMessage = '';
+							}}
+							onback={() => navigateToStage(previousStage)}
+							oncontinue={() => navigateToStage(nextStage)}
+						/>
+					{:else if activeStage === 'details'}
+						<KeyDetailsStage
+							source={{ ...deal, branch: manualBranch || branchInfo.branch }}
+							form={{ ...form, branch: manualBranch || branchInfo.branch }}
+							branch={manualBranch || branchInfo.branch}
+							fieldErrors={fieldErrors}
+							fieldWarnings={fieldWarnings}
+							onupdate={updateField}
+							onaction={generateSlug}
+						/>
+					{:else if activeStage === 'summary'}
 						<section class="editor-card">
 							<div class="card-heading">
 								<div>
-									<h2>{section.title}</h2>
-									<p>{section.description}</p>
+									<h2>Summary and publish readiness</h2>
+									<p>Review each stage, confirm the source-backed risks, and only publish when the record is actually trustworthy.</p>
+								</div>
+								<span class={`readiness-badge tone-${summaryPublishReady ? 'ready' : 'blocked'}`}>
+									{summaryPublishReady ? 'Ready to publish' : 'Still blocked'}
+								</span>
+							</div>
+
+							<div class="summary-grid">
+								<div class="summary-card">
+									<div class="summary-card__label">Deal branch</div>
+									<strong>{DEAL_ONBOARDING_BRANCH_LABELS[manualBranch || branchInfo.branch] || branchInfo.label}</strong>
+								</div>
+								<div class="summary-card">
+									<div class="summary-card__label">SEC gate</div>
+									<strong>{SEC_VERIFICATION_LABELS[secStatus] || 'Pending'}</strong>
+								</div>
+								<div class="summary-card">
+									<div class="summary-card__label">Team contacts</div>
+									<strong>{teamContactsValidation.valid ? `${teamContacts.length} saved` : 'Needs attention'}</strong>
+								</div>
+								<div class="summary-card">
+									<div class="summary-card__label">Highlighted risks</div>
+									<strong>{highlightedRisks.length || 0}</strong>
 								</div>
 							</div>
-							<div class="field-grid">
-								{#each section.fields as fieldKey}
-									<FieldRenderer
-										field={dealFieldConfig[fieldKey]}
-										value={form[fieldKey]}
-										error={fieldErrors[fieldKey] || ''}
-										warning={fieldWarnings[fieldKey] || ''}
-										onupdate={(nextValue) => updateField(fieldKey, nextValue)}
-										onaction={fieldKey === 'slug' ? generateSlug : null}
-									/>
+
+							<div class="summary-section-list">
+								{#each onboardingStages.filter((stage) => !['intake', 'summary'].includes(stage.id)) as stage}
+									<button type="button" class="summary-section-card" onclick={() => navigateToStage(stage.id)}>
+										<div>
+											<div class="summary-section-card__label">{stage.label}</div>
+											<strong>{stage.title}</strong>
+											<p>{stage.description}</p>
+										</div>
+										<span>Edit</span>
+									</button>
 								{/each}
 							</div>
-						</section>
-					{/each}
 
-					<div class="form-footer">
-						<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || saving}>
-							Reset unsaved changes
-						</button>
-						<button type="submit" class="primary-btn" disabled={saving}>
-							{saving ? 'Saving...' : 'Save deal'}
-						</button>
-					</div>
+							<section class="editor-card editor-card--nested">
+								<div class="card-heading">
+									<div>
+										<h3>Publish blockers</h3>
+										<p>These gates must be satisfied before the deal should move to Published.</p>
+									</div>
+								</div>
+								<div class="check-grid">
+									<div class={`check-row ${secGateResolved ? 'is-ready' : 'is-blocked'}`}>
+										<strong>SEC / issuer verification resolved</strong>
+										<span>{secGateResolved ? 'Resolved' : 'Resolve the SEC stage first'}</span>
+									</div>
+									<div class={`check-row ${teamContactsValidation.valid ? 'is-ready' : 'is-blocked'}`}>
+										<strong>LP-facing contacts validated</strong>
+										<span>{teamContactsValidation.valid ? 'Ready' : (teamContactsValidation.formError || 'Add a valid primary/IR contact')}</span>
+									</div>
+									{#each onboardingFlow.publishRules as rule}
+										<div class={`check-row ${rule.satisfied ? 'is-ready' : 'is-blocked'}`}>
+											<strong>{rule.label}</strong>
+											<span>{rule.satisfied ? 'Ready' : `${rule.missingFieldKeys.length} fields still missing`}</span>
+										</div>
+									{/each}
+								</div>
+							</section>
+
+							{#if buildOperatorValidationHref()}
+								<div class="summary-actions">
+									<a class="ghost-btn" href={buildOperatorValidationHref()}>
+										Send operator validation email
+									</a>
+								</div>
+							{/if}
+						</section>
+					{:else}
+						{#if activeStage === 'overview'}
+							<section class="editor-card">
+								<div class="card-heading">
+									<div>
+										<h2>Choose the review track</h2>
+										<p>Pick the deal branch first so the right questions show up in Key Details.</p>
+									</div>
+								</div>
+								<div class="branch-grid">
+									{#each getBranchOptions() as option}
+										<button
+											type="button"
+											class="branch-card"
+											class:is-active={(manualBranch || branchInfo.branch) === option.key}
+											onclick={() => setManualBranch(option.key)}
+										>
+											<span>{option.shortLabel}</span>
+											<strong>{option.label}</strong>
+										</button>
+									{/each}
+								</div>
+							</section>
+						{/if}
+
+						{#each getStageFieldGroups(activeStage) as group}
+							<section class="editor-card">
+								<div class="card-heading">
+									<div>
+										<h2>{group.label}</h2>
+										<p>{group.description}</p>
+									</div>
+								</div>
+								<div class="field-grid">
+									{#each group.fieldKeys as fieldKey}
+										<FieldRenderer
+											field={dealFieldConfig[fieldKey]}
+											value={form[fieldKey]}
+											error={fieldErrors[fieldKey] || ''}
+											warning={fieldWarnings[fieldKey] || ''}
+											onupdate={(nextValue) => updateField(fieldKey, nextValue)}
+											onaction={fieldKey === 'slug' ? generateSlug : null}
+										/>
+									{/each}
+								</div>
+							</section>
+						{/each}
+
+						{#if activeStage === 'risks'}
+							<section class="editor-card">
+								<div class="card-heading">
+									<div>
+										<h2>Risk extraction and highlights</h2>
+										<p>Use one line per item. The first list captures what the documents say. The second list captures what you want highlighted on the deal page.</p>
+									</div>
+								</div>
+								<div class="field-grid field-grid--single">
+									<label class="editor-list-field">
+										<span>Source risk factors</span>
+										<textarea
+											rows="6"
+											placeholder="One risk factor per line pulled from the PPM or deck"
+											value={listToTextarea(sourceRiskFactors)}
+											oninput={(event) => updateListState('source', event.currentTarget.value)}
+										></textarea>
+									</label>
+									<label class="editor-list-field">
+										<span>Highlighted risks for the deal page</span>
+										<textarea
+											rows="5"
+											placeholder="One highlighted risk per line"
+											value={listToTextarea(highlightedRisks)}
+											oninput={(event) => updateListState('highlight', event.currentTarget.value)}
+										></textarea>
+									</label>
+								</div>
+							</section>
+
+							<RiskSourceValidationStage
+								deal={{
+									...deal,
+									deckUrl: getDocumentUrl('deck') || deal?.deck_url || form.deckUrl,
+									ppmUrl: getDocumentUrl('ppm') || deal?.ppm_url || form.ppmUrl,
+									primarySourceUrl: form.primarySourceUrl,
+									primarySourceContext: form.primarySourceContext,
+									riskNotes: form.riskNotes,
+									downsideNotes: form.downsideNotes,
+									operatorBackground: form.operatorBackground,
+									keyDates: form.keyDates,
+									sourceRiskFactors,
+									highlightedRisks
+								}}
+							/>
+						{/if}
+					{/if}
+
+					{#if activeStage !== 'team'}
+						<div class="form-footer wizard-footer">
+							<div class="wizard-footer__left">
+								{#if activeStage !== 'intake' && previousStage && previousStage !== activeStage}
+									<button type="button" class="ghost-btn" onclick={() => navigateToStage(previousStage)}>
+										Back
+									</button>
+								{/if}
+							</div>
+							<div class="wizard-footer__right">
+								<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || saving}>
+									Reset unsaved changes
+								</button>
+								<button type="submit" class="ghost-btn" disabled={saving}>
+									{saving ? 'Saving...' : 'Save changes'}
+								</button>
+								{#if activeStage !== 'summary' && nextStage && nextStage !== activeStage}
+									<button type="button" class="primary-btn" disabled={saving} onclick={() => navigateToStage(nextStage)}>
+										Save & Continue
+									</button>
+								{/if}
+							</div>
+						</div>
+					{/if}
 				</form>
 
 				<aside class="review-sidebar">
+					<DealSourceRail
+						deckUrl={getDocumentUrl('deck') || form.deckUrl}
+						ppmUrl={getDocumentUrl('ppm') || form.ppmUrl}
+						subAgreementUrl={deal?.subAgreementUrl || deal?.sub_agreement_url || ''}
+						extractionState={extractionState}
+					/>
+
 					<section class="sidebar-card sidebar-card--score">
 						<div class="sidebar-eyebrow">Completeness</div>
 						<div class="score-row">
@@ -1040,9 +1589,30 @@
 							<div class="sidebar-value">{DEAL_CATALOG_STATE_LABELS[catalogState] || DEAL_CATALOG_STATE_LABELS.not_published}</div>
 						</div>
 						<div class="sidebar-block">
+							<div class="sidebar-label">Deal branch</div>
+							<div class="sidebar-value">{DEAL_ONBOARDING_BRANCH_LABELS[manualBranch || branchInfo.branch] || branchInfo.label}</div>
+						</div>
+						<div class="sidebar-block">
 							<div class="sidebar-label">Last updated</div>
 							<div class="sidebar-value">{formatDateTime(deal?.updatedAt || deal?.updated_at || deal?.createdAt || deal?.created_at)}</div>
 						</div>
+					</section>
+
+					<section class="sidebar-card">
+						<div class="sidebar-label">SEC verification</div>
+						<p class="sidebar-copy">
+							{SEC_VERIFICATION_LABELS[secStatus] || 'Pending'}
+						</p>
+					</section>
+
+					<section class="sidebar-card">
+						<div class="sidebar-label">Primary LP contact</div>
+						{#if primaryTeamContact}
+							<div class="sidebar-value">{[primaryTeamContact.firstName, primaryTeamContact.lastName].filter(Boolean).join(' ') || primaryTeamContact.email}</div>
+							<p class="sidebar-copy">{primaryTeamContact.email || 'No email yet'}</p>
+						{:else}
+							<p class="sidebar-copy">Add team contacts in the Team stage.</p>
+						{/if}
 					</section>
 
 					<section class="sidebar-card">
@@ -1109,8 +1679,14 @@
 		justify-content: center;
 	}
 
+	.intake-stack {
+		width: min(100%, 980px);
+		display: grid;
+		gap: 18px;
+	}
+
 	.intake-screen {
-		width: min(100%, 900px);
+		width: 100%;
 		padding: 24px;
 		border-radius: 22px;
 		background:
@@ -1564,6 +2140,146 @@
 		flex-wrap: wrap;
 	}
 
+	.wizard-footer__left,
+	.wizard-footer__right {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
+
+	.branch-grid,
+	.summary-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		gap: 12px;
+	}
+
+	.branch-card,
+	.summary-section-card,
+	.summary-card {
+		border: 1px solid rgba(31, 81, 89, 0.12);
+		border-radius: 18px;
+		background: rgba(255, 255, 255, 0.92);
+		padding: 14px 16px;
+	}
+
+	.branch-card {
+		text-align: left;
+		cursor: pointer;
+		display: grid;
+		gap: 6px;
+	}
+
+	.branch-card span,
+	.summary-card__label,
+	.summary-section-card__label {
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.branch-card strong,
+	.summary-card strong,
+	.summary-section-card strong {
+		color: var(--text-dark);
+	}
+
+	.branch-card.is-active {
+		border-color: rgba(81, 190, 123, 0.42);
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12);
+	}
+
+	.summary-section-list {
+		display: grid;
+		gap: 12px;
+	}
+
+	.summary-section-card {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.summary-section-card p {
+		margin: 6px 0 0;
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--text-secondary);
+	}
+
+	.summary-actions {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.editor-card--nested {
+		padding: 16px;
+		box-shadow: none;
+		background: rgba(247, 250, 251, 0.7);
+	}
+
+	.check-grid {
+		display: grid;
+		gap: 10px;
+	}
+
+	.check-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		padding: 12px 14px;
+		border-radius: 14px;
+		background: rgba(247, 250, 251, 0.85);
+		border: 1px solid rgba(31, 81, 89, 0.08);
+	}
+
+	.check-row.is-ready {
+		border-color: rgba(81, 190, 123, 0.24);
+		background: rgba(81, 190, 123, 0.08);
+	}
+
+	.check-row.is-blocked {
+		border-color: rgba(175, 66, 47, 0.14);
+		background: rgba(175, 66, 47, 0.06);
+	}
+
+	.field-grid--single {
+		grid-template-columns: 1fr;
+	}
+
+	.editor-list-field {
+		display: grid;
+		gap: 8px;
+	}
+
+	.editor-list-field span {
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.editor-list-field textarea {
+		width: 100%;
+		min-height: 120px;
+		box-sizing: border-box;
+		padding: 12px 14px;
+		border-radius: 14px;
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.98);
+		font: inherit;
+		color: var(--text-dark);
+		resize: vertical;
+	}
+
 	.message-banner {
 		padding: 12px 14px;
 		border-radius: 14px;
@@ -1725,6 +2441,14 @@
 		.form-footer,
 		.intake-screen__actions,
 		.intake-banner__actions {
+			align-items: stretch;
+		}
+
+		.summary-section-card,
+		.check-row,
+		.wizard-footer__left,
+		.wizard-footer__right {
+			flex-direction: column;
 			align-items: stretch;
 		}
 

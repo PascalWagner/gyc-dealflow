@@ -15,7 +15,7 @@ function mapLessonToVideo(lesson) {
     section: lesson.section,
     module: lesson.module,
     youtubeId: lesson.youtubeId || '',
-    thumbnail: lesson.youtubeId ? `https://img.youtube.com/vi/${lesson.youtubeId}/maxresdefault.jpg` : '',
+    thumbnail: lesson.youtubeId ? `https://img.youtube.com/vi/${lesson.youtubeId}/hqdefault.jpg` : '',
     duration: lesson.duration || '',
     order_index: lesson.order_index,
     featured: lesson.featured || false,

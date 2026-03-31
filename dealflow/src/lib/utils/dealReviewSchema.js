@@ -33,6 +33,9 @@ export const OFFERING_STATUS_OPTIONS = [
 export const AVAILABLE_TO_OPTIONS = ['Accredited Investors', 'Non-Accredited Investors', 'Both'];
 export const DISTRIBUTIONS_OPTIONS = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'At Exit', 'None'];
 export const FINANCIALS_OPTIONS = ['Audited', 'Reviewed', 'Unaudited', 'Unknown'];
+export const INSTRUMENT_OPTIONS = ['Debt', 'Equity', 'Preferred Equity', 'Hybrid', 'Fund'];
+export const DEBT_POSITION_OPTIONS = ['Senior', 'First Lien', 'Second Lien', 'Mezzanine', 'Preferred Equity', 'Other'];
+export const TAX_FORM_OPTIONS = ['K-1', '1099-DIV', '1099-INT', '1099-B', 'Other'];
 export const COUNTRY_OPTIONS = ['United States', 'Canada', 'Mexico', 'Other'];
 export const STATE_OPTIONS = [
 	'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
@@ -133,6 +136,38 @@ const FINANCIALS_ALIASES = {
 	unknown: 'Unknown'
 };
 
+const INSTRUMENT_ALIASES = {
+	debt: 'Debt',
+	loan: 'Debt',
+	equity: 'Equity',
+	'preferred equity': 'Preferred Equity',
+	preferred: 'Preferred Equity',
+	hybrid: 'Hybrid',
+	fund: 'Fund'
+};
+
+const DEBT_POSITION_ALIASES = {
+	senior: 'Senior',
+	'first lien': 'First Lien',
+	'second lien': 'Second Lien',
+	mezz: 'Mezzanine',
+	mezzanine: 'Mezzanine',
+	'preferred equity': 'Preferred Equity',
+	other: 'Other'
+};
+
+const TAX_FORM_ALIASES = {
+	'k1': 'K-1',
+	'k-1': 'K-1',
+	'1099 div': '1099-DIV',
+	'1099-div': '1099-DIV',
+	'1099 int': '1099-INT',
+	'1099-int': '1099-INT',
+	'1099 b': '1099-B',
+	'1099-b': '1099-B',
+	other: 'Other'
+};
+
 const ENUM_CONFIG = {
 	assetClass: { options: DEAL_ASSET_CLASS_OPTIONS, aliases: ASSET_CLASS_ALIASES },
 	dealType: { options: DEAL_TYPE_OPTIONS, aliases: DEAL_TYPE_ALIASES },
@@ -140,7 +175,10 @@ const ENUM_CONFIG = {
 	offeringStatus: { options: OFFERING_STATUS_OPTIONS, aliases: OFFERING_STATUS_ALIASES },
 	availableTo: { options: AVAILABLE_TO_OPTIONS, aliases: AVAILABLE_TO_ALIASES },
 	distributions: { options: DISTRIBUTIONS_OPTIONS, aliases: DISTRIBUTIONS_ALIASES },
-	financials: { options: FINANCIALS_OPTIONS, aliases: FINANCIALS_ALIASES }
+	financials: { options: FINANCIALS_OPTIONS, aliases: FINANCIALS_ALIASES },
+	instrument: { options: INSTRUMENT_OPTIONS, aliases: INSTRUMENT_ALIASES },
+	debtPosition: { options: DEBT_POSITION_OPTIONS, aliases: DEBT_POSITION_ALIASES },
+	taxForm: { options: TAX_FORM_OPTIONS, aliases: TAX_FORM_ALIASES }
 };
 
 const DEFAULT_LOCATION = { city: '', state: '', country: 'United States' };
@@ -432,6 +470,26 @@ export const dealFieldConfig = {
 		helperText: 'Use this for qualitative context that does not fit into structured tags yet.',
 		readFrom: ['investmentStrategy', 'investment_strategy', 'strategy']
 	},
+	offeringSize: {
+		key: 'offeringSize',
+		label: 'Offering size',
+		type: 'currency',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '10,000,000',
+		helperText: 'Total raise size or offering amount in whole dollars.',
+		readFrom: ['offeringSize', 'offering_size']
+	},
+	instrument: {
+		key: 'instrument',
+		label: 'Instrument',
+		type: 'string_enum',
+		section: 'returns',
+		options: INSTRUMENT_OPTIONS,
+		requiredForPublish: false,
+		helperText: 'Use a structured instrument type so branching and analytics stay consistent.',
+		readFrom: ['instrument']
+	},
 	targetIRR: {
 		key: 'targetIRR',
 		label: 'Target IRR',
@@ -471,6 +529,16 @@ export const dealFieldConfig = {
 		placeholder: '2.0',
 		helperText: 'Use the expected equity multiple, for example 2.0x.',
 		readFrom: ['equityMultiple', 'equity_multiple']
+	},
+	sponsorInDeal: {
+		key: 'sponsorInDeal',
+		label: 'Sponsor co-invest',
+		type: 'percentage',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '5',
+		helperText: 'Percent of sponsor capital in the deal, if disclosed.',
+		readFrom: ['sponsorInDeal', 'sponsorCoinvest', 'sponsor_in_deal_pct']
 	},
 	holdPeriod: {
 		key: 'holdPeriod',
@@ -528,6 +596,46 @@ export const dealFieldConfig = {
 		helperText: 'This is still long-form because terms are often nuanced.',
 		readFrom: ['redemption']
 	},
+	debtPosition: {
+		key: 'debtPosition',
+		label: 'Debt position',
+		type: 'string_enum',
+		section: 'returns',
+		options: DEBT_POSITION_OPTIONS,
+		requiredForPublish: false,
+		helperText: 'Capture where this sits in the capital stack if it is a debt or credit deal.',
+		readFrom: ['debtPosition', 'debt_position']
+	},
+	fundAUM: {
+		key: 'fundAUM',
+		label: 'Fund AUM',
+		type: 'currency',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '100,000,000',
+		helperText: 'Use current AUM if the sponsor or fund discloses it.',
+		readFrom: ['fundAUM', 'fund_aum']
+	},
+	loanCount: {
+		key: 'loanCount',
+		label: 'Loan count',
+		type: 'number',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '25',
+		helperText: 'Important for distinguishing a lending fund from a single-loan opportunity.',
+		readFrom: ['loanCount', 'loan_count']
+	},
+	avgLoanLtv: {
+		key: 'avgLoanLtv',
+		label: 'Average loan LTV',
+		type: 'percentage',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '65',
+		helperText: 'Average LTV across the portfolio or credit book if disclosed.',
+		readFrom: ['avgLoanLtv', 'avg_loan_ltv']
+	},
 	financials: {
 		key: 'financials',
 		label: 'Audited / financials',
@@ -537,6 +645,16 @@ export const dealFieldConfig = {
 		requiredForPublish: false,
 		helperText: 'Use a structured financial reporting status.',
 		readFrom: ['financials']
+	},
+	taxForm: {
+		key: 'taxForm',
+		label: 'Tax form',
+		type: 'string_enum',
+		section: 'returns',
+		options: TAX_FORM_OPTIONS,
+		requiredForPublish: false,
+		helperText: 'Choose the expected investor tax form if it is known.',
+		readFrom: ['taxForm', 'tax_form']
 	},
 	taxCharacteristics: {
 		key: 'taxCharacteristics',
@@ -589,6 +707,149 @@ export const dealFieldConfig = {
 		placeholder: 'Track record, team credibility, prior exits, and relevant context...',
 		helperText: 'Use this for the key sponsor/operator diligence context.',
 		readFrom: ['operatorBackground', 'operator_background']
+	},
+	propertyAddress: {
+		key: 'propertyAddress',
+		label: 'Property address',
+		type: 'string_free',
+		input: 'text',
+		section: 'risk',
+		span: 2,
+		requiredForPublish: false,
+		placeholder: '123 Main Street, Dallas, TX',
+		helperText: 'Use the actual property address when this is a single-asset or property-specific deal.',
+		readFrom: ['propertyAddress', 'property_address']
+	},
+	propertyType: {
+		key: 'propertyType',
+		label: 'Property type',
+		type: 'string_free',
+		input: 'text',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: 'Class A multifamily, industrial warehouse, medical office...',
+		helperText: 'This can stay freeform for now until we add a deeper property taxonomy.',
+		readFrom: ['propertyType', 'property_type']
+	},
+	purchasePrice: {
+		key: 'purchasePrice',
+		label: 'Purchase price',
+		type: 'currency',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '26,000,000',
+		helperText: 'Use the actual acquisition cost, not just the LP equity raise.',
+		readFrom: ['purchasePrice', 'purchase_price']
+	},
+	unitCount: {
+		key: 'unitCount',
+		label: 'Unit count',
+		type: 'number',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '180',
+		helperText: 'Use the property unit count when relevant.',
+		readFrom: ['unitCount', 'unit_count']
+	},
+	yearBuilt: {
+		key: 'yearBuilt',
+		label: 'Year built',
+		type: 'number',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '1998',
+		helperText: 'Helpful context for property age and capex expectations.',
+		readFrom: ['yearBuilt', 'year_built']
+	},
+	squareFootage: {
+		key: 'squareFootage',
+		label: 'Square footage',
+		type: 'number',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '125000',
+		helperText: 'Use total rentable or gross square footage when disclosed.',
+		readFrom: ['squareFootage', 'square_footage']
+	},
+	occupancyPct: {
+		key: 'occupancyPct',
+		label: 'Occupancy',
+		type: 'percentage',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '93',
+		helperText: 'Current or in-place occupancy percentage.',
+		readFrom: ['occupancyPct', 'occupancy_pct']
+	},
+	acquisitionLoan: {
+		key: 'acquisitionLoan',
+		label: 'Acquisition loan',
+		type: 'currency',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '18,000,000',
+		helperText: 'Debt size at acquisition if this is a real-estate operating deal.',
+		readFrom: ['acquisitionLoan', 'acquisition_loan']
+	},
+	loanToValue: {
+		key: 'loanToValue',
+		label: 'Loan to value',
+		type: 'percentage',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '70',
+		helperText: 'Use LTV for both property debt and single-loan credit deals.',
+		readFrom: ['loanToValue', 'loan_to_value']
+	},
+	loanRate: {
+		key: 'loanRate',
+		label: 'Loan rate',
+		type: 'percentage',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '9.5',
+		helperText: 'Interest rate or coupon for a credit or loan offering.',
+		readFrom: ['loanRate', 'loan_rate']
+	},
+	loanTermYears: {
+		key: 'loanTermYears',
+		label: 'Loan term (years)',
+		type: 'number',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '3',
+		helperText: 'Loan term or note duration in years.',
+		readFrom: ['loanTermYears', 'loan_term_years']
+	},
+	loanIOYears: {
+		key: 'loanIOYears',
+		label: 'Interest-only years',
+		type: 'number',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '1',
+		helperText: 'Use this when the property or loan includes an IO period.',
+		readFrom: ['loanIOYears', 'loan_io_years']
+	},
+	capexBudget: {
+		key: 'capexBudget',
+		label: 'Capex budget',
+		type: 'currency',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '2,500,000',
+		helperText: 'Capital improvements budget if disclosed.',
+		readFrom: ['capexBudget', 'capex_budget']
+	},
+	closingCosts: {
+		key: 'closingCosts',
+		label: 'Closing costs',
+		type: 'currency',
+		section: 'risk',
+		requiredForPublish: false,
+		placeholder: '450,000',
+		helperText: 'Use known closing and transaction costs.',
+		readFrom: ['closingCosts', 'closing_costs']
 	},
 	keyDates: {
 		key: 'keyDates',

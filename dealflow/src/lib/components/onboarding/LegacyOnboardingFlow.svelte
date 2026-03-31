@@ -3,10 +3,17 @@
 	import { goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import { accessTier, user, isLoggedIn } from '$lib/stores/auth.js';
+	import TeamContactsStage from '$lib/components/onboarding/TeamContactsStage.svelte';
 	import WebOnlyNotice from '$lib/components/WebOnlyNotice.svelte';
 	import { currentAdminRealUser, readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import {
+		buildFallbackTeamContacts,
+		normalizeTeamContacts,
+		serializeTeamContactsForApi,
+		validateTeamContacts
+	} from '$lib/onboarding/teamContacts.js';
 
 	let {
 		appMode = false,
@@ -46,11 +53,8 @@
 	let companyDropdownResults = $state([]);
 	let showCompanyDropdown = $state(false);
 	let selectedAssetClasses = $state([]);
-	let irSelf = $state(false);
-	let irContactName = $state('');
-	let irContactEmail = $state('');
-	let irLinkedin = $state('');
-	let bookingUrl = $state('');
+	let teamContacts = $state([]);
+	let teamContactsError = $state('');
 		let offeringType = $state('506c');
 		let consents = $state({ tos: false, listing: false, accuracy: false, recording: false });
 		let sigName = $state('');
@@ -91,6 +95,15 @@
 	});
 
 	let canSignAgreement = $derived(consents.tos && consents.listing && consents.accuracy && consents.recording && sigName.trim().length > 0);
+	let currentUserTeamContact = $derived.by(() => (
+		buildFallbackTeamContacts({
+			user: {
+				name: $user?.name || '',
+				email: $user?.email || ''
+			}
+		})[0] || null
+	));
+	let teamContactsValidation = $derived.by(() => validateTeamContacts(teamContacts));
 
 	// ===== Step Navigation =====
 	function goToStep(stepId, isBack = false) {
@@ -257,6 +270,20 @@
 	// ===== GP: Company Search =====
 	let searchTimer;
 
+	function syncTeamContacts(nextContacts, { company = null } = {}) {
+		teamContacts = normalizeTeamContacts(nextContacts, {
+			fallbackContact: buildFallbackTeamContacts({
+				company,
+				user: {
+					name: $user?.name || '',
+					email: $user?.email || ''
+				}
+			})[0] || currentUserTeamContact,
+			ensureOne: true
+		});
+		teamContactsError = '';
+	}
+
 	function onCompanySearch(e) {
 		const q = e.target.value.trim();
 		companyName = q;
@@ -284,9 +311,17 @@
 		if (co.linkedin_ceo) linkedinCeo = co.linkedin_ceo;
 		if (co.founding_year) foundingYear = co.founding_year;
 		if (Array.isArray(co.asset_classes)) selectedAssetClasses = [...co.asset_classes];
-		if (co.ir_contact_name) irContactName = co.ir_contact_name;
-		if (co.ir_contact_email) irContactEmail = co.ir_contact_email;
-		if (co.booking_url) bookingUrl = co.booking_url;
+		syncTeamContacts([], { company: co });
+		if (co.id) {
+			fetch(`/api/management-companies/${encodeURIComponent(co.id)}/settings`, { headers })
+				.then((response) => response.ok ? response.json() : null)
+				.then((settings) => {
+					if (Array.isArray(settings?.teamContacts) || Array.isArray(settings?.team_contacts)) {
+						syncTeamContacts(settings.teamContacts || settings.team_contacts || [], { company: co });
+					}
+				})
+				.catch(() => {});
+		}
 		showCompanyDropdown = false;
 	}
 
@@ -326,25 +361,38 @@
 		goToStep('step5');
 	}
 
-	// ===== GP: IR Contact =====
-	function toggleIrSelf() {
-		irSelf = !irSelf;
-		if (irSelf) {
-			irContactName = $user?.name || '';
-			irContactEmail = $user?.email || '';
+	// ===== GP: Team & Contacts =====
+	async function saveTeamContacts() {
+		const validation = validateTeamContacts(teamContacts);
+		syncTeamContacts(validation.contacts.length > 0 ? validation.contacts : teamContacts);
+		if (!validation.valid) {
+			teamContactsError = validation.formError || 'Add at least one valid team contact.';
+			return;
 		}
-	}
-
-	async function saveIrContact() {
-		if (!irContactName.trim() || !irContactEmail.trim()) return;
 
 		try {
-			await fetch('/api/gp-onboarding', {
-				method: 'POST', headers,
-				body: JSON.stringify({ email: $user.email, step: 'ir-contact', data: { irContactName: irContactName.trim(), irContactEmail: irContactEmail.trim(), bookingUrl: bookingUrl.trim() } })
+			const response = await fetch('/api/gp-onboarding', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({
+					email: $user.email,
+					step: 'team-contacts',
+					data: {
+						teamContacts: serializeTeamContactsForApi(validation.contacts)
+					}
+				})
 			});
-		} catch {}
-		goToStep('step6');
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				teamContactsError = payload?.formError || payload?.error || 'Unable to save team contacts right now.';
+				return;
+			}
+
+			syncTeamContacts(payload?.teamContacts?.length > 0 ? payload.teamContacts : validation.contacts);
+			goToStep('step6');
+		} catch {
+			teamContactsError = 'Unable to save team contacts right now.';
+		}
 	}
 
 	// ===== GP: Agreement =====
@@ -511,7 +559,7 @@
 		checklistItems = [
 			{ label: 'Company profile', done: !!companyId, skipped: false, action: companyId ? 'Edit' : 'Set up', step: 'step3' },
 			{ label: 'Asset classes', done: selectedAssetClasses.length > 0, skipped: false, action: 'Edit', step: 'step4' },
-			{ label: 'IR contact', done: !!irContactName.trim(), skipped: false, action: 'Edit', step: 'step5' },
+			{ label: 'Team & contacts', done: teamContactsValidation.valid, skipped: false, action: 'Edit', step: 'step5' },
 			{ label: 'Listing agreement', done: agreementSigned, skipped: false, action: agreementSigned ? 'Signed' : 'Review', step: agreementSigned ? null : 'step6' },
 			{ label: 'Deal uploaded', done: dealUploaded, skipped: dealSkipped, action: dealUploaded ? 'View' : 'Add deal', step: dealUploaded ? null : 'step7' },
 			{ label: 'Presentation', done: presentationInterest === true, skipped: presentationInterest === false, action: presentationInterest === true ? 'Booked' : 'Learn more', step: 'step8' }
@@ -676,9 +724,9 @@
 				if (data.company.founding_year) foundingYear = data.company.founding_year;
 				if (data.company.type) firmType = data.company.type;
 				if (Array.isArray(data.company.asset_classes)) selectedAssetClasses = data.company.asset_classes;
-				if (data.company.ir_contact_name) irContactName = data.company.ir_contact_name;
-				if (data.company.ir_contact_email) irContactEmail = data.company.ir_contact_email;
-				if (data.company.booking_url) bookingUrl = data.company.booking_url;
+				syncTeamContacts(data.teamContacts, { company: data.company });
+			} else {
+				syncTeamContacts([]);
 			}
 				if (data.profile) {
 					selectedRole = data.profile.onboardingRole;
@@ -1189,37 +1237,14 @@
 		{/if}
 
 		{#if currentStep === 'step5'}
-			<div class="step active">
-				<div class="step-header">
-					<div class="step-counter">Step 3 of 8</div>
-					<div class="step-title">Who should we introduce investors to?</div>
-					<div class="step-subtitle">When an LP is interested in your deal, we connect them directly to this person</div>
-				</div>
-				<div class="step-body">
-					<button type="button" class="ir-toggle-row" aria-pressed={irSelf} onclick={toggleIrSelf}>
-						<div class="ir-toggle-check" class:checked={irSelf}>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-						</div>
-						<div class="ir-toggle-label">That's me &mdash; use my contact info</div>
-					</button>
-					<div class="form-grid">
-						<div class="form-group"><label class="form-label" for="ir-contact-name">Name *</label><input id="ir-contact-name" class="form-input" type="text" bind:value={irContactName} placeholder="Full name"></div>
-						<div class="form-group"><label class="form-label" for="ir-contact-email">Email *</label><input id="ir-contact-email" class="form-input" type="email" bind:value={irContactEmail} placeholder="ir@yourfirm.com"></div>
-						<div class="form-group"><label class="form-label" for="ir-linkedin">LinkedIn URL (optional)</label><input id="ir-linkedin" class="form-input" type="url" bind:value={irLinkedin} placeholder="https://linkedin.com/in/..."></div>
-						<div class="form-group"><label class="form-label" for="booking-url">Calendly / Booking Link (optional)</label><input id="booking-url" class="form-input" type="url" bind:value={bookingUrl} placeholder="https://calendly.com/yourfirm"></div>
-					</div>
-				</div>
-				<div class="step-footer">
-					<button class="btn-secondary" onclick={() => goToStep('step4', true)}>
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
-						Back
-					</button>
-					<button class="btn-primary" onclick={saveIrContact} disabled={!irContactName.trim() || !irContactEmail.trim()}>
-						Continue
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-					</button>
-				</div>
-			</div>
+			<TeamContactsStage
+				contacts={teamContacts}
+				error={teamContactsError}
+				selfContact={currentUserTeamContact}
+				onchange={(nextContacts) => syncTeamContacts(nextContacts)}
+				onback={() => goToStep('step4', true)}
+				oncontinue={saveTeamContacts}
+			/>
 		{/if}
 
 		{#if currentStep === 'step6'}

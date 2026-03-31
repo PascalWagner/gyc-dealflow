@@ -24,11 +24,13 @@ const FIELD_MAP = {
   offeringSize: 'offering_size',
   purchasePrice: 'purchase_price',
   offeringType: 'offering_type',
+  offeringSize: 'offering_size',
   availableTo: 'available_to',
   distributions: 'distributions',
   lpGpSplit: 'lp_gp_split',
   fees: 'fees',
   financials: 'financials',
+  instrument: 'instrument',
   shortSummary: 'short_summary',
   coverImageUrl: 'cover_image_url',
   heroMediaUrl: 'hero_media_url',
@@ -46,9 +48,10 @@ const FIELD_MAP = {
   sponsorName: 'sponsor_name',
   slug: 'slug',
   investingGeography: 'investing_geography',
-  instrument: 'instrument',
   debtPosition: 'debt_position',
   fundAUM: 'fund_aum',
+  loanCount: 'loan_count',
+  avgLoanLtv: 'avg_loan_ltv',
   redemption: 'redemption',
   sponsorCoinvest: 'sponsor_in_deal_pct',
   sponsorInDeal: 'sponsor_in_deal_pct',
@@ -73,6 +76,19 @@ const FIELD_MAP = {
   dispositionFeePct: 'disposition_fee_pct',
   constructionMgmtFeePct: 'construction_mgmt_fee_pct',
   tags: 'tags',
+  issuerEntity: 'issuer_entity',
+  secCik: 'sec_cik',
+  dateOfFirstSale: 'date_of_first_sale',
+  totalAmountSold: 'total_amount_sold',
+  totalInvestors: 'total_investors',
+  is506b: 'is_506b',
+  secVerificationState: 'sec_verification_state',
+  secVerificationNotes: 'sec_verification_notes',
+  secFilingId: 'sec_filing_id',
+  dealBranch: 'deal_branch',
+  teamContacts: 'team_contacts',
+  sourceRiskFactors: 'source_risk_factors',
+  highlightedRisks: 'highlighted_risks',
   // Special fields
   status: 'status',
   gpReviewedAt: 'gp_reviewed_at',
@@ -110,11 +126,47 @@ const NUMERIC_FIELD_KEYS = new Set([
   'capitalEventFeePct',
   'dispositionFeePct',
   'constructionMgmtFeePct',
+  'loanCount',
+  'totalInvestors',
 ]);
+
+const JSON_ARRAY_FIELD_KEYS = new Set(['teamContacts', 'sourceRiskFactors', 'highlightedRisks']);
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean);
+  }
+  return String(value || '')
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeTeamContacts(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry, index) => ({
+      firstName: String(entry?.firstName || '').trim(),
+      lastName: String(entry?.lastName || '').trim(),
+      email: String(entry?.email || '').trim(),
+      phone: String(entry?.phone || '').trim(),
+      role: String(entry?.role || '').trim(),
+      linkedinUrl: String(entry?.linkedinUrl || '').trim(),
+      calendarUrl: String(entry?.calendarUrl || '').trim(),
+      isPrimary: entry?.isPrimary === true,
+      isInvestorRelations: entry?.isInvestorRelations === true,
+      displayOrder: Number.isFinite(entry?.displayOrder) ? entry.displayOrder : index
+    }))
+    .filter((entry) => entry.firstName || entry.lastName || entry.email || entry.role);
+}
 
 function normalizeValue(key, value) {
   if (value === undefined) return value;
   if (key === 'managementCompanyId') {
+    const trimmed = String(value || '').trim();
+    return trimmed || null;
+  }
+  if (key === 'secFilingId') {
     const trimmed = String(value || '').trim();
     return trimmed || null;
   }
@@ -126,6 +178,12 @@ function normalizeValue(key, value) {
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
+  }
+  if (key === 'teamContacts') {
+    return normalizeTeamContacts(value);
+  }
+  if (key === 'sourceRiskFactors' || key === 'highlightedRisks') {
+    return normalizeStringArray(value);
   }
   if (NUMERIC_FIELD_KEYS.has(key)) {
     if (value === null || value === '') return null;

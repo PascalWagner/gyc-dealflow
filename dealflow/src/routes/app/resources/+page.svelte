@@ -17,7 +17,7 @@
 	let loading = $state(true);
 	let academyUnlocked = $state(false);
 	const nativeCompanionMode = browser && isNativeApp();
-	const RESOURCES_CACHE_KEY = 'gycResourcesCatalogV1';
+	const RESOURCES_CACHE_KEY = 'gycResourcesCatalogV2';
 	const RESOURCES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 	const categories = $derived.by(() => {
@@ -48,21 +48,21 @@
 
 	function getThumbnail(video) {
 		if (video.thumbnail) return video.thumbnail;
-		if (video.youtubeId) return `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`;
+		if (video.youtubeId) return `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`;
 		return '';
 	}
 
 	function handleThumbnailError(event, video) {
 		const image = event.currentTarget;
 		if (!image || !video?.youtubeId) return;
-		if (image.dataset.fallbackApplied === 'hq') {
+		if (image.dataset.fallbackApplied === 'mq') {
 			image.onerror = null;
-			image.src = `https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`;
-			image.dataset.fallbackApplied = 'mq';
+			image.src = `https://img.youtube.com/vi/${video.youtubeId}/default.jpg`;
+			image.dataset.fallbackApplied = 'default';
 			return;
 		}
-		image.src = `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`;
-		image.dataset.fallbackApplied = 'hq';
+		image.src = `https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`;
+		image.dataset.fallbackApplied = 'mq';
 	}
 
 	function isPlayable(video) {
@@ -413,7 +413,10 @@
 	}
 
 	.resource-thumb-fallback {
-		height: 100%;
+		position: absolute;
+		inset: -2px;
+		width: calc(100% + 4px);
+		height: calc(100% + 4px);
 		background: linear-gradient(135deg, #0d2a30 0%, #204951 100%);
 		color: rgba(255, 255, 255, 0.88);
 		display: flex;
@@ -487,20 +490,22 @@
 		padding-bottom: 56.25%;
 		overflow: hidden;
 		line-height: 0;
+		isolation: isolate;
 		background:
 			linear-gradient(135deg, rgba(81, 190, 123, 0.14), rgba(23, 52, 58, 0.2)),
 			linear-gradient(160deg, #17343a, #102529);
 	}
 	.resource-thumb img {
 		position: absolute;
-		left: 0;
-		right: 0;
-		top: -4px;
-		width: 100%;
+		top: -6px;
+		left: -2px;
+		width: calc(100% + 4px);
 		height: calc(100% + 8px);
 		display: block;
+		background: #102529;
 		object-fit: cover;
-		object-position: center top;
+		object-position: center 48%;
+		transform: translateZ(0);
 	}
 	.play-overlay {
 		position: absolute;
