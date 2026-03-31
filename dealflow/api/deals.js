@@ -86,60 +86,79 @@ export default async function handler(req, res) {
       });
     }
 
-    // Run deals + sponsors queries in parallel (was sequential — ~2x faster)
-    const [dealsResult, sponsorsResult] = await Promise.all([
-      applyPublishedCatalogQuery(
-        supabase
-          .from('opportunities')
-          .select(`
-            *,
-            management_company:management_companies (
-              id, operator_name, ceo, website, linkedin_ceo,
-              invest_clearly_profile, founding_year, type, asset_classes,
-              total_investors, authorized_emails, booking_url,
-              ir_contact_name, ir_contact_email, full_cycle_deals
-            )
-          `)
-          .not('investment_name', 'eq', '')
-          .order('added_date', { ascending: false })
-      ),
-
-      // Sponsors: fetch in parallel instead of after deals
+    const parentQuery = applyPublishedCatalogQuery(
       supabase
-        .from('deal_sponsors')
+        .from('opportunities')
         .select(`
-          deal_id, role, is_primary, display_order,
-          company:management_companies (
+          *,
+          management_company:management_companies (
             id, operator_name, ceo, website, linkedin_ceo,
-            invest_clearly_profile, founding_year, type,
-            asset_classes, total_investors, booking_url
+            invest_clearly_profile, founding_year, type, asset_classes,
+            total_investors, authorized_emails, booking_url,
+            ir_contact_name, ir_contact_email, full_cycle_deals
           )
         `)
-        .order('display_order', { ascending: true })
-    ]);
+        .is('parent_deal_id', null)
+        .not('investment_name', 'eq', '')
+        .order('added_date', { ascending: false })
+    );
 
-    const { data: allDeals, error: dealsError } = dealsResult;
-    if (dealsError) throw dealsError;
+    const { data: parentDeals, error: parentError } = await parentQuery;
+    if (parentError) throw parentError;
 
-    const { data: sponsorRows } = sponsorsResult;
-    const visibleDeals = (allDeals || []).filter((deal) =>
+    const visibleParentDeals = (parentDeals || []).filter((deal) =>
       canViewerAccessRestricted506bDeal(deal, viewerContext, { include506b })
     );
-    const deals = transformDeals(
-      visibleDeals.filter((deal) => !deal.parent_deal_id),
-      visibleDeals.filter((deal) => deal.parent_deal_id),
-      sponsorRows || []
-    );
+    const parentIds = visibleParentDeals.map((deal) => deal.id).filter(Boolean);
 
-    // Build management companies from the already-joined deal data (no extra query needed)
+    const [childResult, sponsorsResult] = parentIds.length
+      ? await Promise.all([
+          applyPublishedCatalogQuery(
+            supabase
+              .from('opportunities')
+              .select(`
+                id, parent_deal_id, share_class_label, investment_name, target_irr, preferred_return,
+                investment_minimum, hold_period_years, lp_gp_split, cash_on_cash, financials, is_506b
+              `)
+              .in('parent_deal_id', parentIds)
+              .order('created_at', { ascending: true })
+          ),
+          supabase
+            .from('deal_sponsors')
+            .select(`
+              deal_id, role, is_primary, display_order,
+              company:management_companies (
+                id, operator_name, ceo, website, linkedin_ceo,
+                invest_clearly_profile, founding_year, type,
+                asset_classes, total_investors, booking_url
+              )
+            `)
+            .in('deal_id', parentIds)
+            .order('display_order', { ascending: true })
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+
+    if (childResult.error) throw childResult.error;
+    if (sponsorsResult.error) throw sponsorsResult.error;
+
+    const visibleChildren = (childResult.data || []).filter((deal) =>
+      canViewerAccessRestricted506bDeal(deal, viewerContext, { include506b })
+    );
+    const deals = transformDeals(visibleParentDeals, visibleChildren, sponsorsResult.data || []);
+
     const mcMap = {};
-    for (const d of allDeals) {
-      const mc = d.management_company;
+    for (const deal of visibleParentDeals) {
+      const mc = deal.management_company;
       if (mc && mc.id && !mcMap[mc.id]) {
         mcMap[mc.id] = {
-          id: mc.id, name: mc.operator_name, ceo: mc.ceo, website: mc.website,
-          linkedin: mc.linkedin_ceo, foundingYear: mc.founding_year,
-          assetClasses: mc.asset_classes || [], type: mc.type,
+          id: mc.id,
+          name: mc.operator_name,
+          ceo: mc.ceo,
+          website: mc.website,
+          linkedin: mc.linkedin_ceo,
+          foundingYear: mc.founding_year,
+          assetClasses: mc.asset_classes || [],
+          type: mc.type,
           investClearlyProfile: mc.invest_clearly_profile,
           totalInvestors: mc.total_investors,
           fullCycleDeals: mc.full_cycle_deals || 0,
@@ -154,7 +173,7 @@ export default async function handler(req, res) {
       managementCompanies,
       people: [],  // People table can be dropped or migrated later if needed
       meta: {
-        totalOpportunities: allDeals.length,
+        totalOpportunities: visibleParentDeals.length,
         totalCompanies: managementCompanies.length,
         totalPeople: 0,
         fetchedAt: new Date().toISOString()
