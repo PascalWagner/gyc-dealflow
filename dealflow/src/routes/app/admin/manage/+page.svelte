@@ -4,6 +4,7 @@
 	import { canonicalizeUserTier, isAdmin, getFreshSessionToken } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import { readScopedStaleCache, writeScopedStaleCache } from '$lib/utils/scopedStaleCache.js';
 	import {
 		compareDealWorkflowRecords,
 		DEAL_LIFECYCLE_LABELS,
@@ -33,6 +34,7 @@
 	let dealWorkflowRows = $state([]);
 	let dealFilter = $state('all');
 	let rowActionPendingId = $state(null);
+	const DEAL_QUEUE_CACHE_TTL_MS = 15 * 1000;
 
 	const showCreateButton = $derived.by(() => {
 		if (activeTab === 'operators') return operatorView === 'database';
@@ -40,7 +42,12 @@
 		return false;
 	});
 
-	const showDealTools = $derived(activeTab === 'deals');
+	const searchPlaceholder = $derived.by(() => {
+		if (activeTab === 'deals') return 'Search deals...';
+		if (activeTab === 'operators') return 'Search operators...';
+		if (activeTab === 'users') return 'Search users...';
+		return 'Search intros...';
+	});
 
 	const dealStats = $derived.by(() => computeDealWorkflowStats(dealWorkflowRows));
 	const filteredDealRows = $derived.by(() => {
@@ -65,7 +72,7 @@
 			goto('/app/deals');
 			return;
 		}
-		loadData();
+		void loadData();
 	});
 
 	async function adminFetch(body) {
@@ -97,22 +104,42 @@
 		qualityStats = null;
 		if (tab === 'operators') operatorView = 'outreach';
 		if (tab === 'deals') dealFilter = 'all';
-		loadData();
+		void loadData();
 	}
 
 	function switchOperatorView(view) {
 		operatorView = view;
 		currentPage = 1;
 		qualityStats = null;
-		loadData();
+		void loadData();
 	}
 
 	function searchDebounce() {
 		clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
 			currentPage = 1;
-			loadData();
+			void loadData();
 		}, 300);
+	}
+
+	function getDealQueueCacheKey(search = '') {
+		return `gycAdminDealQueueV1:${String(search || '').trim().toLowerCase()}`;
+	}
+
+	function primeDealQueueFromCache(search = '') {
+		const cached = readScopedStaleCache(getDealQueueCacheKey(search), {
+			maxAgeMs: DEAL_QUEUE_CACHE_TTL_MS
+		});
+		if (!cached?.value) return { hasCached: false, fresh: false };
+		dealWorkflowRows = Array.isArray(cached.value.rows) ? cached.value.rows : [];
+		loading = false;
+		return { hasCached: true, fresh: cached.fresh };
+	}
+
+	function persistDealQueueCache(search = '') {
+		writeScopedStaleCache(getDealQueueCacheKey(search), {
+			rows: dealWorkflowRows
+		});
 	}
 
 	async function loadData() {
@@ -121,15 +148,20 @@
 		const search = searchQuery.trim();
 
 		if (activeTab === 'deals') {
+			const cachedState = primeDealQueueFromCache(search);
+			if (cachedState.fresh) {
+				return;
+			}
 			try {
 				const result = await adminFetch({ action: 'list-deals-workflow', search });
 				if (result.success) {
 					dealWorkflowRows = result.data || [];
+					persistDealQueueCache(search);
 				} else {
-					dealWorkflowRows = [];
+					dealWorkflowRows = cachedState.hasCached ? dealWorkflowRows : [];
 				}
 			} catch {
-				dealWorkflowRows = [];
+				dealWorkflowRows = cachedState.hasCached ? dealWorkflowRows : [];
 			}
 			loading = false;
 			return;
@@ -279,27 +311,19 @@
 			return;
 		}
 
-		loadData();
-	}
-
-	async function cleanupStart() {
-		alert('Data cleanup: AI-powered enrichment will process deals one by one. This runs via the admin API.');
-	}
-
-	async function deckFinderStart() {
-		alert('Deck Finder: Searches Google Drive for pitch decks and matches them to deals.');
+		void loadData();
 	}
 
 	function prevPage() {
 		if (currentPage > 1) {
 			currentPage -= 1;
-			loadData();
+			void loadData();
 		}
 	}
 
 	function nextPage() {
 		currentPage += 1;
-		loadData();
+		void loadData();
 	}
 
 	function completenessColor(pct) {
@@ -364,6 +388,7 @@
 
 	function updateDealWorkflowRow(nextRow) {
 		dealWorkflowRows = dealWorkflowRows.map((row) => (row.id === nextRow.id ? nextRow : row));
+		persistDealQueueCache(searchQuery.trim());
 	}
 
 	async function handleLifecycleChange(row, event) {
@@ -393,12 +418,26 @@
 {:else}
 	<PageContainer className="manage-page ly-page-stack">
 		<PageHeader title="Manage Data">
-			<div slot="secondaryRow" class="seg-ctrl">
-				{#each tabs as tab}
-					<button class="seg-btn" class:active={activeTab === tab} onclick={() => switchTab(tab)}>
-						{tabLabels[tab]}
-					</button>
-				{/each}
+			<div slot="secondaryRow" class="page-tools-row">
+				<div class="seg-ctrl">
+					{#each tabs as tab}
+						<button class="seg-btn" class:active={activeTab === tab} onclick={() => switchTab(tab)}>
+							{tabLabels[tab]}
+						</button>
+					{/each}
+				</div>
+				<div class="header-toolbar">
+					<div class="search-wrap header-search">
+						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input type="text" placeholder={searchPlaceholder} bind:value={searchQuery} oninput={searchDebounce} />
+					</div>
+					{#if showCreateButton}
+						<button class="action-btn primary" onclick={createNew}>+ Add New</button>
+					{/if}
+				</div>
 			</div>
 		</PageHeader>
 
@@ -460,24 +499,6 @@
 							<span class="filter-chip__count">{option.count}</span>
 						</button>
 					{/each}
-				</div>
-
-				<div class="toolbar">
-					<div class="search-wrap">
-						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
-							<circle cx="11" cy="11" r="8" />
-							<line x1="21" y1="21" x2="16.65" y2="16.65" />
-						</svg>
-						<input type="text" placeholder="Search..." bind:value={searchQuery} oninput={searchDebounce} />
-					</div>
-					{#if showCreateButton}
-						<button class="action-btn primary" onclick={createNew}>+ Add New</button>
-					{/if}
-					{#if showDealTools}
-						<button class="action-btn secondary" onclick={cleanupStart}>Data Cleanup</button>
-						<button class="action-btn secondary" onclick={deckFinderStart}>Deck Finder</button>
-					{/if}
-					<span class="result-count">{filteredDealRows.length} deals in queue</span>
 				</div>
 
 				{#if loading}
@@ -552,20 +573,6 @@
 					</div>
 				{/if}
 			{:else}
-				<div class="toolbar">
-					<div class="search-wrap">
-						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
-							<circle cx="11" cy="11" r="8" />
-							<line x1="21" y1="21" x2="16.65" y2="16.65" />
-						</svg>
-						<input type="text" placeholder="Search..." bind:value={searchQuery} oninput={searchDebounce} />
-					</div>
-					{#if showCreateButton}
-						<button class="action-btn primary" onclick={createNew}>+ Add New</button>
-					{/if}
-					<span class="result-count">{resultCount}</span>
-				</div>
-
 				{#if qualityStats && activeTab === 'operators' && operatorView === 'quality'}
 					<div class="quality-banner">
 						<strong>Quality Audit Mode</strong> Shows how complete each operator record is. Green = 80%+, amber = 50-79%, red = below 50%.
@@ -640,6 +647,13 @@
 
 <style>
 	.manage-page { min-height: 100vh; }
+	.page-tools-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		flex-wrap: wrap;
+	}
 
 	.seg-ctrl,
 	.sub-toggle {
@@ -688,12 +702,12 @@
 
 	.content { min-width: 0; }
 
-	.toolbar {
+	.header-toolbar {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		margin-bottom: 20px;
 		flex-wrap: wrap;
+		margin-left: auto;
 	}
 
 	.search-wrap {
@@ -702,6 +716,10 @@
 		min-width: 220px;
 		display: flex;
 		align-items: center;
+	}
+	.header-search {
+		min-width: 320px;
+		max-width: 460px;
 	}
 
 	.search-wrap svg { position: absolute; left: 12px; }
@@ -738,13 +756,6 @@
 		border: 1px solid var(--border);
 		color: var(--text-secondary);
 		font-size: 12px;
-	}
-
-	.result-count {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		color: var(--text-muted);
-		font-weight: 500;
 	}
 
 	.sub-toggle {
@@ -1214,7 +1225,9 @@
 	}
 
 	@media (max-width: 900px) {
-		.toolbar { flex-direction: column; align-items: stretch; }
+		.page-tools-row { align-items: stretch; }
+		.header-toolbar { width: 100%; margin-left: 0; }
+		.header-search { min-width: 0; max-width: none; width: 100%; }
 		.visibility-toggle { min-width: 180px; }
 	}
 

@@ -2,7 +2,6 @@ import fs from 'node:fs';
 
 import { ADMIN_EMAILS, getAdminClient, resolveUserFromAccessToken, setCors, rateLimit } from './_supabase.js';
 
-const ACADEMY_TIERS = new Set(['academy', 'founding', 'inner-circle', 'alumni', 'investor', 'paid', 'member', 'family_office']);
 const LESSON_CATALOG_PATH = new URL('../src/lib/data/cashflow-academy-lessons.json', import.meta.url);
 const { sections: SECTIONS = [], lessons: LESSONS = [] } = JSON.parse(fs.readFileSync(LESSON_CATALOG_PATH, 'utf8'));
 
@@ -57,9 +56,7 @@ export default async function handler(req, res) {
     const isAdmin = Boolean(profile?.is_admin) || ADMIN_EMAILS.includes(email);
     const tier = (profile?.tier || '').toLowerCase();
 
-    if (!isAdmin && !ACADEMY_TIERS.has(tier)) {
-      return res.status(403).json({ error: 'Cashflow Academy membership required' });
-    }
+    const hasMemberTier = tier === 'member';
 
     const videos = LESSONS
       .slice()
@@ -70,7 +67,9 @@ export default async function handler(req, res) {
       videos,
       sections: SECTIONS,
       source: 'cashflow-academy',
-      replayLibraryUrl: '/app/resources'
+      replayLibraryUrl: '/app/resources',
+      accessRestricted: !hasMemberTier,
+      accessTier: isAdmin ? 'admin' : (tier || 'free')
     });
   } catch (err) {
     console.error('Resources API error:', err);

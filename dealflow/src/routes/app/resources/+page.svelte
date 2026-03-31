@@ -3,10 +3,11 @@
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
-	import { getStoredSessionToken, isMember, userToken } from '$lib/stores/auth.js';
+	import { getStoredSessionToken, userToken } from '$lib/stores/auth.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import { readScopedStaleCache, writeScopedStaleCache } from '$lib/utils/scopedStaleCache.js';
 
 	let searchQuery = $state('');
 	let activeCategory = $state('All');
@@ -14,7 +15,10 @@
 	let sections = $state([]);
 	let selectedVideo = $state(null);
 	let loading = $state(true);
+	let academyUnlocked = $state(false);
 	const nativeCompanionMode = browser && isNativeApp();
+	const RESOURCES_CACHE_KEY = 'gycResourcesCatalogV1';
+	const RESOURCES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 	const categories = $derived.by(() => {
 		const cats = ['All'];
@@ -72,6 +76,7 @@
 
 	function openVideo(video) {
 		if (!video) return;
+		if (!academyUnlocked) return;
 		if (!isPlayable(video)) return;
 		if (video.youtubeId) {
 			selectedVideo = video;
@@ -91,12 +96,24 @@
 		if (event.key === 'Escape' && selectedVideo) closeModal();
 	}
 
-	async function loadResources() {
+	function applyResourcesPayload(payload = {}) {
+		videos = Array.isArray(payload.videos) ? payload.videos : [];
+		sections = Array.isArray(payload.sections) ? payload.sections : [];
+		academyUnlocked = payload.academyUnlocked === true;
+	}
+
+	async function loadResources({ background = false } = {}) {
 		const token = $userToken || getStoredSessionToken();
 		if (!token) {
 			loading = false;
 			videos = [];
+			sections = [];
+			academyUnlocked = false;
 			return;
+		}
+
+		if (!background) {
+			loading = videos.length === 0;
 		}
 
 		try {
@@ -107,11 +124,20 @@
 			});
 			if (!response.ok) throw new Error(`Resources load failed: ${response.status}`);
 			const payload = await response.json();
-			videos = Array.isArray(payload) ? payload : payload.videos || [];
-			sections = payload.sections || [];
+			const normalizedPayload = {
+				videos: Array.isArray(payload) ? payload : payload.videos || [],
+				sections: payload.sections || [],
+				academyUnlocked: payload.accessRestricted !== true
+			};
+			applyResourcesPayload(normalizedPayload);
+			writeScopedStaleCache(RESOURCES_CACHE_KEY, normalizedPayload);
 		} catch (error) {
 			console.warn('Resources unavailable:', error.message);
-			videos = [];
+			if (videos.length === 0) {
+				videos = [];
+				sections = [];
+				academyUnlocked = false;
+			}
 		} finally {
 			loading = false;
 		}
@@ -122,7 +148,18 @@
 		if (requestedCategory) {
 			activeCategory = requestedCategory;
 		}
-		loadResources();
+		const cached = readScopedStaleCache(RESOURCES_CACHE_KEY, {
+			maxAgeMs: RESOURCES_CACHE_TTL_MS
+		});
+		if (cached?.value) {
+			applyResourcesPayload(cached.value);
+			loading = false;
+			if (!cached.fresh) {
+				void loadResources({ background: true });
+			}
+			return;
+		}
+		void loadResources();
 	});
 </script>
 
@@ -139,31 +176,7 @@
 	/>
 
 	<div class="resources-page">
-		{#if !$isMember}
-			<div class="gate-wrap">
-				<div class="academy-gate-cta">
-					{#if nativeCompanionMode}
-					<CompanionGate
-						title="Available to existing members"
-						message="Cashflow Academy lessons, deal reviews, and office hours are available to existing members on the web."
-						note="Enrollment and billing are not offered in the iOS app."
-					/>
-				{:else}
-					<div class="gate-icon">
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
-							<rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-							<path d="M7 11V7a5 5 0 0 1 10 0v4" />
-						</svg>
-					</div>
-					<div class="gate-title">Unlock Cashflow Academy</div>
-					<div class="gate-sub">
-						Structured courses on strategy, deal flow, and execution — built for passive real estate investors who want to invest with confidence.
-					</div>
-					<a href="/app/academy" class="gate-btn">See What's Included &rarr;</a>
-				{/if}
-			</div>
-		</div>
-	{:else if loading}
+		{#if loading}
 		<div class="loading-state">
 			<div class="resource-grid">
 				{#each Array(6) as _}
@@ -176,73 +189,103 @@
 			</div>
 		</div>
 		{:else}
-			<div class="library-toolbar">
-				<div class="search-wrap">
-					<svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
-					<circle cx="11" cy="11" r="8" />
-					<line x1="21" y1="21" x2="16.65" y2="16.65" />
-				</svg>
-				<input type="text" class="resource-search" placeholder="Search lessons..." bind:value={searchQuery} />
-			</div>
+			<div class="resources-library-shell">
+				<div class="resources-library-content" class:is-locked={!academyUnlocked}>
+					<div class="library-toolbar">
+						<div class="search-wrap">
+							<svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input type="text" class="resource-search" placeholder="Search lessons..." bind:value={searchQuery} />
+					</div>
 
-			<div class="resource-filters">
-				{#each categories as category}
-					<button class="resource-filter-btn" class:active={activeCategory === category} onclick={() => (activeCategory = category)}>
-						{category}
-					</button>
-				{/each}
-			</div>
-		</div>
+					<div class="resource-filters">
+						{#each categories as category}
+							<button class="resource-filter-btn" class:active={activeCategory === category} onclick={() => (activeCategory = category)}>
+								{category}
+							</button>
+						{/each}
+					</div>
+				</div>
 
-		{#if filteredVideos.length === 0}
-			<div class="empty-state">
-				<div class="empty-title">No lessons match that search.</div>
-				<div class="empty-desc">Try a different keyword or switch back to all sections.</div>
-			</div>
-		{:else}
-			<div class="resource-grid">
-				{#each filteredVideos as video}
-					<button
-						class="resource-card"
-						class:is-disabled={!isPlayable(video)}
-						onclick={() => openVideo(video)}
-						disabled={!isPlayable(video)}
-					>
-						<div class="resource-thumb">
-							{#if getThumbnail(video)}
-								<img src={getThumbnail(video)} alt="" loading="lazy" onerror={(event) => handleThumbnailError(event, video)} />
-							{:else}
-								<div class="resource-thumb-fallback">
-									<span>{video.category}</span>
-									<strong>{video.module || 'Lesson'}</strong>
+				{#if filteredVideos.length === 0}
+					<div class="empty-state">
+						<div class="empty-title">No lessons match that search.</div>
+						<div class="empty-desc">Try a different keyword or switch back to all sections.</div>
+					</div>
+				{:else}
+					<div class="resource-grid">
+						{#each filteredVideos as video}
+							<button
+								class="resource-card"
+								class:is-disabled={!isPlayable(video) || !academyUnlocked}
+								onclick={() => openVideo(video)}
+								disabled={!isPlayable(video) || !academyUnlocked}
+							>
+								<div class="resource-thumb">
+									{#if getThumbnail(video)}
+										<img src={getThumbnail(video)} alt="" loading="lazy" onerror={(event) => handleThumbnailError(event, video)} />
+									{:else}
+										<div class="resource-thumb-fallback">
+											<span>{video.category}</span>
+											<strong>{video.module || 'Lesson'}</strong>
+										</div>
+									{/if}
+									{#if isPlayable(video)}
+										<div class="play-overlay">
+											<div class="play-btn">
+												<svg viewBox="0 0 24 24" fill="none" width="22" height="22">
+													<polygon points="7 5 19 12 7 19 7 5" fill="#17343a" />
+												</svg>
+											</div>
+										</div>
+									{/if}
 								</div>
-							{/if}
-							{#if isPlayable(video)}
-								<div class="play-overlay">
-									<div class="play-btn">
-										<svg viewBox="0 0 24 24" fill="none" width="22" height="22">
-											<polygon points="7 5 19 12 7 19 7 5" fill="#17343a" />
-										</svg>
+								<div class="resource-meta">
+									<div class="resource-meta-top">
+										<span class="resource-badge {badgeClass(video.category)}">{video.category}</span>
+										{#if video.module}<span class="resource-module">{video.module}</span>{/if}
+									</div>
+									<h3>{video.title}</h3>
+									<p>{video.description}</p>
+									<div class="resource-meta-bottom">
+										{#if video.duration}<span>{video.duration}</span>{/if}
+										<span>{academyUnlocked ? (isPlayable(video) ? 'Watch lesson' : 'Video link coming soon') : 'Unlock with the Academy'}</span>
 									</div>
 								</div>
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+				{#if !academyUnlocked}
+					<div class="resource-lock-overlay">
+						<div class="academy-gate-cta">
+							{#if nativeCompanionMode}
+								<CompanionGate
+									title="Unlock with the Academy"
+									message="Resources, office hours, and the structured video library open up with an active member tier."
+									note="Enrollment and billing are not offered in the iOS app."
+								/>
+							{:else}
+								<div class="gate-icon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+										<rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+										<path d="M7 11V7a5 5 0 0 1 10 0v4" />
+									</svg>
+								</div>
+								<div class="gate-title">Unlock with the Academy</div>
+								<div class="gate-sub">
+									Structured courses on strategy, deal flow, and execution — built for passive real estate investors who want to invest with confidence.
+								</div>
+								<a href="/app/academy" class="gate-btn">Unlock with the Academy</a>
 							{/if}
 						</div>
-						<div class="resource-meta">
-							<div class="resource-meta-top">
-								<span class="resource-badge {badgeClass(video.category)}">{video.category}</span>
-								{#if video.module}<span class="resource-module">{video.module}</span>{/if}
-							</div>
-							<h3>{video.title}</h3>
-							<p>{video.description}</p>
-							<div class="resource-meta-bottom">
-								{#if video.duration}<span>{video.duration}</span>{/if}
-								<span>{isPlayable(video) ? 'Watch lesson' : 'Video link coming soon'}</span>
-							</div>
-						</div>
-					</button>
-				{/each}
+					</div>
+				{/if}
 			</div>
-			{/if}
 		{/if}
 	</div>
 
@@ -278,6 +321,23 @@
 
 <style>
 	.resources-page { min-width: 0; }
+	.resources-library-shell {
+		position: relative;
+		min-height: 320px;
+	}
+	.resources-library-content.is-locked {
+		filter: blur(10px);
+		pointer-events: none;
+		user-select: none;
+	}
+	.resource-lock-overlay {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+	}
 	.gate-btn {
 		display: inline-flex;
 		align-items: center;
@@ -433,13 +493,14 @@
 	}
 	.resource-thumb img {
 		position: absolute;
-		inset: 0;
+		left: 0;
+		right: 0;
+		top: -4px;
 		width: 100%;
-		height: 100%;
+		height: calc(100% + 8px);
 		display: block;
 		object-fit: cover;
-		object-position: center;
-		transform: scale(1.02);
+		object-position: center top;
 	}
 	.play-overlay {
 		position: absolute;
