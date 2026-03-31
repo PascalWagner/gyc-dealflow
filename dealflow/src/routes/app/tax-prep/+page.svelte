@@ -225,13 +225,7 @@
 
 <PageContainer className="tax-shell">
 <div class="tax-page">
-	<PageHeader title="Tax Prep" className="tax-page-header">
-		<div slot="secondaryRow" class="dash-tabs">
-			<a href="/app/dashboard" class="dash-tab">Overview</a>
-			<a href="/app/portfolio" class="dash-tab">Portfolio</a>
-			<a href="/app/plan" class="dash-tab">My Plan</a>
-		</div>
-	</PageHeader>
+	<PageHeader title="Tax Prep" className="tax-page-header" />
 
 	<div class="header-row">
 		<div class="filter-row">
@@ -458,14 +452,6 @@
 	.tax-shell { --ly-frame-max: 1000px; }
 	.tax-page { padding: 0; max-width: 1000px; margin: 0; }
 	.tax-page-header { margin-bottom: 24px; }
-	.dash-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
-	.dash-tab {
-		padding: 8px 16px; border-radius: 8px; font-family: var(--font-ui);
-		font-size: 13px; font-weight: 600; text-decoration: none;
-		color: var(--text-muted); transition: all 0.15s;
-	}
-	.dash-tab:hover { color: var(--text-dark); background: rgba(0,0,0,0.04); }
-	.dash-tab.active { background: var(--primary); color: #fff; }
 
 	.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 	.action-row { display: flex; gap: 10px; }

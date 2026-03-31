@@ -37,20 +37,26 @@ export const PRIMARY_MOBILE_NAV_ITEMS = [
 	{
 		key: 'dashboard',
 		href: APP_ROUTES.dashboard,
-		label: 'Dashboard',
+		label: 'Home',
 		icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>'
+	},
+	{
+		key: 'plan',
+		href: APP_ROUTES.plan,
+		label: 'Plan',
+		icon: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>'
 	},
 	{
 		key: 'deals',
 		href: APP_ROUTES.deals,
-		label: 'Deal Flow',
+		label: 'Deals',
 		icon: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>'
 	},
 	{
-		key: 'resources',
-		href: APP_ROUTES.resources,
-		label: 'Resources',
-		icon: '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>'
+		key: 'portfolio',
+		href: APP_ROUTES.portfolio,
+		label: 'Portfolio',
+		icon: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>'
 	},
 	{
 		key: 'more',
@@ -61,8 +67,6 @@ export const PRIMARY_MOBILE_NAV_ITEMS = [
 ];
 
 export const MORE_DASHBOARD_ITEMS = [
-	{ href: APP_ROUTES.portfolio, label: 'Portfolio', moreIcon: '📊' },
-	{ href: APP_ROUTES.plan, label: 'My Plan', moreIcon: '🎯' },
 	{ href: APP_ROUTES['tax-prep'], label: 'Tax Prep', moreIcon: '📄' }
 ];
 
@@ -123,8 +127,10 @@ export function getSidebarSections(options = {}) {
 		{
 			label: 'Home',
 			items: [
-				{ page: 'dashboard', icon: 'dashboard', label: 'Dashboard' },
-				{ page: 'deals', icon: 'deals', label: 'Deal Flow', badge: true }
+				{ page: 'dashboard', icon: 'dashboard', label: 'Home' },
+				{ page: 'plan', icon: 'plan', label: 'Plan' },
+				{ page: 'deals', icon: 'deals', label: 'Deals', badge: true },
+				{ page: 'portfolio', icon: 'portfolio', label: 'Portfolio' }
 			]
 		},
 		{
