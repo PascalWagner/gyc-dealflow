@@ -148,9 +148,10 @@
 	const hero = $derived(assetHeroes[deal.assetClass] || { gradient: 'linear-gradient(135deg, #0A1E21 0%, #1F5159 100%)', icon: '🏠' });
 	const heroImg = $derived(deal.propertyImageUrl || getDealHeroImage(deal) || deal.imageUrl || '');
 	const historicalReturns = $derived(getDealHistoricalReturns(deal));
-	const showReturnsMiniChart = $derived(isDebtOrLendingDeal(deal) && historicalReturns.length >= 2);
+	const usesReturnsHero = $derived(isDebtOrLendingDeal(deal));
+	const showReturnsHeroChart = $derived(usesReturnsHero && historicalReturns.length >= 2);
 	const heroStyle = $derived.by(() => {
-		if (showReturnsMiniChart) {
+		if (usesReturnsHero) {
 			return 'background:linear-gradient(160deg, #071419 0%, #12313a 52%, #1d4f5a 100%);';
 		}
 		if (heroImg) {
@@ -205,8 +206,8 @@
 >
 	<div
 		class="card-hero"
-		class:has-returns-chart={showReturnsMiniChart}
-		class:returns-hero={showReturnsMiniChart}
+		class:lending-hero={usesReturnsHero}
+		class:lending-hero-empty={usesReturnsHero && !showReturnsHeroChart}
 		style={heroStyle}
 	>
 		<div class="hero-badges">
@@ -223,21 +224,28 @@
 			{/if}
 		</div>
 
-		{#if showReturnsMiniChart}
-			<div class="hero-returns" aria-hidden="true">
-				<DealReturnsMiniChart series={historicalReturns} />
+		{#if usesReturnsHero}
+			<div class="hero-returns-surface" aria-hidden="true">
+				{#if showReturnsHeroChart}
+					<DealReturnsMiniChart series={historicalReturns} variant="hero" />
+				{:else}
+					<div class="hero-returns-empty">
+						<span class="hero-returns-empty-label">5 Year Returns</span>
+						<span class="hero-returns-empty-copy">Annual return history unavailable</span>
+					</div>
+				{/if}
 			</div>
-		{/if}
+		{:else}
+			{#if !heroImg}
+				<div class="hero-icon">{hero.icon}</div>
+			{/if}
 
-		{#if !heroImg && !showReturnsMiniChart}
-			<div class="hero-icon">{hero.icon}</div>
-		{/if}
-
-		{#if deal.targetIRR}
-			<div class="hero-irr" class:has-returns-chart={showReturnsMiniChart}>
-				<span class="irr-value">{fmtPct(deal.targetIRR)}</span>
-				<span class="irr-label">Target IRR</span>
-			</div>
+			{#if deal.targetIRR}
+				<div class="hero-irr">
+					<span class="irr-value">{fmtPct(deal.targetIRR)}</span>
+					<span class="irr-label">Target IRR</span>
+				</div>
+			{/if}
 		{/if}
 	</div>
 
@@ -465,13 +473,9 @@
 		justify-content: space-between;
 	}
 
-	.card-hero.has-returns-chart .hero-badges {
-		max-width: calc(100% - 18px);
-	}
-
-	.card-hero.returns-hero {
-		background-size: cover;
-		background-position: center;
+	.card-hero.lending-hero {
+		gap: 12px;
+		justify-content: flex-start;
 	}
 
 	.hero-badges {
@@ -526,21 +530,41 @@
 		pointer-events: none;
 	}
 
-	.hero-returns {
-		position: absolute;
-		right: 12px;
-		bottom: 10px;
-		width: min(56%, 224px);
-		height: 102px;
+	.hero-returns-surface {
+		position: relative;
 		z-index: 1;
+		flex: 1;
+		min-height: 0;
 		pointer-events: none;
 	}
 
-	.card-hero.returns-hero .hero-returns {
-		left: 12px;
-		right: 12px;
-		width: auto;
-		height: 112px;
+	.hero-returns-empty {
+		height: 100%;
+		min-height: 108px;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 6px;
+		padding: 0 2px 4px;
+		box-sizing: border-box;
+	}
+
+	.hero-returns-empty-label {
+		font-family: var(--font-ui);
+		font-size: 9px;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.44);
+	}
+
+	.hero-returns-empty-copy {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 600;
+		line-height: 1.45;
+		color: rgba(255, 255, 255, 0.56);
+		max-width: 172px;
 	}
 
 	.hero-irr {
@@ -549,16 +573,6 @@
 		display: flex;
 		flex-direction: column;
 		align-self: flex-start;
-	}
-
-	.hero-irr.has-returns-chart {
-		max-width: 40%;
-		padding-bottom: 4px;
-	}
-
-	.card-hero.returns-hero .hero-irr.has-returns-chart {
-		max-width: none;
-		padding-bottom: 0;
 	}
 
 	.irr-value {
@@ -945,22 +959,12 @@
 			flex-basis: 104px;
 		}
 
-		.hero-returns {
-			right: 10px;
-			bottom: 10px;
-			width: min(58%, 212px);
-			height: 94px;
+		.card-hero.lending-hero {
+			padding-bottom: 10px;
 		}
 
-		.card-hero.returns-hero .hero-returns {
-			left: 10px;
-			right: 10px;
-			width: auto;
-			height: 98px;
-		}
-
-		.hero-irr.has-returns-chart {
-			max-width: 36%;
+		.hero-returns-empty {
+			min-height: 96px;
 		}
 	}
 </style>

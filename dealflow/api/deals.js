@@ -113,7 +113,10 @@ export default async function handler(req, res) {
       return res.status(200).json({
         deal: {
           ...deal,
-          historicalReturns: getDealHistoricalReturns(deal)
+          historicalReturns: getDealHistoricalReturns({
+            ...row,
+            ...deal
+          })
         }
       });
     }
@@ -350,7 +353,10 @@ export default async function handler(req, res) {
 
         return {
           ...normalizedDeal,
-          historicalReturns: getDealHistoricalReturns(normalizedDeal)
+          historicalReturns: getDealHistoricalReturns({
+            ...d,
+            ...normalizedDeal
+          })
         };
       });
 

@@ -2,7 +2,7 @@
 // Admin CRUD operations for deals, operators, and users in Supabase
 // Requires JWT auth + email in ADMIN_EMAILS list
 
-import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
+import { ADMIN_EMAILS, getAdminClient, setCors, verifyAdmin } from './_supabase.js';
 
 // --- Deal actions (opportunities table) ---
 
@@ -248,6 +248,380 @@ async function updateUserTier(supabase, body) {
 
   if (error) throw error;
   return { data };
+}
+
+function normalizeAdminEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function isTrackedLpProfile(profile) {
+  const email = normalizeAdminEmail(profile?.email);
+  return !profile?.is_admin && !ADMIN_EMAILS.includes(email);
+}
+
+function filterTrackedLpProfiles(profiles) {
+  return (profiles || []).filter(isTrackedLpProfile);
+}
+
+function formatAdminShortDate(value) {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '--';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function fallbackNameFromEmail(email) {
+  const localPart = String(email || '').split('@')[0] || '';
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function formatMedianDuration(metric) {
+  if (!metric || metric.median === null || metric.median === undefined) return '--';
+  if (metric.median < 1) return `${Math.round(metric.median * 60)} min`;
+  if (metric.median < 24) return `${Math.round(metric.median * 10) / 10} hrs`;
+  return `${Math.round((metric.median / 24) * 10) / 10} days`;
+}
+
+async function fetchUserProfilesForMetrics(supabase) {
+  const selectAttempts = [
+    {
+      select: 'id, email, full_name, created_at, buy_box_complete, funnel_status, deals_viewed_count, deals_saved_count, sessions_count, last_activity_date, tier, is_admin',
+      needsDerivedActivity: false
+    },
+    {
+      select: 'id, email, full_name, created_at, tier, is_admin',
+      needsDerivedActivity: true
+    },
+    {
+      select: 'id, email, created_at, tier, is_admin',
+      needsDerivedActivity: true
+    }
+  ];
+
+  let lastError = null;
+
+  for (const attempt of selectAttempts) {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select(attempt.select)
+      .limit(5000);
+
+    if (!error) {
+      const profiles = (data || []).map((profile) => ({
+        id: profile.id,
+        email: profile.email || '',
+        full_name: profile.full_name || '',
+        created_at: profile.created_at || null,
+        buy_box_complete: Boolean(profile.buy_box_complete),
+        funnel_status: profile.funnel_status || 'new',
+        deals_viewed_count: profile.deals_viewed_count || 0,
+        deals_saved_count: profile.deals_saved_count || 0,
+        sessions_count: profile.sessions_count || 0,
+        last_activity_date: profile.last_activity_date || null,
+        tier: profile.tier || 'free',
+        is_admin: Boolean(profile.is_admin)
+      }));
+
+      return { profiles, needsDerivedActivity: attempt.needsDerivedActivity };
+    }
+
+    if (!String(error.message || '').includes('does not exist')) {
+      throw error;
+    }
+
+    lastError = error;
+  }
+
+  throw lastError || new Error('Failed to load user profiles');
+}
+
+async function fetchUserMetricsData(supabase) {
+  const { profiles, needsDerivedActivity } = await fetchUserProfilesForMetrics(supabase);
+
+  const { data: events, error: evtErr } = await supabase
+    .from('user_events')
+    .select('user_id, event, created_at')
+    .in('event', ['wizard_complete', 'goals_complete', 'deal_viewed', 'deal_saved', 'call_booked', 'session_start', 'page_view', 'wizard_step', 'wizard_abandoned', 'wizard_started'])
+    .order('created_at', { ascending: true })
+    .limit(10000);
+
+  if (evtErr) throw evtErr;
+
+  const firstEvent = {};
+  const eventCounts = {};
+  const lastEventDate = {};
+
+  for (const evt of (events || [])) {
+    if (!firstEvent[evt.user_id]) firstEvent[evt.user_id] = {};
+    if (!firstEvent[evt.user_id][evt.event]) {
+      firstEvent[evt.user_id][evt.event] = evt.created_at;
+    }
+
+    if (!eventCounts[evt.user_id]) eventCounts[evt.user_id] = {};
+    eventCounts[evt.user_id][evt.event] = (eventCounts[evt.user_id][evt.event] || 0) + 1;
+
+    if (!lastEventDate[evt.user_id] || evt.created_at > lastEventDate[evt.user_id]) {
+      lastEventDate[evt.user_id] = evt.created_at;
+    }
+  }
+
+  if (needsDerivedActivity) {
+    for (const profile of profiles) {
+      const counts = eventCounts[profile.id] || {};
+      profile.buy_box_complete = (counts.wizard_complete || 0) > 0;
+      profile.deals_viewed_count = counts.deal_viewed || 0;
+      profile.deals_saved_count = counts.deal_saved || 0;
+      profile.sessions_count = counts.session_start || 0;
+
+      if (counts.call_booked) profile.funnel_status = 'call-booked';
+      else if ((counts.deal_saved || 0) >= 3) profile.funnel_status = 'high-intent';
+      else if (counts.wizard_complete) profile.funnel_status = 'qualified';
+      else if (counts.page_view || counts.deal_viewed) profile.funnel_status = 'exploring';
+      else profile.funnel_status = 'new';
+
+      if (lastEventDate[profile.id]) {
+        profile.last_activity_date = lastEventDate[profile.id];
+      }
+    }
+  }
+
+  const trackedUsers = filterTrackedLpProfiles(profiles);
+
+  return {
+    profiles,
+    trackedUsers,
+    events: events || [],
+    firstEvent,
+    eventCounts,
+    lastEventDate
+  };
+}
+
+async function userMetrics(supabase) {
+  const { trackedUsers, events, firstEvent } = await fetchUserMetricsData(supabase);
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+
+  const totalSignups = trackedUsers.length;
+  const signups7d = trackedUsers.filter((user) => user.created_at >= sevenDaysAgo).length;
+  const onboarded = trackedUsers.filter((user) => user.buy_box_complete).length;
+  const activated = trackedUsers.filter((user) => (user.deals_viewed_count || 0) >= 3).length;
+  const savedDeal = trackedUsers.filter((user) => (user.deals_saved_count || 0) >= 1).length;
+  const startedDd = trackedUsers.filter((user) => ['high-intent', 'call-booked', 'enrolled'].includes(user.funnel_status)).length;
+  const bookedCall = trackedUsers.filter((user) => user.funnel_status === 'call-booked' || user.funnel_status === 'enrolled').length;
+
+  const funnel = [
+    { label: 'Signed Up', count: totalSignups, pct: 100, color: 'var(--primary)' },
+    { label: 'Completed Onboarding', count: onboarded, pct: totalSignups ? Math.round((onboarded / totalSignups) * 100) : 0, color: '#3b82f6' },
+    { label: 'Viewed 3+ Deals', count: activated, pct: totalSignups ? Math.round((activated / totalSignups) * 100) : 0, color: '#8b5cf6' },
+    { label: 'Saved a Deal', count: savedDeal, pct: totalSignups ? Math.round((savedDeal / totalSignups) * 100) : 0, color: '#10b981' },
+    { label: 'Started DD', count: startedDd, pct: totalSignups ? Math.round((startedDd / totalSignups) * 100) : 0, color: '#14b8a6' },
+    { label: 'Booked a Call', count: bookedCall, pct: totalSignups ? Math.round((bookedCall / totalSignups) * 100) : 0, color: '#f59e0b' }
+  ];
+
+  const dropoffs = [];
+  for (let i = 1; i < funnel.length; i++) {
+    const previous = funnel[i - 1];
+    const current = funnel[i];
+    const dropped = previous.count - current.count;
+    const dropPct = previous.count > 0 ? Math.round((dropped / previous.count) * 100) : 0;
+    dropoffs.push({
+      from: previous.label,
+      to: current.label,
+      dropped,
+      dropPct,
+      severity: dropPct >= 70 ? 'critical' : dropPct >= 50 ? 'warning' : 'ok'
+    });
+  }
+
+  function medianHours(userIds, eventName) {
+    const deltas = [];
+
+    for (const userId of userIds) {
+      const profile = trackedUsers.find((user) => user.id === userId);
+      if (!profile) continue;
+
+      const signupTime = new Date(profile.created_at).getTime();
+      const eventTime = firstEvent[userId]?.[eventName];
+      if (!eventTime) continue;
+
+      const hours = (new Date(eventTime).getTime() - signupTime) / 3600000;
+      if (hours >= 0) deltas.push(hours);
+    }
+
+    if (deltas.length === 0) return null;
+
+    deltas.sort((a, b) => a - b);
+    const midpoint = Math.floor(deltas.length / 2);
+    const median = deltas.length % 2 ? deltas[midpoint] : (deltas[midpoint - 1] + deltas[midpoint]) / 2;
+
+    return { median: Math.round(median * 10) / 10, samples: deltas.length };
+  }
+
+  const trackedUserIds = trackedUsers.map((user) => user.id);
+  const ttv = {
+    firstOnboard: medianHours(trackedUserIds, 'wizard_complete'),
+    firstDealView: medianHours(trackedUserIds, 'deal_viewed'),
+    firstSave: medianHours(trackedUserIds, 'deal_saved'),
+    firstCallBook: medianHours(trackedUserIds, 'call_booked')
+  };
+
+  const timeToValue = [
+    { key: 'firstOnboard', label: 'First Onboarding', value: formatMedianDuration(ttv.firstOnboard), samples: ttv.firstOnboard?.samples || 0 },
+    { key: 'firstDealView', label: 'First Deal View', value: formatMedianDuration(ttv.firstDealView), samples: ttv.firstDealView?.samples || 0 },
+    { key: 'firstSave', label: 'First Deal Save', value: formatMedianDuration(ttv.firstSave), samples: ttv.firstSave?.samples || 0 },
+    { key: 'firstCallBook', label: 'First Call Booked', value: formatMedianDuration(ttv.firstCallBook), samples: ttv.firstCallBook?.samples || 0 }
+  ];
+
+  const cohorts = [];
+  for (let weekIndex = 0; weekIndex < 8; weekIndex++) {
+    const weekStart = new Date(now.getTime() - (weekIndex + 1) * 7 * 86400000);
+    const weekEnd = new Date(now.getTime() - weekIndex * 7 * 86400000);
+    const weekLabel = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    const cohortUsers = trackedUsers.filter((user) => {
+      const createdAt = new Date(user.created_at);
+      return createdAt >= weekStart && createdAt < weekEnd;
+    });
+
+    if (cohortUsers.length === 0) continue;
+
+    const count = cohortUsers.length;
+    const cohortOnboarded = cohortUsers.filter((user) => user.buy_box_complete).length;
+    const cohortActivated = cohortUsers.filter((user) => (user.deals_viewed_count || 0) >= 3).length;
+    const cohortSaved = cohortUsers.filter((user) => (user.deals_saved_count || 0) >= 1).length;
+    const cohortCalls = cohortUsers.filter((user) => user.funnel_status === 'call-booked' || user.funnel_status === 'enrolled').length;
+
+    cohorts.push({
+      week: weekLabel,
+      count,
+      signups: count,
+      onboarded: count > 0 ? Math.round((cohortOnboarded / count) * 100) : 0,
+      active: count > 0 ? Math.round((cohortActivated / count) * 100) : 0,
+      activated: count > 0 ? Math.round((cohortActivated / count) * 100) : 0,
+      saved: count > 0 ? Math.round((cohortSaved / count) * 100) : 0,
+      savedDeal: count > 0 ? Math.round((cohortSaved / count) * 100) : 0,
+      call: count > 0 ? Math.round((cohortCalls / count) * 100) : 0,
+      bookedCall: count > 0 ? Math.round((cohortCalls / count) * 100) : 0
+    });
+  }
+
+  const users = trackedUsers
+    .map((user) => ({
+      id: user.id,
+      email: user.email || '',
+      name: user.full_name || fallbackNameFromEmail(user.email),
+      signedUp: user.created_at,
+      lastActive: user.last_activity_date || null,
+      onboarded: Boolean(user.buy_box_complete),
+      views: user.deals_viewed_count || 0,
+      dealsViewed: user.deals_viewed_count || 0,
+      saves: user.deals_saved_count || 0,
+      dealsSaved: user.deals_saved_count || 0,
+      sessions: user.sessions_count || 0,
+      funnel: user.funnel_status || 'new',
+      tier: user.tier || 'free'
+    }))
+    .sort((a, b) => new Date(b.signedUp || 0) - new Date(a.signedUp || 0));
+
+  const actionLists = [
+    {
+      title: 'Needs onboarding',
+      items: users
+        .filter((user) => !user.onboarded)
+        .slice(0, 8)
+        .map((user) => ({
+          email: user.email || user.name || 'Unknown user',
+          meta: `Signed up ${formatAdminShortDate(user.signedUp)}`
+        }))
+    },
+    {
+      title: 'Needs activation',
+      items: users
+        .filter((user) => user.onboarded && user.views < 3)
+        .slice(0, 8)
+        .map((user) => ({
+          email: user.email || user.name || 'Unknown user',
+          meta: `${user.views} views, ${user.saves} saves`
+        }))
+    },
+    {
+      title: 'High-intent follow-up',
+      items: users
+        .filter((user) => ['high-intent', 'call-booked', 'enrolled'].includes(user.funnel))
+        .slice(0, 8)
+        .map((user) => ({
+          email: user.email || user.name || 'Unknown user',
+          meta: `${user.saves} saves, last active ${formatAdminShortDate(user.lastActive)}`
+        }))
+    }
+  ];
+
+  const wizardStarters = new Set();
+  const { data: wizEvents, error: wizErr } = await supabase
+    .from('user_events')
+    .select('user_id, event, data, created_at')
+    .in('event', ['wizard_started', 'wizard_step', 'wizard_abandoned'])
+    .order('created_at', { ascending: true });
+
+  if (wizErr) throw wizErr;
+
+  const wizardStepCounts = {};
+  const wizardAbandons = {};
+
+  for (const evt of (wizEvents || [])) {
+    if (!trackedUsers.some((user) => user.id === evt.user_id)) continue;
+
+    if (evt.event === 'wizard_started') {
+      wizardStarters.add(evt.user_id);
+      continue;
+    }
+
+    if (evt.event === 'wizard_step') {
+      const step = evt.data?.step;
+      const stepType = evt.data?.stepType || 'unknown';
+      if (step === undefined) continue;
+      if (!wizardStepCounts[step]) wizardStepCounts[step] = { count: 0, label: stepType };
+      wizardStepCounts[step].count += 1;
+      continue;
+    }
+
+    if (evt.event === 'wizard_abandoned') {
+      wizardStarters.add(evt.user_id);
+      const step = evt.data?.step;
+      const stepType = evt.data?.stepType || `step_${step || '?'}`;
+      wizardAbandons[stepType] = (wizardAbandons[stepType] || 0) + 1;
+    }
+  }
+
+  const wizardFunnel = Object.entries(wizardStepCounts)
+    .map(([step, info]) => ({ step: parseInt(step, 10), label: info.label, usersReached: info.count }))
+    .sort((a, b) => a.step - b.step);
+
+  const wizardAbandonList = Object.entries(wizardAbandons)
+    .map(([stepType, abandonCount]) => ({ stepType, abandonCount }))
+    .sort((a, b) => b.abandonCount - a.abandonCount);
+
+  return {
+    summary: { totalSignups, signups7d, onboarded, activated, savedDeal, bookedCall },
+    funnel,
+    funnelSteps: funnel,
+    dropoffs,
+    actionLists,
+    users,
+    userList: users,
+    cohorts,
+    timeToValue,
+    ttv,
+    wizardFunnel,
+    wizardAbandonList,
+    wizardStarters: wizardStarters.size,
+    fetchedAt: new Date().toISOString()
+  };
 }
 
 // --- Data Quality ---
@@ -516,13 +890,13 @@ async function growthMetrics(supabase) {
 
   // Fetch all raw data in parallel
   const [usersRes, opsRes, dealsRes, stagesRes] = await Promise.all([
-    supabase.from('user_profiles').select('id, created_at', { count: 'exact' }),
+    supabase.from('user_profiles').select('id, email, is_admin, created_at', { count: 'exact' }),
     supabase.from('management_companies').select('id, created_at', { count: 'exact' }),
     supabase.from('opportunities').select(`id, added_date, status, ${qualityKeys}`, { count: 'exact' }),
     supabase.from('user_deal_stages').select('id, stage, updated_at', { count: 'exact' }),
   ]);
 
-  const users = usersRes.data || [];
+  const users = filterTrackedLpProfiles(usersRes.data || []);
   const ops = opsRes.data || [];
   const deals = dealsRes.data || [];
   const stages = stagesRes.data || [];
@@ -1019,6 +1393,7 @@ const ACTION_MAP = {
   'list-deals-quality': listDealsQuality,
   'list-operators-quality': listOperatorsQuality,
   'intake-create': intakeCreate,
+  'user-metrics': userMetrics,
   'growth-metrics': growthMetrics,
   'list-intros': listIntros,
   'cta-analytics': ctaAnalytics,

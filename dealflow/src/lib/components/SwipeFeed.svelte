@@ -164,7 +164,7 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 16px;
-		padding-bottom: 24px;
+		padding-bottom: 0;
 	}
 
 	.swipe-card-shell {
@@ -243,7 +243,7 @@
 	@media (max-width: 560px) {
 		.swipe-container {
 			gap: 14px;
-			padding-bottom: 20px;
+			padding-bottom: 0;
 		}
 
 		.swipe-card-shell {

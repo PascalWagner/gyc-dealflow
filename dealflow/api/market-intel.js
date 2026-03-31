@@ -1,33 +1,14 @@
 import fs from 'node:fs';
 
 import { getAdminClient, rateLimit, setCors } from './_supabase.js';
+import { getDealHistoricalReturns } from '../src/lib/utils/dealReturns.js';
 
 const SEC_DATA = JSON.parse(
 	fs.readFileSync(new URL('../data/sec-market-data.json', import.meta.url), 'utf8')
 );
 
 const DEAL_SELECT = `
-	id,
-	investment_name,
-	asset_class,
-	deal_type,
-	target_irr,
-	preferred_return,
-	investment_minimum,
-	lp_gp_split,
-	hold_period_years,
-	added_date,
-	created_at,
-	status,
-	offering_size,
-	distributions,
-	financials,
-	strategy,
-	instrument,
-	avg_loan_ltv,
-	fund_aum,
-	debt_position,
-	is_506b,
+	*,
 	management_company:management_companies (
 		operator_name,
 		ceo
@@ -138,6 +119,7 @@ function transformMarketIntelDeals(rows) {
 				submittor: '',
 				managementCompany: managementCompany.operator_name || '',
 				ceo: managementCompany.ceo || '',
+				historicalReturns: getDealHistoricalReturns(row),
 				isStale: staleness.isStale,
 				stalenessReason: staleness.reason
 			};

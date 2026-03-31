@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { accessTier } from '$lib/stores/auth.js';
+	import { getDealHistoricalReturns, isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
@@ -72,9 +73,7 @@
 	const chartColors = ['#51BE7B','#3B9DDD','#F59E0B','#EF4444','#8B5CF6','#EC4899','#14B8A6','#F97316','#6366F1','#84CC16','#06B6D4','#D946EF'];
 
 	// Debt fund helpers
-	const MONTH_LABELS = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
 	const DEBT_COLORS = ['#51BE7B','#2563EB','#CF7A30','#D04040','#8B5CF6','#EC4899','#14B8A6','#F59E0B','#6366F1','#10B981','#EF4444','#3B82F6','#A855F7','#F97316','#06B6D4','#84CC16','#E11D48','#7C3AED','#0EA5E9','#22C55E'];
-	let debtChartMetric = $state('yield');
 	let highlightedDebtFunds = $state(new Set());
 	let debtSortCol = $state('investmentName');
 	let debtSortAsc = $state(true);
@@ -86,37 +85,24 @@
 	let debtYield = $state('all');
 	let debtSearch = $state('');
 
-	function generateMonthlyData(base, months, variance) {
-		const data = [];
-		let val = base;
-		for (let i = 0; i < months; i++) {
-			val += (Math.random() - 0.5) * variance;
-			val = Math.max(0, val);
-			data.push(parseFloat(val.toFixed(4)));
-		}
-		return data;
-	}
-	function generateYearReturn(irr, year) {
-		if (!irr) return null;
-		const base = irr;
-		const jitter = (year - 2022) * 0.002 + (Math.random() - 0.5) * 0.01;
-		return Math.max(0.02, base + jitter);
-	}
-
 	const debtFunds = $derived(
-		analyticsDeals.filter(d => d.instrument === 'Debt' || d.strategy === 'Lending').map((f, i) => ({
-			...f,
-			_yieldData: generateMonthlyData((f.targetIRR || 0.09) * 100, 12, 0.3),
-			_ltvData: generateMonthlyData((f.avgLoanLTV || 0.65) * 100, 12, 2),
-			_leverageData: generateMonthlyData(f.avgLoanLTV ? (1 / (1 - f.avgLoanLTV)) : 1.8, 12, 0.15),
-			_delinquencyData: generateMonthlyData(Math.random() * 3 + 0.5, 12, 0.4),
-			_color: DEBT_COLORS[i % DEBT_COLORS.length],
-			_return2025: generateYearReturn(f.targetIRR, 2025),
-			_return2024: generateYearReturn(f.targetIRR, 2024),
-			_return2023: generateYearReturn(f.targetIRR, 2023),
-			_return2022: generateYearReturn(f.targetIRR, 2022)
+		analyticsDeals.filter((deal) => isDebtOrLendingDeal(deal)).map((fund, index) => ({
+			...fund,
+			historicalReturns: getDealHistoricalReturns(fund),
+			_color: DEBT_COLORS[index % DEBT_COLORS.length]
 		}))
 	);
+
+	const debtReturnYears = $derived.by(() => {
+		const years = new Set();
+		debtFunds.forEach((fund) => {
+			fund.historicalReturns.forEach((entry) => years.add(entry.year));
+		});
+		return [...years].sort((a, b) => a - b).slice(-5);
+	});
+
+	const debtReturnYearsDesc = $derived.by(() => [...debtReturnYears].reverse());
+	const latestDebtReturnYear = $derived(debtReturnYears.at(-1) ?? null);
 
 	const filteredDebtFunds = $derived.by(() => {
 		return debtFunds.filter(f => {
@@ -134,8 +120,9 @@
 				if (f.investmentMinimum && f.investmentMinimum > max) return false;
 			}
 			if (debtYield !== 'all') {
-				const minY = parseInt(debtYield) / 100;
-				if (!f.targetIRR || f.targetIRR < minY) return false;
+				const minY = parseInt(debtYield);
+				const latestReturn = getDebtReturnForYear(f, latestDebtReturnYear);
+				if (!Number.isFinite(latestReturn) || latestReturn < minY) return false;
 			}
 			if (debtSearch) {
 				const q = debtSearch.toLowerCase();
@@ -152,12 +139,19 @@
 		return '$' + v.toLocaleString();
 	}
 	function fmtReturn(v) {
-		if (!v) return '--';
-		return (v * 100).toFixed(1) + '%';
+		const numeric = Number(v);
+		if (!Number.isFinite(numeric) || numeric <= 0) return '--';
+		return (numeric <= 1 ? numeric * 100 : numeric).toFixed(1) + '%';
+	}
+	function getDebtReturnForYear(fund, year) {
+		if (!year) return null;
+		const match = fund?.historicalReturns?.find((entry) => entry.year === year);
+		return Number.isFinite(match?.value) ? match.value : null;
 	}
 	function clearDebtFilters() {
 		debtFinancials = 'all'; debtAUM = 'all'; debtPosition = 'all';
 		debtDistribution = 'all'; debtMinimum = 'all'; debtYield = 'all'; debtSearch = '';
+		void renderDebtChart();
 	}
 
 	function destroyCharts() {
@@ -388,21 +382,68 @@
 		if (charts.debtFund?.destroy) charts.debtFund.destroy();
 		const ctx = document.getElementById('debtFundChart');
 		if (!ctx) return;
-		const funds = filteredDebtFunds;
-		if (!funds.length) return;
-		const metricConfig = {
-			yield: { key: '_yieldData', label: 'Yield (%)', format: (value) => `${Number(value).toFixed(1)}%`, min: 0, max: 40 },
-			delinquency: { key: '_delinquencyData', label: 'Delinquency Rate (%)', format: (value) => `${Number(value).toFixed(1)}%` },
-			ltv: { key: '_ltvData', label: 'Loan-to-Value (%)', format: (value) => `${Number(value).toFixed(0)}%` },
-			leverage: { key: '_leverageData', label: 'Leverage Ratio (x)', format: (value) => `${Number(value).toFixed(1)}x` }
-		};
-		const config = metricConfig[debtChartMetric] || metricConfig.yield;
-		const datasets = funds.map(f => {
-			const isHL = highlightedDebtFunds.has(f.id);
-			const anyHL = highlightedDebtFunds.size > 0;
-			return { label: f.investmentName, data: f[config.key], borderColor: anyHL ? (isHL ? f._color : 'rgba(200,200,200,0.25)') : f._color, backgroundColor: 'transparent', borderWidth: anyHL ? (isHL ? 3 : 1) : 2, pointRadius: anyHL ? (isHL ? 4 : 0) : 2, tension: 0.3 };
+		const labels = debtReturnYears.map((year) => String(year));
+		const funds = filteredDebtFunds.filter((fund) => fund.historicalReturns.length >= 2);
+		if (!funds.length || labels.length < 2) return;
+
+		const allValues = funds.flatMap((fund) =>
+			debtReturnYears
+				.map((year) => getDebtReturnForYear(fund, year))
+				.filter((value) => Number.isFinite(value))
+		);
+		if (allValues.length < 2) return;
+
+		const yMin = Math.max(0, Math.floor(Math.min(...allValues) - 2));
+		const yMax = Math.ceil(Math.max(...allValues) + 2);
+		const anyHighlighted = highlightedDebtFunds.size > 0;
+
+		const datasets = funds.map((fund) => {
+			const isHighlighted = highlightedDebtFunds.has(fund.id);
+			return {
+				label: fund.investmentName,
+				data: debtReturnYears.map((year) => getDebtReturnForYear(fund, year)),
+				borderColor: anyHighlighted
+					? (isHighlighted ? fund._color : 'rgba(148, 163, 184, 0.24)')
+					: fund._color,
+				backgroundColor: 'transparent',
+				borderWidth: anyHighlighted ? (isHighlighted ? 3 : 1.5) : 2,
+				pointRadius: anyHighlighted ? (isHighlighted ? 4 : 0) : 2.5,
+				pointHoverRadius: anyHighlighted ? (isHighlighted ? 5 : 0) : 4,
+				spanGaps: true,
+				tension: 0.28
+			};
 		});
-		charts.debtFund = new Chart(ctx, { type: 'line', data: { labels: MONTH_LABELS, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${config.format(c.parsed.y)}` } } }, scales: { x: { grid: { display: false } }, y: { min: config.min, max: config.max, title: { display: true, text: config.label }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: (value) => config.format(value) } } } } });
+
+		charts.debtFund = new Chart(ctx, {
+			type: 'line',
+			data: { labels, datasets },
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: { display: false },
+					tooltip: {
+						callbacks: {
+							label: (context) => `${context.dataset.label}: ${fmtReturn(context.parsed.y)}`
+						}
+					}
+				},
+				scales: {
+					x: {
+						grid: { display: false }
+					},
+					y: {
+						min: yMin,
+						max: yMax,
+						title: { display: true, text: 'Annual Return (%)' },
+						grid: { color: 'rgba(0,0,0,0.05)' },
+						ticks: {
+							callback: (value) => `${Number(value).toFixed(1)}%`
+						}
+					}
+				}
+			}
+		});
 	}
 
 	async function renderDealFlowCharts() {
@@ -541,12 +582,22 @@
 	// Debt fund summary stats
 	const debtStats = $derived.by(() => {
 		const funds = filteredDebtFunds;
-		const yields = funds.filter(f => f.targetIRR).map(f => f.targetIRR * 100);
-		const avgYield = yields.length ? (yields.reduce((a, b) => a + b, 0) / yields.length).toFixed(1) : '--';
+		const latestReturns = funds
+			.map((fund) => getDebtReturnForYear(fund, latestDebtReturnYear))
+			.filter((value) => Number.isFinite(value));
+		const avgLatestReturn = latestReturns.length
+			? (latestReturns.reduce((a, b) => a + b, 0) / latestReturns.length).toFixed(1)
+			: '--';
 		const ltvs = funds.filter(f => f.avgLoanLTV).map(f => f.avgLoanLTV > 1 ? f.avgLoanLTV : f.avgLoanLTV * 100);
 		const avgLTV = ltvs.length ? (ltvs.reduce((a, b) => a + b, 0) / ltvs.length).toFixed(0) : '--';
 		const totalAUM = funds.filter(f => f.fundAUM).reduce((a, f) => a + f.fundAUM, 0);
-		return { count: funds.length, total: debtFunds.length, avgYield, avgLTV, totalAUM: fmtAUM(totalAUM) };
+		return {
+			count: funds.length,
+			total: debtFunds.length,
+			avgLatestReturn,
+			avgLTV,
+			totalAUM: fmtAUM(totalAUM)
+		};
 	});
 
 	// Deal flow stats
@@ -908,63 +959,65 @@
 					{@render miGate()}
 				{/if}
 				<div class="mi-gated-content" class:blurred={showGate}>
-					<div class="debt-filters">
-						<div class="filter-group"><label for="debt-financials">Financials</label><select id="debt-financials" bind:value={debtFinancials} onchange={() => renderDebtChart()}><option value="all">All</option><option value="Audited">Audited</option><option value="Unaudited">Unaudited</option></select></div>
-						<div class="filter-group"><label for="debt-aum">AUM Size</label><select id="debt-aum" bind:value={debtAUM} onchange={() => renderDebtChart()}><option value="all">All</option><option value="small">Small (&lt;$100M)</option><option value="mid">Mid ($100M-$1B)</option><option value="institutional">Institutional ($1B+)</option></select></div>
-						<div class="filter-group"><label for="debt-position">Debt Position</label><select id="debt-position" bind:value={debtPosition} onchange={() => renderDebtChart()}><option value="all">All</option><option value="1st">1st Position</option><option value="2nd">2nd Position</option><option value="Mezzanine">Mezzanine</option></select></div>
-						<div class="filter-group"><label for="debt-distribution">Distributions</label><select id="debt-distribution" bind:value={debtDistribution} onchange={() => renderDebtChart()}><option value="all">All</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option></select></div>
-						<div class="filter-group"><label for="debt-minimum">Min Investment</label><select id="debt-minimum" bind:value={debtMinimum} onchange={() => renderDebtChart()}><option value="all">All</option><option value="25000">Under $25K</option><option value="50000">Under $50K</option><option value="100000">Under $100K</option></select></div>
-						<div class="filter-group"><label for="debt-yield">2025 Return</label><select id="debt-yield" bind:value={debtYield} onchange={() => renderDebtChart()}><option value="all">All</option><option value="8">8%+</option><option value="9">9%+</option><option value="10">10%+</option></select></div>
-						<div class="filter-group" style="flex:1;min-width:140px;"><label for="debt-search">Search</label><input id="debt-search" type="text" bind:value={debtSearch} oninput={() => renderDebtChart()} placeholder="Search funds..."></div>
-						<button class="btn-clear" onclick={clearDebtFilters}>Clear Filters</button>
-					</div>
-					<div class="stat-cards">
-						<div class="stat-card"><div class="stat-label">Total Debt Funds</div><div class="stat-value" style="color:var(--primary);">{debtStats.count} <span style="color:var(--text-muted);font-size:18px;">/ {debtStats.total}</span></div></div>
-						<div class="stat-card"><div class="stat-label">Average Yield</div><div class="stat-value" style="color:#51BE7B;">{debtStats.avgYield}%</div></div>
-						<div class="stat-card"><div class="stat-label">Average LTV</div><div class="stat-value" style="color:#E67E22;">{debtStats.avgLTV}%</div></div>
-						<div class="stat-card"><div class="stat-label">Total AUM</div><div class="stat-value" style="color:#3B82F6;">{debtStats.totalAUM}</div></div>
-					</div>
-					<div class="chart-card" style="margin-bottom:24px;">
-						<div class="debt-chart-header">
-							<h3>Fund Comparison</h3>
-							<div class="debt-metric-toggles">
-								{#each [['yield','Yield'],['leverage','Leverage'],['ltv','Loan-to-Value'],['delinquency','Delinquency Rate']] as [key, label]}
-									<button class:active={debtChartMetric === key} onclick={() => { debtChartMetric = key; renderDebtChart(); }}>{label}</button>
-								{/each}
-							</div>
+						<div class="debt-filters">
+							<div class="filter-group"><label for="debt-financials">Financials</label><select id="debt-financials" bind:value={debtFinancials} onchange={() => renderDebtChart()}><option value="all">All</option><option value="Audited">Audited</option><option value="Unaudited">Unaudited</option></select></div>
+							<div class="filter-group"><label for="debt-aum">AUM Size</label><select id="debt-aum" bind:value={debtAUM} onchange={() => renderDebtChart()}><option value="all">All</option><option value="small">Small (&lt;$100M)</option><option value="mid">Mid ($100M-$1B)</option><option value="institutional">Institutional ($1B+)</option></select></div>
+							<div class="filter-group"><label for="debt-position">Debt Position</label><select id="debt-position" bind:value={debtPosition} onchange={() => renderDebtChart()}><option value="all">All</option><option value="1st">1st Position</option><option value="2nd">2nd Position</option><option value="Mezzanine">Mezzanine</option></select></div>
+							<div class="filter-group"><label for="debt-distribution">Distributions</label><select id="debt-distribution" bind:value={debtDistribution} onchange={() => renderDebtChart()}><option value="all">All</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option></select></div>
+							<div class="filter-group"><label for="debt-minimum">Min Investment</label><select id="debt-minimum" bind:value={debtMinimum} onchange={() => renderDebtChart()}><option value="all">All</option><option value="25000">Under $25K</option><option value="50000">Under $50K</option><option value="100000">Under $100K</option></select></div>
+							<div class="filter-group"><label for="debt-yield">{latestDebtReturnYear ? `${latestDebtReturnYear} Return` : 'Latest Annual Return'}</label><select id="debt-yield" bind:value={debtYield} onchange={() => renderDebtChart()}><option value="all">All</option><option value="8">8%+</option><option value="9">9%+</option><option value="10">10%+</option></select></div>
+							<div class="filter-group" style="flex:1;min-width:140px;"><label for="debt-search">Search</label><input id="debt-search" type="text" bind:value={debtSearch} oninput={() => renderDebtChart()} placeholder="Search funds..."></div>
+							<button class="btn-clear" onclick={clearDebtFilters}>Clear Filters</button>
 						</div>
-						<div class="chart-wrap" style="height:360px;"><canvas id="debtFundChart"></canvas></div>
-						<div class="debt-chart-note">Compare reported fund trends by yield, leverage, loan-to-value, and delinquency using the selectors above.</div>
-					</div>
-					<div class="debt-table-wrap ly-table-scroll">
-						<table class="debt-table">
-							<thead>
-								<tr>
-									<th onclick={() => { if (debtSortCol === 'investmentName') debtSortAsc = !debtSortAsc; else { debtSortCol = 'investmentName'; debtSortAsc = true; } }}>Fund Name</th>
-									<th>Debt Position</th>
-									<th>AUM</th>
-									<th>Financials</th>
-									<th>2025</th><th>2024</th><th>2023</th><th>2022</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each filteredDebtFunds.sort((a, b) => { let va = a[debtSortCol] || '', vb = b[debtSortCol] || ''; if (typeof va === 'string') va = va.toLowerCase(); if (typeof vb === 'string') vb = vb.toLowerCase(); return debtSortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1); }) as fund (fund.id)}
-									<tr class:highlighted={highlightedDebtFunds.has(fund.id)} onclick={() => { if (highlightedDebtFunds.has(fund.id)) highlightedDebtFunds.delete(fund.id); else highlightedDebtFunds.add(fund.id); highlightedDebtFunds = new Set(highlightedDebtFunds); renderDebtChart(); }}>
-										<td class="name-cell"><a href="/app/deals?id={fund.id}" onclick={(e) => e.stopPropagation()}>{fund.investmentName}</a></td>
-										<td>{fund.debtPosition || '--'}</td>
-										<td>{fmtAUM(fund.fundAUM)}</td>
-										<td><span class="fin-badge" class:audited={fund.financials === 'Audited'} class:unaudited={fund.financials === 'Unaudited'}>{fund.financials || '--'}</span></td>
-										<td class="return-cell">{fmtReturn(fund._return2025)}</td>
-										<td class="return-cell">{fmtReturn(fund._return2024)}</td>
-										<td class="return-cell">{fmtReturn(fund._return2023)}</td>
-										<td class="return-cell">{fmtReturn(fund._return2022)}</td>
-									</tr>
+						<div class="stat-cards">
+							<div class="stat-card"><div class="stat-label">Total Debt Funds</div><div class="stat-value" style="color:var(--primary);">{debtStats.count} <span style="color:var(--text-muted);font-size:18px;">/ {debtStats.total}</span></div></div>
+							<div class="stat-card"><div class="stat-label">{latestDebtReturnYear ? `Avg ${latestDebtReturnYear} Return` : 'Avg Latest Return'}</div><div class="stat-value" style="color:#51BE7B;">{debtStats.avgLatestReturn === '--' ? '--' : debtStats.avgLatestReturn + '%'}</div></div>
+							<div class="stat-card"><div class="stat-label">Average LTV</div><div class="stat-value" style="color:#E67E22;">{debtStats.avgLTV === '--' ? '--' : debtStats.avgLTV + '%'}</div></div>
+							<div class="stat-card"><div class="stat-label">Total AUM</div><div class="stat-value" style="color:#3B82F6;">{debtStats.totalAUM}</div></div>
+						</div>
+						<div class="chart-card" style="margin-bottom:24px;">
+							<div class="debt-chart-header">
+								<h3>Annual Return Comparison</h3>
+							</div>
+							<div class="chart-wrap" style="height:360px;">
+								{#if debtReturnYears.length >= 2 && filteredDebtFunds.some((fund) => fund.historicalReturns.length >= 2)}
+									<canvas id="debtFundChart"></canvas>
 								{:else}
-									<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No funds match your filters.</td></tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
+									<div class="chart-empty-state">No real annual return history is available for the current debt fund set.</div>
+								{/if}
+							</div>
+							<div class="debt-chart-note">Compare real reported annual returns only. No simulated history is shown.</div>
+						</div>
+						<div class="debt-table-wrap ly-table-scroll">
+							<table class="debt-table">
+								<thead>
+									<tr>
+										<th onclick={() => { if (debtSortCol === 'investmentName') debtSortAsc = !debtSortAsc; else { debtSortCol = 'investmentName'; debtSortAsc = true; } }}>Fund Name</th>
+										<th>Debt Position</th>
+										<th>AUM</th>
+										<th>Financials</th>
+										{#each debtReturnYearsDesc as year}
+											<th>{year}</th>
+										{/each}
+									</tr>
+								</thead>
+								<tbody>
+									{#each filteredDebtFunds.sort((a, b) => { let va = a[debtSortCol] || '', vb = b[debtSortCol] || ''; if (typeof va === 'string') va = va.toLowerCase(); if (typeof vb === 'string') vb = vb.toLowerCase(); return debtSortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1); }) as fund (fund.id)}
+										<tr class:highlighted={highlightedDebtFunds.has(fund.id)} onclick={() => { if (highlightedDebtFunds.has(fund.id)) highlightedDebtFunds.delete(fund.id); else highlightedDebtFunds.add(fund.id); highlightedDebtFunds = new Set(highlightedDebtFunds); renderDebtChart(); }}>
+											<td class="name-cell"><a href="/app/deals?id={fund.id}" onclick={(e) => e.stopPropagation()}>{fund.investmentName}</a></td>
+											<td>{fund.debtPosition || '--'}</td>
+											<td>{fmtAUM(fund.fundAUM)}</td>
+											<td><span class="fin-badge" class:audited={fund.financials === 'Audited'} class:unaudited={fund.financials === 'Unaudited'}>{fund.financials || '--'}</span></td>
+											{#each debtReturnYearsDesc as year}
+												<td class="return-cell">{fmtReturn(getDebtReturnForYear(fund, year))}</td>
+											{/each}
+										</tr>
+									{:else}
+										<tr><td colspan={4 + debtReturnYearsDesc.length} style="text-align:center;padding:40px;color:var(--text-muted);">No funds match your filters.</td></tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
 				</div>
 			</div>
 		</div>
@@ -1026,6 +1079,7 @@
 	.chart-card p { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin: 0 0 16px; }
 	.chart-wrap { height: 280px; }
 	.chart-wrap.tall { height: 320px; }
+	.chart-empty-state { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 14px; background: rgba(15, 23, 42, 0.02); }
 	.mi-disclaimer { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); text-align: center; margin: 32px 0; }
 	.mi-gate-overlay { position: absolute; inset: 0; z-index: 10; display: flex; align-items: flex-start; justify-content: center; padding: clamp(52px, 8vw, 88px) 20px 24px; border-radius: inherit; }
 	.mi-gate-overlay::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(248, 244, 236, 0.12) 0%, rgba(248, 244, 236, 0.32) 100%); }

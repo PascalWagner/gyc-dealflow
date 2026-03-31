@@ -27,6 +27,7 @@
 	import { tapLight } from '$lib/utils/haptics.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import { buildGoalProjection } from '$lib/utils/dealAnalysis.js';
+	import { isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
 
 	let { data } = $props();
 	function getInitialDeal() {
@@ -203,7 +204,7 @@
 	const stageOrder = { filter: 0, review: 1, connect: 2, decide: 3, invested: 4 };
 	const currentStageIdx = $derived(currentStage === 'skipped' ? -1 : (stageOrder[currentStage] ?? 0));
 
-	const isCredit = $derived(deal ? isCreditFund(deal) : false);
+	const isCredit = $derived(deal ? isDebtOrLendingDeal(deal) : false);
 	const heroClass = $derived(isCredit ? 'hero-lending' : 'hero-equity');
 
 	const completenessKeys = ['investmentName','assetClass','dealType','strategy','investmentStrategy','targetIRR','preferredReturn','cashOnCash','investmentMinimum','holdPeriod','offeringType','offeringSize','distributions','lpGpSplit','fees','financials','investingGeography','instrument','deckUrl','ppmUrl','secCik','managementCompanyId','purchasePrice','status'];
@@ -645,18 +646,6 @@
 	}
 
 	// ===== Helpers =====
-	function isCreditFund(d) {
-		const ac = (d.assetClass || '').toLowerCase();
-		const st = (d.strategy || '').toLowerCase();
-		const inst = (d.instrument || '').toLowerCase();
-		const name = (d.investmentName || '').toLowerCase();
-		if (inst === 'debt' || st === 'lending' || ac === 'lending') return true;
-		if (ac.includes('credit') || ac.includes('debt')) return true;
-		if ((name.includes('debt fund') || name.includes('credit fund') || name.includes('income fund')) &&
-			(st === 'lending' || inst === 'debt' || inst === 'preferred equity' || d.debtPosition)) return true;
-		return false;
-	}
-
 	function getCompleteness(d) {
 		let filled = 0;
 		for (const k of completenessKeys) {
@@ -1384,7 +1373,7 @@
 	};
 
 	function getChecklistForDeal(d) {
-		return isCreditFund(d) ? DD_CHECKLIST_CREDIT : DD_CHECKLIST_SYNDICATION;
+		return isDebtOrLendingDeal(d) ? DD_CHECKLIST_CREDIT : DD_CHECKLIST_SYNDICATION;
 	}
 
 	function getAutoValue(d, field, format) {

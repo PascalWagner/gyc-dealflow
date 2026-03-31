@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import PipelineTabs from '$lib/components/PipelineTabs.svelte';
 	import DealCard from '$lib/components/DealCard.svelte';
 	import DealFlowViewToggle from '$lib/components/DealFlowViewToggle.svelte';
@@ -47,8 +47,16 @@
 		readUserScopedJson,
 		writeUserScopedJson
 	} from '$lib/utils/userScopedState.js';
+	import {
+		peekDealflowUiState,
+		readDealflowUiState,
+		writeDealflowUiState
+	} from '$lib/utils/dealflowCache.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
+
+	const DEALFLOW_UI_STATE_KEY = 'app/deals/workspace';
+	const DEALFLOW_UI_SCROLL_TABS = ['filter', 'review', 'connect', 'decide', 'invested', 'skipped'];
 
 	let currentTab = $state('filter');
 	let isMobile = $state(false);
@@ -65,6 +73,9 @@
 	let showIntroModal = $state(false);
 	let introRequestDeal = $state(null);
 	let showAddDealModal = $state(false);
+	let scrollPositions = $state({});
+	let uiStateReady = $state(false);
+	let pendingScrollRestore = $state(false);
 
 	let dailyDealCount = $state(0);
 	let showLimitModal = $state(false);
@@ -113,6 +124,130 @@
 		return String(value || '').trim().toLowerCase();
 	}
 
+	function emptyScrollPositions() {
+		return Object.fromEntries(DEALFLOW_UI_SCROLL_TABS.map((tab) => [tab, 0]));
+	}
+
+	function normalizeDealFlowUiState(value) {
+		const nextState = value && typeof value === 'object' ? value : {};
+		const nextTab = UI_STAGE_TABS.has(String(nextState.currentTab || '').trim().toLowerCase())
+			? String(nextState.currentTab).trim().toLowerCase()
+			: 'filter';
+
+		const nextScrollPositions = emptyScrollPositions();
+		for (const tab of DEALFLOW_UI_SCROLL_TABS) {
+			const rawValue = Number(nextState.scrollPositions?.[tab] || 0);
+			nextScrollPositions[tab] = Number.isFinite(rawValue) ? Math.max(0, Math.round(rawValue)) : 0;
+		}
+
+		return {
+			currentTab: nextTab,
+			search: String(nextState.search || ''),
+			assetClass: String(nextState.assetClass || ''),
+			dealType: String(nextState.dealType || ''),
+			strategy: String(nextState.strategy || ''),
+			status: String(nextState.status || ''),
+			maxInvest: String(nextState.maxInvest || ''),
+			maxLockup: String(nextState.maxLockup || ''),
+			distributions: String(nextState.distributions || ''),
+			minIRR: String(nextState.minIRR || ''),
+			sortBy: String(nextState.sortBy || 'newest'),
+			showArchived: Boolean(nextState.showArchived),
+			buyBoxApplied: Boolean(nextState.buyBoxApplied),
+			compareIds: Array.isArray(nextState.compareIds) ? nextState.compareIds : [],
+			viewMode: String(nextState.viewMode || 'grid'),
+			scrollPositions: nextScrollPositions
+		};
+	}
+
+	function buildDealFlowUiStateSnapshot() {
+		return {
+			currentTab,
+			search,
+			assetClass,
+			dealType,
+			strategy,
+			status,
+			maxInvest,
+			maxLockup,
+			distributions,
+			minIRR,
+			sortBy,
+			showArchived,
+			buyBoxApplied,
+			compareIds: $compareDealIds,
+			viewMode: $dealFlowViewMode,
+			scrollPositions,
+			updatedAt: Date.now()
+		};
+	}
+
+	function applyDealFlowUiStateSnapshot(value) {
+		const snapshot = normalizeDealFlowUiState(value);
+		currentTab = snapshot.currentTab;
+		search = snapshot.search;
+		assetClass = snapshot.assetClass;
+		dealType = snapshot.dealType;
+		strategy = snapshot.strategy;
+		status = snapshot.status;
+		maxInvest = snapshot.maxInvest;
+		maxLockup = snapshot.maxLockup;
+		distributions = snapshot.distributions;
+		minIRR = snapshot.minIRR;
+		sortBy = snapshot.sortBy || 'newest';
+		showArchived = snapshot.showArchived;
+		buyBoxApplied = snapshot.buyBoxApplied;
+		scrollPositions = snapshot.scrollPositions;
+		compareDealIds.set(snapshot.compareIds);
+		dealFlowViewMode.set(snapshot.viewMode);
+	}
+
+	async function restoreDealFlowUiState() {
+		const memoryState = peekDealflowUiState(DEALFLOW_UI_STATE_KEY);
+		if (memoryState) {
+			applyDealFlowUiStateSnapshot(memoryState);
+			return true;
+		}
+
+		const persistedState = await readDealflowUiState(DEALFLOW_UI_STATE_KEY);
+		if (!persistedState) {
+			scrollPositions = emptyScrollPositions();
+			return false;
+		}
+
+		applyDealFlowUiStateSnapshot(persistedState);
+		return true;
+	}
+
+	function persistDealFlowUiState() {
+		if (!browser || !uiStateReady) return;
+		writeDealflowUiState(DEALFLOW_UI_STATE_KEY, buildDealFlowUiStateSnapshot());
+	}
+
+	function captureScrollForTab(tab = currentTab) {
+		if (!browser || !UI_STAGE_TABS.has(tab)) return;
+		const nextTop = Math.max(0, Math.round(window.scrollY || 0));
+		scrollPositions = {
+			...scrollPositions,
+			[tab]: nextTop
+		};
+	}
+
+	async function restoreScrollForCurrentTab({ force = false } = {}) {
+		if (!browser || !UI_STAGE_TABS.has(currentTab)) return;
+		const nextTop = Number(scrollPositions?.[currentTab] || 0);
+		if (!force && nextTop <= 0) {
+			pendingScrollRestore = false;
+			return;
+		}
+
+		await tick();
+		requestAnimationFrame(() => {
+			window.scrollTo({ top: nextTop, left: 0, behavior: 'auto' });
+			pendingScrollRestore = false;
+		});
+	}
+
 	function getBuyBoxCheckSize(inputBuyBox) {
 		const directCheckSize = Number(inputBuyBox?.checkSize);
 		if (Number.isFinite(directCheckSize) && directCheckSize > 0) return directCheckSize;
@@ -154,8 +289,8 @@
 
 		if (UI_STAGE_TABS.has(requestedTab)) currentTab = requestedTab;
 
-		if (company && !search) search = company;
-		if (q && !search) search = q;
+		if (company) search = company;
+		if (q) search = q;
 
 		if (!wantsBuyBox) return;
 
@@ -313,9 +448,14 @@
 		};
 	}
 
-	function switchTab(tab) {
+	async function switchTab(tab) {
+		if (!UI_STAGE_TABS.has(tab)) return;
+		if (tab === currentTab) return;
+		captureScrollForTab(currentTab);
 		currentTab = tab;
 		syncTabInUrl(tab);
+		persistDealFlowUiState();
+		await restoreScrollForCurrentTab({ force: true });
 	}
 
 	function switchView(mode) {
@@ -430,8 +570,9 @@
 	const effectiveFilters = $derived(getEffectiveBrowseFilters());
 
 	const filteredDeals = $derived.by(() => {
+		const stagedDealIdSet = new Set(excludedBrowseIds);
 		const scopedDeals = currentTab === 'filter'
-			? ($memberDeals || [])
+			? ($memberDeals || []).filter((deal) => !stagedDealIdSet.has(deal.id))
 			: ($memberDeals || []).filter((deal) => currentTabIds.includes(deal.id));
 		return applyBuyBoxFilters(scopedDeals);
 	});
@@ -449,6 +590,7 @@
 		Object.fromEntries(compareSelectedDeals.map((deal) => [deal.id, getComparePlanFit(deal)]))
 	);
 	const totalMatchingDeals = $derived($memberDealsMeta.total || filteredDeals.length);
+	const showInitialLoadingState = $derived(!$memberDealsMeta.loaded && !$memberDealsError);
 
 	const stageDescriptions = {
 		filter: {
@@ -711,21 +853,95 @@
 		return () => window.clearTimeout(timer);
 	});
 
+	$effect(() => {
+		if (!browser || !uiStateReady) return;
+		currentTab;
+		search;
+		assetClass;
+		dealType;
+		strategy;
+		status;
+		maxInvest;
+		maxLockup;
+		distributions;
+		minIRR;
+		sortBy;
+		showArchived;
+		buyBoxApplied;
+		$compareDealIds;
+		$dealFlowViewMode;
+		persistDealFlowUiState();
+	});
+
+	$effect(() => {
+		if (!browser || !pendingScrollRestore) return;
+		const nextTop = Number(scrollPositions?.[currentTab] || 0);
+		if (nextTop > 0 && !$memberDealsMeta.loaded) return;
+		restoreScrollForCurrentTab({ force: true });
+	});
+
 	onMount(() => {
+		let scrollPersistTimer = null;
+		let uiBootCancelled = false;
+
 		compareDealIds.syncFromSession();
 		dealFlowViewMode.syncFromSession();
 		loadBuyBox();
-		applyLocationFilters();
 		loadDailyCount();
-		filtersReady = true;
+
+		const persistCurrentState = () => {
+			if (scrollPersistTimer) window.clearTimeout(scrollPersistTimer);
+			scrollPersistTimer = window.setTimeout(() => {
+				persistDealFlowUiState();
+			}, 120);
+		};
+
+		const resizeHandler = () => {
+			isMobile = window.innerWidth <= 768;
+		};
+
+		const scrollHandler = () => {
+			captureScrollForTab(currentTab);
+			persistCurrentState();
+		};
+
+		const handleBeforeUnload = () => {
+			captureScrollForTab(currentTab);
+			persistDealFlowUiState();
+		};
+
+		const bootWorkspace = async () => {
+			// Restore the saved workspace before enabling the fetch effect so we request the right query key once.
+			const restoredUiState = await restoreDealFlowUiState();
+			if (uiBootCancelled) return;
+			applyLocationFilters();
+			syncTabInUrl(currentTab);
+			filtersReady = true;
+			uiStateReady = true;
+			pendingScrollRestore = restoredUiState;
+		};
 
 		if (browser) {
-			isMobile = window.innerWidth <= 768;
-			const handler = () => { isMobile = window.innerWidth <= 768; };
-			window.addEventListener('resize', handler);
+			resizeHandler();
+			window.addEventListener('resize', resizeHandler);
+			window.addEventListener('scroll', scrollHandler, { passive: true });
+			window.addEventListener('beforeunload', handleBeforeUnload);
+			bootWorkspace().catch(() => {
+				scrollPositions = emptyScrollPositions();
+				applyLocationFilters();
+				syncTabInUrl(currentTab);
+				filtersReady = true;
+				uiStateReady = true;
+			});
 			return () => {
+				uiBootCancelled = true;
+				captureScrollForTab(currentTab);
+				persistDealFlowUiState();
 				if (pageNoticeTimer) window.clearTimeout(pageNoticeTimer);
-				window.removeEventListener('resize', handler);
+				if (scrollPersistTimer) window.clearTimeout(scrollPersistTimer);
+				window.removeEventListener('resize', resizeHandler);
+				window.removeEventListener('scroll', scrollHandler);
+				window.removeEventListener('beforeunload', handleBeforeUnload);
 			};
 		}
 	});
@@ -822,289 +1038,291 @@
 		{/if}
 
 	<!-- Content -->
-		{#if $memberDealsLoading}
-			<div class="loading-state">
-				<div class="skeleton-grid ly-grid">
-				{#each Array(6) as _}
-					<div class="skeleton-card">
-						<div class="sk-bar sk-title"></div>
-						<div class="sk-bar sk-subtitle"></div>
-						<div class="sk-bar sk-body"></div>
-						<div class="sk-bar sk-body short"></div>
+		<div class="deals-results-stack">
+			{#if showInitialLoadingState}
+				<div class="loading-state">
+					<div class="skeleton-grid ly-grid">
+						{#each Array(6) as _}
+							<div class="skeleton-card">
+								<div class="sk-bar sk-title"></div>
+								<div class="sk-bar sk-subtitle"></div>
+								<div class="sk-bar sk-body"></div>
+								<div class="sk-bar sk-body short"></div>
+							</div>
+						{/each}
 					</div>
-				{/each}
-			</div>
-		</div>
-	{:else if $memberDealsError}
-		<div class="empty-state">
-			<div class="empty-icon">⚠️</div>
-			<div class="empty-title">Couldn’t load deals</div>
-			<div class="empty-desc">{$memberDealsError}</div>
-			<button class="btn-browse" onclick={() => fetchMemberDeals($memberDealsMeta.filters || {}).catch(() => {})}>Try Again</button>
-		</div>
-	{:else if $dealFlowViewMode === 'compare'}
-		<div class="compare-mode-layout">
-			<CompareView
-				deals={compareSelectedDeals}
-				loading={compareDealsLoading}
-				maxDeals={MAX_COMPARE_DEALS}
-				planFitById={comparePlanFitById}
-				onremove={(dealId) => compareDealIds.remove(dealId)}
-			/>
+				</div>
+			{:else if $memberDealsError}
+				<div class="empty-state">
+					<div class="empty-icon">⚠️</div>
+					<div class="empty-title">Couldn’t load deals</div>
+					<div class="empty-desc">{$memberDealsError}</div>
+					<button class="btn-browse" onclick={() => fetchMemberDeals($memberDealsMeta.filters || {}).catch(() => {})}>Try Again</button>
+				</div>
+			{:else if $dealFlowViewMode === 'compare'}
+				<div class="compare-mode-layout">
+					<CompareView
+						deals={compareSelectedDeals}
+						loading={compareDealsLoading}
+						maxDeals={MAX_COMPARE_DEALS}
+						planFitById={comparePlanFitById}
+						onremove={(dealId) => compareDealIds.remove(dealId)}
+					/>
 
-			<div class="compare-grid-shell">
-				<div class="compare-grid-head">
-					<div>
-						<div class="compare-grid-title">{currentStageContent.title} Deals</div>
-						<div class="compare-grid-desc">
-							{#if $compareDealIds.length === 0}
-								Add up to {MAX_COMPARE_DEALS} deals from the cards below to build your comparison set.
-							{:else if compareRemaining > 0}
-								Add {compareRemaining} more deal{compareRemaining === 1 ? '' : 's'} from the cards below, or review the ones already selected.
-							{:else}
-								Swap deals in and out from the cards below to pressure-test your finalists across stages.
-							{/if}
+					<div class="compare-grid-shell">
+						<div class="compare-grid-head">
+							<div>
+								<div class="compare-grid-title">{currentStageContent.title} Deals</div>
+								<div class="compare-grid-desc">
+									{#if $compareDealIds.length === 0}
+										Add up to {MAX_COMPARE_DEALS} deals from the cards below to build your comparison set.
+									{:else if compareRemaining > 0}
+										Add {compareRemaining} more deal{compareRemaining === 1 ? '' : 's'} from the cards below, or review the ones already selected.
+									{:else}
+										Swap deals in and out from the cards below to pressure-test your finalists across stages.
+									{/if}
+								</div>
+							</div>
+
+							<div class="compare-grid-meta">
+								<span class="compare-grid-count">{$compareDealIds.length}/{MAX_COMPARE_DEALS} selected</span>
+								{#if $compareDealIds.length > 0}
+									<button class="compare-clear-btn" onclick={() => compareDealIds.clear()}>Clear compare</button>
+								{/if}
+							</div>
 						</div>
-					</div>
 
-					<div class="compare-grid-meta">
-						<span class="compare-grid-count">{$compareDealIds.length}/{MAX_COMPARE_DEALS} selected</span>
-						{#if $compareDealIds.length > 0}
-							<button class="compare-clear-btn" onclick={() => compareDealIds.clear()}>Clear compare</button>
+						{#if filteredDeals.length === 0}
+							<div class="empty-state">
+								<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
+								{#if hasActiveFilters && currentTab === 'filter'}
+									<div class="empty-title">No deals match your filters</div>
+									<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
+									<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
+								{:else if currentTab === 'filter'}
+									<div class="empty-title">No deals available</div>
+									<div class="empty-desc">New deals are added regularly. Check back soon.</div>
+								{:else if currentTab === 'review'}
+									<div class="empty-title">No deals in Review yet</div>
+									<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
+									<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
+								{:else if currentTab === 'connect'}
+									<div class="empty-title">No deals in Connect yet</div>
+									<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
+									<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
+								{:else if currentTab === 'decide'}
+									<div class="empty-title">No deals in Decide yet</div>
+									<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
+									<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
+								{:else if currentTab === 'invested'}
+									<div class="empty-title">No investments yet</div>
+									<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
+								{:else if currentTab === 'skipped'}
+									<div class="empty-title">No skipped deals</div>
+									<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
+								{:else}
+									<div class="empty-title">Nothing here yet</div>
+									<div class="empty-desc">Start browsing deals to build your pipeline.</div>
+									<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+								{/if}
+							</div>
+						{:else}
+							<div class="deals-grid ly-grid">
+								{#each filteredDeals as deal (deal.id)}
+									{@const actionModel = getDealCardActionModelForCard(deal)}
+									{@const utilityAction = actionModel.utilityAction}
+									{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<div onclick={() => trackDealView(deal.id)}>
+										<DealCard
+											{deal}
+											footerActions={actionModel.footerActions}
+											stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
+											pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
+											{utilityAction}
+											{utilityAnalytics}
+											compareSelected={compareDealSet.has(deal.id)}
+											compareAtLimit={isDealCompareAtLimit(deal.id)}
+											onutilityaction={handleDealCardUtilityAction}
+											onfooteraction={handleDealCardFooterAction}
+										/>
+									</div>
+								{/each}
+							</div>
 						{/if}
 					</div>
 				</div>
+			{:else if $dealFlowViewMode === 'location'}
+				<div class="location-mode-layout">
+					<div class="location-map-shell">
+						<div class="location-map-head">
+							<div>
+								<div class="compare-grid-title">{currentStageContent.title} Locations</div>
+								<div class="compare-grid-desc">
+									See the geographic spread for the deals in this stage, then review the same cards underneath.
+								</div>
+							</div>
 
-				{#if filteredDeals.length === 0}
-					<div class="empty-state">
-						<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
-						{#if hasActiveFilters && currentTab === 'filter'}
-							<div class="empty-title">No deals match your filters</div>
-							<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
-							<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
-						{:else if currentTab === 'filter'}
-							<div class="empty-title">No deals available</div>
-							<div class="empty-desc">New deals are added regularly. Check back soon.</div>
-						{:else if currentTab === 'review'}
-							<div class="empty-title">No deals in Review yet</div>
-							<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
-							<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
-						{:else if currentTab === 'connect'}
-							<div class="empty-title">No deals in Connect yet</div>
-							<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
-							<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
-						{:else if currentTab === 'decide'}
-							<div class="empty-title">No deals in Decide yet</div>
-							<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
-							<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
-						{:else if currentTab === 'invested'}
-							<div class="empty-title">No investments yet</div>
-							<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
-						{:else if currentTab === 'skipped'}
-							<div class="empty-title">No skipped deals</div>
-							<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
+							<div class="compare-grid-meta">
+								<span class="compare-grid-count">{filteredDeals.length} mapped</span>
+							</div>
+						</div>
+
+						<DealMap deals={filteredDeals} />
+					</div>
+
+					<div class="compare-grid-shell">
+						<div class="compare-grid-head">
+							<div>
+								<div class="compare-grid-title">{currentStageContent.title} Deals</div>
+								<div class="compare-grid-desc">
+									Use the map as context, then continue browsing and acting on the cards below without leaving Deal Flow.
+								</div>
+							</div>
+						</div>
+
+						{#if filteredDeals.length === 0}
+							<div class="empty-state">
+								<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
+								{#if hasActiveFilters && currentTab === 'filter'}
+									<div class="empty-title">No deals match your filters</div>
+									<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
+									<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
+								{:else if currentTab === 'filter'}
+									<div class="empty-title">No deals available</div>
+									<div class="empty-desc">New deals are added regularly. Check back soon.</div>
+								{:else if currentTab === 'review'}
+									<div class="empty-title">No deals in Review yet</div>
+									<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
+									<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
+								{:else if currentTab === 'connect'}
+									<div class="empty-title">No deals in Connect yet</div>
+									<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
+									<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
+								{:else if currentTab === 'decide'}
+									<div class="empty-title">No deals in Decide yet</div>
+									<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
+									<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
+								{:else if currentTab === 'invested'}
+									<div class="empty-title">No investments yet</div>
+									<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
+								{:else if currentTab === 'skipped'}
+									<div class="empty-title">No skipped deals</div>
+									<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
+								{:else}
+									<div class="empty-title">Nothing here yet</div>
+									<div class="empty-desc">Start browsing deals to build your pipeline.</div>
+									<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+								{/if}
+							</div>
 						{:else}
-							<div class="empty-title">Nothing here yet</div>
-							<div class="empty-desc">Start browsing deals to build your pipeline.</div>
-							<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+							<div class="deals-grid ly-grid">
+								{#each filteredDeals as deal (deal.id)}
+									{@const actionModel = getDealCardActionModelForCard(deal)}
+									{@const utilityAction = actionModel.utilityAction}
+									{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<div onclick={() => trackDealView(deal.id)}>
+										<DealCard
+											{deal}
+											footerActions={actionModel.footerActions}
+											stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
+											pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
+											{utilityAction}
+											{utilityAnalytics}
+											compareSelected={compareDealSet.has(deal.id)}
+											compareAtLimit={isDealCompareAtLimit(deal.id)}
+											onutilityaction={handleDealCardUtilityAction}
+											onfooteraction={handleDealCardFooterAction}
+										/>
+									</div>
+								{/each}
+							</div>
 						{/if}
 					</div>
+				</div>
+			{:else if showSwipeFeed}
+				<SwipeFeed
+					deals={filteredDeals}
+					compareIds={$compareDealIds}
+					getActionModel={getDealCardActionModelForCard}
+					getUtilityAnalytics={getDealUtilityAnalyticsForCard}
+					{pendingFooterActionByDealId}
+					isCompareAtLimit={isDealCompareAtLimit}
+					onutilityaction={handleDealCardUtilityAction}
+					onfooteraction={handleDealCardFooterAction}
+					oncardview={trackDealView}
+				/>
+			{:else if filteredDeals.length === 0}
+				<div class="empty-state">
+					<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
+					{#if hasActiveFilters && currentTab === 'filter'}
+						<div class="empty-title">No deals match your filters</div>
+						<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
+						<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
+					{:else if currentTab === 'filter'}
+						<div class="empty-title">No deals available</div>
+						<div class="empty-desc">New deals are added regularly. Check back soon.</div>
+					{:else if currentTab === 'review'}
+						<div class="empty-title">No deals in Review yet</div>
+						<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
+						<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
+					{:else if currentTab === 'connect'}
+						<div class="empty-title">No deals in Connect yet</div>
+						<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
+						<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
+					{:else if currentTab === 'decide'}
+						<div class="empty-title">No deals in Decide yet</div>
+						<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
+						<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
+					{:else if currentTab === 'invested'}
+						<div class="empty-title">No investments yet</div>
+						<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
+					{:else if currentTab === 'skipped'}
+						<div class="empty-title">No skipped deals</div>
+						<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
 					{:else}
-						<div class="deals-grid ly-grid">
-						{#each filteredDeals as deal (deal.id)}
-							{@const actionModel = getDealCardActionModelForCard(deal)}
-							{@const utilityAction = actionModel.utilityAction}
-							{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<!-- svelte-ignore a11y_click_events_have_key_events -->
-							<div onclick={() => trackDealView(deal.id)}>
-								<DealCard
-									{deal}
-									footerActions={actionModel.footerActions}
-									stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
-									pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
-									{utilityAction}
-									{utilityAnalytics}
-									compareSelected={compareDealSet.has(deal.id)}
-									compareAtLimit={isDealCompareAtLimit(deal.id)}
-									onutilityaction={handleDealCardUtilityAction}
-									onfooteraction={handleDealCardFooterAction}
-								/>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
-	{:else if $dealFlowViewMode === 'location'}
-		<div class="location-mode-layout">
-			<div class="location-map-shell">
-				<div class="location-map-head">
-					<div>
-						<div class="compare-grid-title">{currentStageContent.title} Locations</div>
-						<div class="compare-grid-desc">
-							See the geographic spread for the deals in this stage, then review the same cards underneath.
-						</div>
-					</div>
-
-					<div class="compare-grid-meta">
-						<span class="compare-grid-count">{filteredDeals.length} mapped</span>
-					</div>
+						<div class="empty-title">Nothing here yet</div>
+						<div class="empty-desc">Start browsing deals to build your pipeline.</div>
+						<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+					{/if}
 				</div>
-
-				<DealMap deals={filteredDeals} />
-			</div>
-
-			<div class="compare-grid-shell">
-				<div class="compare-grid-head">
-					<div>
-						<div class="compare-grid-title">{currentStageContent.title} Deals</div>
-						<div class="compare-grid-desc">
-							Use the map as context, then continue browsing and acting on the cards below without leaving Deal Flow.
-						</div>
-					</div>
-				</div>
-
-				{#if filteredDeals.length === 0}
-					<div class="empty-state">
-						<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
-						{#if hasActiveFilters && currentTab === 'filter'}
-							<div class="empty-title">No deals match your filters</div>
-							<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
-							<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
-						{:else if currentTab === 'filter'}
-							<div class="empty-title">No deals available</div>
-							<div class="empty-desc">New deals are added regularly. Check back soon.</div>
-						{:else if currentTab === 'review'}
-							<div class="empty-title">No deals in Review yet</div>
-							<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
-							<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
-						{:else if currentTab === 'connect'}
-							<div class="empty-title">No deals in Connect yet</div>
-							<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
-							<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
-						{:else if currentTab === 'decide'}
-							<div class="empty-title">No deals in Decide yet</div>
-							<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
-							<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
-						{:else if currentTab === 'invested'}
-							<div class="empty-title">No investments yet</div>
-							<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
-						{:else if currentTab === 'skipped'}
-							<div class="empty-title">No skipped deals</div>
-							<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
-						{:else}
-							<div class="empty-title">Nothing here yet</div>
-							<div class="empty-desc">Start browsing deals to build your pipeline.</div>
-							<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
-						{/if}
-					</div>
-				{:else}
-					<div class="deals-grid ly-grid">
-						{#each filteredDeals as deal (deal.id)}
-							{@const actionModel = getDealCardActionModelForCard(deal)}
-							{@const utilityAction = actionModel.utilityAction}
-							{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<!-- svelte-ignore a11y_click_events_have_key_events -->
-							<div onclick={() => trackDealView(deal.id)}>
-								<DealCard
-									{deal}
-									footerActions={actionModel.footerActions}
-									stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
-									pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
-									{utilityAction}
-									{utilityAnalytics}
-									compareSelected={compareDealSet.has(deal.id)}
-									compareAtLimit={isDealCompareAtLimit(deal.id)}
-									onutilityaction={handleDealCardUtilityAction}
-									onfooteraction={handleDealCardFooterAction}
-								/>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
-	{:else if showSwipeFeed}
-		<SwipeFeed
-			deals={filteredDeals}
-			compareIds={$compareDealIds}
-			getActionModel={getDealCardActionModelForCard}
-			getUtilityAnalytics={getDealUtilityAnalyticsForCard}
-			{pendingFooterActionByDealId}
-			isCompareAtLimit={isDealCompareAtLimit}
-			onutilityaction={handleDealCardUtilityAction}
-			onfooteraction={handleDealCardFooterAction}
-			oncardview={trackDealView}
-		/>
-	{:else if filteredDeals.length === 0}
-		<div class="empty-state">
-			<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
-			{#if hasActiveFilters && currentTab === 'filter'}
-				<div class="empty-title">No deals match your filters</div>
-				<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
-				<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
-			{:else if currentTab === 'filter'}
-				<div class="empty-title">No deals available</div>
-				<div class="empty-desc">New deals are added regularly. Check back soon.</div>
-			{:else if currentTab === 'review'}
-				<div class="empty-title">No deals in Review yet</div>
-				<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
-				<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
-			{:else if currentTab === 'connect'}
-				<div class="empty-title">No deals in Connect yet</div>
-				<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
-				<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
-			{:else if currentTab === 'decide'}
-				<div class="empty-title">No deals in Decide yet</div>
-				<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
-				<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
-			{:else if currentTab === 'invested'}
-				<div class="empty-title">No investments yet</div>
-				<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
-			{:else if currentTab === 'skipped'}
-				<div class="empty-title">No skipped deals</div>
-				<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
 			{:else}
-				<div class="empty-title">Nothing here yet</div>
-				<div class="empty-desc">Start browsing deals to build your pipeline.</div>
-				<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+				<div class="deals-grid ly-grid">
+					{#each filteredDeals as deal (deal.id)}
+						{@const actionModel = getDealCardActionModelForCard(deal)}
+						{@const utilityAction = actionModel.utilityAction}
+						{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<div onclick={() => trackDealView(deal.id)}>
+							<DealCard
+								{deal}
+								footerActions={actionModel.footerActions}
+								stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
+								pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
+								{utilityAction}
+								{utilityAnalytics}
+								compareSelected={compareDealSet.has(deal.id)}
+								compareAtLimit={isDealCompareAtLimit(deal.id)}
+								onutilityaction={handleDealCardUtilityAction}
+								onfooteraction={handleDealCardFooterAction}
+							/>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			{#if !$memberDealsLoading && !$memberDealsError && $memberDealsMeta.hasMore}
+				<div class="load-more-row">
+					<button class="load-more-btn" onclick={loadMoreDeals} disabled={$memberDealsLoadingMore}>
+						{$memberDealsLoadingMore ? 'Loading more deals...' : `Load More Deals (${filteredDeals.length}/${totalMatchingDeals})`}
+					</button>
+				</div>
 			{/if}
 		</div>
-	{:else}
-		<div class="deals-grid ly-grid">
-			{#each filteredDeals as deal (deal.id)}
-				{@const actionModel = getDealCardActionModelForCard(deal)}
-				{@const utilityAction = actionModel.utilityAction}
-				{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<div onclick={() => trackDealView(deal.id)}>
-					<DealCard
-						{deal}
-						footerActions={actionModel.footerActions}
-						stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
-						pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
-						{utilityAction}
-						{utilityAnalytics}
-						compareSelected={compareDealSet.has(deal.id)}
-						compareAtLimit={isDealCompareAtLimit(deal.id)}
-						onutilityaction={handleDealCardUtilityAction}
-						onfooteraction={handleDealCardFooterAction}
-					/>
-				</div>
-			{/each}
-		</div>
-		{/if}
-
-		{#if !$memberDealsLoading && !$memberDealsError && $memberDealsMeta.hasMore}
-			<div class="load-more-row">
-				<button class="load-more-btn" onclick={loadMoreDeals} disabled={$memberDealsLoadingMore}>
-					{$memberDealsLoadingMore ? 'Loading more deals...' : `Load More Deals (${filteredDeals.length}/${totalMatchingDeals})`}
-				</button>
-			</div>
-		{/if}
 	</div>
 </PageContainer>
 
@@ -1281,6 +1499,13 @@
 		min-width: 0;
 	}
 
+	.deals-results-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-width: 0;
+	}
+
 	.location-map-shell {
 		padding: 18px;
 		background: var(--bg-card);
@@ -1409,7 +1634,7 @@
 	.load-more-row {
 		display: flex;
 		justify-content: center;
-		padding: 24px 0 8px;
+		padding: 0;
 	}
 
 	.load-more-btn {

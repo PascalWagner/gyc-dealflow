@@ -18,6 +18,11 @@ import {
 	writeScopedSessionString
 } from '$lib/utils/userScopedState.js';
 import {
+	peekDealflowDealsCache,
+	readDealflowDealsCache,
+	writeDealflowDealsCache
+} from '$lib/utils/dealflowCache.js';
+import {
 	OUTCOME_UI_STAGES,
 	PIPELINE_UI_STAGES,
 	STAGE_META,
@@ -30,6 +35,8 @@ export const PIPELINE_STAGES = PIPELINE_UI_STAGES;
 export const OUTCOME_STAGES = OUTCOME_UI_STAGES;
 export const ALL_STAGES = [...PIPELINE_STAGES, ...OUTCOME_STAGES];
 export const MEMBER_DEALS_PAGE_SIZE = 24;
+const MEMBER_DEALS_CACHE_REVALIDATE_COOLDOWN_MS = 15000;
+const MEMBER_DEALS_CACHE_KEY_PREFIX = 'member-deals';
 
 function persistStageCache(value) {
 	writeScopedJson('gycDealStages', value, { email: currentSessionEmail() });
@@ -131,6 +138,10 @@ function buildMemberMeta(overrides = {}) {
 		hasMore: false,
 		browseTotal: null,
 		loaded: false,
+		cacheKey: '',
+		source: 'network',
+		lastSuccessfulSyncAt: null,
+		fingerprint: '',
 		filters: {},
 		...overrides
 	};
@@ -144,6 +155,108 @@ function appendUniqueDeals(currentDeals, nextDeals) {
 	return [...byId.values()];
 }
 
+function normalizeIdList(value) {
+	return [...new Set((Array.isArray(value) ? value : []).map((id) => String(id || '').trim()).filter(Boolean))].sort();
+}
+
+function sanitizeMemberDealsOptions(options = {}) {
+	return {
+		scope: options.scope || 'browse',
+		limit: Number(options.limit || MEMBER_DEALS_PAGE_SIZE),
+		ids: normalizeIdList(options.ids),
+		excludeIds: normalizeIdList(options.excludeIds),
+		search: String(options.search || '').trim(),
+		assetClass: String(options.assetClass || '').trim(),
+		assetClassIn: normalizeIdList(options.assetClassIn),
+		dealType: String(options.dealType || '').trim(),
+		dealTypeIn: normalizeIdList(options.dealTypeIn),
+		strategy: String(options.strategy || '').trim(),
+		strategyIn: normalizeIdList(options.strategyIn),
+		status: String(options.status || '').trim(),
+		distributions: String(options.distributions || '').trim(),
+		maxInvest: String(options.maxInvest || '').trim(),
+		maxLockup: String(options.maxLockup || '').trim(),
+		minIRR: String(options.minIRR || '').trim(),
+		sortBy: String(options.sortBy || '').trim(),
+		showArchived: Boolean(options.showArchived),
+		company: String(options.company || '').trim(),
+		managementCompanyId: String(options.managementCompanyId || '').trim(),
+		matchAnyStrategyOrDealType: Boolean(options.matchAnyStrategyOrDealType)
+	};
+}
+
+function buildMemberDealsCacheKey(options = {}) {
+	return `${MEMBER_DEALS_CACHE_KEY_PREFIX}:${JSON.stringify(sanitizeMemberDealsOptions(options))}`;
+}
+
+function computeMemberDealsFingerprint(dealsList = [], meta = {}) {
+	const rows = (dealsList || []).map((deal) =>
+		[
+			deal?.id || '',
+			deal?.updatedAt || deal?.createdAt || deal?.addedDate || '',
+			deal?.pctFunded ?? '',
+			deal?.status || ''
+		].join(':')
+	);
+
+	return [
+		String(meta.scope || 'browse'),
+		String(meta.total || 0),
+		String(meta.hasMore ? 1 : 0),
+		String(meta.browseTotal ?? ''),
+		rows.join('|')
+	].join('::');
+}
+
+function buildMemberDealsPayload({
+	cacheKey,
+	deals: nextDeals = [],
+	meta = {},
+	pagination = {},
+	options = {},
+	source = 'network',
+	lastSuccessfulSyncAt = Date.now(),
+	loaded = true
+}) {
+	const nextMeta = buildMemberMeta({
+		scope: meta.scope || options.scope || 'browse',
+		limit: pagination.limit || options.limit || MEMBER_DEALS_PAGE_SIZE,
+		offset: pagination.offset || 0,
+		total: pagination.total || 0,
+		hasMore: Boolean(pagination.hasMore),
+		browseTotal: meta.browseTotal ?? null,
+		loaded,
+		cacheKey,
+		source,
+		lastSuccessfulSyncAt,
+		filters: options
+	});
+
+	nextMeta.fingerprint = computeMemberDealsFingerprint(nextDeals, nextMeta);
+
+	return {
+		cacheKey,
+		deals: nextDeals,
+		meta: nextMeta,
+		savedAt: Date.now()
+	};
+}
+
+function applyMemberDealsPayload(payload, { loading = false, loadingMore = false, refreshing = false } = {}) {
+	if (!payload) return;
+	memberDeals.set(payload.deals || []);
+	memberDealsMeta.set(payload.meta || buildMemberMeta());
+	memberDealsError.set(null);
+	memberDealsLoading.set(Boolean(loading));
+	memberDealsLoadingMore.set(Boolean(loadingMore));
+	memberDealsRefreshing.set(Boolean(refreshing));
+
+	const browseTotal = payload.meta?.browseTotal;
+	if (browseTotal !== null && browseTotal !== undefined) {
+		browseTotalCount.set(browseTotal);
+	}
+}
+
 export { STAGE_META, normalizeStage, stageLabel };
 
 export const deals = writable([]);
@@ -153,6 +266,7 @@ export const dealsError = writable(null);
 export const memberDeals = writable([]);
 export const memberDealsLoading = writable(false);
 export const memberDealsLoadingMore = writable(false);
+export const memberDealsRefreshing = writable(false);
 export const memberDealsError = writable(null);
 export const memberDealsMeta = writable(buildMemberMeta());
 
@@ -368,6 +482,9 @@ export function hydrateDealStagesFromCache() {
 
 export function resetMemberDeals() {
 	memberDeals.set([]);
+	memberDealsLoading.set(false);
+	memberDealsLoadingMore.set(false);
+	memberDealsRefreshing.set(false);
 	memberDealsError.set(null);
 	memberDealsMeta.set(buildMemberMeta());
 }
@@ -489,30 +606,83 @@ export async function fetchMemberDeals(options = {}) {
 	const limit = options.limit || MEMBER_DEALS_PAGE_SIZE;
 	const offset = options.offset || 0;
 	const ids = options.ids || [];
-	const preserveResults = Boolean(options.preserveResults);
+	const normalizedOptions = {
+		...options,
+		scope,
+		limit,
+		offset,
+		ids
+	};
+	const cacheKey = buildMemberDealsCacheKey(normalizedOptions);
+	const currentMeta = get(memberDealsMeta);
+	const currentDeals = get(memberDeals);
+	const hasCurrentExactResults = currentMeta.loaded && currentMeta.cacheKey === cacheKey;
+	const hasVisibleResults = currentDeals.length > 0;
+	let cachedPayload = null;
 
 	memberDealsError.set(null);
 
 	if (scope !== 'browse' && ids.length === 0) {
-		memberDeals.set([]);
-		memberDealsMeta.set(buildMemberMeta({
-			scope,
-			limit,
-			offset: 0,
-			total: 0,
-			hasMore: false,
-			browseTotal: get(browseTotalCount),
-			loaded: true,
-			filters: options
+		applyMemberDealsPayload(buildMemberDealsPayload({
+			cacheKey,
+			deals: [],
+			meta: {
+				scope,
+				browseTotal: get(browseTotalCount)
+			},
+			pagination: {
+				limit,
+				offset: 0,
+				total: 0,
+				hasMore: false
+			},
+			options: normalizedOptions,
+			source: 'memory',
+			lastSuccessfulSyncAt: Date.now()
 		}));
 		return [];
 	}
 
+	if (!options.append) {
+		// Reuse the last query payload instantly before revalidating so Deal Flow never blanks on revisit.
+		cachedPayload = peekDealflowDealsCache(cacheKey);
+		if (!cachedPayload) {
+			cachedPayload = await readDealflowDealsCache(cacheKey);
+		}
+	}
+
+	if (!options.append && cachedPayload && requestId === activeMemberRequestId && !hasCurrentExactResults) {
+		applyMemberDealsPayload(cachedPayload, {
+			loading: false,
+			refreshing: true
+		});
+	}
+
+	const currentPayloadFreshEnough =
+		hasCurrentExactResults &&
+		currentMeta.lastSuccessfulSyncAt &&
+		Date.now() - currentMeta.lastSuccessfulSyncAt < MEMBER_DEALS_CACHE_REVALIDATE_COOLDOWN_MS;
+	const cachedPayloadFreshEnough =
+		!options.append &&
+		cachedPayload?.meta?.lastSuccessfulSyncAt &&
+		Date.now() - cachedPayload.meta.lastSuccessfulSyncAt < MEMBER_DEALS_CACHE_REVALIDATE_COOLDOWN_MS;
+
+	if (!options.force && !options.append && (currentPayloadFreshEnough || (cachedPayloadFreshEnough && !hasCurrentExactResults))) {
+		memberDealsLoading.set(false);
+		memberDealsLoadingMore.set(false);
+		memberDealsRefreshing.set(false);
+		return get(memberDeals);
+	}
+
 	if (options.append) {
 		memberDealsLoadingMore.set(true);
-	} else if (!preserveResults) {
+		memberDealsRefreshing.set(false);
+	} else if (!cachedPayload && !hasCurrentExactResults && !hasVisibleResults) {
 		memberDealsLoading.set(true);
-		memberDeals.set([]);
+		memberDealsRefreshing.set(false);
+	} else {
+		memberDealsLoading.set(false);
+		memberDealsRefreshing.set(true);
 	}
 
 	try {
@@ -526,50 +696,75 @@ export async function fetchMemberDeals(options = {}) {
 			ids
 		});
 		const nextDeals = data?.deals || [];
+		const mergedDeals = options.append ? appendUniqueDeals(get(memberDeals), nextDeals) : nextDeals;
+		const browseTotal = data?.meta?.browseTotal ?? get(browseTotalCount);
+		const nextPayload = buildMemberDealsPayload({
+			cacheKey,
+			deals: mergedDeals,
+			meta: {
+				scope: data?.meta?.scope || scope,
+				browseTotal
+			},
+			pagination: {
+				limit: data?.pagination?.limit || limit,
+				offset: options.append ? 0 : data?.pagination?.offset || offset,
+				total: data?.pagination?.total || 0,
+				hasMore: !!data?.pagination?.hasMore
+			},
+			options: normalizedOptions,
+			source: 'network',
+			lastSuccessfulSyncAt: Date.now()
+		});
+
+		writeDealflowDealsCache(cacheKey, nextPayload);
 
 		if (requestId !== activeMemberRequestId) {
 			return nextDeals;
 		}
 
-		if (options.append) {
-			memberDeals.update((current) => appendUniqueDeals(current, nextDeals));
-		} else {
-			memberDeals.set(nextDeals);
+		const currentLiveMeta = get(memberDealsMeta);
+		const currentLiveFingerprint = currentLiveMeta.fingerprint || '';
+		if (currentLiveMeta.cacheKey === cacheKey && currentLiveFingerprint === nextPayload.meta.fingerprint) {
+			memberDealsMeta.set({
+				...currentLiveMeta,
+				...nextPayload.meta
+			});
+			memberDealsLoading.set(false);
+			memberDealsLoadingMore.set(false);
+			memberDealsRefreshing.set(false);
+			return nextDeals;
 		}
 
-		const browseTotal = data?.meta?.browseTotal;
-		if (browseTotal !== null && browseTotal !== undefined) {
-			browseTotalCount.set(browseTotal);
-		}
-
-		memberDealsMeta.set(buildMemberMeta({
-			scope: data?.meta?.scope || scope,
-			limit: data?.pagination?.limit || limit,
-			offset: data?.pagination?.offset || offset,
-			total: data?.pagination?.total || 0,
-			hasMore: !!data?.pagination?.hasMore,
-			browseTotal: browseTotal ?? get(browseTotalCount),
-			loaded: true,
-			filters: options
-		}));
+		applyMemberDealsPayload(nextPayload, {
+			loading: false,
+			loadingMore: false,
+			refreshing: false
+		});
 
 		return nextDeals;
 	} catch (error) {
 		if (requestId === activeMemberRequestId) {
-			memberDealsError.set(error.message);
-			memberDealsMeta.set(buildMemberMeta({
-				scope,
-				limit,
-				offset,
-				browseTotal: get(browseTotalCount),
-				filters: options
-			}));
+			const stillHasCachedContent = hasVisibleResults || Boolean(cachedPayload) || get(memberDeals).length > 0;
+			if (stillHasCachedContent) {
+				console.warn('Member deals refresh failed:', error.message);
+			} else {
+				memberDealsError.set(error.message);
+				memberDealsMeta.set(buildMemberMeta({
+					scope,
+					limit,
+					offset,
+					cacheKey,
+					browseTotal: get(browseTotalCount),
+					filters: normalizedOptions
+				}));
+			}
 		}
 		return [];
 	} finally {
 		if (requestId === activeMemberRequestId) {
 			memberDealsLoading.set(false);
 			memberDealsLoadingMore.set(false);
+			memberDealsRefreshing.set(false);
 		}
 	}
 }

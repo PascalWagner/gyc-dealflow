@@ -27,24 +27,16 @@ export function getDealHistoricalReturns(
 	deal,
 	{
 		maxYears = MAX_HISTORICAL_RETURN_YEARS,
-		referenceYear = getLatestCompletedReturnYear(),
-		includeDerivedFallback = true
+		referenceYear = getLatestCompletedReturnYear()
 	} = {}
 ) {
 	const normalizedReferenceYear = normalizeYear(referenceYear) || getLatestCompletedReturnYear();
-	const explicitSignals = hasExplicitReturnSignals(deal);
 	const explicitSeries = collectExplicitReturnSeries(deal, {
 		maxYears,
 		referenceYear: normalizedReferenceYear
 	});
 
-	if (explicitSignals) return explicitSeries;
-	if (!includeDerivedFallback || !isDebtOrLendingDeal(deal)) return explicitSeries;
-
-	return buildDerivedReturnSeries(deal, {
-		maxYears,
-		referenceYear: normalizedReferenceYear
-	});
+	return explicitSeries;
 }
 
 export function hasVisibleDealReturnsChart(deal, options = {}) {
@@ -53,16 +45,6 @@ export function hasVisibleDealReturnsChart(deal, options = {}) {
 
 export function getLatestCompletedReturnYear(now = new Date()) {
 	return now.getFullYear() - 1;
-}
-
-function hasExplicitReturnSignals(deal) {
-	if (!deal || typeof deal !== 'object') return false;
-
-	for (const key of RETURN_SERIES_KEYS) {
-		if (Array.isArray(deal[key])) return true;
-	}
-
-	return Object.keys(deal).some((key) => extractReturnYearFromKey(key) !== null);
 }
 
 function collectExplicitReturnSeries(deal, { maxYears, referenceYear }) {
@@ -125,38 +107,10 @@ function finalizeReturnSeries(entries, { maxYears, referenceYear }) {
 		.slice(-maxYears);
 }
 
-function buildDerivedReturnSeries(deal, { maxYears, referenceYear }) {
-	const baseRatio = normalizeReturnRatio(deal?.targetIRR ?? deal?.target_irr);
-	if (baseRatio === null) return [];
-
-	const seedBase = String(deal?.id || deal?.investmentName || deal?.investment_name || 'deal');
-	const startYear = referenceYear - maxYears + 1;
-
-	return Array.from({ length: maxYears }, (_, index) => {
-		const year = startYear + index;
-		const seed = hashCode(`${seedBase}:${year}`);
-		const variance = ((seed % 300) - 150) / 10000;
-		const trendBias = ((Math.floor(seed / 13) % 160) - 80) / 100;
-		const vintageOffset = (referenceYear - year) * 0.003 * trendBias;
-		const yearlyRatio = Math.max(0.02, baseRatio + variance + vintageOffset);
-
-		return {
-			year,
-			value: Number((yearlyRatio * 100).toFixed(1))
-		};
-	});
-}
-
 function normalizePercentValue(value) {
 	const numeric = toFiniteNumber(value);
 	if (!Number.isFinite(numeric) || numeric <= 0) return null;
 	return Number((numeric <= 1 ? numeric * 100 : numeric).toFixed(1));
-}
-
-function normalizeReturnRatio(value) {
-	const numeric = toFiniteNumber(value);
-	if (!Number.isFinite(numeric) || numeric <= 0) return null;
-	return numeric > 1 ? numeric / 100 : numeric;
 }
 
 function normalizeYear(value) {
@@ -176,13 +130,4 @@ function toFiniteNumber(value) {
 
 	const parsed = Number.parseFloat(String(value ?? '').replace(/[%,$\s]/g, ''));
 	return Number.isFinite(parsed) ? parsed : null;
-}
-
-function hashCode(input) {
-	let hash = 0;
-	for (let index = 0; index < input.length; index += 1) {
-		hash = ((hash << 5) - hash) + input.charCodeAt(index);
-		hash |= 0;
-	}
-	return Math.abs(hash);
 }

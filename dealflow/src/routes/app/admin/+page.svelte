@@ -42,6 +42,7 @@
 
 	// Users state
 	let usersLoading = $state(true);
+	let usersError = $state('');
 	let usersData = $state(null);
 	let userSearch = $state('');
 	let userTierFilter = $state('all');
@@ -135,10 +136,16 @@
 
 	async function loadUsers() {
 		usersLoading = true;
+		usersError = '';
+		usersData = null;
 		try {
 			const result = await adminFetch({ action: 'user-metrics' });
-			if (result.success) usersData = result;
-		} catch (e) { console.error(e); }
+			if (result.success) usersData = normalizeUsersMetrics(result);
+			else usersError = result.error || 'Failed to load user metrics.';
+		} catch (e) {
+			console.error(e);
+			usersError = e.message || 'Failed to load user metrics.';
+		}
 		finally { usersLoading = false; }
 	}
 
@@ -276,6 +283,49 @@
 
 	function histColor(i) {
 		return ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'][i] || '#666';
+	}
+
+	function formatTtvValue(metric) {
+		if (!metric || metric.median === null || metric.median === undefined) return '--';
+		if (metric.median < 1) return `${Math.round(metric.median * 60)} min`;
+		if (metric.median < 24) return `${Math.round(metric.median * 10) / 10} hrs`;
+		return `${Math.round((metric.median / 24) * 10) / 10} days`;
+	}
+
+	function normalizeUsersMetrics(payload) {
+		const rawUsers = payload?.users || payload?.userList || [];
+		const rawFunnel = payload?.funnel || payload?.funnelSteps || [];
+		const rawCohorts = payload?.cohorts || [];
+		const rawTtv = payload?.timeToValue || payload?.ttv || [];
+		const timeToValue = Array.isArray(rawTtv)
+			? rawTtv
+			: [
+				{ key: 'firstOnboard', label: 'First Onboarding', value: formatTtvValue(rawTtv.firstOnboard), samples: rawTtv.firstOnboard?.samples || 0 },
+				{ key: 'firstDealView', label: 'First Deal View', value: formatTtvValue(rawTtv.firstDealView), samples: rawTtv.firstDealView?.samples || 0 },
+				{ key: 'firstSave', label: 'First Deal Save', value: formatTtvValue(rawTtv.firstSave), samples: rawTtv.firstSave?.samples || 0 },
+				{ key: 'firstCallBook', label: 'First Call Booked', value: formatTtvValue(rawTtv.firstCallBook), samples: rawTtv.firstCallBook?.samples || 0 }
+			];
+
+		return {
+			...payload,
+			funnel: rawFunnel,
+			users: rawUsers.map((user) => ({
+				...user,
+				name: user.name || user.full_name || user.fullName || '',
+				views: user.views ?? user.dealsViewed ?? 0,
+				saves: user.saves ?? user.dealsSaved ?? 0,
+				sessions: user.sessions ?? 0,
+				tier: user.tier || 'free'
+			})),
+			cohorts: rawCohorts.map((cohort) => ({
+				...cohort,
+				count: cohort.count ?? cohort.signups ?? 0,
+				active: cohort.active ?? cohort.activated ?? 0,
+				saved: cohort.saved ?? cohort.savedDeal ?? 0,
+				call: cohort.call ?? cohort.bookedCall ?? 0
+			})),
+			timeToValue
+		};
 	}
 </script>
 
@@ -479,6 +529,8 @@
 		{:else if activeTab === 'users'}
 			{#if usersLoading}
 				<div class="loading-msg">Loading user metrics...</div>
+			{:else if usersError}
+				<div class="error-msg">Failed to load: {usersError}</div>
 			{:else if usersData}
 				<!-- Activation Funnel -->
 				{#if usersData.funnel}

@@ -49,16 +49,7 @@ export default async function handler(req, res) {
     let query = supabase
       .from('opportunities')
       .select(`
-        id, deal_number, investment_name, asset_class, deal_type, status,
-        target_irr, equity_multiple, preferred_return, cash_on_cash,
-        investment_minimum, lp_gp_split, hold_period_years, sponsor_in_deal_pct,
-        offering_type, offering_size, investing_geography, investment_strategy,
-        distributions, financials, available_to, first_yr_depreciation,
-        strategy, instrument, fees, location, property_address,
-        debt_position, fund_aum, loan_count, avg_loan_ltv,
-        vertical_integration, added_date, created_at, updated_at,
-        parent_deal_id, share_class_label,
-        sec_cik, date_of_first_sale, total_amount_sold, total_investors,
+        *,
         management_company:management_companies (
           id, operator_name, ceo, website, founding_year, type, asset_classes, headquarters, full_cycle_deals
         )
@@ -208,12 +199,8 @@ function formatDeal(d, mc) {
   return {
     ...formattedDeal,
     historical_returns: getDealHistoricalReturns({
-      id: formattedDeal.id,
-      investment_name: formattedDeal.name,
-      asset_class: formattedDeal.asset_class,
-      strategy: formattedDeal.strategy,
-      instrument: formattedDeal.instrument,
-      target_irr: formattedDeal.target_irr
+      ...d,
+      ...formattedDeal
     }).map((entry) => ({
       year: entry.year,
       value: entry.value

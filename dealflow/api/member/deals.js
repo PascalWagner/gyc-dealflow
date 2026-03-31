@@ -244,6 +244,8 @@ function transformDeals(allDeals, sponsorRows, { include506b = false } = {}) {
 				lpGpSplit: deal.lp_gp_split,
 				holdPeriod: deal.hold_period_years,
 				addedDate: deal.added_date,
+				createdAt: deal.created_at,
+				updatedAt: deal.updated_at,
 				status: deal.status,
 				offeringType: deal.offering_type,
 				offeringSize: deal.offering_size,
@@ -327,7 +329,10 @@ function transformDeals(allDeals, sponsorRows, { include506b = false } = {}) {
 
 			return {
 				...normalizedDeal,
-				historicalReturns: getDealHistoricalReturns(normalizedDeal)
+				historicalReturns: getDealHistoricalReturns({
+					...deal,
+					...normalizedDeal
+				})
 			};
 		});
 }
