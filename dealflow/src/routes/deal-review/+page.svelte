@@ -211,7 +211,6 @@
 
 	function lifecycleTone(status) {
 		if (status === 'published') return 'published';
-		if (status === 'approved') return 'approved';
 		if (status === 'archived') return 'archived';
 		return 'working';
 	}
@@ -342,7 +341,7 @@
 <PageContainer className="deal-review-page ly-page-stack">
 	<PageHeader
 		title={deal ? form.investmentName || 'Untitled deal' : 'Deal Review'}
-		subtitle="Fix missing fields, tighten source context, and move the deal toward approval with confidence."
+		subtitle="Fix missing fields, tighten source context, and move the deal toward publishing with confidence."
 		className="deal-review-header"
 	>
 		<div slot="actions" class="header-actions">
@@ -623,8 +622,8 @@
 						</span>
 					</div>
 					<div class="sidebar-block">
-						<div class="sidebar-label">Visibility</div>
-						<div class="sidebar-value">{isVisibleToUsers ? 'Visible to users' : 'Hidden from users'}</div>
+						<div class="sidebar-label">Catalog state</div>
+						<div class="sidebar-value">{isVisibleToUsers ? 'Live in Deal Flow' : 'Not published yet'}</div>
 					</div>
 					<div class="sidebar-block">
 						<div class="sidebar-label">Last updated</div>
@@ -641,7 +640,7 @@
 							{/each}
 						</ul>
 					{:else}
-						<p class="sidebar-copy">All required fields are present. This deal can be made visible from the queue.</p>
+						<p class="sidebar-copy">All required fields are present. This deal is ready to be published from the queue.</p>
 					{/if}
 				</section>
 
@@ -662,9 +661,9 @@
 					<div class="sidebar-label">Publishing rule</div>
 					<p class="sidebar-copy">
 						{#if canPublishFromQueue}
-							This deal can be made visible from the queue once you are comfortable approving it.
+							This deal can be published from the queue once you are comfortable making it live.
 						{:else}
-							Visibility stays disabled in the queue until every required field above is filled in.
+							This deal should stay unpublished until every required field above is filled in.
 						{/if}
 					</p>
 				</section>

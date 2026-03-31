@@ -49,7 +49,6 @@ async function listDealsWorkflow(supabase, body) {
 			visible: rows.filter((row) => row.lifecycleStatus === 'published').length,
 			draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
 			inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
-			approved: rows.filter((row) => row.lifecycleStatus === 'approved').length,
 			archived: rows.filter((row) => row.lifecycleStatus === 'archived').length,
 			missingRequiredFields: rows.filter((row) => row.hasBlockingIssues).length,
 			readyToPublish: rows.filter((row) => row.readyToPublish).length,

@@ -1,11 +1,10 @@
 import { getDealOperatorName } from './dealSponsors.js';
 
-export const DEAL_LIFECYCLE_STATUSES = ['draft', 'in_review', 'approved', 'published', 'archived'];
+export const DEAL_LIFECYCLE_STATUSES = ['draft', 'in_review', 'published', 'archived'];
 
 export const DEAL_LIFECYCLE_LABELS = {
 	draft: 'Draft',
 	in_review: 'In Review',
-	approved: 'Approved',
 	published: 'Published',
 	archived: 'Archived'
 };
@@ -13,9 +12,8 @@ export const DEAL_LIFECYCLE_LABELS = {
 export const DEAL_LIFECYCLE_SORT_ORDER = {
 	draft: 0,
 	in_review: 1,
-	approved: 2,
-	published: 3,
-	archived: 4
+	published: 2,
+	archived: 3
 };
 
 const REQUIRED_FIELD_WEIGHT = 70;
@@ -73,6 +71,7 @@ export function slugify(value = '') {
 export function normalizeLifecycleStatus(value, fallback = 'draft') {
 	const normalized = normalizeToken(value);
 	if (DEAL_LIFECYCLE_STATUSES.includes(normalized)) return normalized;
+	if (normalized === 'approved') return 'in_review';
 	if (normalized === 'inreview') return 'in_review';
 	if (normalized === 'active' || normalized === 'live') return 'published';
 	if (normalized === 'review') return 'in_review';
@@ -83,6 +82,9 @@ export function resolveDealLifecycleStatus(deal) {
 	const explicit = normalizeToken(firstMeaningfulValue(deal, ['lifecycle_status', 'lifecycleStatus']));
 	if (DEAL_LIFECYCLE_STATUSES.includes(explicit)) {
 		return explicit;
+	}
+	if (explicit === 'approved') {
+		return 'in_review';
 	}
 
 	const archived = firstMeaningfulValue(deal, ['archived'], { allowZero: true }) === true;
@@ -97,13 +99,6 @@ export function resolveDealLifecycleStatus(deal) {
 
 export function resolveDealVisibility(deal) {
 	const lifecycleStatus = resolveDealLifecycleStatus(deal);
-	if (lifecycleStatus === 'archived') return false;
-
-	const explicit = readPath(deal, 'is_visible_to_users');
-	if (explicit === true || explicit === false) return explicit;
-	const camel = readPath(deal, 'isVisibleToUsers');
-	if (camel === true || camel === false) return camel;
-
 	return lifecycleStatus === 'published';
 }
 
@@ -289,7 +284,7 @@ export function computeDealCompleteness(deal) {
 	const missingRecommendedFields = recommendedChecks.filter((check) => !check.present).map((check) => check.label);
 
 	let readinessLabel = 'Needs setup';
-	if (completenessScore >= 90) readinessLabel = 'Ready for approval';
+	if (completenessScore >= 90) readinessLabel = 'Ready to publish';
 	else if (completenessScore >= 70) readinessLabel = 'Nearly ready';
 	else if (completenessScore >= 40) readinessLabel = 'Incomplete';
 
@@ -311,9 +306,9 @@ export function buildDealWorkflowRecord(deal) {
 		lifecycleStatus === 'archived'
 			? 'Archived deals cannot be visible to users'
 			: (!isVisibleToUsers && completeness.hasBlockingIssues
-				? 'Cannot make visible until required fields are complete'
-				: (!isVisibleToUsers && lifecycleStatus !== 'approved'
-					? 'Move deal to Approved before making it visible'
+				? 'Cannot publish until required fields are complete'
+				: (!isVisibleToUsers && lifecycleStatus !== 'in_review'
+					? 'Move deal to In Review before publishing'
 					: null));
 
 	return {
@@ -326,7 +321,7 @@ export function buildDealWorkflowRecord(deal) {
 		updatedAt,
 		...completeness,
 		readyToPublish:
-			lifecycleStatus === 'approved' && completeness.hasBlockingIssues === false,
+			lifecycleStatus !== 'published' && lifecycleStatus !== 'archived' && completeness.hasBlockingIssues === false,
 		visibilityDisabledReason
 	};
 }
@@ -372,25 +367,27 @@ export function resolveDealWorkflowMutation(currentDeal, requestedUpdates = {}) 
 			? normalizeLifecycleStatus(explicitLifecycle, existingLifecycleStatus)
 			: existingLifecycleStatus;
 	let isVisibleToUsers = explicitVisibility !== undefined ? Boolean(explicitVisibility) : existingVisibility;
-	const hasApprovalGate =
-		existingLifecycleStatus === 'approved'
-		|| existingLifecycleStatus === 'published'
-		|| lifecycleStatus === 'approved';
 
 	if (explicitLifecycle !== undefined && lifecycleStatus !== 'published') {
 		isVisibleToUsers = false;
 	}
 
-	if ((explicitVisibility === true || lifecycleStatus === 'published') && !hasApprovalGate) {
-		return {
-			error: 'Move deal to Approved before making it visible',
-			finalDeal: {
-				...currentDeal,
-				...requestedUpdates,
-				lifecycle_status: lifecycleStatus,
-				is_visible_to_users: isVisibleToUsers
-			}
+	if (explicitVisibility === true || lifecycleStatus === 'published') {
+		const candidateLifecycle = 'published';
+		const candidateDeal = {
+			...currentDeal,
+			...requestedUpdates,
+			lifecycle_status: candidateLifecycle,
+			is_visible_to_users: true
 		};
+		const candidateCompleteness = computeDealCompleteness(candidateDeal);
+		if (candidateCompleteness.hasBlockingIssues) {
+			return {
+				error: 'Complete the required fields before publishing',
+				finalDeal: candidateDeal,
+				completeness: candidateCompleteness
+			};
+		}
 	}
 
 	if (explicitVisibility === true) {
@@ -399,12 +396,14 @@ export function resolveDealWorkflowMutation(currentDeal, requestedUpdates = {}) 
 	} else if (explicitVisibility === false) {
 		isVisibleToUsers = false;
 		if (explicitLifecycle === undefined && existingLifecycleStatus === 'published') {
-			lifecycleStatus = 'approved';
+			lifecycleStatus = 'in_review';
 		}
 	}
 
 	if (lifecycleStatus === 'published') {
 		isVisibleToUsers = true;
+	} else {
+		isVisibleToUsers = false;
 	}
 
 	if (lifecycleStatus === 'archived') {
@@ -419,9 +418,9 @@ export function resolveDealWorkflowMutation(currentDeal, requestedUpdates = {}) 
 	};
 	const completeness = computeDealCompleteness(finalDeal);
 
-	if (isVisibleToUsers && completeness.hasBlockingIssues) {
+	if (lifecycleStatus === 'published' && completeness.hasBlockingIssues) {
 		return {
-			error: 'Cannot make visible until required fields are complete',
+			error: 'Complete the required fields before publishing',
 			finalDeal,
 			completeness
 		};

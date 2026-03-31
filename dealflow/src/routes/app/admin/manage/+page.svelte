@@ -57,7 +57,6 @@
 		{ key: 'hidden', label: 'Hidden', count: countDealRows(dealWorkflowRows, 'hidden') },
 		{ key: 'draft', label: 'Draft', count: countDealRows(dealWorkflowRows, 'draft') },
 		{ key: 'in_review', label: 'In Review', count: countDealRows(dealWorkflowRows, 'in_review') },
-		{ key: 'approved', label: 'Approved', count: countDealRows(dealWorkflowRows, 'approved') },
 		{ key: 'published', label: 'Published', count: countDealRows(dealWorkflowRows, 'published') },
 		{ key: 'archived', label: 'Archived', count: countDealRows(dealWorkflowRows, 'archived') }
 	]);
@@ -359,7 +358,6 @@
 			hidden: rows.filter((row) => row.lifecycleStatus !== 'published').length,
 			draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
 			inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
-			approved: rows.filter((row) => row.lifecycleStatus === 'approved').length,
 			archived: rows.filter((row) => row.lifecycleStatus === 'archived').length,
 			published: rows.filter((row) => row.lifecycleStatus === 'published').length
 		};
@@ -371,7 +369,6 @@
 				return row.lifecycleStatus !== 'published';
 			case 'draft':
 			case 'in_review':
-			case 'approved':
 			case 'published':
 			case 'archived':
 				return row.lifecycleStatus === filterKey;
@@ -386,7 +383,6 @@
 
 	function lifecycleTone(status) {
 		if (status === 'published') return 'published';
-		if (status === 'approved') return 'approved';
 		if (status === 'archived') return 'archived';
 		return 'working';
 	}
@@ -500,12 +496,12 @@
 						<div class="stat-value">{dealStats.inReview}</div>
 					</div>
 					<div class="stat-card">
-						<div class="stat-label">Approved</div>
-						<div class="stat-value">{dealStats.approved}</div>
-					</div>
-					<div class="stat-card">
 						<div class="stat-label">Published</div>
 						<div class="stat-value">{dealStats.published}</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-label">Archived</div>
+						<div class="stat-value">{dealStats.archived}</div>
 					</div>
 				</div>
 
