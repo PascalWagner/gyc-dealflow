@@ -2,8 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { user, isAdmin, userEmail, getFreshSessionToken } from '$lib/stores/auth.js';
-	import { deals } from '$lib/stores/deals.js';
+	import { isAdmin, getFreshSessionToken } from '$lib/stores/auth.js';
 	import { onboardingReviewGroups } from '$lib/onboarding/reviewLinks.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
@@ -39,6 +38,7 @@
 	let weekLabels = $state([]);
 	let growthRates = $state({});
 	let recommendations = $state([]);
+	let dealSubmissionAttribution = $state(null);
 
 	// Users state
 	let usersLoading = $state(true);
@@ -120,6 +120,7 @@
 	async function loadOverview() {
 		overviewLoading = true;
 		overviewError = '';
+		dealSubmissionAttribution = null;
 		try {
 			const result = await adminFetch({ action: 'growth-metrics' });
 			if (!result.success) { overviewError = result.error || 'Failed'; return; }
@@ -130,6 +131,7 @@
 			weekLabels = result.weekLabels || [];
 			growthRates = result.growthRates || {};
 			recommendations = result.recommendations || [];
+			dealSubmissionAttribution = result.dealSubmissionAttribution || null;
 		} catch (e) { overviewError = e.message; }
 		finally { overviewLoading = false; }
 	}
@@ -309,6 +311,50 @@
 		return ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'][i] || '#666';
 	}
 
+	const submissionRoleColors = {
+		admin: '#10252a',
+		gp: '#2563eb',
+		lp: '#51be7b'
+	};
+
+	function submissionSeriesTotal(point) {
+		if (!point) return 0;
+		return Number(point.admin || 0) + Number(point.gp || 0) + Number(point.lp || 0);
+	}
+
+	function submissionSeriesSegments(point) {
+		const total = submissionSeriesTotal(point);
+		return ['admin', 'gp', 'lp']
+			.map((role) => ({
+				role,
+				value: Number(point?.[role] || 0),
+				width: total > 0 ? Math.round((Number(point?.[role] || 0) / total) * 100) : 0
+			}))
+			.filter((segment) => segment.value > 0);
+	}
+
+	function formatSubmissionKind(value = '') {
+		const normalized = String(value || '').trim().toLowerCase();
+		if (normalized === 'new_deal') return 'New deal';
+		if (normalized === 'existing_deal_link') return 'Linked existing deal';
+		return normalized
+			.split('_')
+			.filter(Boolean)
+			.map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+			.join(' ') || 'Submission';
+	}
+
+	function formatSubmissionIntent(value = '') {
+		const normalized = String(value || '').trim().toLowerCase();
+		if (normalized === 'invested') return 'Already Invested';
+		if (normalized === 'interested') return 'Evaluating';
+		return normalized
+			.split('_')
+			.filter(Boolean)
+			.map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+			.join(' ') || 'Evaluating';
+	}
+
 	function formatTtvValue(metric) {
 		if (!metric || metric.median === null || metric.median === undefined) return '--';
 		if (metric.median < 1) return `${Math.round(metric.median * 60)} min`;
@@ -476,6 +522,152 @@
 								</div>
 							</div>
 						{/each}
+					</div>
+				{/if}
+
+				{#if dealSubmissionAttribution}
+					<div class="section-card">
+						<div class="section-title">Deal Sources</div>
+						<div class="section-desc">Measure who is introducing new deals into the platform and whether the network is starting to source inventory for us.</div>
+
+						<div class="market-grid">
+							<div class="market-card">
+								<div class="market-label">Community-Sourced</div>
+								<div class="market-value">{dealSubmissionAttribution.summary?.communityPct ?? 0}%</div>
+								<div class="market-meta">
+									<span class="week-badge">{dealSubmissionAttribution.summary?.totalUniqueDeals ?? 0} unique deals</span>
+								</div>
+							</div>
+							<div class="market-card">
+								<div class="market-label">Admin-Sourced</div>
+								<div class="market-value">{dealSubmissionAttribution.summary?.adminPct ?? 0}%</div>
+								<div class="market-meta">
+									<span class="week-badge">{dealSubmissionAttribution.summary?.totalAddActions ?? 0} total add actions</span>
+								</div>
+							</div>
+							<div class="market-card">
+								<div class="market-label">GP Share</div>
+								<div class="market-value">{dealSubmissionAttribution.summary?.gpPct ?? 0}%</div>
+							</div>
+							<div class="market-card">
+								<div class="market-label">LP Share</div>
+								<div class="market-value">{dealSubmissionAttribution.summary?.lpPct ?? 0}%</div>
+							</div>
+						</div>
+
+						<div class="submission-grid">
+							<div class="submission-card">
+								<div class="chart-title">New Unique Deals by Source</div>
+								<div class="submission-legend">
+									{#each ['admin', 'gp', 'lp'] as role}
+										<div class="submission-legend-item">
+											<span class="submission-legend-dot" style={`background:${submissionRoleColors[role]}`}></span>
+											<span>{role.toUpperCase()}</span>
+										</div>
+									{/each}
+								</div>
+								<div class="submission-series">
+									{#each dealSubmissionAttribution.weeklyUnique || [] as point}
+										<div class="submission-series-row">
+											<div class="submission-series-label">{point.label}</div>
+											<div class="submission-series-track">
+												{#if submissionSeriesTotal(point) > 0}
+													{#each submissionSeriesSegments(point) as segment}
+														<div
+															class="submission-series-fill"
+															style={`width:${segment.width}%;background:${submissionRoleColors[segment.role]}`}
+															title={`${segment.role.toUpperCase()}: ${segment.value}`}
+														></div>
+													{/each}
+												{:else}
+													<div class="submission-series-empty">No new deals</div>
+												{/if}
+											</div>
+											<div class="submission-series-total">{submissionSeriesTotal(point)}</div>
+										</div>
+									{/each}
+								</div>
+								<div class="submission-breakdown">
+									{#each dealSubmissionAttribution.uniqueByRole || [] as item}
+										<div class="submission-breakdown-row">
+											<span>{item.label}</span>
+											<strong>{item.count} ({item.pct}%)</strong>
+										</div>
+									{/each}
+								</div>
+							</div>
+
+							<div class="submission-card">
+								<div class="chart-title">All Add Actions by Source</div>
+								<div class="submission-legend">
+									{#each ['admin', 'gp', 'lp'] as role}
+										<div class="submission-legend-item">
+											<span class="submission-legend-dot" style={`background:${submissionRoleColors[role]}`}></span>
+											<span>{role.toUpperCase()}</span>
+										</div>
+									{/each}
+								</div>
+								<div class="submission-series">
+									{#each dealSubmissionAttribution.weeklyActions || [] as point}
+										<div class="submission-series-row">
+											<div class="submission-series-label">{point.label}</div>
+											<div class="submission-series-track">
+												{#if submissionSeriesTotal(point) > 0}
+													{#each submissionSeriesSegments(point) as segment}
+														<div
+															class="submission-series-fill"
+															style={`width:${segment.width}%;background:${submissionRoleColors[segment.role]}`}
+															title={`${segment.role.toUpperCase()}: ${segment.value}`}
+														></div>
+													{/each}
+												{:else}
+													<div class="submission-series-empty">No add actions</div>
+												{/if}
+											</div>
+											<div class="submission-series-total">{submissionSeriesTotal(point)}</div>
+										</div>
+									{/each}
+								</div>
+								<div class="submission-breakdown">
+									{#each dealSubmissionAttribution.actionsByRole || [] as item}
+										<div class="submission-breakdown-row">
+											<span>{item.label}</span>
+											<strong>{item.count} ({item.pct}%)</strong>
+										</div>
+									{/each}
+								</div>
+							</div>
+						</div>
+
+						<div class="table-wrap submission-table-wrap">
+							<table class="compact">
+								<thead>
+									<tr>
+										<th>Recent Submission</th>
+										<th>Source</th>
+										<th>Intent</th>
+										<th>Type</th>
+										<th>Date</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each dealSubmissionAttribution.recentSubmissions || [] as item}
+										<tr>
+											<td>
+												<div class="submission-table-title">{item.dealName}</div>
+												<div class="submission-table-sub">{item.submittedByName}</div>
+											</td>
+											<td>{String(item.submittedByRole || '').toUpperCase()} via {item.entrySurface || '--'}</td>
+											<td>{formatSubmissionIntent(item.submissionIntent)}</td>
+											<td>{formatSubmissionKind(item.submissionKind)}</td>
+											<td>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '--'}</td>
+										</tr>
+									{:else}
+										<tr><td colspan="5" class="muted" style="text-align:center;padding:18px">No submission activity yet.</td></tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
 					</div>
 				{/if}
 
@@ -1392,6 +1584,102 @@
 	.topbar-btn:hover { border-color: var(--primary); color: var(--primary); }
 	.topbar-btn.toggle-active { background: rgba(81, 190, 123, 0.14); border-color: rgba(81, 190, 123, 0.36); color: var(--text-dark); }
 	.content { min-width: 0; max-width: 1100px; }
+	.submission-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 18px;
+		margin-top: 20px;
+	}
+	.submission-card {
+		padding: 18px;
+		border-radius: 18px;
+		border: 1px solid rgba(31, 81, 89, 0.1);
+		background: rgba(255, 255, 255, 0.92);
+	}
+	.submission-legend {
+		display: flex;
+		gap: 14px;
+		flex-wrap: wrap;
+		margin-top: 12px;
+	}
+	.submission-legend-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-secondary);
+	}
+	.submission-legend-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 999px;
+	}
+	.submission-series {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		margin-top: 18px;
+	}
+	.submission-series-row {
+		display: grid;
+		grid-template-columns: 80px minmax(0, 1fr) 36px;
+		align-items: center;
+		gap: 10px;
+	}
+	.submission-series-label {
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-secondary);
+	}
+	.submission-series-track {
+		display: flex;
+		height: 14px;
+		border-radius: 999px;
+		background: rgba(16, 37, 42, 0.08);
+		overflow: hidden;
+	}
+	.submission-series-fill {
+		height: 100%;
+	}
+	.submission-series-empty {
+		display: flex;
+		align-items: center;
+		padding-left: 10px;
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+	.submission-series-total {
+		font-size: 12px;
+		font-weight: 800;
+		color: var(--text-dark);
+		text-align: right;
+	}
+	.submission-breakdown {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-top: 18px;
+	}
+	.submission-breakdown-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		font-size: 13px;
+		color: var(--text-secondary);
+	}
+	.submission-table-wrap {
+		margin-top: 20px;
+	}
+	.submission-table-title {
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.submission-table-sub {
+		margin-top: 4px;
+		font-size: 12px;
+		color: var(--text-secondary);
+	}
 
 	/* Tab bar */
 	.tab-bar {
@@ -1935,6 +2223,7 @@
 	/* Responsive */
 	@media (max-width: 768px) {
 		.two-col, .charts-grid, .pillars-grid, .arch-grid, .features-grid, .three-col { grid-template-columns: 1fr; }
+		.submission-grid { grid-template-columns: 1fr; }
 		.phase-card-body { grid-template-columns: 1fr; }
 		.revenue-grid { grid-template-columns: repeat(2, 1fr); }
 		.flywheel { flex-wrap: wrap; }

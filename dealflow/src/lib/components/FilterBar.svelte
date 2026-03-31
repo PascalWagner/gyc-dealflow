@@ -292,6 +292,15 @@
 					<span class="mobile-filter-badge">{activeFilterCount}</span>
 				{/if}
 			</button>
+
+			{#if showAddDeal}
+				<button class="mobile-add-deal-btn" onclick={onadddeal}>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+						<line x1="12" y1="5" x2="12" y2="19"></line>
+						<line x1="5" y1="12" x2="19" y2="12"></line>
+					</svg>
+				</button>
+			{/if}
 		</div>
 	</div>
 
@@ -569,6 +578,20 @@
 		height: 42px;
 		padding: 0;
 		border-radius: 12px;
+		flex-shrink: 0;
+	}
+
+	.mobile-add-deal-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		border: none;
+		border-radius: 14px;
+		background: var(--primary);
+		color: #fff;
+		box-shadow: 0 14px 28px rgba(81, 190, 123, 0.24);
 		flex-shrink: 0;
 	}
 

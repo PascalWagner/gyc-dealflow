@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 	import { getStoredSessionToken } from '$lib/stores/auth.js';
+	import AddDealModal from '$lib/components/AddDealModal.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
@@ -11,6 +12,7 @@
 
 	let portfolioDetails = $state([]);
 	let wizardData = $state({});
+	let showIntakeModal = $state(false);
 	let showAddModal = $state(false);
 	let editingId = $state('');
 
@@ -29,20 +31,22 @@
 		})
 	);
 	const portfolio = $derived.by(() => portfolioView.entries);
+	const metricPortfolio = $derived.by(() => portfolioView.metricEntries || []);
+	const pendingEntries = $derived.by(() => portfolioView.pendingEntries || []);
 	const hasPersistedDetails = $derived.by(() =>
 		portfolioDetails.some((investment) => investment.id === editingId)
 	);
 
-	const totalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
-	const totalDistributions = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0));
-	const activeCount = $derived(portfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length);
+	const totalInvested = $derived(metricPortfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
+	const totalDistributions = $derived(metricPortfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0));
+	const activeCount = $derived(metricPortfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length);
 	const avgIRR = $derived.by(() => {
-		const withIRR = portfolio.filter(i => i.targetIRR);
+		const withIRR = metricPortfolio.filter(i => i.targetIRR);
 		if (withIRR.length === 0) return 0;
 		return withIRR.reduce((s, i) => s + parseFloat(i.targetIRR), 0) / withIRR.length;
 	});
 	const avgHoldPeriod = $derived.by(() => {
-		const withDate = portfolio.filter(i => i.dateInvested && (i.status === 'Active' || i.status === 'Distributing'));
+		const withDate = metricPortfolio.filter(i => i.dateInvested && (i.status === 'Active' || i.status === 'Distributing'));
 		if (withDate.length === 0) return 0;
 		const now = new Date();
 		const totalMonths = withDate.reduce((s, i) => {
@@ -51,12 +55,12 @@
 		}, 0);
 		return totalMonths / withDate.length;
 	});
-	const assetClasses = $derived(new Set(portfolio.map(i => i.assetClass).filter(Boolean)));
-	const sponsors = $derived(new Set(portfolio.map(i => i.sponsor).filter(Boolean)));
+	const assetClasses = $derived(new Set(metricPortfolio.map(i => i.assetClass).filter(Boolean)));
+	const sponsors = $derived(new Set(metricPortfolio.map(i => i.sponsor).filter(Boolean)));
 
 	const allocationMap = $derived.by(() => {
 		const map = {};
-		portfolio.forEach(i => { const cls = i.assetClass || 'Other'; map[cls] = (map[cls] || 0) + (parseFloat(i.amountInvested) || 0); });
+		metricPortfolio.forEach(i => { const cls = i.assetClass || 'Other'; map[cls] = (map[cls] || 0) + (parseFloat(i.amountInvested) || 0); });
 		return map;
 	});
 	const allocationEntries = $derived(Object.entries(allocationMap).sort((a, b) => b[1] - a[1]));
@@ -119,7 +123,7 @@
 			}
 		}
 		const sponsorAlloc = {};
-		portfolio.forEach(i => { const sp = i.sponsor || 'Unknown'; sponsorAlloc[sp] = (sponsorAlloc[sp] || 0) + (parseFloat(i.amountInvested) || 0); });
+		metricPortfolio.forEach(i => { const sp = i.sponsor || 'Unknown'; sponsorAlloc[sp] = (sponsorAlloc[sp] || 0) + (parseFloat(i.amountInvested) || 0); });
 		for (const [sp, amt] of Object.entries(sponsorAlloc)) {
 			const pct = (amt / totalInvested) * 100;
 			if (pct > 40) {
@@ -164,6 +168,7 @@
 
 	const timelineChart = $derived.by(() => {
 		const datedInvestments = portfolio
+			.filter((investment) => investment.countsTowardPortfolioMetrics !== false)
 			.map((investment) => ({
 				amount: parseFloat(investment.amountInvested) || 0,
 				date: investment.dateInvested ? new Date(investment.dateInvested) : null,
@@ -367,6 +372,11 @@
 		}
 	}
 
+	async function handlePortfolioDealSubmission() {
+		await fetchDeals({ force: true }).catch(() => {});
+		await loadPortfolioData();
+	}
+
 	function openAddModal(id = '') {
 		editingId = id;
 		if (id) {
@@ -473,13 +483,13 @@
 	});
 </script>
 
+<svelte:head>
+	<title>Portfolio | GYC</title>
+</svelte:head>
+
 <PageContainer className="portfolio-shell ly-page-stack">
 	<PageHeader title="Portfolio" className="dashboard-page-header">
-		<nav slot="secondaryRow" class="ly-dashboard-tabs" aria-label="Dashboard sections">
-			<a href="/app/dashboard" class="ly-dashboard-tab">Overview</a>
-			<a href="/app/portfolio" class="ly-dashboard-tab active">Portfolio</a>
-			<a href="/app/plan" class="ly-dashboard-tab">My Plan</a>
-		</nav>
+		<button slot="actions" class="btn-add" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
 	</PageHeader>
 
 	<div class="content-area">
@@ -490,11 +500,22 @@
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="42" height="42"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
 				</div>
 				<h3>No invested deals yet</h3>
-				<p>Move a deal to <strong>Invested</strong> in Deal Flow and it will appear here automatically.</p>
-				<div class="browse-link"><a href="/app/deals">Open Deal Flow →</a></div>
+				<p>Add an existing investment or move a deal to <strong>Invested</strong> in Deal Flow and it will appear here automatically.</p>
+				<div class="browse-link">
+					<button class="btn-add section-add-btn" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
+				</div>
 			</div>
 		</div>
 	{:else}
+		{#if pendingEntries.length > 0}
+			<div class="pending-banner">
+				<div class="pending-banner__title">Pending-review investments are visible now.</div>
+				<div class="pending-banner__copy">
+					They appear in your portfolio immediately, but they are excluded from the summary metrics until the underlying deal clears review.
+				</div>
+			</div>
+		{/if}
+
 		<!-- Summary cards -->
 		<div class="summary-grid">
 			<div class="stat-card"><div class="stat-label">Total Invested</div><div class="stat-value">${totalInvested.toLocaleString()}</div></div>
@@ -624,7 +645,7 @@
 
 		<div class="inv-list">
 			{#each sorted as inv}
-				{@const sc = statusColors[inv.status] || 'var(--text-muted)'}
+				{@const sc = inv.isPendingReview ? '#f59e0b' : (statusColors[inv.status] || 'var(--text-muted)')}
 				<div class="inv-card">
 					<div class="inv-card-stripe" style="background:{sc}"></div>
 					<div class="inv-card-body">
@@ -636,7 +657,7 @@
 								</div>
 							</div>
 							<div class="inv-card-actions">
-								<span class="inv-status" style="--sc:{sc}">{inv.status || 'Unknown'}</span>
+								<span class="inv-status" style="--sc:{sc}">{inv.displayStatus || inv.status || 'Unknown'}</span>
 								<button class="btn-edit" onclick={() => openAddModal(inv.id)}>{inv._missingDetails ? 'Add Details' : 'Edit'}</button>
 							</div>
 						</div>
@@ -664,6 +685,8 @@
 						</div>
 						{#if inv.notes}
 							<div class="inv-card-notes">{inv.notes}</div>
+						{:else if inv.isPendingReview}
+							<div class="inv-card-notes">This investment is visible now and will count toward your portfolio once the deal completes review.</div>
 						{:else if inv._missingDetails}
 							<div class="inv-card-notes">Add amount, date, and other details to complete this invested deal.</div>
 						{/if}
@@ -674,6 +697,15 @@
 	{/if}
 	</div>
 </PageContainer>
+
+{#if showIntakeModal}
+	<AddDealModal
+		entrySurface="portfolio"
+		defaultIntent="invested"
+		onclose={() => (showIntakeModal = false)}
+		onsubmitted={handlePortfolioDealSubmission}
+	/>
+{/if}
 
 <!-- Add/Edit Investment Modal -->
 {#if showAddModal}
@@ -757,6 +789,25 @@
 	.section-add-btn {
 		padding: 8px 20px;
 		font-size: 12px;
+	}
+	.pending-banner {
+		margin: 0 0 18px;
+		padding: 16px 18px;
+		border-radius: 18px;
+		background: rgba(245, 158, 11, 0.08);
+		border: 1px solid rgba(245, 158, 11, 0.18);
+	}
+	.pending-banner__title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 800;
+		color: #9a6700;
+	}
+	.pending-banner__copy {
+		margin-top: 6px;
+		font-size: 14px;
+		line-height: 1.6;
+		color: #7c5a00;
 	}
 	/* ── Summary Stat Cards ── */
 	.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }

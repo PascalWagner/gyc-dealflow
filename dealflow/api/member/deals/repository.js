@@ -100,7 +100,7 @@ function applyDbSort(query, normalizedQuery) {
 export async function fetchMemberDealDataset(
 	adminClient,
 	normalizedQuery,
-	{ include506b = false, viewerManagementCompanyId = null, isAdmin = false, publishedOnly = false } = {}
+	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '', isAdmin = false, publishedOnly = false } = {}
 ) {
 	let parentQuery = adminClient
 		.from('opportunities')
@@ -109,7 +109,11 @@ export async function fetchMemberDealDataset(
 		.not('investment_name', 'eq', '');
 
 	parentQuery = publishedOnly
-		? applyPublishedCatalogQuery(parentQuery)
+		? applyPublishedCatalogQuery(parentQuery, {
+			email: viewerEmail,
+			viewerManagementCompanyId,
+			isAdmin
+		})
 		: applyDealVisibilityQuery(parentQuery, { isAdmin, viewerManagementCompanyId });
 	parentQuery = applyDbFilters(parentQuery, normalizedQuery, { include506b });
 	parentQuery = parentQuery ? applyDbSort(parentQuery, normalizedQuery) : parentQuery;
@@ -142,7 +146,12 @@ export async function fetchMemberDealDataset(
 							.from('opportunities')
 							.select(CHILD_SHARE_CLASS_SELECT)
 							.in('parent_deal_id', batchIds)
-							.order('created_at', { ascending: true })
+							.order('created_at', { ascending: true }),
+						{
+							email: viewerEmail,
+							viewerManagementCompanyId,
+							isAdmin
+						}
 					)
 					: applyDealVisibilityQuery(
 						adminClient

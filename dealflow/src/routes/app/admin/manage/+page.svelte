@@ -62,6 +62,7 @@
 		{ key: 'all', label: 'All', count: dealWorkflowRows.length },
 		{ key: 'draft', label: 'Draft', count: countDealRows(dealWorkflowRows, 'draft') },
 		{ key: 'in_review', label: 'In Review', count: countDealRows(dealWorkflowRows, 'in_review') },
+		{ key: 'approved', label: 'Approved', count: countDealRows(dealWorkflowRows, 'approved') },
 		{ key: 'published', label: 'Published', count: countDealRows(dealWorkflowRows, 'published') },
 		{ key: 'do_not_publish', label: 'Do Not Publish', count: countDealRows(dealWorkflowRows, 'do_not_publish') },
 		{ key: 'archived', label: 'Archived', count: countDealRows(dealWorkflowRows, 'archived') }
@@ -354,6 +355,7 @@
 			totalDeals: rows.length,
 			draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
 			inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
+			approved: rows.filter((row) => row.lifecycleStatus === 'approved').length,
 			published: rows.filter((row) => row.lifecycleStatus === 'published' && row.catalogState !== 'archived').length,
 			doNotPublish: rows.filter((row) => row.lifecycleStatus === 'do_not_publish').length,
 			archived: rows.filter((row) => row.catalogState === 'archived').length
@@ -364,6 +366,7 @@
 		switch (filterKey) {
 			case 'draft':
 			case 'in_review':
+			case 'approved':
 			case 'do_not_publish':
 				return row.lifecycleStatus === filterKey;
 			case 'published':
@@ -410,6 +413,18 @@
 
 	function openDealEditor(row) {
 		goto(`/deal-review?id=${encodeURIComponent(row.id)}&from=queue&step=intake`);
+	}
+
+	function formatSubmissionSummary(row) {
+		const submittedBy = row.submittedByName || row.submittedByEmail || 'Unknown submitter';
+		const role = row.submittedByRoleLabel || 'Admin';
+		const surface = row.submissionSurfaceLabel || 'Admin';
+		return `${role} via ${surface} · ${submittedBy}`;
+	}
+
+	function formatSubmissionContext(row) {
+		const intent = row.submissionIntentLabel || 'Evaluating';
+		return `Intent: ${intent}`;
 	}
 </script>
 
@@ -461,7 +476,7 @@
 					<div class="queue-banner__eyebrow">Deal QA Work Queue</div>
 					<div class="queue-banner__title">Review imported deals, fill the gaps, then publish only what is trustworthy.</div>
 					<p class="queue-banner__copy">
-						Start new deals in Draft, move active work to In Review, and publish only what belongs in the live catalog.
+						Start new deals in Draft, move active work to In Review, approve what is ready, and publish only what belongs in the live catalog.
 					</p>
 				</section>
 
@@ -477,6 +492,10 @@
 					<div class="stat-card">
 						<div class="stat-label">In Review</div>
 						<div class="stat-value">{dealStats.inReview}</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-label">Approved</div>
+						<div class="stat-value">{dealStats.approved}</div>
 					</div>
 					<div class="stat-card">
 						<div class="stat-label">Published</div>
@@ -527,6 +546,8 @@
 													<div class="deal-sponsor">{row.sponsorName || 'Unknown sponsor'}</div>
 													<div class="deal-name">{row.dealName}</div>
 													<div class="deal-meta">{row.slug ? `/${row.slug}` : 'No slug yet'}</div>
+													<div class="deal-meta">{formatSubmissionSummary(row)}</div>
+													<div class="deal-meta">{formatSubmissionContext(row)}</div>
 													<div class="deal-updated">
 														Updated {formatShortDate(row.updatedAt)}
 													</div>
