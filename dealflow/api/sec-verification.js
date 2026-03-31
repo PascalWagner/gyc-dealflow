@@ -27,7 +27,7 @@ const DEAL_SELECT = `
 	gp_entity,
 	sponsor_entity,
 	is_506b,
-	management_company:management_companies(id, operator_name, legal_entity)
+	management_company:management_companies(id, operator_name)
 `;
 
 const FILING_SELECT = `
