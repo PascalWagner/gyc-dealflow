@@ -17,7 +17,7 @@
 	let loading = $state(true);
 	let academyUnlocked = $state(false);
 	const nativeCompanionMode = browser && isNativeApp();
-	const RESOURCES_CACHE_KEY = 'gycResourcesCatalogV2';
+	const RESOURCES_CACHE_KEY = 'gycResourcesCatalogV3';
 	const RESOURCES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 	const categories = $derived.by(() => {
@@ -67,6 +67,11 @@
 
 	function isPlayable(video) {
 		return Boolean(video?.playable || video?.youtubeId || video?.url);
+	}
+
+	function getDurationLabel(video) {
+		const duration = typeof video?.duration === 'string' ? video.duration.trim() : '';
+		return duration || 'Length coming soon';
 	}
 
 	function closeModal() {
@@ -250,14 +255,14 @@
 									<h3>{video.title}</h3>
 									<p>{video.description}</p>
 									<div class="resource-meta-bottom">
-										{#if video.duration}<span>{video.duration}</span>{/if}
-										<span>{academyUnlocked ? (isPlayable(video) ? 'Watch lesson' : 'Video link coming soon') : 'Unlock with the Academy'}</span>
+										<span class="resource-duration">{getDurationLabel(video)}</span>
+										<span class="resource-action">{academyUnlocked ? (isPlayable(video) ? 'Watch lesson' : 'Video link coming soon') : 'Unlock with the Academy'}</span>
 									</div>
 								</div>
 							</button>
-						{/each}
-					</div>
-				{/if}
+							{/each}
+						</div>
+					{/if}
 			</div>
 
 				{#if !academyUnlocked}
@@ -412,22 +417,22 @@
 		color: var(--text-dark);
 	}
 
-	.resource-thumb-fallback {
-		position: absolute;
-		inset: -2px;
-		width: calc(100% + 4px);
-		height: calc(100% + 4px);
-		background: linear-gradient(135deg, #0d2a30 0%, #204951 100%);
-		color: rgba(255, 255, 255, 0.88);
-		display: flex;
-		flex-direction: column;
-		justify-content: flex-end;
-		gap: 8px;
-		padding: 18px;
-		box-sizing: border-box;
-		font-family: var(--font-ui);
-		text-align: left;
-	}
+		.resource-thumb-fallback {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			background: linear-gradient(135deg, #0d2a30 0%, #204951 100%);
+			color: rgba(255, 255, 255, 0.88);
+			display: flex;
+			flex-direction: column;
+			justify-content: flex-end;
+			gap: 8px;
+			padding: 18px;
+			box-sizing: border-box;
+			font-family: var(--font-ui);
+			text-align: left;
+		}
 
 	.resource-thumb-fallback span {
 		font-size: 10px;
@@ -473,8 +478,13 @@
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 18px;
+		align-items: stretch;
 	}
 	.resource-card {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		min-width: 0;
 		appearance: none;
 		-webkit-appearance: none;
 		padding: 0;
@@ -487,9 +497,8 @@
 	}
 	.resource-thumb {
 		position: relative;
-		padding-bottom: 56.25%;
+		aspect-ratio: 16 / 9;
 		overflow: hidden;
-		line-height: 0;
 		isolation: isolate;
 		background:
 			linear-gradient(135deg, rgba(81, 190, 123, 0.14), rgba(23, 52, 58, 0.2)),
@@ -497,15 +506,13 @@
 	}
 	.resource-thumb img {
 		position: absolute;
-		top: -6px;
-		left: -2px;
-		width: calc(100% + 4px);
-		height: calc(100% + 8px);
+		inset: 0;
+		width: 100%;
+		height: 100%;
 		display: block;
 		background: #102529;
 		object-fit: cover;
-		object-position: center 48%;
-		transform: translateZ(0);
+		object-position: center;
 	}
 	.play-overlay {
 		position: absolute;
@@ -516,8 +523,11 @@
 		background: rgba(0, 0, 0, 0.2);
 	}
 	.resource-meta {
+		flex: 1;
+		min-height: 0;
 		padding: 16px;
 		display: grid;
+		grid-template-rows: auto auto minmax(0, 1fr) auto;
 		gap: 10px;
 	}
 	.resource-meta h3 {
@@ -527,6 +537,10 @@
 		font-weight: 700;
 		line-height: 1.4;
 		color: var(--text-dark);
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
 	}
 	.resource-meta p {
 		margin: 0;
@@ -534,11 +548,28 @@
 		font-size: 13px;
 		line-height: 1.6;
 		color: var(--text-secondary);
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		overflow: hidden;
 	}
 	.resource-module {
 		font-family: var(--font-ui);
 		font-size: 11px;
 		color: var(--text-muted);
+	}
+	.resource-meta-bottom {
+		align-items: center;
+		justify-content: space-between;
+		margin-top: auto;
+	}
+	.resource-duration {
+		font-weight: 600;
+		color: var(--text-secondary);
+	}
+	.resource-action {
+		text-align: right;
+		margin-left: auto;
 	}
 
 	.resource-badge-strategy {
