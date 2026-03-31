@@ -14,22 +14,20 @@
 		sortBy = 'newest',
 		showArchived = false,
 		buyBoxApplied = false,
-		totalDeals = 0,
-		avgIRR = '0',
 		onchange = () => {},
 		onclear = () => {},
-		ontoggleBuyBox = () => {},
-		onadddeal = () => {},
-		isAdmin = false
+		ontoggleBuyBox = () => {}
 	} = $props();
 
 	let filterPanelOpen = $state(false);
 
-	const activeFilterCount = $derived(
-		[assetClass, dealType, strategy, status, maxInvest, maxLockup, distributions, minIRR].filter(Boolean).length
-			+ (sortBy !== 'newest' ? 1 : 0)
-			+ (showArchived ? 1 : 0)
-	);
+	const SORT_OPTIONS = [
+		['newest', 'Sort: Newest'],
+		['best_match', 'Sort: Best Match'],
+		['irr', 'Sort: Highest IRR'],
+		['min_invest', 'Sort: Lowest Min Investment'],
+		['az', 'Sort: A-Z Name']
+	];
 
 	const FILTER_SELECTS = [
 		{
@@ -123,29 +121,43 @@
 				['0.15', '15%+'],
 				['0.20', '20%+']
 			]
-		},
-		{
-			field: 'sortBy',
-			label: 'Sort By',
-			options: [
-				['newest', 'Sort: Newest'],
-				['best_match', 'Sort: Best Match'],
-				['irr', 'Sort: Highest IRR'],
-				['min_invest', 'Sort: Lowest Min Investment'],
-				['az', 'Sort: A-Z Name']
-			]
 		}
 	];
+
+	const activeFilterCount = $derived(
+		[assetClass, dealType, strategy, status, maxInvest, maxLockup, distributions, minIRR].filter(Boolean).length
+			+ (showArchived ? 1 : 0)
+	);
 
 	function emit(field, value, withHaptic = false) {
 		if (withHaptic) selectionChanged();
 		onchange({ field, value });
 	}
 
+	function toggleFilterPanel() {
+		selectionChanged();
+		filterPanelOpen = !filterPanelOpen;
+	}
+
+	function closeFilterPanel() {
+		filterPanelOpen = false;
+	}
+
 	function clearAll() {
 		selectionChanged();
-		filterPanelOpen = true;
 		onclear();
+	}
+
+	function handleOverlayClick(event) {
+		if (event.target === event.currentTarget) {
+			closeFilterPanel();
+		}
+	}
+
+	function handleWindowKeydown(event) {
+		if (event.key === 'Escape' && filterPanelOpen) {
+			closeFilterPanel();
+		}
 	}
 
 	function valueFor(field) {
@@ -166,51 +178,28 @@
 				return distributions;
 			case 'minIRR':
 				return minIRR;
-			case 'sortBy':
-				return sortBy;
 			default:
 				return '';
 		}
 	}
+
+	$effect(() => {
+		if (typeof window === 'undefined' || typeof document === 'undefined' || !filterPanelOpen || window.innerWidth > 768) return;
+
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+
+		return () => {
+			document.body.style.overflow = previousOverflow;
+		};
+	});
 </script>
 
+<svelte:window onkeydown={handleWindowKeydown} />
+
 <div class="filter-shell">
-	<div class="filter-bar ly-desktop-only">
-		<div class="filter-bar-actions">
-			<button
-				class="buybox-toggle"
-				class:active={buyBoxApplied}
-				onclick={() => {
-					selectionChanged();
-					ontoggleBuyBox();
-				}}
-			>
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-				Apply My Plan
-			</button>
-
-			<a class="buybox-update-btn" href="/app/plan?edit=1">
-				Update Plan
-			</a>
-
-			<button
-				class="filters-toggle"
-				class:active={filterPanelOpen}
-				aria-expanded={filterPanelOpen}
-				onclick={() => {
-					selectionChanged();
-					filterPanelOpen = !filterPanelOpen;
-				}}
-			>
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-				Filters
-				{#if activeFilterCount > 0}
-					<span class="filter-count-badge">{activeFilterCount}</span>
-				{/if}
-			</button>
-		</div>
-
-		<div class="search-wrap">
+	<div class="filter-toolbar ly-desktop-only">
+		<div class="search-wrap toolbar-search">
 			<input
 				type="text"
 				class="filter-input"
@@ -221,23 +210,50 @@
 			>
 		</div>
 
-		<div class="filter-bar-meta">
-			<div class="filter-bar-stats">
-				<span><strong>{totalDeals}</strong> deals</span>
-				<span class="fbs-dot">&middot;</span>
-				<span><strong>{avgIRR}%</strong> avg IRR</span>
-			</div>
+		<label class="sr-only" for="deal-flow-sort">Sort Deals</label>
+		<select
+			id="deal-flow-sort"
+			class="toolbar-select"
+			value={sortBy}
+			onchange={(event) => emit('sortBy', event.currentTarget.value, true)}
+		>
+			{#each SORT_OPTIONS as [value, label]}
+				<option value={value}>{label}</option>
+			{/each}
+		</select>
 
-			{#if isAdmin}
-				<button class="add-deal-btn" onclick={onadddeal}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-					Add Deal
-				</button>
+		<button
+			class="buybox-toggle"
+			class:active={buyBoxApplied}
+			onclick={() => {
+				selectionChanged();
+				ontoggleBuyBox();
+			}}
+		>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+				<rect x="3" y="3" width="18" height="18" rx="3"></rect>
+				<path d="M9 12l2 2 4-4"></path>
+			</svg>
+			Apply My Plan
+		</button>
+
+		<button
+			class="filters-toggle"
+			class:active={filterPanelOpen || activeFilterCount > 0}
+			aria-expanded={filterPanelOpen}
+			onclick={toggleFilterPanel}
+		>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+				<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+			</svg>
+			Filters
+			{#if activeFilterCount > 0}
+				<span class="filter-count-badge">{activeFilterCount}</span>
 			{/if}
-		</div>
+		</button>
 	</div>
 
-	<div class="mobile-filter-shell ly-mobile-only">
+	<div class="mobile-toolbar ly-mobile-only">
 		<div class="mobile-search-row">
 			<div class="search-wrap mobile-search-wrap">
 				<input
@@ -249,71 +265,26 @@
 					autocomplete="off"
 				>
 			</div>
-		</div>
 
-		<button
-			class="filters-toggle mobile-full-button"
-			class:active={filterPanelOpen || activeFilterCount > 0}
-			aria-expanded={filterPanelOpen}
-			onclick={() => {
-				selectionChanged();
-				filterPanelOpen = !filterPanelOpen;
-			}}
-		>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-			{#if activeFilterCount > 0}
-				Filters ({activeFilterCount})
-			{:else}
-				Filters
-			{/if}
-		</button>
-
-		{#if isAdmin}
-			<div class="mobile-primary-row">
-				<button
-					class="buybox-toggle mobile-primary-button"
-					class:active={buyBoxApplied}
-					onclick={() => {
-						selectionChanged();
-						ontoggleBuyBox();
-					}}
-				>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-					Apply My Plan
-				</button>
-
-				<button class="add-deal-btn mobile-primary-button" onclick={onadddeal}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-					Add Deal
-				</button>
-			</div>
-		{:else}
 			<button
-				class="buybox-toggle mobile-full-button"
-				class:active={buyBoxApplied}
-				onclick={() => {
-					selectionChanged();
-					ontoggleBuyBox();
-				}}
+				class="mobile-filter-button"
+				class:active={filterPanelOpen || activeFilterCount > 0}
+				aria-expanded={filterPanelOpen}
+				aria-label="Open filters"
+				onclick={toggleFilterPanel}
 			>
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-				Apply My Plan
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+					<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+				</svg>
+				{#if activeFilterCount > 0}
+					<span class="mobile-filter-badge">{activeFilterCount}</span>
+				{/if}
 			</button>
-		{/if}
-
-		<a class="buybox-update-btn mobile-full-button mobile-update-btn" href="/app/plan?edit=1">
-			Update Plan
-		</a>
-
-		<div class="mobile-stats">
-			<span><strong>{totalDeals}</strong> deals</span>
-			<span class="fbs-dot">&middot;</span>
-			<span><strong>{avgIRR}%</strong> avg IRR</span>
 		</div>
 	</div>
 
 	{#if filterPanelOpen}
-		<div class="filter-panel">
+		<div class="filter-panel ly-desktop-only">
 			<div class="filter-panel-grid">
 				{#each FILTER_SELECTS as filterDef}
 					<div class="filter-field">
@@ -344,6 +315,81 @@
 				</div>
 			</div>
 		</div>
+
+		<div class="mobile-filter-modal ly-mobile-only" onclick={handleOverlayClick}>
+			<div class="mobile-filter-sheet">
+				<div class="mobile-filter-header">
+					<div class="mobile-filter-title">Filters</div>
+					<button class="mobile-close-btn" aria-label="Close filters" onclick={closeFilterPanel}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+							<line x1="18" y1="6" x2="6" y2="18"></line>
+							<line x1="6" y1="6" x2="18" y2="18"></line>
+						</svg>
+					</button>
+				</div>
+
+				<div class="mobile-filter-body">
+					<button
+						class="buybox-toggle mobile-plan-toggle"
+						class:active={buyBoxApplied}
+						onclick={() => {
+							selectionChanged();
+							ontoggleBuyBox();
+						}}
+					>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+							<rect x="3" y="3" width="18" height="18" rx="3"></rect>
+							<path d="M9 12l2 2 4-4"></path>
+						</svg>
+						Apply My Plan
+					</button>
+
+					<div class="filter-field mobile-sort-field">
+						<label for="deal-flow-mobile-sort">Sort By</label>
+						<select
+							id="deal-flow-mobile-sort"
+							value={sortBy}
+							onchange={(event) => emit('sortBy', event.currentTarget.value, true)}
+						>
+							{#each SORT_OPTIONS as [value, label]}
+								<option value={value}>{label}</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="mobile-filter-grid">
+						{#each FILTER_SELECTS as filterDef}
+							<div class="filter-field">
+								<label for={`mobile-filter-${filterDef.field}`}>{filterDef.label}</label>
+								<select
+									id={`mobile-filter-${filterDef.field}`}
+									value={valueFor(filterDef.field)}
+									onchange={(event) => emit(filterDef.field, event.currentTarget.value, true)}
+								>
+									{#each filterDef.options as [value, label]}
+										<option value={value}>{label}</option>
+									{/each}
+								</select>
+							</div>
+						{/each}
+					</div>
+
+					<label class="archived-toggle mobile-archived-toggle">
+						<input
+							type="checkbox"
+							checked={showArchived}
+							onchange={(event) => emit('showArchived', event.currentTarget.checked, true)}
+						>
+						Show archived
+					</label>
+
+					<div class="mobile-filter-actions">
+						<button class="clear-btn mobile-clear-btn" onclick={clearAll}>Clear All Filters</button>
+						<button class="done-btn" onclick={closeFilterPanel}>Done</button>
+					</div>
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
 
@@ -352,57 +398,92 @@
 		--toolbar-control-height: 40px;
 		display: grid;
 		gap: 0;
-		margin: 0;
-		background: transparent;
-	}
-
-	.filter-bar {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 0;
 		min-width: 0;
-		flex-wrap: nowrap;
 	}
 
-	.filter-bar-actions,
-	.filter-bar-meta {
-		display: flex;
+	.filter-toolbar {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto auto auto;
 		align-items: center;
-		gap: 8px;
+		gap: 12px;
 		min-width: 0;
-		flex: 0 0 auto;
 	}
 
-	.filter-bar-meta {
-		margin-left: auto;
+	.search-wrap {
+		position: relative;
+		min-width: 0;
+	}
+
+	.toolbar-search {
+		min-width: 0;
+	}
+
+	.filter-input,
+	.toolbar-select,
+	.filter-field select {
+		width: 100%;
+		height: var(--toolbar-control-height);
+		padding: 0 38px 0 14px;
+		box-sizing: border-box;
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		background: var(--bg-card);
+		color: var(--text-dark);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		outline: none;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease;
+		appearance: none;
+		-webkit-appearance: none;
+	}
+
+	.filter-input {
+		background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='7' stroke='%23999' stroke-width='2'/%3E%3Cpath d='M16 16L20 20' stroke='%23999' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 12px center;
+	}
+
+	.toolbar-select,
+	.filter-field select {
+		min-width: 156px;
+		background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 12px center;
+		cursor: pointer;
+	}
+
+	.filter-input:focus,
+	.toolbar-select:focus,
+	.filter-field select:focus {
+		border-color: var(--primary);
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12);
 	}
 
 	.buybox-toggle,
-	.buybox-update-btn,
 	.filters-toggle,
-	.add-deal-btn {
+	.mobile-filter-button,
+	.clear-btn,
+	.done-btn,
+	.mobile-close-btn {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		gap: 6px;
-		height: var(--toolbar-control-height);
-		padding: 0 14px;
-		box-sizing: border-box;
+		border: 1px solid var(--border);
+		background: var(--bg-card);
 		font-family: var(--font-ui);
 		font-size: 12px;
 		font-weight: 700;
-		white-space: nowrap;
-		text-decoration: none;
-		transition: all 0.15s ease;
+		color: var(--text-secondary);
 		cursor: pointer;
+		transition: all 0.15s ease;
 	}
 
 	.buybox-toggle {
-		border: 1px solid rgba(81, 190, 123, 0.35);
+		height: var(--toolbar-control-height);
+		padding: 0 14px;
 		border-radius: 999px;
-		background: var(--bg-card);
-		color: var(--text-dark);
+		white-space: nowrap;
 	}
 
 	.buybox-toggle:hover {
@@ -416,24 +497,11 @@
 		color: #fff;
 	}
 
-	.buybox-update-btn {
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		background: transparent;
-		color: var(--text-secondary);
-	}
-
-	.buybox-update-btn:hover {
-		border-color: var(--text-muted);
-		color: var(--text-dark);
-		background: rgba(15, 23, 42, 0.03);
-	}
-
 	.filters-toggle {
-		border: 1px solid var(--border);
+		height: var(--toolbar-control-height);
+		padding: 0 14px;
 		border-radius: 10px;
-		background: var(--bg-card);
-		color: var(--text-secondary);
+		white-space: nowrap;
 	}
 
 	.filters-toggle:hover,
@@ -442,7 +510,8 @@
 		color: var(--primary);
 	}
 
-	.filter-count-badge {
+	.filter-count-badge,
+	.mobile-filter-badge {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -456,115 +525,60 @@
 		color: var(--primary);
 	}
 
-	.search-wrap {
-		position: relative;
-		flex: 1 1 280px;
-		min-width: 220px;
-	}
-
-	.filter-input {
-		width: 100%;
-		height: var(--toolbar-control-height);
-		padding: 0 38px 0 14px;
-		box-sizing: border-box;
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		background: var(--bg-card);
-		color: var(--text-dark);
-		font-family: var(--font-ui);
-		font-size: 12px;
-		outline: none;
-		transition: border-color 0.15s ease, box-shadow 0.15s ease;
-		background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='7' stroke='%23999' stroke-width='2'/%3E%3Cpath d='M16 16L20 20' stroke='%23999' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-		background-repeat: no-repeat;
-		background-position: right 12px center;
-	}
-
-	.filter-input:focus {
-		border-color: var(--primary);
-		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12);
-	}
-
-	.filter-bar-stats,
-	.mobile-stats {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		color: var(--text-muted);
-		white-space: nowrap;
-	}
-
-	.filter-bar-stats :global(strong),
-	.mobile-stats :global(strong) {
-		color: var(--text-dark);
-		font-weight: 700;
-	}
-
-	.fbs-dot {
-		color: var(--border);
-	}
-
-	.add-deal-btn {
-		border: 1px solid transparent;
-		border-radius: 10px;
-		background: var(--primary);
-		color: #fff;
-	}
-
-	.add-deal-btn:hover {
-		background: #3ca96b;
-	}
-
-	.mobile-filter-shell {
+	.mobile-toolbar {
 		display: none;
 	}
 
 	.mobile-search-row {
-		display: block;
-	}
-
-	.mobile-full-button,
-	.mobile-update-btn {
-		width: 100%;
-	}
-
-	.mobile-primary-row {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 8px;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 10px;
 	}
 
-	.mobile-primary-button {
-		width: 100%;
-		min-width: 0;
+	.mobile-filter-button {
+		position: relative;
+		width: 42px;
+		height: 42px;
+		padding: 0;
+		border-radius: 12px;
+		flex-shrink: 0;
 	}
 
-	.mobile-stats {
-		font-size: 11px;
-		line-height: 1.4;
-		white-space: normal;
+	.mobile-filter-button:hover,
+	.mobile-filter-button.active {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
+	.mobile-filter-badge {
+		position: absolute;
+		top: -4px;
+		right: -4px;
+		min-width: 20px;
+		height: 20px;
 	}
 
 	.filter-panel {
-		margin: 0;
-		padding: 8px 0 0;
-		border-top: 1px solid var(--border-light);
-		background: transparent;
+		margin-top: 18px;
+		padding: 18px;
+		border: 1px solid var(--border-light);
+		border-radius: 16px;
+		background: var(--bg-card);
+		box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
 	}
 
 	.filter-panel-grid {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-end;
-		gap: 12px;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 14px;
+		align-items: end;
 	}
 
 	.filter-field {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
+		display: grid;
+		gap: 6px;
+		min-width: 0;
 	}
 
 	.filter-field label {
@@ -576,28 +590,10 @@
 		color: var(--text-muted);
 	}
 
-	.filter-field select {
-		min-width: 140px;
-		height: 40px;
-		padding: 0 36px 0 14px;
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		background: var(--bg-card);
-		color: var(--text-dark);
-		font-family: var(--font-ui);
-		font-size: 12px;
-		appearance: none;
-		-webkit-appearance: none;
-		cursor: pointer;
-		background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-		background-repeat: no-repeat;
-		background-position: right 12px center;
-	}
-
 	.archived-toggle {
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
+		gap: 8px;
 		height: 40px;
 		padding: 0 14px;
 		border: 1px solid var(--border);
@@ -619,21 +615,14 @@
 	}
 
 	.clear-wrap {
-		margin-left: auto;
+		display: flex;
+		justify-content: flex-end;
 	}
 
 	.clear-btn {
 		height: 40px;
 		padding: 0 14px;
-		border: 1px solid var(--border);
 		border-radius: 10px;
-		background: transparent;
-		color: var(--text-secondary);
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.15s ease;
 	}
 
 	.clear-btn:hover {
@@ -641,82 +630,146 @@
 		color: var(--red, #e74c3c);
 	}
 
+	.mobile-filter-modal {
+		position: fixed;
+		inset: 0;
+		z-index: 1200;
+		background: rgba(15, 23, 42, 0.42);
+		display: none;
+	}
+
+	.mobile-filter-sheet {
+		width: 100%;
+		height: 100%;
+		background: var(--bg);
+		display: grid;
+		grid-template-rows: auto minmax(0, 1fr);
+		padding-top: env(safe-area-inset-top, 0px);
+		padding-bottom: env(safe-area-inset-bottom, 0px);
+	}
+
+	.mobile-filter-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 18px 18px 16px;
+		border-bottom: 1px solid var(--border-light);
+		background: var(--bg-card);
+	}
+
+	.mobile-filter-title {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.mobile-close-btn {
+		width: 40px;
+		height: 40px;
+		padding: 0;
+		border-radius: 12px;
+	}
+
+	.mobile-filter-body {
+		overflow-y: auto;
+		padding: 18px;
+		display: grid;
+		gap: 18px;
+		align-content: start;
+	}
+
+	.mobile-plan-toggle {
+		width: 100%;
+		min-height: 42px;
+	}
+
+	.mobile-sort-field select,
+	.mobile-filter-grid .filter-field select {
+		min-width: 0;
+	}
+
+	.mobile-filter-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 14px;
+	}
+
+	.mobile-archived-toggle {
+		height: 44px;
+		justify-content: flex-start;
+	}
+
+	.mobile-filter-actions {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 10px;
+	}
+
+	.mobile-clear-btn,
+	.done-btn {
+		width: 100%;
+		height: 44px;
+	}
+
+	.done-btn {
+		border-color: var(--primary);
+		background: var(--primary);
+		color: #fff;
+	}
+
+	.done-btn:hover {
+		background: #3ca96b;
+		border-color: #3ca96b;
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
 	@media (max-width: 1080px) {
-		.filter-bar {
-			flex-wrap: wrap;
-			row-gap: 8px;
+		.filter-toolbar {
+			grid-template-columns: minmax(0, 1fr) minmax(170px, auto) auto auto;
+			gap: 10px;
 		}
 
-		.search-wrap {
-			order: 2;
-			flex-basis: 100%;
-			min-width: 0;
+		.filter-panel-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
 		}
+	}
 
-		.filter-bar-meta {
-			order: 3;
-			width: 100%;
-			justify-content: flex-end;
-			margin-left: 0;
+	@media (max-width: 900px) {
+		.filter-panel-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 	}
 
 	@media (max-width: 768px) {
-		.filter-bar {
+		.filter-toolbar {
 			display: none;
 		}
 
-		.mobile-filter-shell {
-			display: grid;
-			gap: 8px;
-			padding: 0;
+		.mobile-toolbar {
+			display: block;
 		}
 
-		.mobile-search-wrap {
-			min-width: 0;
-		}
-
-		.mobile-filter-input {
-			height: 42px;
-			font-size: 16px;
-		}
-
-		.mobile-full-button,
-		.mobile-primary-button {
-			min-height: 42px;
-		}
-
-		.filter-panel {
-			padding-top: 8px;
-		}
-
-		.filter-panel-grid {
-			display: grid;
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			align-items: start;
-			gap: 12px;
-		}
-
-		.filter-field select {
-			width: 100%;
-			min-width: 0;
-		}
-
-		.archived-toggle,
-		.clear-wrap,
-		.clear-btn {
-			width: 100%;
-		}
-
-		.clear-wrap {
-			margin-left: 0;
-			grid-column: 1 / -1;
+		.mobile-filter-modal.ly-mobile-only {
+			display: block !important;
 		}
 	}
 
 	@media (max-width: 520px) {
-		.mobile-primary-row,
-		.filter-panel-grid {
+		.mobile-filter-grid,
+		.mobile-filter-actions {
 			grid-template-columns: minmax(0, 1fr);
 		}
 	}

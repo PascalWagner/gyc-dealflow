@@ -26,6 +26,7 @@
 	import { getUiStage, normalizeStageCounts } from '$lib/utils/dealflow-contract.js';
 	import { tapLight } from '$lib/utils/haptics.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import { buildGoalProjection } from '$lib/utils/dealAnalysis.js';
 
 	let { data } = $props();
 	function getInitialDeal() {
@@ -89,7 +90,6 @@
 
 	// Goal Path
 	let userGoal = $state(null);
-	let goalProgress = $state(null);
 
 	// Deck Viewer Modal
 	let showDeckViewer = $state(false);
@@ -238,6 +238,49 @@
 	const operatorTrackRecordRows = $derived.by(() => buildOperatorTrackRecordRows(deal));
 	const buyBoxLite = $derived.by(() => buildBuyBoxLite(deal));
 	const investClearlyPreview = $derived.by(() => ($isAdmin ? buildInvestClearlyPreview(deal) : null));
+	const goalBranch = $derived.by(() =>
+		normalizeGoalBranch(userGoal)
+		|| normalizeGoalBranch(buyBox?._branch)
+		|| normalizeGoalBranch(buyBox?.goal)
+	);
+	const goalProgress = $derived.by(() => {
+		if (!buyBox || !goalBranch) return null;
+
+		let targetRaw = null;
+		let currentRaw = 0;
+
+		if (goalBranch === 'cashflow') {
+			targetRaw = parseTargetAmount(buyBox.targetCashFlow || buyBox.targetIncome);
+			currentRaw = parseTargetAmount(buyBox.baselineIncome) || 0;
+		} else if (goalBranch === 'growth') {
+			targetRaw = parseTargetAmount(buyBox.growthCapital || buyBox.targetGrowth);
+		} else if (goalBranch === 'tax') {
+			targetRaw = parseTargetAmount(buyBox.taxableIncome || buyBox.targetTaxSavings);
+		}
+
+		if (!targetRaw || targetRaw <= 0) return null;
+
+		const pct = Math.min(100, Math.max(0, Math.round((currentRaw / targetRaw) * 100)));
+		const projection = deal ? buildGoalProjection(deal, goalBranch, deal?.investmentMinimum) : null;
+
+		let dealContribution = 0;
+		if (projection) {
+			if (goalBranch === 'cashflow') dealContribution = projection.annual || 0;
+			else if (goalBranch === 'tax') dealContribution = projection.writeOff || 0;
+			else if (goalBranch === 'growth') dealContribution = projection.gain || 0;
+		}
+
+		const pctAfter = Math.min(100, Math.max(0, Math.round(((currentRaw + dealContribution) / targetRaw) * 100)));
+
+		return {
+			target: formatTargetDisplay(targetRaw, goalBranch),
+			targetRaw,
+			current: fmtGoalMoney(currentRaw),
+			currentRaw,
+			pct,
+			pctAfter
+		};
+	});
 
 	// Buy Box Match
 	const buyBoxChecks = $derived(deal && buyBox ? computeBuyBoxChecks(deal, buyBox) : []);
@@ -1370,10 +1413,63 @@
 	}
 
 	// ===== Goal Path =====
+	function normalizeGoalBranch(value) {
+		const normalized = String(value || '').trim().toLowerCase();
+		if (!normalized) return null;
+		if (normalized === 'cashflow' || normalized.includes('cash')) return 'cashflow';
+		if (normalized === 'growth' || normalized.includes('growth') || normalized.includes('equity')) return 'growth';
+		if (normalized === 'tax' || normalized.includes('tax')) return 'tax';
+		return null;
+	}
+
+	function suffixToMultiplier(suffix) {
+		const normalized = String(suffix || '').trim().toLowerCase();
+		if (normalized === 'k') return 1000;
+		if (normalized === 'm') return 1000000;
+		if (normalized === 'b') return 1000000000;
+		return 1;
+	}
+
+	function parseTargetAmount(text) {
+		if (!text) return null;
+
+		const cleaned = String(text)
+			.replace(/\/yr|\/mo|\+/gi, '')
+			.trim();
+		if (!cleaned) return null;
+
+		const rangeParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean);
+		const lowerBound = rangeParts[0] || cleaned;
+		const upperBound = rangeParts[1] || '';
+		const lowerMatch = lowerBound.match(/\$?([\d,.]+)\s*(k|m|b)?/i);
+		if (!lowerMatch) return null;
+
+		const inheritedSuffix = lowerMatch[2] || upperBound.match(/\$?[\d,.]+\s*(k|m|b)/i)?.[1] || '';
+		const numericValue = parseFloat(lowerMatch[1].replace(/,/g, ''));
+		if (!Number.isFinite(numericValue)) return null;
+
+		return numericValue * suffixToMultiplier(inheritedSuffix);
+	}
+
+	function fmtGoalMoney(val) {
+		if (!val || Number.isNaN(val)) return '$0';
+		if (val >= 1e6) return '$' + (val / 1e6).toFixed(1) + 'M';
+		if (val >= 1e3) return '$' + Math.round(val / 1e3).toLocaleString() + 'K';
+		return '$' + Math.round(val).toLocaleString();
+	}
+
+	function formatTargetDisplay(amount, branch) {
+		const formatted = fmtGoalMoney(amount);
+		if (branch === 'cashflow' || branch === 'tax') return formatted + '/yr';
+		return formatted;
+	}
+
 	function setUserGoal(goal) {
-		userGoal = goal;
+		const normalizedGoal = normalizeGoalBranch(goal);
+		if (!normalizedGoal) return;
+		userGoal = normalizedGoal;
 		if (browser) {
-			writeUserScopedString('gycInvestmentGoal', goal);
+			writeUserScopedString('gycInvestmentGoal', normalizedGoal);
 		}
 	}
 
@@ -1656,8 +1752,9 @@
 		// Load investment goal from storage
 		try {
 			const storedGoal = readUserScopedString('gycInvestmentGoal', '');
-			if (storedGoal && ['cashflow', 'tax', 'growth'].includes(storedGoal)) {
-				userGoal = storedGoal;
+			const normalizedStoredGoal = normalizeGoalBranch(storedGoal);
+			if (normalizedStoredGoal) {
+				userGoal = normalizedStoredGoal;
 			}
 		} catch {}
 
@@ -1694,7 +1791,8 @@
 						buyBox = nextBuyBox;
 						// Auto-set goal from buy box if not already set
 						if (!userGoal && (nextBuyBox._branch || nextBuyBox.goal)) {
-							userGoal = nextBuyBox._branch || nextBuyBox.goal;
+							const normalizedBuyBoxGoal = normalizeGoalBranch(nextBuyBox._branch || nextBuyBox.goal);
+							if (normalizedBuyBoxGoal) userGoal = normalizedBuyBoxGoal;
 						}
 					}
 				})
@@ -1951,7 +2049,7 @@
 					{buyBox}
 					{buyBoxChecks}
 					{buyBoxScore}
-					goal={userGoal}
+					goal={goalBranch}
 					{goalProgress}
 					investmentAmount={deal?.investmentMinimum}
 					isLoggedIn={$isLoggedIn}

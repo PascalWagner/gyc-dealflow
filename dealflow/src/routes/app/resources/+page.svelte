@@ -35,22 +35,6 @@
 		})
 	);
 
-	const featuredVideo = $derived.by(
-		() => filteredVideos.find((video) => video.featured) || filteredVideos[0] || videos[0] || null
-	);
-
-	const spotlightVideos = $derived.by(() =>
-		(featuredVideo ? filteredVideos.filter((video) => video.id !== featuredVideo.id) : filteredVideos).slice(0, 4)
-	);
-
-	const sectionStats = $derived.by(() => {
-		const stats = {};
-		for (const section of sections) {
-			stats[section.id] = videos.filter((v) => v.section === section.id).length;
-		}
-		return { total: videos.length, ...stats };
-	});
-
 	function badgeClass(category) {
 		if (category === 'Strategy') return 'resource-badge-strategy';
 		if (category === 'Deal Flow') return 'resource-badge-dealflow';
@@ -158,10 +142,6 @@
 		</div>
 	{:else if loading}
 		<div class="loading-state">
-			<div class="resource-stage">
-				<div class="sk-hero"></div>
-				<div class="sk-side"></div>
-			</div>
 			<div class="resource-grid">
 				{#each Array(6) as _}
 					<div class="sk-card">
@@ -180,72 +160,6 @@
 				</p>
 			</div>
 		</PageHeader>
-
-		<div class="resource-stats">
-			<div class="resource-stat">
-				<div class="resource-stat-label">Total Lessons</div>
-				<div class="resource-stat-value">{sectionStats.total}</div>
-			</div>
-			{#each sections as section}
-				<div class="resource-stat">
-					<div class="resource-stat-label">{section.title}</div>
-					<div class="resource-stat-value">{sectionStats[section.id] || 0}</div>
-				</div>
-			{/each}
-		</div>
-
-		{#if featuredVideo}
-			<div class="resource-stage">
-				<button class="featured-card" onclick={() => openVideo(featuredVideo)}>
-					<div class="featured-media">
-						{#if getThumbnail(featuredVideo)}
-							<img src={getThumbnail(featuredVideo)} alt="" loading="lazy" />
-						{/if}
-						<div class="featured-overlay">
-							<div class="featured-badge {badgeClass(featuredVideo.category)}">{featuredVideo.category}</div>
-							<div class="featured-play">
-								<svg viewBox="0 0 24 24" fill="none" width="24" height="24">
-									<polygon points="7 5 19 12 7 19 7 5" fill="#17343a" />
-								</svg>
-							</div>
-						</div>
-					</div>
-					<div class="featured-copy">
-						<div class="featured-kicker">Start Here</div>
-						<h2>{featuredVideo.title}</h2>
-						<p>{featuredVideo.description}</p>
-						<div class="featured-meta">
-							{#if featuredVideo.module}
-								<span>{featuredVideo.module}</span>
-							{/if}
-							{#if featuredVideo.duration}
-								<span>{featuredVideo.duration}</span>
-							{/if}
-						</div>
-					</div>
-				</button>
-
-				<div class="spotlight-panel">
-					<div class="spotlight-header">
-						<div class="spotlight-title">Up Next</div>
-					</div>
-					<div class="spotlight-list">
-						{#each spotlightVideos as video}
-							<button class="spotlight-item" onclick={() => openVideo(video)}>
-								<div class="spotlight-item-title">{video.title}</div>
-								<div class="spotlight-item-meta">
-									<span class="resource-badge {badgeClass(video.category)}">{video.category}</span>
-									{#if video.duration}<span>{video.duration}</span>{/if}
-								</div>
-							</button>
-						{/each}
-						{#if spotlightVideos.length === 0}
-							<div class="spotlight-empty">More lessons will appear here as the library grows.</div>
-						{/if}
-					</div>
-				</div>
-			</div>
-		{/if}
 
 		<div class="library-toolbar">
 			<div class="search-wrap">
@@ -363,74 +277,6 @@
 		white-space: nowrap;
 		border: none;
 	}
-
-	.resource-stats {
-		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-		gap: 14px;
-		margin-bottom: 22px;
-	}
-	.resource-stat {
-		padding: 16px 18px;
-		border: 1px solid var(--border);
-		border-radius: 18px;
-		background: var(--bg-card);
-	}
-	.resource-stat-label {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.4px;
-		text-transform: uppercase;
-		color: var(--text-muted);
-		margin-bottom: 8px;
-	}
-	.resource-stat-value {
-		font-family: var(--font-headline);
-		font-size: 28px;
-		color: var(--text-dark);
-	}
-
-	.resource-stage {
-		display: grid;
-		grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
-		gap: 18px;
-		margin-bottom: 24px;
-	}
-	.featured-card {
-		display: grid;
-		grid-template-columns: minmax(280px, 1fr) minmax(0, 1fr);
-		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: 24px;
-		background: var(--bg-card);
-		overflow: hidden;
-		cursor: pointer;
-		text-align: left;
-	}
-	.featured-media {
-		position: relative;
-		min-height: 100%;
-		background:
-			linear-gradient(135deg, rgba(81, 190, 123, 0.16), rgba(23, 52, 58, 0.2)),
-			linear-gradient(160deg, #18393f, #0f2428);
-	}
-	.featured-media img {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-	.featured-overlay {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		padding: 18px;
-		background: linear-gradient(180deg, rgba(10, 20, 23, 0.18), rgba(10, 20, 23, 0.55));
-	}
 	.featured-badge,
 	.resource-badge {
 		display: inline-flex;
@@ -443,7 +289,6 @@
 		text-transform: uppercase;
 		letter-spacing: 0.4px;
 	}
-	.featured-play,
 	.play-btn {
 		width: 54px;
 		height: 54px;
@@ -454,35 +299,6 @@
 		justify-content: center;
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
 	}
-	.featured-copy {
-		padding: 28px 26px;
-		display: grid;
-		align-content: center;
-		gap: 12px;
-	}
-	.featured-kicker {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-	}
-	.featured-copy h2 {
-		margin: 0;
-		font-family: var(--font-headline);
-		font-size: 30px;
-		line-height: 1.02;
-		color: var(--text-dark);
-	}
-	.featured-copy p {
-		margin: 0;
-		font-family: var(--font-body);
-		font-size: 14px;
-		line-height: 1.7;
-		color: var(--text-secondary);
-	}
-	.featured-meta,
 	.resource-meta-bottom,
 	.resource-meta-top {
 		display: flex;
@@ -491,61 +307,6 @@
 		font-family: var(--font-ui);
 		font-size: 12px;
 		color: var(--text-muted);
-	}
-
-	.spotlight-panel {
-		padding: 20px;
-		border: 1px solid var(--border);
-		border-radius: 24px;
-		background:
-			radial-gradient(circle at top right, rgba(81, 190, 123, 0.12), transparent 42%),
-			var(--bg-card);
-	}
-	.spotlight-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		margin-bottom: 14px;
-	}
-	.spotlight-title {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-	.spotlight-list {
-		display: grid;
-		gap: 10px;
-	}
-	.spotlight-item {
-		padding: 14px 14px;
-		border: 1px solid var(--border);
-		border-radius: 16px;
-		background: rgba(255, 255, 255, 0.84);
-		text-align: left;
-		cursor: pointer;
-	}
-	.spotlight-item-title {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-		margin-bottom: 6px;
-	}
-	.spotlight-item-meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		color: var(--text-muted);
-	}
-	.spotlight-empty {
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-muted);
-		padding: 10px 2px 0;
 	}
 
 	.library-toolbar {
@@ -728,20 +489,10 @@
 		display: grid;
 		gap: 18px;
 	}
-	.sk-hero,
-	.sk-side,
 	.sk-thumb,
 	.sk-text {
 		background: var(--border-light, #e7ecef);
 		animation: skPulse 1.5s infinite;
-	}
-	.sk-hero {
-		min-height: 320px;
-		border-radius: 24px;
-	}
-	.sk-side {
-		min-height: 320px;
-		border-radius: 24px;
 	}
 	.sk-card {
 		border: 1px solid var(--border);
@@ -843,13 +594,6 @@
 	}
 
 	@media (max-width: 1024px) {
-		.resource-stage,
-		.resource-stats {
-			grid-template-columns: 1fr 1fr;
-		}
-		.featured-card {
-			grid-template-columns: 1fr;
-		}
 		.resource-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
@@ -858,18 +602,6 @@
 	@media (max-width: 768px) {
 		.resources-page {
 			padding: 0 16px 36px;
-		}
-		.page-header,
-		.resource-stage,
-		.resource-stats {
-			grid-template-columns: 1fr;
-			display: grid;
-		}
-		.page-header {
-			gap: 16px;
-		}
-		h1 {
-			font-size: 34px;
 		}
 		.resource-grid {
 			grid-template-columns: 1fr;

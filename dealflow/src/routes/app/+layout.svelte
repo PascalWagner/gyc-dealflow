@@ -30,6 +30,7 @@
 	let authTimeout = null;
 	let redirecting = $state(false);
 	let sessionReady = $state(false);
+	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
 	// Derive current page from URL for sidebar highlighting
 	// e.g. /app/deals → 'deals', /app/market-intel → 'market-intel', /app/admin/manage → 'admin-manage'
@@ -55,6 +56,11 @@
 		goto('/app/deals', { replaceState: true }).catch(() => {});
 	}
 
+	function announceUserScopedStateUpdate() {
+		if (typeof window === 'undefined') return;
+		window.dispatchEvent(new CustomEvent(USER_SCOPED_STATE_EVENT));
+	}
+
 	// Auth guard — on client mount, re-hydrate store from localStorage
 	onMount(() => {
 		authTimeout = window.setTimeout(() => {
@@ -66,6 +72,7 @@
 			if (sessionUser?.email) {
 				restoreScopedUserState(sessionUser);
 				hydrateDealStagesFromCache();
+				announceUserScopedStateUpdate();
 				user.set(sessionUser);
 				sessionReady = true;
 				authChecked = true;
@@ -91,6 +98,7 @@
 				if (hydration?.ok) {
 					// Keep the live stage store aligned with the server-truth bundle we just fetched.
 					hydrateDealStagesFromRows(hydration.bundle?.stages || []);
+					announceUserScopedStateUpdate();
 				}
 				return;
 			}

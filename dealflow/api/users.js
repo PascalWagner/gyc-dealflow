@@ -2,7 +2,7 @@
 // Admin-only endpoint to search users for impersonation
 // Searches GHL first, then falls back to Supabase user_profiles
 
-import { ADMIN_EMAILS, setCors, deriveTier, getAdminClient } from './_supabase.js';
+import { ADMIN_EMAILS, setCors, deriveTier, getAdminClient, verifyAdmin } from './_supabase.js';
 
 const GHL_API_KEY = process.env.GHL_API_KEY;
 const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
@@ -18,9 +18,14 @@ export default async function handler(req, res) {
 
   const { q, admin } = req.query;
   const normalizedQuery = String(q || '').trim().toLowerCase();
+  const normalizedAdminQuery = String(admin || '').trim().toLowerCase();
 
-  // Verify admin
-  if (!admin || !ADMIN_EMAILS.includes(admin.toLowerCase())) {
+  // Prefer bearer-token verification so the sidebar can call this endpoint the
+  // same way as the rest of the admin API surface. Keep the legacy query-param
+  // path as a fallback for older clients.
+  const auth = await verifyAdmin(req);
+  const hasLegacyAdminQuery = !!normalizedAdminQuery && ADMIN_EMAILS.includes(normalizedAdminQuery);
+  if (!auth.authorized && !hasLegacyAdminQuery) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 

@@ -8,11 +8,11 @@
 		deals = [],
 		compareIds = [],
 		compareLimit = 3,
-		oncomparetoggle = () => {}
+		oncomparetoggle = () => {},
+		showCompare = false
 	} = $props();
 
 	let currentIndex = $state(0);
-	let mobileView = $state('swipe'); // 'swipe' | 'feed'
 
 	const currentDeal = $derived(deals[currentIndex] || null);
 	const compareSet = $derived(new Set(compareIds));
@@ -45,11 +45,11 @@
 
 	const assetHeroes = {
 		'Private Credit': { gradient: 'linear-gradient(135deg, #1e3a5f, #2d5a8c)', icon: '\u{1f3e6}' },
-		'Multifamily': { gradient: 'linear-gradient(135deg, #2d5a3d, #4a8c6a)', icon: '\u{1f3e2}' },
+		Multifamily: { gradient: 'linear-gradient(135deg, #2d5a3d, #4a8c6a)', icon: '\u{1f3e2}' },
 		'Multi-Family': { gradient: 'linear-gradient(135deg, #2d5a3d, #4a8c6a)', icon: '\u{1f3e2}' },
-		'Industrial': { gradient: 'linear-gradient(135deg, #5a3d2d, #8c6a4a)', icon: '\u{1f3ed}' },
+		Industrial: { gradient: 'linear-gradient(135deg, #5a3d2d, #8c6a4a)', icon: '\u{1f3ed}' },
 		'Self Storage': { gradient: 'linear-gradient(135deg, #3d2d5a, #6a4a8c)', icon: '\u{1f4e6}' },
-		'Build-to-Rent': { gradient: 'linear-gradient(135deg, #5a2d3d, #8c4a6a)', icon: '\u{1f3d8}\ufe0f' },
+		'Build-to-Rent': { gradient: 'linear-gradient(135deg, #5a2d3d, #8c4a6a)', icon: '\u{1f3d8}\ufe0f' }
 	};
 
 	function getHero(deal) {
@@ -58,6 +58,17 @@
 
 	function getHeroImage(deal) {
 		return deal.propertyImageUrl || getDealHeroImage(deal) || deal.imageUrl || '';
+	}
+
+	function openDealDetails(deal) {
+		if (!deal || typeof window === 'undefined') return;
+		window.location.href = `/deal/${deal.id}`;
+	}
+
+	function handleCardKeydown(event, deal) {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		openDealDetails(deal);
 	}
 
 	function skipDeal() {
@@ -102,86 +113,83 @@
 		return !compareSet.has(dealId) && compareIds.length >= compareLimit;
 	}
 
-	// Reset index when deals change
+	function stopPropagation(event, callback = null) {
+		event.stopPropagation();
+		callback?.();
+	}
+
 	$effect(() => {
 		if (deals) currentIndex = 0;
 	});
 </script>
 
-<div class="swipe-toolbar">
-	<div class="swipe-toolbar-copy">
-		<div class="swipe-toolbar-title">Browse Deals</div>
-		<div class="swipe-toolbar-subtitle">{deals.length} deal{deals.length === 1 ? '' : 's'} in this stage</div>
-	</div>
-
-	<div class="swipe-mode-toggle ly-pill-tabs" role="tablist" aria-label="Deal Flow mobile view">
-		<button class="ly-pill-tab" class:active={mobileView === 'swipe'} onclick={() => mobileView = 'swipe'}>Swipe</button>
-		<button class="ly-pill-tab" class:active={mobileView === 'feed'} onclick={() => mobileView = 'feed'}>Grid</button>
-	</div>
-</div>
-
-{#if mobileView === 'swipe'}
-	<!-- Swipe Card View -->
-	<div class="swipe-container">
-		{#if deals.length === 0}
-			<div class="swipe-empty">
-				<div class="swipe-empty-icon">🔍</div>
-				<div class="swipe-empty-text">No deals to show</div>
-				<div class="swipe-empty-sub">Try adjusting your filters</div>
-			</div>
-		{:else if currentDeal}
-			<div class="swipe-counter">{currentIndex + 1} / {deals.length}</div>
-			<div class="swipe-card">
-				<div
-					class="swipe-hero"
-					style="background:{getHeroImage(currentDeal) ? `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(${getHeroImage(currentDeal)})` : getHero(currentDeal).gradient};{getHeroImage(currentDeal) ? 'background-size:cover;background-position:center;' : ''}"
-				>
-					<div class="swipe-badges">
-						<span class="badge">{currentDeal.assetClass || 'Real Estate'}</span>
-						<span class="badge">{currentDeal.dealType || 'Fund'}</span>
+<div class="swipe-container">
+	{#if deals.length === 0}
+		<div class="swipe-empty">
+			<div class="swipe-empty-icon">🔍</div>
+			<div class="swipe-empty-text">No deals to show</div>
+			<div class="swipe-empty-sub">Try adjusting your filters</div>
+		</div>
+	{:else if currentDeal}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="swipe-card"
+			role="link"
+			tabindex="0"
+			onclick={() => openDealDetails(currentDeal)}
+			onkeydown={(event) => handleCardKeydown(event, currentDeal)}
+		>
+			<div
+				class="swipe-hero"
+				style="background:{getHeroImage(currentDeal) ? `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(${getHeroImage(currentDeal)})` : getHero(currentDeal).gradient};{getHeroImage(currentDeal) ? 'background-size:cover;background-position:center;' : ''}"
+			>
+				<div class="swipe-badges">
+					<span class="badge">{currentDeal.assetClass || 'Real Estate'}</span>
+					<span class="badge">{currentDeal.dealType || 'Fund'}</span>
+				</div>
+				{#if !getHeroImage(currentDeal)}
+					<div class="swipe-hero-icon">{getHero(currentDeal).icon}</div>
+				{/if}
+				{#if currentDeal.targetIRR}
+					<div class="swipe-irr">
+						<span class="irr-value">{fmtPct(currentDeal.targetIRR)}</span>
+						<span class="irr-label">Target IRR</span>
 					</div>
-					{#if !getHeroImage(currentDeal)}
-						<div class="swipe-hero-icon">{getHero(currentDeal).icon}</div>
-					{/if}
-					{#if currentDeal.targetIRR}
-						<div class="swipe-irr">
-							<span class="irr-value">{fmtPct(currentDeal.targetIRR)}</span>
-							<span class="irr-label">Target IRR</span>
-						</div>
-					{/if}
+				{/if}
+			</div>
+
+			<div class="swipe-body">
+				<div class="swipe-title">{currentDeal.investmentName}</div>
+				<div class="swipe-manager">
+					{currentDeal.managementCompany || ''}
+					{#if currentDeal.location}&middot; {currentDeal.location}{/if}
 				</div>
 
-				<div class="swipe-body">
-					<div class="swipe-title">{currentDeal.investmentName}</div>
-					<div class="swipe-manager">
-						{currentDeal.managementCompany || ''}
-						{#if currentDeal.location}&middot; {currentDeal.location}{/if}
+				<div class="swipe-metrics">
+					<div class="metric">
+						<div class="metric-label">Pref Return</div>
+						<div class="metric-value highlight">{fmtPct(currentDeal.preferredReturn)}</div>
 					</div>
-
-					<div class="swipe-metrics">
-						<div class="metric">
-							<div class="metric-label">Pref Return</div>
-							<div class="metric-value highlight">{fmtPct(currentDeal.preferredReturn)}</div>
-						</div>
-						<div class="metric">
-							<div class="metric-label">Minimum</div>
-							<div class="metric-value">{fmtMoney(currentDeal.investmentMinimum)}</div>
-						</div>
-						<div class="metric">
-							<div class="metric-label">Lockup</div>
-							<div class="metric-value">{formatHold(currentDeal.holdPeriod)}</div>
-						</div>
-						<div class="metric">
-							<div class="metric-label">Distribution</div>
-							<div class="metric-value">{formatDist(currentDeal)}</div>
-						</div>
+					<div class="metric">
+						<div class="metric-label">Minimum</div>
+						<div class="metric-value">{fmtMoney(currentDeal.investmentMinimum)}</div>
 					</div>
+					<div class="metric">
+						<div class="metric-label">Lockup</div>
+						<div class="metric-value">{formatHold(currentDeal.holdPeriod)}</div>
+					</div>
+					<div class="metric">
+						<div class="metric-label">Distribution</div>
+						<div class="metric-value">{formatDist(currentDeal)}</div>
+					</div>
+				</div>
 
+				{#if showCompare}
 					<button
 						class="swipe-compare"
 						class:is-selected={compareSet.has(currentDeal.id)}
 						class:is-at-limit={isCompareLimitReached(currentDeal.id)}
-						onclick={() => handleCompareToggle(currentDeal.id)}
+						onclick={(event) => stopPropagation(event, () => handleCompareToggle(currentDeal.id))}
 					>
 						{#if compareSet.has(currentDeal.id)}
 							Remove From Compare
@@ -191,131 +199,67 @@
 							Add To Compare
 						{/if}
 					</button>
+				{/if}
 
-					<div class="swipe-actions">
-						<button class="swipe-action skip" onclick={skipDeal}>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-							Skip
+				<div class="swipe-actions">
+					<button class="swipe-action skip" onclick={(event) => stopPropagation(event, skipDeal)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+							<line x1="18" y1="6" x2="6" y2="18"></line>
+							<line x1="6" y1="6" x2="18" y2="18"></line>
+						</svg>
+						Skip
+					</button>
+					<a href="/deal/{currentDeal.id}" class="swipe-action view" onclick={(event) => stopPropagation(event)}>
+						View Deal
+					</a>
+					{#if canShare()}
+						<button
+							class="swipe-action share"
+							onclick={(event) => stopPropagation(event, () => handleShare(currentDeal))}
+							aria-label="Share deal"
+						>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+								<circle cx="18" cy="5" r="3"></circle>
+								<circle cx="6" cy="12" r="3"></circle>
+								<circle cx="18" cy="19" r="3"></circle>
+								<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+								<line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+							</svg>
+							Share
 						</button>
-						<a href="/deal/{currentDeal.id}" class="swipe-action view">
-							View Deal
-						</a>
-						{#if canShare()}
-							<button class="swipe-action share" onclick={() => handleShare(currentDeal)} aria-label="Share deal">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-									<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-									<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-								</svg>
-								Share
-							</button>
-						{/if}
-						<button class="swipe-action save" onclick={saveDeal}>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-							Save
-						</button>
-					</div>
+					{/if}
+					<button class="swipe-action save" onclick={(event) => stopPropagation(event, saveDeal)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+							<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+						</svg>
+						Save
+					</button>
 				</div>
 			</div>
+		</div>
 
-			<div class="swipe-nav">
-				<button class="nav-arrow" onclick={prevCard} disabled={currentIndex === 0}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
-				</button>
-				<button class="nav-arrow" onclick={nextCard} disabled={currentIndex >= deals.length - 1}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="9 18 15 12 9 6"/></svg>
-				</button>
-			</div>
-		{/if}
-	</div>
-{:else}
-	<!-- Feed (mini card grid) View -->
-	<div class="feed-grid">
-		{#each deals as deal (deal.id)}
-			{@const hero = getHero(deal)}
-			{@const heroImg = getHeroImage(deal)}
-			<div class="feed-card">
-				<a href="/deal/{deal.id}" class="feed-link">
-					<div class="feed-hero" style="background:{heroImg ? `linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.4) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}">
-						<span class="feed-badge">{deal.assetClass || 'Real Estate'}</span>
-						{#if deal.targetIRR}
-							<span class="feed-irr">{fmtPct(deal.targetIRR)} IRR</span>
-						{/if}
-					</div>
-					<div class="feed-info">
-						<div class="feed-title">{deal.investmentName}</div>
-						<div class="feed-manager">{deal.managementCompany || ''}</div>
-						<div class="feed-stats">
-							{#if deal.preferredReturn}<span>{fmtPct(deal.preferredReturn)} pref</span>{/if}
-							{#if deal.investmentMinimum}<span>{fmtMoney(deal.investmentMinimum)} min</span>{/if}
-						</div>
-					</div>
-				</a>
-				<button
-					class="feed-compare"
-					class:is-selected={compareSet.has(deal.id)}
-					class:is-at-limit={isCompareLimitReached(deal.id)}
-					onclick={() => handleCompareToggle(deal.id)}
-				>
-					{#if compareSet.has(deal.id)}
-						Remove Compare
-					{:else if isCompareLimitReached(deal.id)}
-						Compare Full
-					{:else}
-						+ Compare
-					{/if}
-				</button>
-			</div>
-		{/each}
-	</div>
-{/if}
+		<div class="swipe-nav">
+			<button class="nav-arrow" onclick={prevCard} disabled={currentIndex === 0} aria-label="Previous deal">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+					<polyline points="15 18 9 12 15 6"></polyline>
+				</svg>
+			</button>
+			<div class="swipe-position">{currentIndex + 1} of {deals.length}</div>
+			<button class="nav-arrow" onclick={nextCard} disabled={currentIndex >= deals.length - 1} aria-label="Next deal">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+					<polyline points="9 18 15 12 9 6"></polyline>
+				</svg>
+			</button>
+		</div>
+	{/if}
+</div>
 
 <style>
-	.swipe-toolbar {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		align-items: start;
-		gap: 12px;
-		padding: 4px 0 8px;
-	}
-
-	.swipe-toolbar-copy {
-		min-width: 0;
-	}
-
-	.swipe-toolbar-title {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 800;
-		letter-spacing: 0.4px;
-		text-transform: uppercase;
-		color: var(--text-dark);
-	}
-
-	.swipe-toolbar-subtitle {
-		margin-top: 4px;
-		font-family: var(--font-body);
-		font-size: 12px;
-		line-height: 1.45;
-		color: var(--text-muted);
-	}
-
-	.swipe-mode-toggle {
-		justify-self: end;
-	}
-
-	/* Swipe Card */
 	.swipe-container {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		padding-bottom: 24px;
-	}
-
-	.swipe-counter {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		color: var(--text-muted);
-		margin-bottom: 8px;
 	}
 
 	.swipe-card {
@@ -325,7 +269,15 @@
 		overflow: hidden;
 		max-width: 380px;
 		width: 100%;
-		box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+		cursor: pointer;
+		outline: none;
+		transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+	}
+
+	.swipe-card:focus-visible {
+		border-color: var(--primary);
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12), 0 4px 20px rgba(0, 0, 0, 0.08);
 	}
 
 	.swipe-hero {
@@ -337,9 +289,14 @@
 		padding: 12px;
 	}
 
-	.swipe-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+	.swipe-badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+
 	.badge {
-		background: rgba(0,0,0,0.4);
+		background: rgba(0, 0, 0, 0.4);
 		backdrop-filter: blur(8px);
 		color: #fff;
 		font-family: var(--font-ui);
@@ -365,6 +322,7 @@
 		right: 12px;
 		text-align: right;
 	}
+
 	.irr-value {
 		display: block;
 		font-family: var(--font-ui);
@@ -373,14 +331,17 @@
 		color: #fff;
 		line-height: 1;
 	}
+
 	.irr-label {
 		font-family: var(--font-ui);
 		font-size: 9px;
-		color: rgba(255,255,255,0.7);
+		color: rgba(255, 255, 255, 0.7);
 		text-transform: uppercase;
 	}
 
-	.swipe-body { padding: 16px; }
+	.swipe-body {
+		padding: 16px;
+	}
 
 	.swipe-title {
 		font-family: var(--font-ui);
@@ -403,6 +364,7 @@
 		gap: 10px;
 		margin-bottom: 16px;
 	}
+
 	.metric-label {
 		font-family: var(--font-ui);
 		font-size: 9px;
@@ -412,13 +374,17 @@
 		color: var(--text-muted);
 		margin-bottom: 2px;
 	}
+
 	.metric-value {
 		font-family: var(--font-ui);
 		font-size: 14px;
 		font-weight: 700;
 		color: var(--text-dark);
 	}
-	.metric-value.highlight { color: var(--primary); }
+
+	.metric-value.highlight {
+		color: var(--primary);
+	}
 
 	.swipe-compare {
 		width: 100%;
@@ -452,6 +418,7 @@
 		display: flex;
 		gap: 8px;
 	}
+
 	.swipe-action {
 		flex: 1;
 		display: flex;
@@ -470,34 +437,34 @@
 		text-decoration: none;
 		transition: all 0.15s;
 	}
-	.swipe-action.skip:hover { border-color: var(--red, #e74c3c); color: var(--red, #e74c3c); }
-	.swipe-action.save { background: var(--primary); color: #fff; border-color: var(--primary); }
-	.swipe-action.view { border-color: var(--primary); color: var(--primary); }
+
+	.swipe-action.skip:hover {
+		border-color: var(--red, #e74c3c);
+		color: var(--red, #e74c3c);
+	}
+
+	.swipe-action.save {
+		background: var(--primary);
+		color: #fff;
+		border-color: var(--primary);
+	}
+
+	.swipe-action.view {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
 	.swipe-action.share {
 		flex: 0 0 88px;
 	}
 
-	@media (min-width: 769px) and (max-width: 1024px) {
-		.swipe-card {
-			max-width: 480px;
-		}
-	}
-
-	@media (max-width: 520px) {
-		.swipe-toolbar {
-			grid-template-columns: 1fr;
-		}
-
-		.swipe-mode-toggle {
-			justify-self: stretch;
-		}
-	}
-
 	.swipe-nav {
 		display: flex;
+		align-items: center;
 		gap: 16px;
 		margin-top: 16px;
 	}
+
 	.nav-arrow {
 		width: 40px;
 		height: 40px;
@@ -511,125 +478,53 @@
 		color: var(--text-secondary);
 		transition: all 0.15s;
 	}
-	.nav-arrow:disabled { opacity: 0.3; cursor: default; }
-	.nav-arrow:not(:disabled):hover { border-color: var(--primary); color: var(--primary); }
+
+	.nav-arrow:disabled {
+		opacity: 0.3;
+		cursor: default;
+	}
+
+	.nav-arrow:not(:disabled):hover {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
+	.swipe-position {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-muted);
+		min-width: 64px;
+		text-align: center;
+	}
 
 	.swipe-empty {
 		text-align: center;
 		padding: 60px 20px;
 	}
-	.swipe-empty-icon { font-size: 40px; margin-bottom: 12px; }
-	.swipe-empty-text { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); }
-	.swipe-empty-sub { font-family: var(--font-ui); font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
-	/* Feed Grid */
-	.feed-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 10px;
-		padding-bottom: 24px;
+	.swipe-empty-icon {
+		font-size: 40px;
+		margin-bottom: 12px;
 	}
 
-	.feed-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border-light);
-		border-radius: 10px;
-		overflow: hidden;
-	}
-
-	.feed-card.is-selected {
-		border-color: rgba(81, 190, 123, 0.34);
-		box-shadow: 0 0 0 2px rgba(81, 190, 123, 0.1);
-	}
-
-	.feed-link {
-		display: block;
-		text-decoration: none;
-		color: inherit;
-	}
-
-	.feed-hero {
-		height: 56px;
-		display: flex;
-		align-items: flex-end;
-		justify-content: space-between;
-		padding: 6px 8px;
-	}
-
-	.feed-badge {
-		background: rgba(0,0,0,0.4);
-		color: #fff;
+	.swipe-empty-text {
 		font-family: var(--font-ui);
-		font-size: 8px;
-		font-weight: 700;
-		text-transform: uppercase;
-		padding: 2px 6px;
-		border-radius: 3px;
-	}
-
-	.feed-irr {
-		color: #fff;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 800;
-	}
-
-	.feed-info { padding: 8px; }
-
-	.feed-title {
-		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 16px;
 		font-weight: 700;
 		color: var(--text-dark);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
-	.feed-manager {
+	.swipe-empty-sub {
 		font-family: var(--font-ui);
-		font-size: 10px;
+		font-size: 13px;
 		color: var(--text-muted);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		margin-bottom: 4px;
+		margin-top: 4px;
 	}
 
-	.feed-stats {
-		display: flex;
-		gap: 8px;
-		font-family: var(--font-ui);
-		font-size: 10px;
-		color: var(--text-secondary);
-		font-weight: 600;
-	}
-
-	.feed-compare {
-		width: calc(100% - 16px);
-		margin: 0 8px 8px;
-		padding: 8px 10px;
-		border-radius: 8px;
-		border: 1px solid var(--border);
-		background: transparent;
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		letter-spacing: 0.4px;
-		text-transform: uppercase;
-		color: var(--text-secondary);
-		cursor: pointer;
-	}
-
-	.feed-compare.is-selected {
-		background: rgba(81, 190, 123, 0.12);
-		border-color: rgba(81, 190, 123, 0.34);
-		color: var(--primary);
-	}
-
-	.feed-compare.is-at-limit {
-		background: rgba(245, 158, 11, 0.08);
-		border-color: rgba(245, 158, 11, 0.25);
-		color: #b7791f;
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.swipe-card {
+			max-width: 480px;
+		}
 	}
 </style>

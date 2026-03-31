@@ -8,7 +8,6 @@
 	import RequestIntroductionModal from '$lib/components/RequestIntroductionModal.svelte';
 	import SwipeFeed from '$lib/components/SwipeFeed.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
-	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import {
 		dealStages,
 		compareDealIds,
@@ -25,7 +24,7 @@
 		MAX_COMPARE_DEALS,
 		STAGE_META
 	} from '$lib/stores/deals.js';
-	import { accessTier, getStoredSessionUser, isAdmin } from '$lib/stores/auth.js';
+	import { accessTier, getStoredSessionUser } from '$lib/stores/auth.js';
 	import {
 		buildDealCardFooterAnalyticsPayload,
 		buildDealCardUtilityAnalyticsPayload,
@@ -66,14 +65,11 @@
 
 	let dailyDealCount = $state(0);
 	let showLimitModal = $state(false);
-	let resetTimerLabel = $state('Resets at midnight');
 	const DAILY_LIMIT = 20;
 	const nativeCompanionMode = browser && isNativeApp();
 	const todayKey = $derived(browser ? `gycDailyDeals_${new Date().toISOString().slice(0, 10)}` : '');
 	const isFreeUser = $derived($accessTier === 'free');
 	const dealsRemaining = $derived(Math.max(0, DAILY_LIMIT - dailyDealCount));
-	const dailyViewsPct = $derived(Math.round((dealsRemaining / DAILY_LIMIT) * 100));
-	const dailyViewsColor = $derived(dealsRemaining <= 5 ? '#e74c3c' : dealsRemaining <= 10 ? '#f59e0b' : 'var(--primary)');
 
 	let search = $state('');
 	let assetClass = $state('');
@@ -95,17 +91,6 @@
 		if (!browser) return;
 		const stored = readUserScopedJson(todayKey, []);
 		dailyDealCount = stored.length;
-	}
-
-	function updateResetTimer() {
-		if (!browser) return;
-		const now = new Date();
-		const midnight = new Date(now);
-		midnight.setHours(24, 0, 0, 0);
-		const diff = midnight - now;
-		const hrs = Math.floor(diff / 3600000);
-		const mins = Math.floor((diff % 3600000) / 60000);
-		resetTimerLabel = `Resets in ${hrs}h ${mins}m`;
 	}
 
 	function trackDealView(dealId) {
@@ -457,22 +442,35 @@
 		Object.fromEntries(compareSelectedDeals.map((deal) => [deal.id, getComparePlanFit(deal)]))
 	);
 	const totalMatchingDeals = $derived($memberDealsMeta.total || filteredDeals.length);
-	const avgIRR = $derived.by(() => {
-		const withIRR = filteredDeals.filter((deal) => deal.targetIRR);
-		if (withIRR.length === 0) return '0';
-		return (withIRR.reduce((sum, deal) => sum + deal.targetIRR, 0) / withIRR.length * 100).toFixed(1);
-	});
 
 	const stageDescriptions = {
-		filter: { title: 'Filter', text: 'Browse vetted opportunities. Move a deal to Review when it deserves more attention, or skip it if it does not fit.', color: 'var(--primary)' },
-		review: { title: 'Review', text: 'Read the deck, explore the deal page, and work through the checklist. Understand this deal before reaching out.', color: '#3b82f6' },
-		connect: { title: 'Connect', text: "Time to talk to the operator. Request an intro and we'll connect you via email. Ask your questions, fill in the gaps.", color: '#f97316' },
-		decide: { title: 'Decide', text: 'Compare deals side by side. Ready to commit? Wire the money and mark it as Invested.', color: '#a855f7' },
-		invested: { title: 'Invested', text: "Deals you've committed capital to. Track distributions, K-1s, and hold periods.", color: '#059669' },
-		skipped: { title: 'Skipped', text: "Deals you decided weren't right for you. You can always reconsider later.", color: 'var(--text-muted)' }
+		filter: {
+			title: 'Filter',
+			text: 'Browse new opportunities. Move strong deals to Review, or skip what does not fit.'
+		},
+		review: {
+			title: 'Review',
+			text: 'Take a closer look at shortlisted deals. Move the strongest ones forward.'
+		},
+		connect: {
+			title: 'Connect',
+			text: 'Connect with the operator and collect the details you need to move forward.'
+		},
+		decide: {
+			title: 'Decide',
+			text: 'Compare deals and decide which ones to invest in.'
+		},
+		invested: {
+			title: 'Invested',
+			text: 'Track the deals you’ve invested in and keep your portfolio organized.'
+		},
+		skipped: {
+			title: 'Skipped',
+			text: 'Keep track of deals you skipped without cluttering your active pipeline.'
+		}
 	};
 	const currentStageContent = $derived(stageDescriptions[currentTab] || stageDescriptions.filter);
-	const showSwipeFeed = $derived(isMobile && currentTab === 'filter' && $dealFlowViewMode === 'grid');
+	const showSwipeFeed = $derived(isMobile && currentTab === 'filter');
 
 	function clearFilters() {
 		search = '';
@@ -487,6 +485,20 @@
 		sortBy = 'newest';
 		showArchived = false;
 		buyBoxApplied = false;
+	}
+
+	function handleFilterChange({ field: key, value: val }) {
+		if (key === 'search') search = val;
+		else if (key === 'assetClass') assetClass = val;
+		else if (key === 'dealType') dealType = val;
+		else if (key === 'strategy') strategy = val;
+		else if (key === 'status') status = val;
+		else if (key === 'maxInvest') maxInvest = val;
+		else if (key === 'maxLockup') maxLockup = val;
+		else if (key === 'distributions') distributions = val;
+		else if (key === 'minIRR') minIRR = val;
+		else if (key === 'sortBy') sortBy = val;
+		else if (key === 'showArchived') showArchived = val;
 	}
 
 	function handleCompareToggle(dealId) {
@@ -663,6 +675,12 @@
 	});
 
 	$effect(() => {
+		if (isMobile && $dealFlowViewMode !== 'grid') {
+			dealFlowViewMode.set('grid');
+		}
+	});
+
+	$effect(() => {
 		if (!browser || !filtersReady) return;
 
 		const request = {
@@ -698,18 +716,15 @@
 		loadBuyBox();
 		applyLocationFilters();
 		loadDailyCount();
-		updateResetTimer();
 		filtersReady = true;
 
 		if (browser) {
 			isMobile = window.innerWidth <= 768;
 			const handler = () => { isMobile = window.innerWidth <= 768; };
-			const timer = window.setInterval(updateResetTimer, 60000);
 			window.addEventListener('resize', handler);
 			return () => {
 				if (pageNoticeTimer) window.clearTimeout(pageNoticeTimer);
 				window.removeEventListener('resize', handler);
-				window.clearInterval(timer);
 			};
 		}
 	});
@@ -717,80 +732,102 @@
 
 <svelte:head><title>Deal Flow | GYC</title></svelte:head>
 
-	<PageContainer className="deals-page">
-		<div class="deals-shell ly-page-stack">
-			<div class="deals-top">
-				<PageHeader title="Deal Flow" className="deals-page-header">
-					<div slot="actions">
-						<div class="view-toggle">
-							<button class="view-btn" class:active={$dealFlowViewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-						</button>
-						<button class="view-btn" class:active={$dealFlowViewMode === 'compare'} onclick={() => switchView('compare')} title="Compare view">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-								<rect x="3" y="5" width="7" height="14" rx="1.5"></rect>
-								<rect x="14" y="5" width="7" height="14" rx="1.5"></rect>
-								<line x1="12" y1="3.5" x2="12" y2="20.5"></line>
-							</svg>
-						</button>
-							<button class="view-btn" class:active={$dealFlowViewMode === 'location'} onclick={() => switchView('location')} title="Location view">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+<PageContainer className="deals-page">
+	<div class="deals-shell ly-page-stack">
+		<div class="deals-top">
+			{#if isMobile}
+				<div class="mobile-toolbar">
+					<div class="mobile-pipeline-row">
+						<div class="mobile-pipeline-label">Pipeline</div>
+						<div class="mobile-pipeline-control">
+							<PipelineTabs
+								{currentTab}
+								counts={$stageCounts}
+								onswitch={switchTab}
+								mobileCountStyle="inline"
+							/>
+						</div>
+					</div>
+
+					<div class="deals-filters" bind:this={filterAnchor}>
+						<FilterBar
+							{search}
+							{assetClass}
+							{dealType}
+							{strategy}
+							{status}
+							{maxInvest}
+							{maxLockup}
+							{distributions}
+							{minIRR}
+							{sortBy}
+							{showArchived}
+							{buyBoxApplied}
+							onchange={handleFilterChange}
+							onclear={clearFilters}
+							ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
+						/>
+					</div>
+
+					<div class="mobile-stage-helper">{currentStageContent.text}</div>
+				</div>
+			{:else}
+				<div class="desktop-toolbar">
+					<div class="desktop-toolbar-row desktop-toolbar-row-primary">
+						<div class="toolbar-stage-tabs">
+							<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
+						</div>
+
+						<div class="view-toggle" role="tablist" aria-label="Deal Flow view mode">
+							<button
+								class="view-btn"
+								class:active={$dealFlowViewMode === 'grid'}
+								onclick={() => switchView('grid')}
+								title="Grid view"
+							>
+								Grid
+							</button>
+							<button
+								class="view-btn"
+								class:active={$dealFlowViewMode === 'compare'}
+								onclick={() => switchView('compare')}
+								title="Compare view"
+							>
+								Compare
+							</button>
+							<button
+								class="view-btn"
+								class:active={$dealFlowViewMode === 'location'}
+								onclick={() => switchView('location')}
+								title="Map view"
+							>
+								Map
 							</button>
 						</div>
 					</div>
-					<div slot="secondaryRow" class="header-row">
-						<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
+
+					<div class="desktop-toolbar-row desktop-toolbar-row-secondary deals-filters" bind:this={filterAnchor}>
+						<FilterBar
+							{search}
+							{assetClass}
+							{dealType}
+							{strategy}
+							{status}
+							{maxInvest}
+							{maxLockup}
+							{distributions}
+							{minIRR}
+							{sortBy}
+							{showArchived}
+							{buyBoxApplied}
+							onchange={handleFilterChange}
+							onclear={clearFilters}
+							ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
+						/>
 					</div>
-				</PageHeader>
-
-				<div class="deals-filters" bind:this={filterAnchor}>
-					<FilterBar
-					{search} {assetClass} {dealType} {strategy} {status} {maxInvest} {maxLockup}
-					{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
-					totalDeals={totalMatchingDeals} avgIRR={avgIRR}
-					isAdmin={$isAdmin}
-					onadddeal={() => {
-						if (browser) window.location.href = '/app/admin/manage';
-					}}
-					onchange={({ field: key, value: val }) => {
-						if (key === 'search') search = val;
-						else if (key === 'assetClass') assetClass = val;
-						else if (key === 'dealType') dealType = val;
-						else if (key === 'strategy') strategy = val;
-						else if (key === 'status') status = val;
-						else if (key === 'maxInvest') maxInvest = val;
-						else if (key === 'maxLockup') maxLockup = val;
-						else if (key === 'distributions') distributions = val;
-						else if (key === 'minIRR') minIRR = val;
-						else if (key === 'sortBy') sortBy = val;
-						else if (key === 'showArchived') showArchived = val;
-					}}
-					onclear={clearFilters}
-					ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
-				/>
-			</div>
+				</div>
+			{/if}
 		</div>
-
-		{#if !showSwipeFeed}
-			<div class="stage-banner" style="border-left-color:{currentStageContent.color}">
-				<div class="stage-copy">
-					<span class="stage-title">{currentStageContent.title}</span>
-					<span class="stage-desc">{currentStageContent.text}</span>
-				</div>
-			</div>
-		{/if}
-
-		{#if isFreeUser && !showSwipeFeed}
-			<div class="daily-views">
-				<div class="daily-views-head">
-					<span class="daily-views-text">{dealsRemaining}/{DAILY_LIMIT} deal views left today</span>
-					<span class="daily-views-timer">{resetTimerLabel}</span>
-				</div>
-				<div class="daily-views-track">
-					<div class="daily-views-fill" style="width:{dailyViewsPct}%; background:{dailyViewsColor};"></div>
-				</div>
-			</div>
-		{/if}
 
 		{#if pageNoticeVisible}
 			<div class="compare-notice" role="status">{pageNotice}</div>
@@ -817,7 +854,7 @@
 			<div class="empty-desc">{$memberDealsError}</div>
 			<button class="btn-browse" onclick={() => fetchMemberDeals($memberDealsMeta.filters || {}).catch(() => {})}>Try Again</button>
 		</div>
-	{:else if $dealFlowViewMode === 'compare'}
+	{:else if !isMobile && $dealFlowViewMode === 'compare'}
 		<div class="compare-mode-layout">
 			<CompareView
 				deals={compareSelectedDeals}
@@ -911,7 +948,7 @@
 				{/if}
 			</div>
 		</div>
-	{:else if $dealFlowViewMode === 'location'}
+	{:else if !isMobile && $dealFlowViewMode === 'location'}
 		<div class="location-mode-layout">
 			<div class="location-map-shell">
 				<div class="location-map-head">
@@ -1127,52 +1164,32 @@
 
 	.deals-top {
 		display: grid;
-		gap: 8px;
+		gap: 12px;
 		min-width: 0;
 	}
 
-	:global(.deals-page-header) {
+	.desktop-toolbar,
+	.mobile-toolbar {
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr) auto;
-		grid-template-areas: 'title tabs toggles';
-		align-items: center;
-		gap: 12px 16px;
-		margin-bottom: 0;
-	}
-
-	:global(.deals-page-header .ly-page-header-main) {
-		display: contents;
-	}
-
-	:global(.deals-page-header .ly-page-header-copy) {
-		grid-area: title;
+		gap: 12px;
 		min-width: 0;
 	}
 
-	:global(.deals-page-header .ly-page-header-title) {
-		white-space: nowrap;
-	}
-
-	:global(.deals-page-header .ly-page-header-actions) {
-		grid-area: toggles;
-		align-items: center;
-		justify-content: flex-end;
-	}
-
-	:global(.deals-page-header .ly-page-header-secondary) {
-		grid-area: tabs;
-		min-width: 0;
-	}
-
-	.header-row {
+	.desktop-toolbar-row {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
 		min-width: 0;
-		width: 100%;
 	}
 
-	.header-row > * {
+	.desktop-toolbar-row-secondary {
+		display: block;
+	}
+
+	.toolbar-stage-tabs {
 		min-width: 0;
+		flex: 1 1 auto;
 	}
 
 	:global(.pipeline-tabs.ly-desktop-only) {
@@ -1185,101 +1202,76 @@
 	}
 
 	.view-toggle {
-		display: flex;
+		display: inline-flex;
+		align-items: center;
 		gap: 2px;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
-		border-radius: 8px;
-		padding: 3px;
+		border-radius: 10px;
+		padding: 4px;
 		flex-shrink: 0;
 	}
 
 	.view-btn {
-		padding: 6px 10px;
+		min-width: 78px;
+		height: 36px;
+		padding: 0 14px;
 		border: none;
 		background: none;
-		border-radius: 5px;
+		border-radius: 8px;
 		cursor: pointer;
 		color: var(--text-muted);
-		transition: all 0.15s;
-		display: flex;
+		transition: all 0.15s ease;
+		display: inline-flex;
 		align-items: center;
-		gap: 6px;
-	}
-
-	.view-btn:hover { color: var(--text-dark); }
-	.view-btn.active { background: var(--primary); color: #fff; }
-
-	.stage-banner {
-		padding: 12px 16px;
-		margin: 0;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		border-left: 3px solid var(--primary);
-	}
-
-	.stage-copy {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		flex-wrap: wrap;
-	}
-
-	.stage-title {
+		justify-content: center;
 		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-
-	.stage-desc {
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-secondary);
-		line-height: 1.5;
-	}
-
-	.daily-views {
-		margin-bottom: 0;
-		padding: 9px 14px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		font-family: var(--font-ui);
-	}
-
-	.daily-views-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 6px;
-		gap: 12px;
-	}
-
-	.daily-views-text {
 		font-size: 12px;
-		font-weight: 600;
-		color: var(--text-secondary);
-	}
-
-	.daily-views-timer {
-		font-size: 11px;
-		color: var(--text-muted);
+		font-weight: 700;
 		white-space: nowrap;
 	}
 
-	.daily-views-track {
-		height: 4px;
-		background: var(--border-light);
-		border-radius: 2px;
-		overflow: hidden;
+	.view-btn:hover {
+		color: var(--text-dark);
 	}
 
-	.daily-views-fill {
-		height: 100%;
-		border-radius: 2px;
-		transition: width 0.5s ease, background 0.3s ease;
+	.view-btn.active {
+		background: var(--primary);
+		color: #fff;
+	}
+
+	.mobile-toolbar {
+		gap: 10px;
+	}
+
+	.mobile-pipeline-row {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: center;
+		gap: 12px;
+	}
+
+	.mobile-pipeline-label {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 800;
+		color: var(--text-dark);
+		text-transform: uppercase;
+		letter-spacing: 0.32px;
+	}
+
+	.mobile-pipeline-control {
+		display: flex;
+		justify-content: flex-end;
+		min-width: 0;
+	}
+
+	.mobile-stage-helper {
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.45;
+		color: var(--text-secondary);
+		padding: 0 2px;
 	}
 
 	.compare-notice {
@@ -1514,6 +1506,15 @@
 		.deals-grid,
 		.skeleton-grid { --ly-grid-gap: 16px; }
 
+		.desktop-toolbar-row {
+			gap: 14px;
+		}
+
+		.view-btn {
+			min-width: 72px;
+			padding-inline: 12px;
+		}
+
 		.compare-grid-shell {
 			padding: 16px;
 		}
@@ -1536,28 +1537,23 @@
 			gap: 8px;
 		}
 
-		:global(.deals-page-header) {
-			grid-template-columns: minmax(0, 1fr) auto;
-			grid-template-areas:
-				'title toggles'
-				'tabs tabs';
-			gap: 8px 12px;
+		.mobile-toolbar {
+			gap: 8px;
 		}
 
-		:global(.deals-page-header .ly-page-header-title) {
-			font-size: 20px;
+		.mobile-pipeline-row {
+			gap: 10px;
 		}
 
-		:global(.deals-page-header .ly-page-header-actions) {
-			margin-left: 0;
+		.mobile-pipeline-label {
+			font-size: 12px;
 		}
 
-		.stage-banner {
-			padding: 10px 14px;
+		.mobile-stage-helper {
+			font-size: 12px;
+			line-height: 1.4;
 		}
-		.stage-copy { display: block; }
-		.stage-desc { display: block; margin-top: 4px; }
-		.daily-views { display: none; }
+
 		.compare-grid-head {
 			flex-direction: column;
 			align-items: stretch;

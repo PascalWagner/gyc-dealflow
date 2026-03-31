@@ -4,8 +4,12 @@
 	import { browser } from '$app/environment';
 	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
 	import { user } from '$lib/stores/auth.js';
+	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import { getUserScopedCacheSnapshot } from '$lib/utils/userScopedState.js';
+
+	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
 	// Local state
 	let portfolio = $state([]);
@@ -16,14 +20,15 @@
 
 	// Derived
 	const branch = $derived(wizardData._branch || '');
-	const hasOnboarding = $derived(!!branch || (goals && goals.targetIncome > 0));
+	const hasGoals = $derived(Boolean(goals && goals.targetIncome > 0));
+	const hasGoalContext = $derived(Boolean(branch) || hasGoals);
+	const hasCompletedDashboardPlan = $derived.by(() => hasCompletedPlan(wizardData || {}, portfolioPlan));
 
 	const totalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
 	const totalDistributions = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0));
 	const activeInvestments = $derived(portfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length);
 
 	// Goal progress
-	const hasGoals = $derived(goals && goals.targetIncome > 0);
 	const targetIncome = $derived(hasGoals ? goals.targetIncome : 0);
 
 	const currentIncome = $derived.by(() => {
@@ -90,12 +95,12 @@
 	// Slot progress
 	const planSlots = $derived(portfolioPlan && (portfolioPlan.slots || portfolioPlan.buckets));
 	const filledCount = $derived(planSlots ? planSlots.filter(s => s.filled_by).length : 0);
+	const hasPlanBlueprint = $derived.by(() => Array.isArray(planSlots) && planSlots.some((slot) => slot?.asset_class));
 	const slotLine = $derived(
-		planSlots && planSlots.length > 0 && planSlots[0]?.asset_class
+		hasPlanBlueprint
 			? ` · ${filledCount} of ${planSlots.length} investments made`
 			: ''
 	);
-	const hasPlan = $derived(!!(planSlots && planSlots.length > 0 && planSlots[0]?.asset_class));
 	const totalPlanSlots = $derived(planSlots?.length || 0);
 	const filledPlanSlots = $derived.by(() => (planSlots || []).filter(slot => slot.filled_by));
 	const totalPlanIncome = $derived.by(() => (planSlots || []).reduce((sum, slot) => sum + (slot.est_income || 0), 0));
@@ -116,8 +121,6 @@
 	});
 	const nextPlanSlot = $derived.by(() => (planSlots || []).find(slot => !slot.filled_by) || null);
 	const planCheckSize = $derived(portfolioPlan?.check_size || nextPlanSlot?.check_size || wizardData.checkSize || 100000);
-
-	const dealsReviewed = $derived(Object.keys($dealStages).length);
 
 	// Action items
 	function assetKey(value) {
@@ -153,7 +156,7 @@
 		const portfolioDealIds = portfolio.map((investment) => investment.dealId).filter(Boolean);
 		const unloggedInvested = investedDealIds.filter((id) => !portfolioDealIds.includes(id));
 
-		if (hasPlan && filledCount > 0 && nextPlanSlot) {
+		if (hasPlanBlueprint && filledCount > 0 && nextPlanSlot) {
 			items.push({
 				icon: 'plan',
 				text: `<strong>${filledCount} of ${totalPlanSlots}</strong> plan slots filled. Next: <strong>${nextPlanSlot.asset_class}</strong> at ${fmtDollar(nextPlanSlot.check_size)}`,
@@ -204,7 +207,7 @@
 				}
 			}
 		}
-		if (items.length === 0 && !hasPlan && portfolio.length === 0 && $deals.length > 0) {
+		if (items.length === 0 && !hasCompletedDashboardPlan && portfolio.length === 0 && $deals.length > 0) {
 			items.push({
 				icon: 'browse',
 				text: `Browse <strong>${$deals.length} deals</strong> and start building your pipeline`,
@@ -235,16 +238,29 @@
 	}
 
 	function openWizard() {
-		goto(hasPlan ? '/app/plan?edit=1' : '/onboarding/plan');
+		goto(hasCompletedDashboardPlan ? '/app/plan?edit=1' : '/onboarding/plan');
+	}
+
+	function syncDashboardState() {
+		if (!browser) return;
+		const snapshot = getUserScopedCacheSnapshot();
+		portfolio = snapshot.portfolio;
+		wizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
+		goals = snapshot.goals;
+		distributions = snapshot.distributions;
+		portfolioPlan = snapshot.portfolioPlan;
 	}
 
 	onMount(() => {
 		if (!browser) return;
-		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
-		wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-		goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-		distributions = JSON.parse(localStorage.getItem('gycDistributions') || '[]');
-		portfolioPlan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+		syncDashboardState();
+		const handleScopedStateUpdate = () => {
+			syncDashboardState();
+		};
+		window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
+		return () => {
+			window.removeEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
+		};
 	});
 
 	onMount(() => {
@@ -262,7 +278,7 @@
 	</PageHeader>
 
 	<div class="content-area">
-		{#if !hasOnboarding && dealsReviewed === 0 && portfolio.length === 0}
+		{#if !hasGoalContext && !hasCompletedDashboardPlan}
 			<div class="dashboard-onboarding-card">
 				<div class="dashboard-onboarding-icon">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
@@ -276,7 +292,7 @@
 			</div>
 		{:else}
 		<!-- Hero Progress Card -->
-		{#if hasOnboarding}
+		{#if hasGoalContext}
 			<div class="dash-hero">
 				<div class="dash-hero-label">{goalLabel}</div>
 				<div class="dash-hero-bar" aria-hidden="true">
@@ -288,16 +304,9 @@
 				</div>
 				<div class="dash-hero-stats">{statsLine}{slotLine}</div>
 			</div>
-			{:else}
-				<div class="plan-empty-card">
-					<div class="plan-empty-icon">📋</div>
-					<div class="plan-empty-title">You don't have a plan yet.</div>
-					<div class="plan-empty-copy">Members with a plan deploy an average of $150K in their first 90 days. Takes 3 minutes.</div>
-					<a href="/onboarding/plan" class="btn-primary plan-empty-btn">Build My Plan</a>
-				</div>
 			{/if}
 
-		{#if hasPlan}
+		{#if hasPlanBlueprint}
 			<div class="blueprint-card">
 				<div class="blueprint-header">
 					<div class="blueprint-eyebrow">Your Investment Plan</div>
@@ -344,7 +353,7 @@
 					</div>
 				{/if}
 			</div>
-		{:else if hasOnboarding}
+		{:else if hasGoalContext && !hasCompletedDashboardPlan}
 			<div class="plan-cta-card">
 				<div>
 					<div class="plan-cta-eyebrow">Your Investment Plan</div>
@@ -442,38 +451,6 @@
 	}
 
 	/* ── Empty Plan Card ── */
-	.plan-empty-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 24px 24px;
-		margin-bottom: 20px;
-	}
-	.plan-empty-icon {
-		font-size: 28px;
-		line-height: 1;
-		margin-bottom: 16px;
-	}
-	.plan-empty-title {
-		font-family: var(--font-ui);
-		font-size: 20px;
-		font-weight: 700;
-		color: var(--text-dark);
-		margin-bottom: 8px;
-	}
-	.plan-empty-copy {
-		font-family: var(--font-body);
-		font-size: 14px;
-		line-height: 1.6;
-		color: var(--text-secondary);
-		max-width: 520px;
-	}
-	.plan-empty-btn {
-		display: inline-flex;
-		margin-top: 20px;
-		text-decoration: none;
-	}
-
 	/* ── Hero Progress Card ── */
 	.dash-hero {
 		background: #fff;

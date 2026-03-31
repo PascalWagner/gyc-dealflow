@@ -2,7 +2,12 @@
 	import { PIPELINE_STAGES, OUTCOME_STAGES, STAGE_META } from '$lib/stores/deals.js';
 	import { selectionChanged } from '$lib/utils/haptics.js';
 
-	let { currentTab = 'filter', counts = {}, onswitch = () => {} } = $props();
+	let {
+		currentTab = 'filter',
+		counts = {},
+		onswitch = () => {},
+		mobileCountStyle = 'inline'
+	} = $props();
 
 	const ALL_STAGES = [...PIPELINE_STAGES, ...OUTCOME_STAGES];
 
@@ -22,6 +27,9 @@
 		}
 		return STAGE_META[stage].label;
 	}
+
+	const mobileStageLabel = $derived(STAGE_META[currentTab]?.label || 'Filter');
+	const mobileStageCount = $derived(stageCount(currentTab));
 </script>
 
 <div class="pipeline-tabs ly-desktop-only">
@@ -70,6 +78,17 @@
 				<option value={stage}>{stageLabel(stage, true)}</option>
 			{/each}
 		</select>
+
+		<div class="pipeline-select-display" aria-hidden="true">
+			<span class="pipeline-select-label">{mobileStageLabel}</span>
+			<svg class="pipeline-select-chevron" viewBox="0 0 10 6" fill="none">
+				<path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+			</svg>
+
+			{#if mobileCountStyle === 'inline'}
+				<span class="pipeline-select-count">{mobileStageCount}</span>
+			{/if}
+		</div>
 	</div>
 </div>
 
@@ -161,9 +180,21 @@
 	}
 
 	.pipeline-select {
+		position: absolute;
+		inset: 0;
 		width: 100%;
+		height: 100%;
+		opacity: 0.01;
+		cursor: pointer;
+	}
+
+	.pipeline-select-display {
+		display: inline-flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 8px;
 		min-height: 38px;
-		padding: 0 34px 0 12px;
+		padding: 0 12px;
 		border: 1px solid var(--border);
 		border-radius: 999px;
 		background: var(--bg-card);
@@ -171,12 +202,39 @@
 		font-family: var(--font-ui);
 		font-size: 12px;
 		font-weight: 700;
-		appearance: none;
-		-webkit-appearance: none;
-		background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2394A3B8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-		background-repeat: no-repeat;
-		background-position: right 14px center;
-		cursor: pointer;
+		pointer-events: none;
+		box-sizing: border-box;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.pipeline-select-shell:focus-within .pipeline-select-display {
+		border-color: var(--primary);
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12);
+	}
+
+	.pipeline-select-label {
+		white-space: nowrap;
+	}
+
+	.pipeline-select-chevron {
+		width: 10px;
+		height: 6px;
+		color: var(--text-muted);
+		flex-shrink: 0;
+	}
+
+	.pipeline-select-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 22px;
+		height: 22px;
+		padding: 0 6px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.14);
+		font-size: 11px;
+		line-height: 1;
+		color: var(--primary);
 	}
 
 	.sr-only {

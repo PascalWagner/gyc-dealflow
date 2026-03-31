@@ -7,7 +7,7 @@
 //   - Upsert is native (ON CONFLICT)
 //   - ~10x faster response times
 
-import { getUserClient, getAdminClient, verifyAdmin, setCors, ghlFetch } from './_supabase.js';
+import { getUserClient, getAdminClient, verifyAdmin, setCors, ghlFetch, deriveTier } from './_supabase.js';
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -42,6 +42,114 @@ async function findUserIdByEmail(adminClient, email) {
   }
 
   return null;
+}
+
+function displayNameFromEmail(email) {
+  return normalizeEmail(email).split('@')[0] || '';
+}
+
+function adminPayload(req) {
+  return req.method === 'GET' ? (req.query || {}) : (req.body || {});
+}
+
+function isAdminImpersonationRequest(req) {
+  const payload = adminPayload(req);
+  return payload?.admin === true || payload?.admin === 'true';
+}
+
+function adminTargetEmail(req) {
+  return normalizeEmail(adminPayload(req)?.email);
+}
+
+async function lookupGhlContactByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  try {
+    const response = await ghlFetch(
+      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(normalizedEmail)}`
+    );
+    if (!response?.ok) return null;
+    const data = await response.json();
+    const contact = (data.contacts || []).find((entry) => normalizeEmail(entry.email) === normalizedEmail);
+    if (!contact) return null;
+
+    return {
+      id: contact.id || null,
+      email: normalizedEmail,
+      firstName: contact.firstName || '',
+      lastName: contact.lastName || '',
+      fullName: [contact.firstName, contact.lastName].filter(Boolean).join(' ').trim(),
+      tags: Array.isArray(contact.tags) ? contact.tags : []
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function ensureUserForEmail(adminClient, email, { createIfMissing = false } = {}) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  let targetUserId = await findUserIdByEmail(adminClient, normalizedEmail);
+  const ghlContact = await lookupGhlContactByEmail(normalizedEmail);
+
+  if (!targetUserId && createIfMissing) {
+    const fullName = ghlContact?.fullName || displayNameFromEmail(normalizedEmail);
+    const { data, error } = await adminClient.auth.admin.createUser({
+      email: normalizedEmail,
+      email_confirm: true,
+      user_metadata: fullName ? { full_name: fullName } : {}
+    });
+
+    if (error && !error.message?.toLowerCase().includes('already')) {
+      throw error;
+    }
+
+    targetUserId = data?.user?.id || await findUserIdByEmail(adminClient, normalizedEmail);
+  }
+
+  if (!targetUserId) return null;
+
+  const fullName = ghlContact?.fullName || displayNameFromEmail(normalizedEmail);
+  await adminClient.from('user_profiles').upsert({
+    id: targetUserId,
+    email: normalizedEmail,
+    full_name: fullName,
+    tier: deriveTier(ghlContact?.tags || []),
+    is_admin: false,
+    ghl_contact_id: ghlContact?.id || null
+  }, { onConflict: 'id' });
+
+  return {
+    id: targetUserId,
+    email: normalizedEmail,
+    full_name: fullName
+  };
+}
+
+async function resolveWriteContext(req, supabase, user, { createIfMissing = false } = {}) {
+  if (!isAdminImpersonationRequest(req) || !adminTargetEmail(req)) {
+    return { supabase, user };
+  }
+
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) {
+    const error = new Error(auth.error || 'Admin access required');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const adminClient = getAdminClient();
+  const targetUser = await ensureUserForEmail(adminClient, adminTargetEmail(req), { createIfMissing });
+  if (!targetUser) {
+    return { supabase: adminClient, user: { id: null, email: adminTargetEmail(req) } };
+  }
+
+  return {
+    supabase: adminClient,
+    user: targetUser
+  };
 }
 
 const TABLE_MAP = {
@@ -370,6 +478,9 @@ async function handleAdminGet(req, res) {
 
 async function handlePost(req, res, supabase, user) {
   const { type, data } = req.body;
+  const writeContext = await resolveWriteContext(req, supabase, user, { createIfMissing: true });
+  const db = writeContext.supabase;
+  const effectiveUser = writeContext.user;
 
   // Special case: profile updates (user_profiles table)
   if (type === 'profile') {
@@ -386,10 +497,10 @@ async function handlePost(req, res, supabase, user) {
     if (Object.keys(fields).length === 0) {
       return res.status(400).json({ error: 'No valid profile fields to update' });
     }
-    const { data: updated, error } = await supabase
+    const { data: updated, error } = await db
       .from('user_profiles')
       .update(fields)
-      .eq('id', user.id)
+      .eq('id', effectiveUser.id)
       .select()
       .single();
     if (error) throw error;
@@ -399,7 +510,7 @@ async function handlePost(req, res, supabase, user) {
     // Keeping the code in place for when v2 key is available
     if (fields.phone || fields.full_name) {
       try {
-        await syncProfileToGhl(user.email, fields);
+        await syncProfileToGhl(effectiveUser.email, fields);
       } catch (e) {
         console.warn('GHL profile sync failed:', e.message);
       }
@@ -410,10 +521,10 @@ async function handlePost(req, res, supabase, user) {
 
   // Handle auto-renew preference
   if (type === 'autoRenew') {
-    const { data: updated, error } = await supabase
+    const { data: updated, error } = await db
       .from('user_profiles')
       .update({ auto_renew: !!data.autoRenew })
-      .eq('id', user.id)
+      .eq('id', effectiveUser.id)
       .select('auto_renew, email')
       .single();
     if (error) throw error;
@@ -429,10 +540,10 @@ async function handlePost(req, res, supabase, user) {
   // Handle notif_prefs: update user_profiles.notif_frequency + sync GHL tag
   if (type === 'notif_prefs') {
     const freq = data.frequency === 'off' ? 'off' : 'weekly';
-    const { data: updated, error } = await supabase
+    const { data: updated, error } = await db
       .from('user_profiles')
       .update({ notif_frequency: freq })
-      .eq('id', user.id)
+      .eq('id', effectiveUser.id)
       .select('notif_frequency, email')
       .single();
     if (error) throw error;
@@ -454,7 +565,7 @@ async function handlePost(req, res, supabase, user) {
   }
 
   const fields = mapFields(type, data);
-  fields.user_id = user.id;
+  fields.user_id = effectiveUser.id;
 
   let result;
 
@@ -463,7 +574,7 @@ async function handlePost(req, res, supabase, user) {
     if (!fields.deal_id) {
       return res.status(400).json({ error: 'Deal ID is required for stages' });
     }
-    const { data: upserted, error } = await supabase
+    const { data: upserted, error } = await db
       .from(table)
       .upsert(fields, { onConflict: 'user_id,deal_id' })
       .select()
@@ -473,7 +584,7 @@ async function handlePost(req, res, supabase, user) {
 
   } else if (type === 'goals') {
     // Upsert by user_id (one record per user)
-    const { data: upserted, error } = await supabase
+    const { data: upserted, error } = await db
       .from(table)
       .upsert(fields, { onConflict: 'user_id' })
       .select()
@@ -482,7 +593,7 @@ async function handlePost(req, res, supabase, user) {
     result = upserted;
 
     // Background sync to GHL custom fields
-    syncGoalsToGhl(user.email, result).catch(e =>
+    syncGoalsToGhl(effectiveUser.email, result).catch(e =>
       console.warn('GHL goals background sync failed:', e.message)
     );
 
@@ -498,10 +609,10 @@ async function handlePost(req, res, supabase, user) {
       buyBoxSync.goal = result.goal_type;
     }
     if (Object.keys(buyBoxSync).length > 0) {
-      await supabase
+      await db
         .from('user_buy_box')
         .update(buyBoxSync)
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUser.id)
         .then(() => {})
         .catch(e => console.warn('Goals→BuyBox cross-sync failed:', e.message));
     }
@@ -519,7 +630,7 @@ async function handlePost(req, res, supabase, user) {
       buckets: data.buckets || [],
       generated_from: data.generated_from || 'manual'
     };
-    const { data: upserted, error } = await supabase
+    const { data: upserted, error } = await db
       .from('user_portfolio_plans')
       .upsert(planFields, { onConflict: 'user_id' })
       .select()
@@ -531,17 +642,17 @@ async function handlePost(req, res, supabase, user) {
     // portfolio, taxdocs: multiple records. Update if ID provided, create otherwise.
     const recordId = data._recordId;
     if (recordId) {
-      const { data: updated, error } = await supabase
+      const { data: updated, error } = await db
         .from(table)
         .update(fields)
         .eq('id', recordId)
-        .eq('user_id', user.id)  // ensure ownership
+        .eq('user_id', effectiveUser.id)
         .select()
         .single();
       if (error) throw error;
       result = updated;
     } else {
-      const { data: created, error } = await supabase
+      const { data: created, error } = await db
         .from(table)
         .insert(fields)
         .select()
@@ -552,8 +663,8 @@ async function handlePost(req, res, supabase, user) {
 
     // Auto-sync: when a portfolio entry has a deal_id, ensure a pipeline stage exists
     if (type === 'portfolio' && result && result.deal_id) {
-      await supabase.from('user_deal_stages').upsert({
-        user_id: user.id,
+      await db.from('user_deal_stages').upsert({
+        user_id: effectiveUser.id,
         deal_id: result.deal_id,
         stage: 'invested',
         notes: '',
@@ -570,21 +681,40 @@ async function handlePost(req, res, supabase, user) {
 }
 
 async function handleDelete(req, res, supabase, user) {
-  const { type, recordId } = req.body;
+  const { type, recordId, dealId } = req.body;
+  const writeContext = await resolveWriteContext(req, supabase, user, { createIfMissing: false });
+  const db = writeContext.supabase;
+  const effectiveUser = writeContext.user;
   const table = TABLE_MAP[type];
   if (!table) {
     return res.status(400).json({ error: `Invalid type. Must be one of: ${Object.keys(TABLE_MAP).join(', ')}` });
+  }
+  if (type === 'stages' && dealId) {
+    const { error } = await db
+      .from(table)
+      .delete()
+      .eq('deal_id', dealId)
+      .eq('user_id', effectiveUser.id);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      deleted: true,
+      dealId,
+      type,
+      deletedAt: new Date().toISOString()
+    });
   }
   if (!recordId) {
     return res.status(400).json({ error: 'Record ID is required' });
   }
 
   // RLS ensures user can only delete own records
-  const { error } = await supabase
+  const { error } = await db
     .from(table)
     .delete()
     .eq('id', recordId)
-    .eq('user_id', user.id);
+    .eq('user_id', effectiveUser.id);
 
   if (error) throw error;
 
