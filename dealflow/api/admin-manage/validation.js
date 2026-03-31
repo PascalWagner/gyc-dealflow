@@ -72,7 +72,7 @@ export function validateAdminActionInput(action, params) {
         expectEnum(
           params.lifecycleStatus !== undefined ? params.lifecycleStatus : params.lifecycle_status,
           'lifecycleStatus',
-          ['draft', 'in_review', 'published', 'archived']
+          ['draft', 'in_review', 'published', 'do_not_publish', 'archived']
         );
       }
       if (params.isVisibleToUsers !== undefined || params.is_visible_to_users !== undefined) {

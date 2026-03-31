@@ -53,10 +53,10 @@
 	});
 	const dealFilterOptions = $derived.by(() => [
 		{ key: 'all', label: 'All', count: dealWorkflowRows.length },
-		{ key: 'hidden', label: 'Hidden', count: countDealRows(dealWorkflowRows, 'hidden') },
 		{ key: 'draft', label: 'Draft', count: countDealRows(dealWorkflowRows, 'draft') },
 		{ key: 'in_review', label: 'In Review', count: countDealRows(dealWorkflowRows, 'in_review') },
 		{ key: 'published', label: 'Published', count: countDealRows(dealWorkflowRows, 'published') },
+		{ key: 'do_not_publish', label: 'Do Not Publish', count: countDealRows(dealWorkflowRows, 'do_not_publish') },
 		{ key: 'archived', label: 'Archived', count: countDealRows(dealWorkflowRows, 'archived') }
 	]);
 
@@ -328,23 +328,24 @@
 	function computeDealWorkflowStats(rows) {
 		return {
 			totalDeals: rows.length,
-			hidden: rows.filter((row) => row.lifecycleStatus !== 'published').length,
 			draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
 			inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
-			archived: rows.filter((row) => row.lifecycleStatus === 'archived').length,
-			published: rows.filter((row) => row.lifecycleStatus === 'published').length
+			published: rows.filter((row) => row.lifecycleStatus === 'published' && row.catalogState !== 'archived').length,
+			doNotPublish: rows.filter((row) => row.lifecycleStatus === 'do_not_publish').length,
+			archived: rows.filter((row) => row.catalogState === 'archived').length
 		};
 	}
 
 	function matchesDealFilter(row, filterKey) {
 		switch (filterKey) {
-			case 'hidden':
-				return row.lifecycleStatus !== 'published';
 			case 'draft':
 			case 'in_review':
-			case 'published':
-			case 'archived':
+			case 'do_not_publish':
 				return row.lifecycleStatus === filterKey;
+			case 'published':
+				return row.lifecycleStatus === 'published' && row.catalogState !== 'archived';
+			case 'archived':
+				return row.catalogState === 'archived';
 			default:
 				return true;
 		}
@@ -356,7 +357,7 @@
 
 	function lifecycleTone(status) {
 		if (status === 'published') return 'published';
-		if (status === 'archived') return 'archived';
+		if (status === 'do_not_publish') return 'do-not-publish';
 		return 'working';
 	}
 
@@ -427,7 +428,7 @@
 					<div class="queue-banner__eyebrow">Deal QA Work Queue</div>
 					<div class="queue-banner__title">Review imported deals, fill the gaps, then publish only what is trustworthy.</div>
 					<p class="queue-banner__copy">
-						Hidden deals surface first. Use completeness and lifecycle status to move one deal at a time from intake to published.
+						Start new deals in Draft, move active work to In Review, and publish only what belongs in the live catalog.
 					</p>
 				</section>
 
@@ -435,10 +436,6 @@
 					<div class="stat-card">
 						<div class="stat-label">Total Deals</div>
 						<div class="stat-value">{dealStats.totalDeals}</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-label">Hidden</div>
-						<div class="stat-value">{dealStats.hidden}</div>
 					</div>
 					<div class="stat-card">
 						<div class="stat-label">Draft</div>
@@ -451,6 +448,10 @@
 					<div class="stat-card">
 						<div class="stat-label">Published</div>
 						<div class="stat-value">{dealStats.published}</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-label">Do Not Publish</div>
+						<div class="stat-value">{dealStats.doNotPublish}</div>
 					</div>
 					<div class="stat-card">
 						<div class="stat-label">Archived</div>
@@ -539,7 +540,12 @@
 											</td>
 											<td>
 												<div class="lifecycle-cell">
-													<span class={`status-pill tone-${lifecycleTone(row.lifecycleStatus)}`}>{formatLifecycleLabel(row.lifecycleStatus)}</span>
+													<div class="lifecycle-badges">
+														<span class={`status-pill tone-${lifecycleTone(row.lifecycleStatus)}`}>{formatLifecycleLabel(row.lifecycleStatus)}</span>
+														{#if row.catalogState === 'archived'}
+															<span class="status-pill tone-archived">Archived</span>
+														{/if}
+													</div>
 													<select
 														class="lifecycle-select"
 														value={row.lifecycleStatus}
@@ -1037,19 +1043,25 @@
 		min-width: 150px;
 	}
 
+	.lifecycle-badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
 	.status-pill.tone-published {
 		background: rgba(22, 122, 82, 0.12);
 		color: #167a52;
 	}
 
-	.status-pill.tone-approved {
-		background: rgba(214, 140, 69, 0.14);
-		color: #b56f2f;
-	}
-
 	.status-pill.tone-working {
 		background: rgba(31, 81, 89, 0.1);
 		color: #1f5159;
+	}
+
+	.status-pill.tone-do-not-publish {
+		background: rgba(194, 65, 68, 0.14);
+		color: #b42328;
 	}
 
 	.status-pill.tone-archived {

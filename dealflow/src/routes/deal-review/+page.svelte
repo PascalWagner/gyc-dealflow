@@ -24,9 +24,10 @@
 	} from '$lib/utils/dealReviewSchema.js';
 	import {
 		computeDealCompleteness,
+		DEAL_CATALOG_STATE_LABELS,
 		DEAL_LIFECYCLE_LABELS,
+		resolveDealCatalogState,
 		resolveDealLifecycleStatus,
-		resolveDealVisibility,
 		slugify
 	} from '$lib/utils/dealWorkflow.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
@@ -39,7 +40,7 @@
 
 	function lifecycleTone(status) {
 		if (status === 'published') return 'published';
-		if (status === 'archived') return 'archived';
+		if (status === 'do_not_publish') return 'do-not-publish';
 		return 'working';
 	}
 
@@ -74,7 +75,7 @@
 	const cameFromQueue = $derived($page.url.searchParams.get('from') === 'queue');
 	const completeness = $derived(computeDealCompleteness(buildDealReviewCompletenessModel(form, deal)));
 	const lifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
-	const isVisibleToUsers = $derived(resolveDealVisibility(deal || {}));
+	const catalogState = $derived(resolveDealCatalogState(deal || {}));
 	const canPublishFromQueue = $derived(!completeness.hasBlockingIssues);
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
@@ -795,7 +796,7 @@
 						</div>
 						<div class="sidebar-block">
 							<div class="sidebar-label">Catalog state</div>
-							<div class="sidebar-value">{isVisibleToUsers ? 'Live in Deal Flow' : 'Not published yet'}</div>
+							<div class="sidebar-value">{DEAL_CATALOG_STATE_LABELS[catalogState] || DEAL_CATALOG_STATE_LABELS.not_published}</div>
 						</div>
 						<div class="sidebar-block">
 							<div class="sidebar-label">Last updated</div>
@@ -1285,14 +1286,14 @@
 		color: #167a52;
 	}
 
-	.status-pill.tone-approved {
-		background: rgba(214, 140, 69, 0.14);
-		color: #b56f2f;
-	}
-
 	.status-pill.tone-working {
 		background: rgba(31, 81, 89, 0.1);
 		color: #1f5159;
+	}
+
+	.status-pill.tone-do-not-publish {
+		background: rgba(194, 65, 68, 0.14);
+		color: #b42328;
 	}
 
 	.status-pill.tone-archived {

@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       .is('parent_deal_id', null)       // Only parent deals, not share classes
       .eq('is_visible_to_users', true)  // Only published deals
       .eq('is_506b', false)             // Never expose 506(b) deals via public API
-      .not('lifecycle_status', 'eq', 'archived');
+      .not('lifecycle_status', 'eq', 'do_not_publish');
 
     // Filters
     if (q.asset_class) query = query.eq('asset_class', q.asset_class);

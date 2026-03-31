@@ -1,4 +1,5 @@
 import { applyDealCreateDefaults } from './deals-workflow.js';
+import { resolveDealLifecycleStatus } from '../../src/lib/utils/dealWorkflow.js';
 
 async function listDeals(supabase, body) {
   const { page = 1, limit = 50, search } = body;
@@ -62,10 +63,19 @@ async function deleteDeal(supabase, body) {
   const { id } = body;
   if (!id) throw new Error('Missing deal id');
 
+  const { data: currentDeal, error: currentDealError } = await supabase
+    .from('opportunities')
+    .select('id, lifecycle_status, is_visible_to_users')
+    .eq('id', id)
+    .single();
+
+  if (currentDealError || !currentDeal) throw currentDealError || new Error('Deal not found');
+
+  const nextLifecycle = resolveDealLifecycleStatus(currentDeal) === 'published' ? 'published' : 'do_not_publish';
   const updates = {
     status: 'Archived',
-    lifecycle_status: 'archived',
-    is_visible_to_users: false
+    lifecycle_status: nextLifecycle,
+    is_visible_to_users: nextLifecycle === 'published'
   };
 
   try {
@@ -98,17 +108,26 @@ async function toggleArchive(supabase, body) {
   const { id, archived } = body;
   if (!id) throw new Error('Missing deal id');
 
+  const { data: currentDeal, error: currentDealError } = await supabase
+    .from('opportunities')
+    .select('id, lifecycle_status, is_visible_to_users, status')
+    .eq('id', id)
+    .single();
+
+  if (currentDealError || !currentDeal) throw currentDealError || new Error('Deal not found');
+
   const shouldArchive = archived !== undefined ? archived : true;
+  const currentLifecycle = resolveDealLifecycleStatus(currentDeal);
   const updates = shouldArchive
     ? {
         status: 'Archived',
-        lifecycle_status: 'archived',
-        is_visible_to_users: false
+        lifecycle_status: currentLifecycle === 'published' ? 'published' : 'do_not_publish',
+        is_visible_to_users: currentLifecycle === 'published'
       }
     : {
-        status: 'Draft',
-        lifecycle_status: 'draft',
-        is_visible_to_users: false
+        status: currentDeal.status === 'Archived' ? 'Open to Invest' : currentDeal.status,
+        lifecycle_status: currentLifecycle === 'do_not_publish' ? 'draft' : currentLifecycle,
+        is_visible_to_users: currentLifecycle === 'published'
       };
 
   try {

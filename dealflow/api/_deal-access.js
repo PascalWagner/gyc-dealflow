@@ -128,7 +128,7 @@ function readRequestedImpersonationEmail(req) {
 
 export function applyPublishedCatalogQuery(query) {
 	return query
-		.eq('lifecycle_status', 'published')
+		.in('lifecycle_status', ['published', 'archived'])
 		.eq('is_visible_to_users', true);
 }
 
