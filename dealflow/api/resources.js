@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     const isAdmin = Boolean(profile?.is_admin) || ADMIN_EMAILS.includes(email);
     const tier = (profile?.tier || '').toLowerCase();
 
-    const hasMemberTier = tier === 'member';
+    const hasResourceAccess = isAdmin || tier === 'member';
 
     const videos = LESSONS
       .slice()
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       sections: SECTIONS,
       source: 'cashflow-academy',
       replayLibraryUrl: '/app/resources',
-      accessRestricted: !hasMemberTier,
+      accessRestricted: !hasResourceAccess,
       accessTier: isAdmin ? 'admin' : (tier || 'free')
     });
   } catch (err) {
