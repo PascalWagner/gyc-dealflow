@@ -37,8 +37,8 @@
 		<li><a href="/for-operators">For Operators</a></li>
 	</ul>
 	<div class="nav-right">
-		<a href="/login" class="nav-login">Log In</a>
-		<a href="/login" class="nav-cta">Browse Deals Free</a>
+		<a href="/login" class="nav-login" data-sveltekit-reload>Log In</a>
+		<a href="/login" class="nav-cta" data-sveltekit-reload>Browse Deals Free</a>
 	</div>
 	<button class="nav-hamburger" onclick={() => mobileMenuOpen = !mobileMenuOpen} aria-label="Menu">
 		<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -47,8 +47,8 @@
 <div class="nav-mobile-menu" class:open={mobileMenuOpen}>
 	<a href="#how-it-works" onclick={(e) => scrollToAnchor(e, '#how-it-works')}>How It Works</a>
 	<a href="/for-operators">For Operators</a>
-	<a href="/login">Log In</a>
-	<a href="/login" class="nav-cta">Browse Deals Free</a>
+	<a href="/login" data-sveltekit-reload>Log In</a>
+	<a href="/login" class="nav-cta" data-sveltekit-reload>Browse Deals Free</a>
 </div>
 
 <!-- 1. HERO -->
@@ -57,7 +57,7 @@
 		<div class="hero-eyebrow">The Deal Database for Accredited Investors</div>
 		<h1><span class="highlight">800+</span> private real estate & alternative deals. Exposed.</h1>
 		<p class="hero-desc">Compare sponsors. See the real numbers. Vet deals the way family offices do — not the way pitch decks want you to. Free to browse. No credit card.</p>
-		<a href="/login" class="btn-primary">Browse Deals Free →</a>
+		<a href="/login" class="btn-primary" data-sveltekit-reload>Browse Deals Free →</a>
 		<p class="hero-fine">No credit card required. Takes 30 seconds.</p>
 		<div class="hero-trust-row">
 			<div class="hero-trust-item"><div class="hero-trust-dot"></div> 800+ Deals</div>
@@ -301,7 +301,7 @@
 <section class="final-cta">
 	<h2>Stop comparing deals in the dark</h2>
 	<p>800+ deals. 455 verified sponsors. Every number exposed. Free to browse — see for yourself.</p>
-	<a href="/login" class="btn-primary">Browse Deals Free →</a>
+	<a href="/login" class="btn-primary" data-sveltekit-reload>Browse Deals Free →</a>
 	<p class="hero-fine">No credit card. No sales call. Just data.</p>
 </section>
 
@@ -309,7 +309,7 @@
 <footer class="footer">
 	<div class="footer-links">
 		<a href="/for-operators">For Operators</a>
-		<a href="/login">Log In</a>
+		<a href="/login" data-sveltekit-reload>Log In</a>
 	</div>
 	<div class="footer-copy">&copy; 2026 Grow Your Cashflow. All rights reserved. Not a broker-dealer. Not investment advice.</div>
 </footer>
