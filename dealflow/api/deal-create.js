@@ -3,7 +3,7 @@
 // (no admin auth required — deals are created with user_submitted=true)
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
-import { buildNewDealDefaults } from '../src/lib/utils/dealWorkflow.js';
+import { buildNewDealDefaults, normalizeLifecycleStatus } from '../src/lib/utils/dealWorkflow.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (!rateLimit(req, res, { maxRequests: 10 })) return;
 
   try {
-    const { investmentName, sponsor, website, userEmail, userName } = req.body;
+    const { investmentName, sponsor, website, lifecycleStatus, userEmail, userName } = req.body;
 
     if (!investmentName || !sponsor) {
       return res.status(400).json({ error: 'Investment name and sponsor are required' });
@@ -48,6 +48,8 @@ export default async function handler(req, res) {
     }
 
     // 2. Create the deal
+    const requestedLifecycleStatus = normalizeLifecycleStatus(lifecycleStatus || 'draft');
+
     const { data: deal, error: dealErr } = await supabase
       .from('opportunities')
       .insert({
@@ -58,6 +60,8 @@ export default async function handler(req, res) {
         investment_name: investmentName.trim(),
         management_company_id: mcId,
         sponsor_name: sponsor.trim(),
+        lifecycle_status: requestedLifecycleStatus,
+        is_visible_to_users: requestedLifecycleStatus === 'published',
         status: 'Open to Invest',
         added_date: new Date().toISOString().split('T')[0]
       })

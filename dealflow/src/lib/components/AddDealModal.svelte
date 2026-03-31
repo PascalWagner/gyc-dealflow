@@ -27,6 +27,7 @@
 	let searching = $state(false);
 	let submitting = $state(false);
 	let submitError = $state('');
+	let submitMode = $state('extract');
 
 	let searchRequestId = 0;
 	let blurTimer = null;
@@ -141,7 +142,15 @@
 
 	async function selectExistingDeal(dealId) {
 		closeModal();
-		await goto(`/deal/${dealId}`);
+		await goto(`/deal-review?id=${dealId}`);
+	}
+
+	function buildDealReviewHref(dealId, { extract = false } = {}) {
+		const params = new URLSearchParams({ id: dealId, from: 'intake' });
+		if (extract) {
+			params.set('extract', '1');
+		}
+		return `/deal-review?${params.toString()}`;
 	}
 
 	async function readFileAsBase64(file) {
@@ -238,7 +247,7 @@
 		return data?.error || `Could not upload the ${docType.toUpperCase()} file.`;
 	}
 
-	async function submitNewDeal() {
+	async function submitNewDeal({ autoExtract = true } = {}) {
 		submitError = '';
 
 		const trimmedName = investmentName.trim();
@@ -248,7 +257,12 @@
 			submitError = 'Please enter at least the investment name and sponsor.';
 			return;
 		}
+		if (autoExtract && !deckFile && !ppmFile) {
+			submitError = 'Upload a deck or PPM before starting extraction, or continue to review manually.';
+			return;
+		}
 
+		submitMode = autoExtract ? 'extract' : 'manual';
 		submitting = true;
 
 		try {
@@ -267,6 +281,7 @@
 					investmentName: trimmedName,
 					sponsor: trimmedSponsor,
 					website: trimmedWebsite,
+					lifecycleStatus: 'in_review',
 					userEmail: actor.actorEmail,
 					userName: actor.actorName
 				})
@@ -304,11 +319,12 @@
 				window.alert(`Deal created, but there was a document issue:\n\n${uploadWarnings.join('\n')}`);
 			}
 
-			await goto(`/deal/${createData.dealId}`);
+			await goto(buildDealReviewHref(createData.dealId, { extract: autoExtract }));
 		} catch (error) {
 			submitError = error?.message || 'Could not submit the deal right now.';
 		} finally {
 			submitting = false;
+			submitMode = 'extract';
 		}
 	}
 
@@ -352,9 +368,10 @@
 	<div class="add-deal-modal__card" role="dialog" aria-modal="true" aria-labelledby="add-deal-modal-title">
 		<div class="add-deal-modal__top">
 			<div>
+				<div class="add-deal-modal__eyebrow">Step 1 of 2</div>
 				<div id="add-deal-modal-title" class="add-deal-modal__title">Add a Deal</div>
 				<p class="add-deal-modal__copy">
-					Can’t find a deal? Submit it to the database. If you upload a deck or PPM, we’ll attach it to the record.
+					Start with the source documents. We’ll attach them to the deal, extract what we can, and then take you into Deal Review to clean up the details before publishing.
 				</p>
 			</div>
 			<button class="add-deal-modal__close" aria-label="Close add deal modal" onclick={closeModal}>&times;</button>
@@ -508,8 +525,19 @@
 			<button class="add-deal-modal__btn add-deal-modal__btn--secondary" onclick={closeModal} disabled={submitting}>
 				Cancel
 			</button>
-			<button class="add-deal-modal__btn add-deal-modal__btn--primary" onclick={submitNewDeal} disabled={submitting}>
-				{submitting ? 'Submitting...' : 'Submit Deal'}
+			<button
+				class="add-deal-modal__btn add-deal-modal__btn--secondary"
+				onclick={() => submitNewDeal({ autoExtract: false })}
+				disabled={submitting}
+			>
+				{submitting && submitMode === 'manual' ? 'Opening Review...' : 'Review Manually'}
+			</button>
+			<button
+				class="add-deal-modal__btn add-deal-modal__btn--primary"
+				onclick={() => submitNewDeal({ autoExtract: true })}
+				disabled={submitting}
+			>
+				{submitting && submitMode === 'extract' ? 'Uploading & Extracting...' : 'Upload & Extract'}
 			</button>
 		</div>
 	</div>
@@ -544,6 +572,16 @@
 		justify-content: space-between;
 		gap: 16px;
 		margin-bottom: 20px;
+	}
+
+	.add-deal-modal__eyebrow {
+		margin-bottom: 8px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--text-muted);
 	}
 
 	.add-deal-modal__title {

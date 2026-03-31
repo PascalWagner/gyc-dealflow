@@ -1,4 +1,5 @@
 <script>
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -46,14 +47,23 @@
 	let fieldWarnings = $state({});
 	let fieldErrors = $state({});
 	let previousDealId = $state('');
+	let extractionState = $state('idle');
+	let extractionError = $state('');
+	let extractionSummary = $state(null);
+	let autoExtractionHandled = $state(false);
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
+	const shouldAutoExtract = $derived($page.url.searchParams.get('extract') === '1');
+	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
 	const completeness = $derived(computeDealCompleteness(buildDealReviewCompletenessModel(form, deal)));
 	const lifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
 	const isVisibleToUsers = $derived(resolveDealVisibility(deal || {}));
 	const canPublishFromQueue = $derived(!completeness.hasBlockingIssues);
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
+	const hasSourceDocuments = $derived(
+		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
+	);
 	const schemaWarnings = $derived(
 		Object.entries(fieldWarnings).filter(([, message]) => Boolean(message))
 	);
@@ -94,6 +104,14 @@
 		saveMessage = '';
 	}
 
+	function clearExtractionFlags() {
+		if (!browser) return;
+		const nextUrl = new URL(window.location.href);
+		nextUrl.searchParams.delete('extract');
+		nextUrl.searchParams.delete('from');
+		window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+	}
+
 	async function loadDeal() {
 		if (!dealId) {
 			loadError = 'Pick a deal from Manage Data to start review.';
@@ -124,6 +142,9 @@
 			fieldErrors = {};
 			dirty = false;
 			saveError = '';
+			if (!shouldAutoExtract) {
+				extractionError = '';
+			}
 		} catch (error) {
 			loadError = error?.message || 'Failed to load deal.';
 			deal = null;
@@ -192,6 +213,83 @@
 		}
 	}
 
+	async function runExtraction() {
+		if (!dealId || extractionState === 'running') return;
+
+		extractionState = 'running';
+		extractionError = '';
+		extractionSummary = null;
+		saveMessage = '';
+
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active admin session to extract deal details.');
+
+			const enrichResponse = await fetch('/api/deal-cleanup', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					action: 'enrich-deal',
+					dealId
+				})
+			});
+			const enrichPayload = await enrichResponse.json().catch(() => ({}));
+
+			if (!enrichResponse.ok || !enrichPayload?.success) {
+				throw new Error(enrichPayload?.error || 'Failed to extract deal details.');
+			}
+
+			const updates = enrichPayload?.found_fields || {};
+			let appliedCount = 0;
+
+			if (Object.keys(updates).length > 0) {
+				const applyResponse = await fetch('/api/deal-cleanup', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${token}`
+					},
+					body: JSON.stringify({
+						action: 'apply-enrichment',
+						dealId,
+						updates
+					})
+				});
+				const applyPayload = await applyResponse.json().catch(() => ({}));
+
+				if (!applyResponse.ok || !applyPayload?.success) {
+					throw new Error(applyPayload?.error || 'The extracted fields could not be applied.');
+				}
+
+				appliedCount = Array.isArray(applyPayload.fields_updated)
+					? applyPayload.fields_updated.length
+					: Object.keys(updates).length;
+
+				await loadDeal();
+			}
+
+			extractionSummary = {
+				fieldsFound: Object.keys(updates).length,
+				fieldsApplied: appliedCount,
+				sources: enrichPayload?.sources || [],
+				steps: enrichPayload?.steps || [],
+				notes: enrichPayload?.notes || ''
+			};
+			extractionState = 'success';
+			saveMessage = appliedCount > 0
+				? `We prefilled ${appliedCount} fields from the uploaded sources. Review them before publishing.`
+				: 'The uploaded sources were processed. Review the deal details before publishing.';
+		} catch (error) {
+			extractionState = 'error';
+			extractionError = error?.message || 'Failed to extract deal details.';
+		} finally {
+			clearExtractionFlags();
+		}
+	}
+
 	onMount(async () => {
 		previousDealId = dealId;
 		await loadDeal();
@@ -200,7 +298,21 @@
 	$effect(() => {
 		if (!dealId || dealId === previousDealId) return;
 		previousDealId = dealId;
+		autoExtractionHandled = false;
 		void loadDeal();
+	});
+
+	$effect(() => {
+		if (!shouldAutoExtract || autoExtractionHandled || loading || !deal) return;
+		autoExtractionHandled = true;
+		if (!hasSourceDocuments) {
+			extractionState = 'idle';
+			extractionError = '';
+			saveMessage = 'No deck or PPM was uploaded, so this deal is ready for manual review.';
+			clearExtractionFlags();
+			return;
+		}
+		void runExtraction();
 	});
 </script>
 
@@ -241,6 +353,52 @@
 	{:else}
 		<div class="review-layout">
 			<form class="editor-stack" onsubmit={(event) => { event.preventDefault(); saveDeal(); }}>
+				{#if cameFromIntake || extractionState !== 'idle' || extractionSummary}
+					<div class={`intake-banner intake-banner--${extractionState === 'error' ? 'error' : extractionState === 'running' ? 'working' : 'ready'}`}>
+						<div class="intake-banner__header">
+							<div>
+								<div class="intake-banner__eyebrow">Step 2 of 2</div>
+								<h2>Review extracted deal details</h2>
+							</div>
+							{#if hasSourceDocuments}
+								<button
+									type="button"
+									class="ghost-btn"
+									onclick={runExtraction}
+									disabled={extractionState === 'running' || saving}
+								>
+									{extractionState === 'running' ? 'Extracting...' : 'Run extraction again'}
+								</button>
+							{/if}
+						</div>
+
+						{#if extractionState === 'running'}
+							<p>We’re extracting fields from the uploaded deck and PPM now. Stay on this page and review the details as they come in.</p>
+						{:else if extractionState === 'error'}
+							<p>{extractionError}</p>
+						{:else if extractionSummary}
+							<p>
+								We found {extractionSummary.fieldsFound} candidate fields and applied {extractionSummary.fieldsApplied}
+								to the draft. Review each section below before publishing.
+							</p>
+							{#if extractionSummary.steps.length > 0}
+								<div class="intake-step-list">
+									{#each extractionSummary.steps as step}
+										<div class="intake-step-chip">
+											<strong>{step.step || 'step'}</strong>
+											<span>{step.fields_found || 0} fields</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						{:else}
+							<p>
+								This deal came in through the intake flow. Review the extracted details, fill any gaps, and publish only when you trust the record.
+							</p>
+						{/if}
+					</div>
+				{/if}
+
 				{#if saveError}
 					<div class="message-banner message-banner--error">{saveError}</div>
 				{/if}
@@ -386,12 +544,84 @@
 
 	.editor-card,
 	.sidebar-card,
-	.state-card {
+	.state-card,
+	.intake-banner {
 		padding: 20px;
 		border-radius: 20px;
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 251, 0.98));
 		border: 1px solid rgba(31, 81, 89, 0.1);
 		box-shadow: 0 16px 34px rgba(16, 37, 42, 0.05);
+	}
+
+	.intake-banner {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		background:
+			linear-gradient(180deg, rgba(18, 42, 48, 0.98), rgba(21, 58, 65, 0.94)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.14), transparent 40%);
+		color: #f7fafb;
+	}
+
+	.intake-banner--error {
+		background: rgba(255, 244, 244, 0.92);
+		border-color: rgba(194, 65, 68, 0.16);
+		color: #7a1d1d;
+	}
+
+	.intake-banner__header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
+	}
+
+	.intake-banner__eyebrow {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: rgba(247, 250, 251, 0.76);
+		margin-bottom: 8px;
+	}
+
+	.intake-banner--error .intake-banner__eyebrow {
+		color: #b42328;
+	}
+
+	.intake-banner h2 {
+		margin: 0;
+		font-family: var(--font-ui);
+		font-size: 20px;
+		font-weight: 800;
+		color: inherit;
+	}
+
+	.intake-banner p {
+		margin: 0;
+		font-size: 13px;
+		line-height: 1.6;
+		color: inherit;
+		opacity: 0.92;
+	}
+
+	.intake-step-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.intake-step-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.1);
+		font-size: 12px;
+		line-height: 1;
 	}
 
 	.sidebar-card--score {
