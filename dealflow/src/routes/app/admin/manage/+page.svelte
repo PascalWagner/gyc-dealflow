@@ -11,7 +11,7 @@
 	} from '$lib/utils/dealWorkflow.js';
 
 	let activeTab = $state('deals');
-	const tabs = ['operators', 'deals', 'users', 'submissions', 'intros'];
+	const tabs = ['deals', 'operators', 'users', 'intros', 'submissions'];
 	const tabLabels = {
 		operators: 'Operators',
 		deals: 'Deals',
@@ -435,26 +435,6 @@
 		</PageHeader>
 
 		<div class="content">
-			<div class="toolbar">
-				<div class="search-wrap">
-					<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
-						<circle cx="11" cy="11" r="8" />
-						<line x1="21" y1="21" x2="16.65" y2="16.65" />
-					</svg>
-					<input type="text" placeholder="Search..." bind:value={searchQuery} oninput={searchDebounce} />
-				</div>
-				{#if showCreateButton}
-					<button class="action-btn primary" onclick={createNew}>+ Add New</button>
-				{/if}
-				{#if showDealTools}
-					<button class="action-btn secondary" onclick={cleanupStart}>Data Cleanup</button>
-					<button class="action-btn secondary" onclick={deckFinderStart}>Deck Finder</button>
-				{/if}
-				<span class="result-count">
-					{activeTab === 'deals' ? `${filteredDealRows.length} deals in queue` : resultCount}
-				</span>
-			</div>
-
 			{#if activeTab === 'operators'}
 				<div class="sub-toggle">
 					<button class="sub-toggle-btn" class:active={operatorView === 'outreach'} onclick={() => switchOperatorView('outreach')}>
@@ -477,6 +457,24 @@
 						Hidden deals surface first. Use completeness and lifecycle status to move one deal at a time from intake to published.
 					</p>
 				</section>
+
+				<div class="toolbar">
+					<div class="search-wrap">
+						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input type="text" placeholder="Search..." bind:value={searchQuery} oninput={searchDebounce} />
+					</div>
+					{#if showCreateButton}
+						<button class="action-btn primary" onclick={createNew}>+ Add New</button>
+					{/if}
+					{#if showDealTools}
+						<button class="action-btn secondary" onclick={cleanupStart}>Data Cleanup</button>
+						<button class="action-btn secondary" onclick={deckFinderStart}>Deck Finder</button>
+					{/if}
+					<span class="result-count">{filteredDealRows.length} deals in queue</span>
+				</div>
 
 				<div class="stats-grid">
 					<div class="stat-card">
@@ -592,6 +590,20 @@
 					</div>
 				{/if}
 			{:else}
+				<div class="toolbar">
+					<div class="search-wrap">
+						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input type="text" placeholder="Search..." bind:value={searchQuery} oninput={searchDebounce} />
+					</div>
+					{#if showCreateButton}
+						<button class="action-btn primary" onclick={createNew}>+ Add New</button>
+					{/if}
+					<span class="result-count">{resultCount}</span>
+				</div>
+
 				{#if qualityStats && activeTab === 'operators' && operatorView === 'quality'}
 					<div class="quality-banner">
 						<strong>Quality Audit Mode</strong> Shows how complete each operator record is. Green = 80%+, amber = 50-79%, red = below 50%.
