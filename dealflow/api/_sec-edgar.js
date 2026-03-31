@@ -252,7 +252,34 @@ export function pickBestSecMatch(dealName, sponsorName, allHits = []) {
 	return best && best.matchScore >= 0.45 ? best : null;
 }
 
-export function generateSecSearchQueries(dealName, sponsorName, legalEntities = {}) {
+function buildDealNameQueries(dealName) {
+	const queries = [];
+	const seen = new Set();
+
+	function add(value) {
+		const cleaned = String(value || '').trim();
+		if (cleaned && cleaned.length > 2 && !seen.has(cleaned.toLowerCase())) {
+			seen.add(cleaned.toLowerCase());
+			queries.push(cleaned);
+		}
+	}
+
+	add(dealName);
+
+	if (dealName) {
+		const stripped = dealName
+			.replace(/\b(apartments?|plaza|center|park|village|estates?|towers?|place|court|square|landing|crossing|ridge|hills?)\b/gi, '')
+			.trim();
+		add(stripped);
+	}
+
+	const parenthetical = String(dealName || '').match(/\(([^)]+)\)/);
+	if (parenthetical) add(parenthetical[1]);
+
+	return queries;
+}
+
+function buildFallbackQueries(dealName, sponsorName, legalEntities = {}) {
 	const queries = [];
 	const seen = new Set();
 
@@ -268,15 +295,7 @@ export function generateSecSearchQueries(dealName, sponsorName, legalEntities = 
 	add(legalEntities.gpEntity);
 	add(legalEntities.sponsorEntity);
 	add(legalEntities.operatorLegalEntity);
-	add(dealName);
 	add(sponsorName);
-
-	if (dealName) {
-		const stripped = dealName
-			.replace(/\b(apartments?|plaza|center|park|village|estates?|towers?|place|court|square|landing|crossing|ridge|hills?)\b/gi, '')
-			.trim();
-		add(stripped);
-	}
 
 	if (sponsorName && dealName) {
 		const dealCore = dealName
@@ -286,10 +305,17 @@ export function generateSecSearchQueries(dealName, sponsorName, legalEntities = 
 		if (dealCore && dealCore.length > 2) add(`${sponsorName} ${dealCore}`);
 	}
 
-	const parenthetical = String(dealName || '').match(/\(([^)]+)\)/);
-	if (parenthetical) add(parenthetical[1]);
-
 	return queries;
+}
+
+export function generateSecSearchQueries(dealName, sponsorName, legalEntities = {}, options = {}) {
+	const mode = String(options.mode || 'all');
+	const primaryQueries = buildDealNameQueries(dealName);
+	const fallbackQueries = buildFallbackQueries(dealName, sponsorName, legalEntities);
+
+	if (mode === 'deal') return primaryQueries;
+	if (mode === 'fallback') return fallbackQueries;
+	return [...primaryQueries, ...fallbackQueries.filter((query) => !primaryQueries.includes(query))];
 }
 
 export function dedupeSecHits(hits = []) {
@@ -304,20 +330,45 @@ export function dedupeSecHits(hits = []) {
 	return results;
 }
 
-export async function findSecMatchesForDeal(deal = {}, { maxQueries = 6, earlyMatchScore = 0.75 } = {}) {
+export async function findSecMatchesForDeal(
+	deal = {},
+	{ maxQueries = 6, earlyMatchScore = 0.75, fallbackTriggerScore = 0.72 } = {}
+) {
 	const searchContext = buildDealSecSearchContext(deal);
-	const queries = generateSecSearchQueries(
+	const primaryQueries = generateSecSearchQueries(
 		searchContext.dealName,
 		searchContext.sponsorName,
-		searchContext.legalEntities
+		searchContext.legalEntities,
+		{ mode: 'deal' }
+	).slice(0, maxQueries);
+	const fallbackQueries = generateSecSearchQueries(
+		searchContext.dealName,
+		searchContext.sponsorName,
+		searchContext.legalEntities,
+		{ mode: 'fallback' }
 	).slice(0, maxQueries);
 
 	let hits = [];
-	for (const query of queries) {
+	const executedQueries = [];
+
+	for (const query of primaryQueries) {
 		const results = await searchEdgar(query);
 		hits = dedupeSecHits([...hits, ...results]);
+		executedQueries.push(query);
 		const earlyMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits);
 		if (earlyMatch && earlyMatch.matchScore >= earlyMatchScore) break;
+	}
+
+	const primaryBestMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits);
+
+	if (!primaryBestMatch || primaryBestMatch.matchScore < fallbackTriggerScore) {
+		for (const query of fallbackQueries) {
+			const results = await searchEdgar(query);
+			hits = dedupeSecHits([...hits, ...results]);
+			executedQueries.push(query);
+			const earlyMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits);
+			if (earlyMatch && earlyMatch.matchScore >= earlyMatchScore) break;
+		}
 	}
 
 	const candidates = hits
@@ -335,7 +386,9 @@ export async function findSecMatchesForDeal(deal = {}, { maxQueries = 6, earlyMa
 		.slice(0, 8);
 
 	return {
-		queries,
+		queries: executedQueries,
+		primaryQueries,
+		fallbackQueries,
 		searchContext,
 		candidates,
 		bestMatch: pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, candidates)
