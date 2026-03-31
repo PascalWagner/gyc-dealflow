@@ -13,6 +13,16 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+function isMissingTableError(error, tableName) {
+  const message = String(error?.message || '');
+  if (!message) return false;
+  return (
+    message.includes(`Could not find the table 'public.${tableName}' in the schema cache`) ||
+    message.includes(`relation "public.${tableName}" does not exist`) ||
+    message.includes(`relation "${tableName}" does not exist`)
+  );
+}
+
 async function findUserIdByEmail(adminClient, email) {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return null;
@@ -355,7 +365,18 @@ async function handleGet(req, res, supabase, user) {
     .select('*')
     .eq('user_id', user.id);
 
-  if (error) throw error;
+  if (error) {
+    if (type === 'plan' && isMissingTableError(error, table)) {
+      return res.status(200).json({
+        records: [],
+        count: 0,
+        type,
+        unavailable: true,
+        fetchedAt: new Date().toISOString()
+      });
+    }
+    throw error;
+  }
 
   // If goals are empty in Supabase, try to pull from GHL contact
   if (type === 'goals' && (!data || data.length === 0) && user.email) {
@@ -469,7 +490,13 @@ async function handleAdminGet(req, res) {
       .from(table)
       .select('*')
       .eq('user_id', targetUserId);
-    if (error) throw error;
+    if (error) {
+      if (t === 'plan' && isMissingTableError(error, table)) {
+        result[t] = [];
+        continue;
+      }
+      throw error;
+    }
     result[t] = data || [];
   }
 
@@ -635,7 +662,18 @@ async function handlePost(req, res, supabase, user) {
       .upsert(planFields, { onConflict: 'user_id' })
       .select()
       .single();
-    if (error) throw error;
+    if (error) {
+      if (isMissingTableError(error, 'user_portfolio_plans')) {
+        return res.status(200).json({
+          record: null,
+          type,
+          persisted: false,
+          warning: 'Plan storage unavailable in this environment',
+          updatedAt: new Date().toISOString()
+        });
+      }
+      throw error;
+    }
     result = upserted;
 
   } else {
