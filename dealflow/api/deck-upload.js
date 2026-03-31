@@ -8,7 +8,7 @@
 //   - Still sends email notification via Resend
 //   - Auto-enrichment: PDFs are sent to Claude for field extraction after upload
 
-import { getAdminClient, setCors } from './_supabase.js';
+import { ADMIN_EMAILS, getAdminClient, setCors } from './_supabase.js';
 import { getLatestGpAgreement, hasCurrentGpAgreement } from './_gp-agreement.js';
 import { extractFromPdf, runEnrichmentCascade } from './_enrichment.js';
 
@@ -34,13 +34,18 @@ export default async function handler(req, res) {
     if (authError || !user?.id || !user?.email) {
       return res.status(401).json({ error: 'Invalid authorization' });
     }
-    if (userEmail && user.email.toLowerCase() !== String(userEmail).toLowerCase()) {
+    const normalizedAuthEmail = String(user.email || '').toLowerCase();
+    const isAdminUpload = ADMIN_EMAILS.includes(normalizedAuthEmail);
+
+    if (userEmail && !isAdminUpload && normalizedAuthEmail !== String(userEmail).toLowerCase()) {
       return res.status(403).json({ error: 'Upload email must match authenticated user' });
     }
 
-    const agreement = await getLatestGpAgreement(supabase, user.id);
-    if (!hasCurrentGpAgreement(agreement)) {
-      return res.status(403).json({ error: 'A current signed operator listing agreement is required before uploading deal materials.' });
+    if (!isAdminUpload) {
+      const agreement = await getLatestGpAgreement(supabase, user.id);
+      if (!hasCurrentGpAgreement(agreement)) {
+        return res.status(403).json({ error: 'A current signed operator listing agreement is required before uploading deal materials.' });
+      }
     }
 
     const effectiveUserEmail = user.email;

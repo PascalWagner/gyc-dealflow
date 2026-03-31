@@ -8,6 +8,7 @@
 	import CompareView from '$lib/components/CompareView.svelte';
 	import RequestIntroductionModal from '$lib/components/RequestIntroductionModal.svelte';
 	import SwipeFeed from '$lib/components/SwipeFeed.svelte';
+	import AddDealModal from '$lib/components/AddDealModal.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import {
 		dealStages,
@@ -63,6 +64,7 @@
 	let compareRequestId = 0;
 	let showIntroModal = $state(false);
 	let introRequestDeal = $state(null);
+	let showAddDealModal = $state(false);
 
 	let dailyDealCount = $state(0);
 	let showLimitModal = $state(false);
@@ -321,8 +323,7 @@
 	}
 
 	function handleAddDeal() {
-		if (!browser) return;
-		window.location.href = '/app/admin/manage';
+		showAddDealModal = true;
 	}
 
 	function showPageNotice(message) {
@@ -1114,6 +1115,10 @@
 	onclose={closeIntroModal}
 	onsuccess={handleIntroRequestSuccess}
 />
+
+{#if showAddDealModal}
+	<AddDealModal onclose={() => showAddDealModal = false} />
+{/if}
 
 <!-- Daily Limit Modal -->
 {#if showLimitModal && isFreeUser}
