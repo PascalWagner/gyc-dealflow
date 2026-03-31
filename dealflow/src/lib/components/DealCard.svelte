@@ -78,8 +78,8 @@
 		const size = inputDeal.fundAUM || inputDeal.offeringSize || inputDeal.aum || inputDeal.managementCompanyAUM;
 		if (!size) return { range: '—' };
 		if (size >= 1000000000) return { range: '$1B+' };
-		if (size >= 100000000) return { range: '$100M-$1B' };
-		if (size >= 50000000) return { range: '$50M-$100M' };
+		if (size >= 100000000) return { range: '$100M-1B' };
+		if (size >= 50000000) return { range: '$50-100M' };
 		return { range: '<$50M' };
 	}
 
@@ -653,6 +653,9 @@
 	}
 
 	.metric {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
 		padding: 7px 9px;
 		border-right: 1px solid var(--border);
 		border-bottom: 1px solid var(--border);
@@ -668,6 +671,8 @@
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		color: var(--text-muted);
+		line-height: 1.2;
+		white-space: normal;
 	}
 
 	.metric-value {
@@ -676,6 +681,10 @@
 		font-weight: 700;
 		color: var(--text-dark);
 		margin-top: 2px;
+		line-height: 1.2;
+		white-space: normal;
+		word-break: break-word;
+		overflow-wrap: anywhere;
 	}
 
 	.metric-value.highlight {
@@ -910,15 +919,24 @@
 	}
 
 	@media (max-width: 1200px) {
-		.metrics {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+		.metric {
+			padding: 7px 8px;
 		}
-
-		.metric:nth-child(2n) { border-right: none; }
-		.metric:nth-last-child(-n + 2) { border-bottom: none; }
 	}
 
 	@media (max-width: 560px) {
+		.metric {
+			padding: 6px 6px;
+		}
+
+		.metric-label {
+			font-size: 8px;
+		}
+
+		.metric-value {
+			font-size: 10px;
+		}
+
 		.card-actions-row {
 			gap: 7px;
 		}
