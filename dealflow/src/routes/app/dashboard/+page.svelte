@@ -139,8 +139,16 @@
 		}
 		return items;
 	});
+	const standardActionItems = $derived.by(() => [
+		{
+			icon: 'plus',
+			text: 'Add a deal you are evaluating or already invested in so it lands in the right place right away',
+			link: 'Add Deal',
+			action: 'modal'
+		}
+	]);
 	const primaryAction = $derived.by(() => actionItems[0] || null);
-	const secondaryActionItems = $derived.by(() => actionItems.slice(1));
+	const secondaryActionItems = $derived.by(() => [...actionItems.slice(1), ...standardActionItems]);
 
 	// First name
 	const firstName = $derived.by(() => {
@@ -157,6 +165,10 @@
 
 	function openWizard() {
 		goto(hasCompletedDashboardPlan ? '/app/plan?edit=1' : '/onboarding/plan');
+	}
+
+	function openAddDealModal() {
+		showAddDealModal = true;
 	}
 
 	async function syncDashboardState() {
@@ -212,9 +224,7 @@
 </svelte:head>
 
 <PageContainer className="dashboard-shell ly-page-stack">
-	<PageHeader title="Home" className="dashboard-page-header">
-		<button slot="actions" class="btn-primary" onclick={() => (showAddDealModal = true)}>Add Deal</button>
-	</PageHeader>
+	<PageHeader title="Home" className="dashboard-page-header" />
 
 	<div class="content-area">
 		{#if !hasGoalContext && !hasCompletedDashboardPlan}
@@ -277,7 +287,13 @@
 						<div class="secondary-actions-label">Also On Deck</div>
 					{/if}
 					{#each secondaryActionItems as item}
-						<a href={item.href || `/app/${item.page}`} class="action-row">
+						<svelte:element
+							this={item.action === 'modal' ? 'button' : 'a'}
+							type={item.action === 'modal' ? 'button' : undefined}
+							href={item.action === 'modal' ? undefined : item.href || `/app/${item.page}`}
+							class={`action-row${item.action === 'modal' ? ' action-row--button' : ''}`}
+							onclick={item.action === 'modal' ? openAddDealModal : undefined}
+						>
 							<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
 								{#if item.icon === 'plan'}
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -289,13 +305,15 @@
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1"></rect><path d="M9 14l2 2 4-4"></path></svg>
 								{:else if item.icon === 'tax'}
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+								{:else if item.icon === 'plus'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 								{:else}
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 								{/if}
 							</div>
 							<div class="action-text">{@html item.text}</div>
 							<span class="action-link">{item.link} →</span>
-						</a>
+						</svelte:element>
 					{/each}
 				</div>
 			{:else}
@@ -303,9 +321,36 @@
 					<div class="action-header">What To Do Next</div>
 					<div class="empty-dashboard-title">You’re caught up for now.</div>
 					<div class="empty-dashboard-copy">Use this page to launch the next meaningful action, not to monitor a bunch of dashboard metrics. Right now there isn’t anything urgent blocking you.</div>
-					<div class="empty-dashboard-actions">
-						<a href="/app/deals" class="btn-primary">Browse Deals →</a>
-					</div>
+					<div class="secondary-actions-label secondary-actions-label--standalone">Also On Deck</div>
+					{#each secondaryActionItems as item}
+						<svelte:element
+							this={item.action === 'modal' ? 'button' : 'a'}
+							type={item.action === 'modal' ? 'button' : undefined}
+							href={item.action === 'modal' ? undefined : item.href || `/app/${item.page}`}
+							class={`action-row${item.action === 'modal' ? ' action-row--button' : ''}`}
+							onclick={item.action === 'modal' ? openAddDealModal : undefined}
+						>
+							<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
+								{#if item.icon === 'plan'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+								{:else if item.icon === 'card'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+								{:else if item.icon === 'bookmark'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+								{:else if item.icon === 'connect'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1"></rect><path d="M9 14l2 2 4-4"></path></svg>
+								{:else if item.icon === 'tax'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+								{:else if item.icon === 'plus'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+								{:else}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+								{/if}
+							</div>
+							<div class="action-text">{@html item.text}</div>
+							<span class="action-link">{item.link} →</span>
+						</svelte:element>
+					{/each}
 				</div>
 			{/if}
 		</div>
@@ -554,6 +599,9 @@
 	.secondary-actions-label {
 		padding: 0 16px 8px;
 	}
+	.secondary-actions-label--standalone {
+		padding-top: 18px;
+	}
 	.action-row {
 		display: flex;
 		align-items: center;
@@ -563,6 +611,14 @@
 		cursor: pointer;
 		transition: background var(--transition);
 		text-decoration: none;
+	}
+	.action-row--button {
+		width: 100%;
+		border: none;
+		background: transparent;
+		text-align: left;
+		font: inherit;
+		color: inherit;
 	}
 	.action-row:last-child { border-bottom: none; }
 	.action-row:hover { background: var(--bg-cream); }
