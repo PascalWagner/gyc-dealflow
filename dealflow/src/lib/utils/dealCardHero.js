@@ -158,7 +158,8 @@ export function getDealCardHeroConfig(deal = {}) {
 			headlineLabel: headline.label,
 			returnsSeries: historicalReturns,
 			imageUrl: '',
-			emptyMessage: ''
+			emptyMessage: '',
+			showHeadline: false
 		};
 	}
 
@@ -172,7 +173,8 @@ export function getDealCardHeroConfig(deal = {}) {
 			headlineLabel: headline.label,
 			returnsSeries: [],
 			imageUrl: '',
-			emptyMessage: 'Annual return history unavailable'
+			emptyMessage: 'Annual return history unavailable',
+			showHeadline: false
 		};
 	}
 
@@ -186,7 +188,8 @@ export function getDealCardHeroConfig(deal = {}) {
 			headlineLabel: headline.label,
 			returnsSeries: [],
 			imageUrl: actualImageUrl,
-			emptyMessage: ''
+			emptyMessage: '',
+			showHeadline: true
 		};
 	}
 
@@ -199,6 +202,7 @@ export function getDealCardHeroConfig(deal = {}) {
 		headlineLabel: headline.label,
 		returnsSeries: [],
 		imageUrl: '',
-		emptyMessage: ''
+		emptyMessage: '',
+		showHeadline: true
 	};
 }

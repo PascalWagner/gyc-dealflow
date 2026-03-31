@@ -310,10 +310,12 @@
 			{/if}
 		</div>
 
-		<div class="hero-headline">
-			<span class="irr-value" class:is-placeholder={heroConfig.headlineValue === '—'}>{heroConfig.headlineValue}</span>
-			<span class="irr-label">{heroConfig.headlineLabel}</span>
-		</div>
+		{#if heroConfig.showHeadline !== false}
+			<div class="hero-headline">
+				<span class="irr-value" class:is-placeholder={heroConfig.headlineValue === '—'}>{heroConfig.headlineValue}</span>
+				<span class="irr-label">{heroConfig.headlineLabel}</span>
+			</div>
+		{/if}
 	</div>
 
 	<div class="card-body">
@@ -607,33 +609,27 @@
 		z-index: 1;
 		height: 100%;
 		min-height: 0;
-		border-radius: 14px;
-		overflow: hidden;
-		background:
-			linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%),
-			rgba(7, 20, 25, 0.16);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+		width: 100%;
 		display: flex;
-		align-items: flex-end;
-		padding: 12px;
+		align-items: flex-start;
+		padding: 6px 0 0;
 		pointer-events: none;
 	}
 
 	.hero-empty-watermark {
 		position: absolute;
-		right: 10px;
-		top: 8px;
-		font-size: 42px;
-		opacity: 0.1;
-		filter: grayscale(1) brightness(1.8);
+		right: -4px;
+		bottom: -12px;
+		font-size: 46px;
+		opacity: 0.14;
+		filter: grayscale(1) brightness(1.6);
 	}
 
 	.hero-empty-copy {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
-		max-width: 152px;
+		max-width: 164px;
 	}
 
 	.hero-empty-label {
