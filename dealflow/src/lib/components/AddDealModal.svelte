@@ -21,10 +21,14 @@
 		onsubmitted = () => {}
 	} = $props();
 
-	const normalizedEntrySurface = normalizeSubmissionSurface(entrySurface, 'deal_flow');
-	const initialIntent = normalizeSubmissionIntent(
-		defaultIntent,
-		getDefaultSubmissionIntent(normalizedEntrySurface)
+	const normalizedEntrySurface = $derived.by(() =>
+		normalizeSubmissionSurface(entrySurface, 'deal_flow')
+	);
+	const initialIntent = $derived.by(() =>
+		normalizeSubmissionIntent(
+			defaultIntent,
+			getDefaultSubmissionIntent(normalizedEntrySurface)
+		)
 	);
 
 	let nameInputEl = $state(null);
@@ -34,7 +38,7 @@
 	let investmentName = $state('');
 	let sponsor = $state('');
 	let website = $state('');
-	let submissionIntent = $state(initialIntent);
+	let submissionIntent = $state('');
 	let selectedExistingDeal = $state(null);
 
 	let deckFile = $state(null);
@@ -63,6 +67,12 @@
 	const submitButtonLabel = $derived.by(() =>
 		submissionIntent === 'invested' ? 'Add to Invested' : 'Add to Review'
 	);
+
+	$effect(() => {
+		if (!submissionIntent) {
+			submissionIntent = initialIntent;
+		}
+	});
 
 	onMount(() => {
 		tick().then(() => nameInputEl?.focus());

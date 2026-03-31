@@ -27,6 +27,8 @@ export const FIELD_MAP = {
     'Target IRR': 'target_irr',
     'Distributions Received': 'distributions_received',
     'Hold Period': 'hold_period',
+    'Actual Year 1 Cash Flow': 'actual_year_1_cash_flow',
+    'Actual Year 1 Depreciation': 'actual_year_1_depreciation',
     'Investing Entity': 'investing_entity',
     'Entity Invested Into': 'entity_invested_into',
     'Notes': 'notes'

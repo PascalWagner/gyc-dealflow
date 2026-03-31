@@ -8,6 +8,7 @@
 		ADMIN_NAV_ITEMS,
 		MORE_ACCOUNT_ITEMS,
 		MORE_DASHBOARD_ITEMS,
+		getOfferingNavItems,
 		getSupportNavItems
 	} from '$lib/navigation/app-nav.js';
 
@@ -34,6 +35,17 @@
 			{
 				label: 'Support',
 				items: supportItems
+			},
+			{
+				label: 'Offerings',
+				items: getOfferingNavItems({
+					nativeCompanionMode,
+					canShowMemberHub
+				}).map((item) => ({
+					href: item.href,
+					label: item.label,
+					icon: item.moreIcon
+				}))
 			},
 			{
 				label: 'Account',
@@ -67,7 +79,7 @@
 	{/each}
 
 	{#if $isGP}
-		<div class="section-label">GP Portal</div>
+		<div class="section-label">For Operators</div>
 		<a href="/gp-dashboard" class="menu-item">
 			<span class="menu-icon">📈</span>
 			<span class="menu-label">GP Dashboard</span>

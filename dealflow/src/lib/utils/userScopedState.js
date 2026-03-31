@@ -397,6 +397,8 @@ function mapPortfolio(rows) {
 		distributionsReceived: row.distributions_received || 0,
 		equityMultiple: row.equity_multiple || '',
 		holdPeriod: row.hold_period || '',
+		actualYear1CashFlow: row.actual_year_1_cash_flow || '',
+		actualYear1Depreciation: row.actual_year_1_depreciation || '',
 		investingEntity: row.investing_entity || '',
 		entityInvestedInto: row.entity_invested_into || '',
 		notes: row.notes || '',

@@ -74,6 +74,35 @@ export const MORE_ACCOUNT_ITEMS = [
 	{ href: APP_ROUTES.settings, label: 'Settings', moreIcon: '⚙️' }
 ];
 
+export function getOfferingNavItems({
+	nativeCompanionMode = false,
+	canShowMemberHub = true
+} = {}) {
+	const items = [];
+
+	if (!nativeCompanionMode) {
+		items.push({
+			page: 'income-fund',
+			href: APP_ROUTES['income-fund'],
+			icon: 'incomefund',
+			label: 'Income Fund',
+			moreIcon: '💰'
+		});
+	}
+
+	if (canShowMemberHub) {
+		items.push({
+			page: 'academy',
+			href: APP_ROUTES.academy,
+			icon: 'academy',
+			label: 'Cash Flow Academy',
+			moreIcon: '📚'
+		});
+	}
+
+	return items;
+}
+
 export function getSupportNavItems({
 	nativeCompanionMode = false,
 	canShowMemberHub = true,
@@ -99,33 +128,13 @@ export function getSupportNavItems({
 		});
 	}
 
-	if (!nativeCompanionMode) {
-		items.push({
-			page: 'income-fund',
-			href: APP_ROUTES['income-fund'],
-			icon: 'incomefund',
-			label: 'GYC Income Fund',
-			moreIcon: '💰'
-		});
-	}
-
-	if (canShowMemberHub) {
-		items.push({
-			page: 'academy',
-			href: APP_ROUTES.academy,
-			icon: 'academy',
-			label: nativeCompanionMode ? 'Member Hub' : 'Cash Flow Academy',
-			moreIcon: '📚'
-		});
-	}
-
 	return items;
 }
 
 export function getSidebarSections(options = {}) {
 	return [
 		{
-			label: 'Home',
+			label: '',
 			items: [
 				{ page: 'dashboard', icon: 'dashboard', label: 'Home' },
 				{ page: 'plan', icon: 'plan', label: 'Plan' },
@@ -136,6 +145,10 @@ export function getSidebarSections(options = {}) {
 		{
 			label: 'Support',
 			items: getSupportNavItems(options)
+		},
+		{
+			label: 'Offerings',
+			items: getOfferingNavItems(options)
 		}
 	];
 }

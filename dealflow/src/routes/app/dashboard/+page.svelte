@@ -100,6 +100,25 @@
 		}
 		return '';
 	});
+	const coachTargetCopy = $derived.by(() => {
+		if (hasGoals) return `You're building toward $${targetIncome.toLocaleString()}/year in passive income.`;
+		if (branch === 'growth') {
+			const capital = parseDollar(wizardData.growthCapital) || 500000;
+			return `You're building toward $${capital.toLocaleString()} in portfolio value growth.`;
+		}
+		if (branch === 'tax') {
+			const target = parseDollar(wizardData.taxableIncome) || 200000;
+			return `You're working toward $${target.toLocaleString()}/year in taxable income offsets.`;
+		}
+		const target = parseDollar(wizardData.targetCashFlow) || 100000;
+		return `You're building toward $${target.toLocaleString()}/year in passive income.`;
+	});
+	const coachProgressCopy = $derived.by(() => {
+		if (goalProgress > 0 && currentIncome > 0) {
+			return `You're currently at $${currentIncome.toLocaleString()}/year, and the fastest way to keep moving is to browse deals that fit your plan.`;
+		}
+		return `You haven't started deploying yet, and the fastest way to make progress is to browse deals that fit your plan.`;
+	});
 	const statsLine = $derived(
 		activeInvestments > 0
 			? `${activeInvestments} active investment${activeInvestments !== 1 ? 's' : ''} · $${totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(2) + 'M' : totalInvested.toLocaleString()} deployed`
@@ -240,6 +259,19 @@
 				</div>
 			</div>
 		{:else}
+		<div class="coach-card">
+			<div class="coach-copy">
+				<div class="coach-eyebrow">Your investing coach</div>
+				<h2 class="coach-title">{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h2>
+				<p class="coach-text">{coachTargetCopy}</p>
+				<p class="coach-text coach-text--muted">{coachProgressCopy}</p>
+			</div>
+			<div class="coach-actions">
+				<a href="/app/deals" class="btn-primary coach-primary">Browse Deals</a>
+				<a href="/app/plan" class="coach-secondary">Review Plan</a>
+			</div>
+		</div>
+
 		{#if hasGoalContext}
 			<div class="dash-hero">
 				<div class="dash-hero-label">{goalLabel}</div>
@@ -427,6 +459,68 @@
 		font-size: 13px;
 		font-weight: 600;
 		color: var(--primary);
+		text-decoration: none;
+	}
+	.coach-card {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 18px;
+		padding: 22px 24px;
+		margin-bottom: 18px;
+		background:
+			linear-gradient(135deg, rgba(81, 190, 123, 0.1), rgba(37, 99, 235, 0.05)),
+			var(--bg-card);
+		border: 1px solid rgba(81, 190, 123, 0.18);
+		border-radius: var(--radius);
+	}
+	.coach-copy {
+		max-width: 680px;
+	}
+	.coach-eyebrow {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: var(--primary);
+	}
+	.coach-title {
+		margin: 10px 0 0;
+		font-family: var(--font-headline);
+		font-size: 30px;
+		line-height: 1.12;
+		color: var(--text-dark);
+	}
+	.coach-text {
+		margin: 12px 0 0;
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1.7;
+		color: var(--text-dark);
+	}
+	.coach-text--muted {
+		color: var(--text-secondary);
+	}
+	.coach-actions {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
+		flex-shrink: 0;
+	}
+	.coach-primary {
+		white-space: nowrap;
+	}
+	.coach-secondary {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 10px 0;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-secondary);
 		text-decoration: none;
 	}
 
@@ -682,6 +776,24 @@
 
 	/* ── Mobile Responsive ── */
 	@media (max-width: 768px) {
+		.coach-card {
+			flex-direction: column;
+			padding: 20px 18px;
+			margin-bottom: 16px;
+		}
+		.coach-title {
+			font-size: 24px;
+		}
+		.coach-actions {
+			width: 100%;
+			flex-direction: column;
+			align-items: stretch;
+		}
+		.coach-primary,
+		.coach-secondary {
+			width: 100%;
+			text-align: center;
+		}
 		.dashboard-onboarding-card {
 			margin-top: 20px;
 			padding: 28px 20px;

@@ -430,7 +430,9 @@
 
 	<nav class="sidebar-nav">
 		{#each navSections as section}
-			<div class="nav-section-label">{section.label}</div>
+			{#if section.label}
+				<div class="nav-section-label">{section.label}</div>
+			{/if}
 			{#each section.items as item}
 				<a
 					class="nav-item"
@@ -454,7 +456,7 @@
 		{/each}
 
 		{#if $isGP || $isAdmin}
-			<div class="nav-section-label">GP Portal</div>
+			<div class="nav-section-label">For Operators</div>
 			<a class="nav-item" class:active={currentPage === 'gp-dashboard'} href="/gp-dashboard" data-sveltekit-reload onclick={closeMobile}>
 				<span class="nav-icon">{@html icons.gpdashboard}</span>
 				GP Dashboard

@@ -18,6 +18,8 @@ function populationScore(record = {}) {
 		record.amountInvested,
 		record.dateInvested,
 		record.targetIRR,
+		record.actualYear1CashFlow,
+		record.actualYear1Depreciation,
 		record.distributionsReceived,
 		record.equityMultiple,
 		record.investingEntity,
@@ -27,25 +29,120 @@ function populationScore(record = {}) {
 	].filter((value) => value !== null && value !== undefined && String(value).trim?.() !== '').length;
 }
 
-function preferPortfolioRecord(currentRecord, nextRecord) {
-	if (!currentRecord) return nextRecord;
-	if (!nextRecord) return currentRecord;
+function parseCurrencyLike(value) {
+	if (typeof value === 'number') {
+		return Number.isFinite(value) ? value : null;
+	}
 
-	const currentScore = populationScore(currentRecord);
-	const nextScore = populationScore(nextRecord);
+	const normalized = String(value || '').trim();
+	if (!normalized) return null;
+	if (!/^-?\$?[\d,\s]+(?:\.\d+)?$/.test(normalized)) return null;
+	const parsed = Number(normalized.replace(/[$,\s]/g, ''));
+	return Number.isFinite(parsed) ? parsed : null;
+}
 
-	if (nextScore > currentScore) return nextRecord;
-	if (currentScore > nextScore) return currentRecord;
+function resolveProjectedYear1CashFlow(deal = {}, amountInvested = 0) {
+	const rateCandidate = firstNonEmpty(
+		deal.cashYield,
+		deal.cash_yield,
+		deal.cashOnCash,
+		deal.cash_on_cash,
+		deal.preferredReturn,
+		deal.preferred_return
+	);
+	const numericRate = Number(rateCandidate);
+	if (!Number.isFinite(numericRate) || numericRate <= 0 || !Number.isFinite(amountInvested) || amountInvested <= 0) {
+		return '';
+	}
+	const rate = numericRate > 1 ? numericRate / 100 : numericRate;
+	return Math.round(amountInvested * rate);
+}
 
-	return String(nextRecord._recordId || nextRecord.id || '').localeCompare(String(currentRecord._recordId || currentRecord.id || '')) >= 0
-		? nextRecord
-		: currentRecord;
+function resolveProjectedYear1DepreciationText(deal = {}) {
+	return firstNonEmpty(deal.firstYrDepreciation, deal.first_yr_depreciation);
+}
+
+function buildPortfolioEntry({ detailRecord = null, deal = {}, fallbackDealId = '' } = {}) {
+	const lifecycleStatus = firstNonEmpty(detailRecord?.lifecycleStatus, deal.lifecycleStatus, deal.lifecycle_status);
+	const status = detailRecord?.status || 'Active';
+	const isPendingReview =
+		lifecycleStatus
+			? lifecycleStatus !== 'published'
+			: String(status || '').trim().toLowerCase() === 'pending';
+	const displayStatus = isPendingReview ? getPendingReviewBadgeLabel(lifecycleStatus) : status;
+	const countsTowardPortfolioMetrics = !isPendingReview && String(displayStatus).trim().toLowerCase() !== 'pending';
+	const amountInvested = parseFloat(detailRecord?.amountInvested) || 0;
+	const projectedYear1CashFlow = resolveProjectedYear1CashFlow(deal, amountInvested);
+	const projectedYear1DepreciationText = resolveProjectedYear1DepreciationText(deal);
+	const projectedYear1DepreciationValue = parseCurrencyLike(projectedYear1DepreciationText);
+	const actualYear1CashFlow = detailRecord?.actualYear1CashFlow ?? detailRecord?.actual_year_1_cash_flow ?? '';
+	const actualYear1Depreciation = detailRecord?.actualYear1Depreciation ?? detailRecord?.actual_year_1_depreciation ?? '';
+	const hasActualYear1CashFlow = actualYear1CashFlow !== '' && actualYear1CashFlow !== null && actualYear1CashFlow !== undefined;
+	const hasActualYear1Depreciation = actualYear1Depreciation !== '' && actualYear1Depreciation !== null && actualYear1Depreciation !== undefined;
+
+	return normalizePortfolioRecord({
+		id: detailRecord?.id || `invested_${fallbackDealId}`,
+		_recordId: detailRecord?._recordId || '',
+		dealId: detailRecord?.dealId || fallbackDealId || '',
+		investmentName: firstNonEmpty(
+			detailRecord?.investmentName,
+			deal.investmentName,
+			deal.investment_name,
+			deal.name,
+			'Unnamed investment'
+		),
+		sponsor: firstNonEmpty(
+			detailRecord?.sponsor,
+			deal.managementCompany,
+			deal.management_company,
+			deal.sponsor
+		),
+		assetClass: firstNonEmpty(detailRecord?.assetClass, deal.assetClass, deal.asset_class),
+		amountInvested: detailRecord?.amountInvested ?? '',
+		dateInvested: detailRecord?.dateInvested || '',
+		status,
+		targetIRR: detailRecord?.targetIRR ?? firstNonEmpty(deal.targetIRR, deal.target_irr),
+		distributionsReceived: detailRecord?.distributionsReceived ?? '',
+		equityMultiple: detailRecord?.equityMultiple ?? firstNonEmpty(deal.equityMultiple, deal.equity_multiple),
+		actualYear1CashFlow,
+		actualYear1Depreciation,
+		projectedYear1CashFlow,
+		projectedYear1DepreciationValue,
+		projectedYear1DepreciationText,
+		displayYear1CashFlow: hasActualYear1CashFlow ? actualYear1CashFlow : projectedYear1CashFlow,
+		displayYear1CashFlowSource: hasActualYear1CashFlow ? 'actual' : projectedYear1CashFlow !== '' ? 'projected' : '',
+		displayYear1Depreciation: hasActualYear1Depreciation ? actualYear1Depreciation : projectedYear1DepreciationValue ?? '',
+		displayYear1DepreciationText: hasActualYear1Depreciation ? '' : projectedYear1DepreciationText || '',
+		displayYear1DepreciationSource:
+			hasActualYear1Depreciation ? 'actual' : projectedYear1DepreciationText ? 'projected' : '',
+		investingEntity: detailRecord?.investingEntity || '',
+		entityInvestedInto: detailRecord?.entityInvestedInto || '',
+		holdPeriod: firstNonEmpty(detailRecord?.holdPeriod, deal.holdPeriod, deal.hold_period),
+		notes: detailRecord?.notes || '',
+		lifecycleStatus,
+		isPendingReview,
+		reviewStatusLabel: isPendingReview ? getPendingReviewBadgeLabel(lifecycleStatus) : '',
+		countsTowardPortfolioMetrics,
+		displayStatus,
+		_missingDetails: !detailRecord,
+		_source: detailRecord ? 'details' : 'stage'
+	});
 }
 
 export function normalizePortfolioRecord(record = {}) {
+	const normalizedId = record.id || `inv_${Math.random().toString(36).slice(2, 9)}`;
+	const resolvedRecordId =
+		record._recordId ||
+		(
+			record.id &&
+			!String(record.id).startsWith('inv_') &&
+			!String(record.id).startsWith('invested_')
+		? record.id
+		: ''
+		);
 	return {
-		id: record.id || `inv_${Math.random().toString(36).slice(2, 9)}`,
-		_recordId: record._recordId || record.id || '',
+		id: normalizedId,
+		_recordId: resolvedRecordId,
 		dealId: record.dealId || record.deal_id || '',
 		investmentName: record.investmentName || record.investment_name || '',
 		sponsor: record.sponsor || '',
@@ -56,6 +153,16 @@ export function normalizePortfolioRecord(record = {}) {
 		targetIRR: record.targetIRR ?? record.target_irr ?? '',
 		distributionsReceived: record.distributionsReceived ?? record.distributions_received ?? '',
 		equityMultiple: record.equityMultiple ?? record.equity_multiple ?? '',
+		actualYear1CashFlow: record.actualYear1CashFlow ?? record.actual_year_1_cash_flow ?? '',
+		actualYear1Depreciation: record.actualYear1Depreciation ?? record.actual_year_1_depreciation ?? '',
+		projectedYear1CashFlow: record.projectedYear1CashFlow ?? '',
+		projectedYear1DepreciationValue: record.projectedYear1DepreciationValue ?? '',
+		projectedYear1DepreciationText: record.projectedYear1DepreciationText || '',
+		displayYear1CashFlow: record.displayYear1CashFlow ?? '',
+		displayYear1CashFlowSource: record.displayYear1CashFlowSource || '',
+		displayYear1Depreciation: record.displayYear1Depreciation ?? '',
+		displayYear1DepreciationText: record.displayYear1DepreciationText || '',
+		displayYear1DepreciationSource: record.displayYear1DepreciationSource || '',
 		investingEntity: record.investingEntity || record.investing_entity || '',
 		entityInvestedInto: record.entityInvestedInto || record.entity_invested_into || '',
 		holdPeriod: record.holdPeriod || record.hold_period || '',
@@ -85,10 +192,15 @@ function comparePortfolioRecords(left, right) {
 export function buildInvestedPortfolio({ stageMap = {}, deals = [], portfolio = [] } = {}) {
 	const normalizedPortfolio = (portfolio || []).map((record) => normalizePortfolioRecord(record));
 	const detailsByDealId = new Map();
+	const unlinkedEntries = [];
 
 	for (const record of normalizedPortfolio) {
-		if (!record.dealId) continue;
-		detailsByDealId.set(record.dealId, preferPortfolioRecord(detailsByDealId.get(record.dealId), record));
+		if (!record.dealId) {
+			unlinkedEntries.push(buildPortfolioEntry({ detailRecord: record }));
+			continue;
+		}
+		if (!detailsByDealId.has(record.dealId)) detailsByDealId.set(record.dealId, []);
+		detailsByDealId.get(record.dealId).push(record);
 	}
 
 	const dealById = new Map(
@@ -101,56 +213,31 @@ export function buildInvestedPortfolio({ stageMap = {}, deals = [], portfolio = 
 		.filter(([, stage]) => normalizeStage(stage) === 'invested')
 		.map(([dealId]) => dealId);
 
-	const entries = investedDealIds
-		.map((dealId) => {
-			const detailRecord = detailsByDealId.get(dealId);
-			const deal = dealById.get(dealId) || {};
-			const lifecycleStatus = firstNonEmpty(detailRecord?.lifecycleStatus, deal.lifecycleStatus, deal.lifecycle_status);
-			const isPendingReview =
-				lifecycleStatus
-					? lifecycleStatus !== 'published'
-					: String(detailRecord?.status || '').trim().toLowerCase() === 'pending';
-			const displayStatus = isPendingReview ? getPendingReviewBadgeLabel(lifecycleStatus) : (detailRecord?.status || 'Active');
-			const countsTowardPortfolioMetrics = !isPendingReview && String(displayStatus).trim().toLowerCase() !== 'pending';
+	const entries = [];
 
-			return normalizePortfolioRecord({
-				id: detailRecord?.id || `invested_${dealId}`,
-				_recordId: detailRecord?._recordId || '',
-				dealId,
-				investmentName: firstNonEmpty(
-					detailRecord?.investmentName,
-					deal.investmentName,
-					deal.investment_name,
-					deal.name,
-					'Unnamed investment'
-				),
-				sponsor: firstNonEmpty(
-					detailRecord?.sponsor,
-					deal.managementCompany,
-					deal.management_company,
-					deal.sponsor
-				),
-				assetClass: firstNonEmpty(detailRecord?.assetClass, deal.assetClass, deal.asset_class),
-				amountInvested: detailRecord?.amountInvested ?? '',
-				dateInvested: detailRecord?.dateInvested || '',
-				status: detailRecord?.status || 'Active',
-				targetIRR: detailRecord?.targetIRR ?? firstNonEmpty(deal.targetIRR, deal.target_irr),
-				distributionsReceived: detailRecord?.distributionsReceived ?? '',
-				equityMultiple: detailRecord?.equityMultiple ?? firstNonEmpty(deal.equityMultiple, deal.equity_multiple),
-				investingEntity: detailRecord?.investingEntity || '',
-				entityInvestedInto: detailRecord?.entityInvestedInto || '',
-				holdPeriod: firstNonEmpty(detailRecord?.holdPeriod, deal.holdPeriod, deal.hold_period),
-				notes: detailRecord?.notes || '',
-				lifecycleStatus,
-				isPendingReview,
-				reviewStatusLabel: isPendingReview ? getPendingReviewBadgeLabel(lifecycleStatus) : '',
-				countsTowardPortfolioMetrics,
-				displayStatus,
-				_missingDetails: !detailRecord,
-				_source: detailRecord ? 'details' : 'stage'
+	for (const dealId of investedDealIds) {
+		const deal = dealById.get(dealId) || {};
+		const detailRecords = detailsByDealId.get(dealId) || [];
+		if (detailRecords.length > 0) {
+			detailRecords.forEach((record) => {
+				entries.push(buildPortfolioEntry({ detailRecord: record, deal, fallbackDealId: dealId }));
 			});
-		})
-		.sort(comparePortfolioRecords);
+			detailsByDealId.delete(dealId);
+			continue;
+		}
+
+		entries.push(buildPortfolioEntry({ deal, fallbackDealId: dealId }));
+	}
+
+	for (const [dealId, detailRecords] of detailsByDealId.entries()) {
+		const deal = dealById.get(dealId) || {};
+		detailRecords.forEach((record) => {
+			entries.push(buildPortfolioEntry({ detailRecord: record, deal, fallbackDealId: dealId }));
+		});
+	}
+
+	entries.push(...unlinkedEntries);
+	entries.sort(comparePortfolioRecords);
 
 	return {
 		entries,

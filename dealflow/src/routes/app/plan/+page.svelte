@@ -975,6 +975,26 @@
 						{/if}
 					{/each}
 				</p>
+				<div class="plan-snapshot-grid">
+					<div class="plan-snapshot-item">
+						<div class="plan-snapshot-label">Target Annual Outcome</div>
+						<div class="plan-snapshot-value">{currency(annualTargetAmount)}</div>
+					</div>
+					<div class="plan-snapshot-item">
+						<div class="plan-snapshot-label">Average Check Size</div>
+						<div class="plan-snapshot-value">{currency(plannedCheckSize)}</div>
+					</div>
+					<div class="plan-snapshot-item">
+						<div class="plan-snapshot-label">Preferred Asset Classes</div>
+						<div class="plan-snapshot-value plan-snapshot-value--wrap">
+							{selectedAssets.slice(0, 3).map((asset) => getAssetProfile(asset).label).join(', ')}
+						</div>
+					</div>
+					<div class="plan-snapshot-item">
+						<div class="plan-snapshot-label">Target Hold Period</div>
+						<div class="plan-snapshot-value">{printLockup}</div>
+					</div>
+				</div>
 			</section>
 
 			{#if canViewAnalytics}
@@ -982,6 +1002,32 @@
 					<div class="section-eyebrow">Market Snapshot</div>
 					<div class="section-subcopy">Deals in the database right now that line up with your selected asset classes.</div>
 					<MarketSnapshot rows={snapshotRows} {totalMatches} totalNewMatches={totalNewMatches} />
+				</section>
+
+				<section class="plan-card schedule-card">
+					<div class="schedule-topline">
+						<div>
+							<div class="section-eyebrow">Your Investment Plan</div>
+							<div class="schedule-summary">{currentInvestmentCount} of 9 investments · {currency(currentInvestedTotal)} deployed</div>
+						</div>
+						<button class="inline-action green" onclick={openWizard}>Edit Plan</button>
+					</div>
+					<div class="schedule-list">
+						{#each projection.years as item}
+							<div class="schedule-row">
+								<div class="schedule-row-top">
+									<div class="schedule-year">Year {item.index} <span>({item.year})</span></div>
+									<div class="schedule-income">{currency(item.cumulativeIncome)}/yr <span>{item.progressPct}%</span></div>
+								</div>
+								<div class="schedule-row-detail">
+									<span class="schedule-bullet"></span>
+									{item.profile.label} · {currency(item.checkSize)} · ~{percent(item.profile.cashYield)} · ~{currency(item.income)}/yr
+									<a href="/app/deals" class="schedule-link">{item.matches} matches</a>
+								</div>
+							</div>
+						{/each}
+					</div>
+					<div class="schedule-total">{projection.years.length} deals · {currency(projection.checkSize)} avg check · {currency(projection.years[projection.years.length - 1]?.cumulativeIncome || 0)}/yr</div>
 				</section>
 
 				<section class="plan-card growth-card">
@@ -1015,32 +1061,6 @@
 					{#if concentrationAlert}
 						<div class="growth-alert">{concentrationAlert}</div>
 					{/if}
-				</section>
-
-				<section class="plan-card schedule-card">
-					<div class="schedule-topline">
-						<div>
-							<div class="section-eyebrow">Your Investment Plan</div>
-							<div class="schedule-summary">{currentInvestmentCount} of 9 investments · {currency(currentInvestedTotal)} deployed</div>
-						</div>
-						<button class="inline-action green" onclick={openWizard}>Edit Plan</button>
-					</div>
-					<div class="schedule-list">
-						{#each projection.years as item}
-							<div class="schedule-row">
-								<div class="schedule-row-top">
-									<div class="schedule-year">Year {item.index} <span>({item.year})</span></div>
-									<div class="schedule-income">{currency(item.cumulativeIncome)}/yr <span>{item.progressPct}%</span></div>
-								</div>
-								<div class="schedule-row-detail">
-									<span class="schedule-bullet"></span>
-									{item.profile.label} · {currency(item.checkSize)} · ~{percent(item.profile.cashYield)} · ~{currency(item.income)}/yr
-									<a href="/app/deals" class="schedule-link">{item.matches} matches</a>
-								</div>
-							</div>
-						{/each}
-					</div>
-					<div class="schedule-total">{projection.years.length} deals · {currency(projection.checkSize)} avg check · {currency(projection.years[projection.years.length - 1]?.cumulativeIncome || 0)}/yr</div>
 				</section>
 			{:else}
 				<section class="plan-card locked-card">
@@ -1372,6 +1392,37 @@
 	.print-copy strong {
 		font-weight: 700;
 		color: var(--text-dark);
+	}
+	.plan-snapshot-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 12px;
+		margin-top: 20px;
+	}
+	.plan-snapshot-item {
+		padding: 14px 16px;
+		border-radius: 14px;
+		background: rgba(81, 190, 123, 0.06);
+		border: 1px solid rgba(81, 190, 123, 0.12);
+	}
+	.plan-snapshot-label {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+	.plan-snapshot-value {
+		margin-top: 8px;
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 700;
+		line-height: 1.45;
+		color: var(--text-dark);
+	}
+	.plan-snapshot-value--wrap {
+		font-size: 14px;
 	}
 	.section-subcopy,
 	.locked-copy {
@@ -2079,6 +2130,9 @@
 	}
 
 	@media (max-width: 1024px) {
+		.plan-snapshot-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
 		.growth-chart {
 			gap: 8px;
 		}
@@ -2094,6 +2148,9 @@
 		.growth-topline {
 			flex-direction: column;
 			align-items: flex-start;
+		}
+		.plan-snapshot-grid {
+			grid-template-columns: minmax(0, 1fr);
 		}
 		.target-actions,
 		.locked-actions {

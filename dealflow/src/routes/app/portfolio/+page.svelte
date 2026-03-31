@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
-	import { getStoredSessionToken } from '$lib/stores/auth.js';
+	import { getStoredSessionToken, isMember } from '$lib/stores/auth.js';
 	import AddDealModal from '$lib/components/AddDealModal.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
@@ -10,19 +10,35 @@
 	import { buildInvestedPortfolio, normalizePortfolioRecord } from '$lib/utils/investedPortfolio.js';
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
+	function createEmptyInvestmentDraft() {
+		return {
+			investmentName: '',
+			sponsor: '',
+			assetClass: '',
+			amountInvested: '',
+			dateInvested: '',
+			status: 'Active',
+			targetIRR: '',
+			actualYear1CashFlow: '',
+			actualYear1Depreciation: '',
+			distributionsReceived: '',
+			equityMultiple: '',
+			investingEntity: '',
+			entityInvestedInto: '',
+			holdPeriod: '',
+			notes: '',
+			dealId: ''
+		};
+	}
+
 	let portfolioDetails = $state([]);
 	let wizardData = $state({});
 	let showIntakeModal = $state(false);
-	let showAddModal = $state(false);
 	let editingId = $state('');
+	let activePortfolioTab = $state('holdings');
 
 	// Modal form data
-	let modalData = $state({
-		investmentName: '', sponsor: '', assetClass: '', amountInvested: '',
-		dateInvested: '', status: 'Active', targetIRR: '', distributionsReceived: '',
-		equityMultiple: '', investingEntity: '', entityInvestedInto: '',
-		holdPeriod: '', notes: '', dealId: ''
-	});
+	let modalData = $state(createEmptyInvestmentDraft());
 	const portfolioView = $derived.by(() =>
 		buildInvestedPortfolio({
 			stageMap: $dealStages || {},
@@ -33,28 +49,31 @@
 	const portfolio = $derived.by(() => portfolioView.entries);
 	const metricPortfolio = $derived.by(() => portfolioView.metricEntries || []);
 	const pendingEntries = $derived.by(() => portfolioView.pendingEntries || []);
+	const canViewAnalysis = $derived($isMember);
 	const hasPersistedDetails = $derived.by(() =>
 		portfolioDetails.some((investment) => investment.id === editingId)
 	);
 
 	const totalInvested = $derived(metricPortfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
-	const totalDistributions = $derived(metricPortfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0));
-	const activeCount = $derived(metricPortfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length);
 	const avgIRR = $derived.by(() => {
 		const withIRR = metricPortfolio.filter(i => i.targetIRR);
 		if (withIRR.length === 0) return 0;
 		return withIRR.reduce((s, i) => s + parseFloat(i.targetIRR), 0) / withIRR.length;
 	});
-	const avgHoldPeriod = $derived.by(() => {
-		const withDate = metricPortfolio.filter(i => i.dateInvested && (i.status === 'Active' || i.status === 'Distributing'));
-		if (withDate.length === 0) return 0;
-		const now = new Date();
-		const totalMonths = withDate.reduce((s, i) => {
-			const d = new Date(i.dateInvested);
-			return s + ((now - d) / (1000 * 60 * 60 * 24 * 30.44));
-		}, 0);
-		return totalMonths / withDate.length;
+	const avgHoldPeriodYears = $derived.by(() => {
+		const withHoldPeriod = metricPortfolio
+			.map((investment) => parseFloat(investment.holdPeriod))
+			.filter((value) => Number.isFinite(value) && value > 0);
+		if (withHoldPeriod.length === 0) return 0;
+		return withHoldPeriod.reduce((sum, value) => sum + value, 0) / withHoldPeriod.length;
 	});
+	const avgHoldPeriodMonths = $derived.by(() => (avgHoldPeriodYears > 0 ? avgHoldPeriodYears * 12 : 0));
+	const totalYear1CashFlow = $derived.by(() =>
+		metricPortfolio.reduce((sum, investment) => sum + (parsePortfolioCurrency(investment.displayYear1CashFlow) || 0), 0)
+	);
+	const totalYear1Depreciation = $derived.by(() =>
+		metricPortfolio.reduce((sum, investment) => sum + (parsePortfolioCurrency(investment.displayYear1Depreciation) || 0), 0)
+	);
 	const assetClasses = $derived(new Set(metricPortfolio.map(i => i.assetClass).filter(Boolean)));
 	const sponsors = $derived(new Set(metricPortfolio.map(i => i.sponsor).filter(Boolean)));
 
@@ -152,7 +171,7 @@
 			}
 		}
 
-		const avgHoldMonths = avgHoldPeriod;
+		const avgHoldMonths = avgHoldPeriodMonths;
 		if (avgHoldMonths > 84) {
 			insights.push({
 				type: 'warn',
@@ -277,6 +296,47 @@
 
 	const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
 
+	function parsePortfolioCurrency(value) {
+		if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+		const normalized = String(value || '').trim();
+		if (!normalized || !/^-?\$?[\d,\s]+(?:\.\d+)?$/.test(normalized)) return 0;
+		const parsed = Number(normalized.replace(/[$,\s]/g, ''));
+		return Number.isFinite(parsed) ? parsed : 0;
+	}
+
+	function formatPortfolioMoney(value, fallback = '—') {
+		const amount = parsePortfolioCurrency(value);
+		if (!amount && amount !== 0) return fallback;
+		if (amount === 0 && String(value || '').trim() === '') return fallback;
+		return `$${amount.toLocaleString()}`;
+	}
+
+	function formatHoldPeriodValue(value) {
+		const amount = Number(value || 0);
+		if (!Number.isFinite(amount) || amount <= 0) return '—';
+		return `${amount} yr${amount === 1 ? '' : 's'}`;
+	}
+
+	function formatMetricSource(source) {
+		return source === 'actual' ? 'Actual' : source === 'projected' ? 'Projected' : '';
+	}
+
+	function displayCashFlowValue(investment) {
+		return formatPortfolioMoney(investment?.displayYear1CashFlow);
+	}
+
+	function displayDepreciationValue(investment) {
+		if (investment?.displayYear1Depreciation !== '' && investment?.displayYear1Depreciation !== null && investment?.displayYear1Depreciation !== undefined) {
+			return formatPortfolioMoney(investment.displayYear1Depreciation);
+		}
+		return investment?.displayYear1DepreciationText || '—';
+	}
+
+	function selectPortfolioTab(tab) {
+		if (tab === 'analysis' && !canViewAnalysis) return;
+		activePortfolioTab = tab;
+	}
+
 	function getToken() {
 		return browser ? getStoredSessionToken() : null;
 	}
@@ -301,6 +361,8 @@
 			'Date Invested': investment.dateInvested || '',
 			Status: investment.status || 'Active',
 			'Target IRR': investment.targetIRR !== '' ? parseFloat(investment.targetIRR) || 0 : '',
+			'Actual Year 1 Cash Flow': investment.actualYear1CashFlow !== '' ? parseFloat(investment.actualYear1CashFlow) || 0 : '',
+			'Actual Year 1 Depreciation': investment.actualYear1Depreciation !== '' ? parseFloat(investment.actualYear1Depreciation) || 0 : '',
 			'Distributions Received': parseFloat(investment.distributionsReceived) || 0,
 			'Hold Period': investment.holdPeriod || '',
 			'Investing Entity': investment.investingEntity || '',
@@ -381,16 +443,20 @@
 		editingId = id;
 		if (id) {
 			const inv = portfolio.find(i => i.id === id);
-			if (inv) modalData = { ...inv };
+			if (inv) {
+				modalData = {
+					...createEmptyInvestmentDraft(),
+					...inv
+				};
+			}
 		} else {
-			modalData = {
-				investmentName: '', sponsor: '', assetClass: '', amountInvested: '',
-				dateInvested: '', status: 'Active', targetIRR: '', distributionsReceived: '',
-				equityMultiple: '', investingEntity: '', entityInvestedInto: '',
-				holdPeriod: '', notes: '', dealId: ''
-			};
+			modalData = createEmptyInvestmentDraft();
 		}
-		showAddModal = true;
+	}
+
+	function closeInlineEditor() {
+		editingId = '';
+		modalData = createEmptyInvestmentDraft();
 	}
 
 	async function saveInvestment() {
@@ -410,25 +476,20 @@
 					? baseRecord.id
 					: 'inv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
 			});
-			nextPortfolio = draftInvestment.dealId
-				? [...portfolioDetails.filter((investment) => investment.dealId !== draftInvestment.dealId), draftInvestment]
-				: [...portfolioDetails, draftInvestment];
+			nextPortfolio = [...portfolioDetails, draftInvestment];
 		}
 		savePortfolioDetails(nextPortfolio);
 		try {
 			const synced = await syncPortfolioRecord(draftInvestment);
 			savePortfolioDetails(
 				nextPortfolio
-					.filter((investment) =>
-						investment.id !== draftInvestment.id &&
-						(!synced.dealId || investment.dealId !== synced.dealId)
-					)
+					.filter((investment) => investment.id !== draftInvestment.id)
 					.concat([synced])
 			);
 		} catch (error) {
 			console.warn('Portfolio save sync failed:', error);
 		}
-		showAddModal = false;
+		closeInlineEditor();
 	}
 
 	async function deleteInvestment(id) {
@@ -436,6 +497,7 @@
 		const existingInvestment = portfolioDetails.find((investment) => investment.id === id);
 		if (!existingInvestment) return;
 		savePortfolioDetails(portfolioDetails.filter(i => i.id !== id));
+		if (editingId === id) closeInlineEditor();
 		try {
 			await deletePortfolioRecord(existingInvestment);
 		} catch (error) {
@@ -516,184 +578,381 @@
 			</div>
 		{/if}
 
-		<!-- Summary cards -->
 		<div class="summary-grid">
-			<div class="stat-card"><div class="stat-label">Total Invested</div><div class="stat-value">${totalInvested.toLocaleString()}</div></div>
-			<div class="stat-card"><div class="stat-label">Active Investments</div><div class="stat-value">{activeCount}</div></div>
-			<div class="stat-card"><div class="stat-label">Total Distributions</div><div class="stat-value">${totalDistributions.toLocaleString()}</div></div>
-			<div class="stat-card"><div class="stat-label">Avg Target IRR</div><div class="stat-value">{avgIRR ? avgIRR.toFixed(1) + '%' : '--'}</div></div>
-		</div>
-
-		<!-- Charts row -->
-		<div class="charts-row">
-			<div class="chart-card">
-				<div class="chart-card-title">Asset Class Allocation</div>
-				<div class="chartjs-donut-wrap">
-					{#if allocationSlices.length > 0}
-						<svg viewBox="0 0 160 160" class="allocation-donut" aria-hidden="true">
-							{#each allocationSlices as slice}
-								{#if slice.isOnly}
-									<circle cx="80" cy="80" r="60" fill={slice.color}></circle>
-								{:else}
-									<path
-										d={`M80,80 L${slice.x1},${slice.y1} A60,60 0 ${slice.largeArcFlag},1 ${slice.x2},${slice.y2} Z`}
-										fill={slice.color}
-									></path>
-								{/if}
-							{/each}
-							<circle cx="80" cy="80" r="33" fill="var(--bg-card)"></circle>
-						</svg>
-					{/if}
-				</div>
-				<div class="alloc-legend">
-					{#each allocationEntries as [cls, amt], i}
-						<div class="alloc-legend-item">
-							<span class="alloc-legend-dot" style="background:{PIE_COLORS[i % PIE_COLORS.length]}"></span>
-							<span class="alloc-legend-label">{cls}</span>
-							<span class="alloc-legend-pct">{((amt / totalInvested) * 100).toFixed(0)}%</span>
-						</div>
-					{/each}
-				</div>
-				<div class="alloc-meta">
-					<div class="alloc-stat"><div class="alloc-num">{assetClasses.size}</div><div class="alloc-label">Asset Classes</div></div>
-					<div class="alloc-stat"><div class="alloc-num">{sponsors.size}</div><div class="alloc-label">Sponsors</div></div>
-				</div>
+			<div class="stat-card">
+				<div class="stat-label">Total Invested</div>
+				<div class="stat-value">{formatPortfolioMoney(totalInvested, '$0')}</div>
 			</div>
-			<div class="chart-card">
-				<div class="chart-card-title">Risk Analysis</div>
-				<div class="risk-badges">
-					{#each riskInsights as insight}
-						<div class="risk-badge" class:badge-danger={insight.type === 'danger'} class:badge-warn={insight.type === 'warn'} class:badge-ok={insight.type === 'ok'}>
-							<div class="risk-badge-icon">
-								{#if insight.type === 'danger'}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-								{:else if insight.type === 'warn'}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-								{:else}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-								{/if}
-							</div>
-							<div class="risk-badge-content">
-								<div class="risk-badge-text">{insight.text}</div>
-								{#if insight.detail}
-									<div class="risk-badge-detail">{insight.detail}</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
+			<div class="stat-card">
+				<div class="stat-label">Year 1 Cash Flow</div>
+				<div class="stat-value">{formatPortfolioMoney(totalYear1CashFlow, '$0')}</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-label">Year 1 Depreciation</div>
+				<div class="stat-value">{formatPortfolioMoney(totalYear1Depreciation, '$0')}</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-label">Avg Target IRR</div>
+				<div class="stat-value">{avgIRR ? `${avgIRR.toFixed(1)}%` : '—'}</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-label">Avg Hold Period</div>
+				<div class="stat-value">{avgHoldPeriodYears ? formatHoldPeriodValue(avgHoldPeriodYears) : '—'}</div>
 			</div>
 		</div>
 
-		{#if timelineChart}
-			<div class="chart-card timeline-card">
-				<div class="timeline-card-header">
-					<div class="chart-card-title">Capital Deployed Over Time</div>
-					<div class="timeline-legend">
-						<span class="timeline-legend-item"><span class="timeline-legend-dot capital"></span>Capital Deployed</span>
-						<span class="timeline-legend-item"><span class="timeline-legend-dot goal"></span>Goal</span>
+		<div class="portfolio-view-switch" role="tablist" aria-label="Portfolio views">
+			<button
+				type="button"
+				class="portfolio-tab"
+				class:portfolio-tab--active={activePortfolioTab === 'holdings'}
+				onclick={() => selectPortfolioTab('holdings')}
+			>
+				Holdings
+			</button>
+			<button
+				type="button"
+				class="portfolio-tab"
+				class:portfolio-tab--active={activePortfolioTab === 'analysis'}
+				class:portfolio-tab--locked={!canViewAnalysis}
+				onclick={() => selectPortfolioTab('analysis')}
+				disabled={!canViewAnalysis}
+				aria-disabled={!canViewAnalysis}
+			>
+				Analysis
+				{#if !canViewAnalysis}
+					<span class="portfolio-tab-badge">Members</span>
+				{/if}
+			</button>
+		</div>
+
+		{#if activePortfolioTab === 'holdings'}
+			<div class="holdings-panel">
+				<div class="holdings-header">
+					<div>
+						<div class="holdings-title">Your Holdings</div>
+						<div class="holdings-copy">Manage one line item per investment event. Actual LP results supersede projected deal figures whenever you add them.</div>
 					</div>
 				</div>
-				<div class="timeline-svg-shell ly-table-scroll">
-					<svg viewBox={`0 0 ${timelineChart.width} ${timelineChart.height}`} class="timeline-svg" aria-label="Capital deployed over time">
-						{#each timelineChart.tickValues as value}
-							{@const y = timelineChart.yForValue(value)}
-							<line x1={timelineChart.padding.left} y1={y} x2={timelineChart.width - timelineChart.padding.right} y2={y} class="timeline-grid-line"></line>
-							<text x={timelineChart.padding.left - 10} y={y + 4} text-anchor="end" class="timeline-axis-label">{formatAxisMoney(value)}</text>
-						{/each}
 
-						<line
-							x1={timelineChart.padding.left}
-							y1={timelineChart.goalY}
-							x2={timelineChart.width - timelineChart.padding.right}
-							y2={timelineChart.goalY}
-							class="timeline-goal-line"
-						></line>
-						<text x={timelineChart.width - timelineChart.padding.right} y={timelineChart.goalY - 8} text-anchor="end" class="timeline-goal-label">
-							Goal {formatAxisMoney(timelineChart.goal)}
-						</text>
+				<div class="holdings-table">
+					<div class="holdings-table-head">
+						<div>Investment</div>
+						<div>Status</div>
+						<div>Invested</div>
+						<div>Year 1 Cash Flow</div>
+						<div>Year 1 Depreciation</div>
+						<div>Target IRR</div>
+						<div>Hold Period</div>
+						<div></div>
+					</div>
 
-						<path d={timelineChart.areaPath} class="timeline-series-area"></path>
-						<path d={timelineChart.linePath} class="timeline-series-line"></path>
+					{#each sorted as inv}
+						{@const sc = inv.isPendingReview ? '#f59e0b' : (statusColors[inv.status] || 'var(--text-muted)')}
+						<div class="holdings-row" class:holdings-row--editing={editingId === inv.id}>
+							<div class="holdings-row-grid">
+								<div class="holding-cell holding-cell--primary" data-label="Investment">
+									<div class="holding-primary">{inv.investmentName || 'Unnamed investment'}</div>
+									<div class="holding-secondary">
+										{inv.sponsor || 'Unknown sponsor'}{inv.assetClass ? ` · ${inv.assetClass}` : ''}{inv.dateInvested ? ` · ${formatCardDate(inv.dateInvested)}` : ''}
+									</div>
+									{#if inv._missingDetails}
+										<div class="holding-note">Add your invested amount and actual first-year metrics to complete this line item.</div>
+									{:else if inv.isPendingReview}
+										<div class="holding-note">This line item is visible now and will count toward portfolio totals once the deal completes review.</div>
+									{:else if inv.notes}
+										<div class="holding-note">{inv.notes}</div>
+									{/if}
+								</div>
 
-						{#each timelineChart.markers as marker}
-							<circle cx={marker.x} cy={marker.y} r="4.5" class="timeline-marker"></circle>
-						{/each}
+								<div class="holding-cell" data-label="Status">
+									<span class="inv-status" style="--sc:{sc}">{inv.displayStatus || inv.status || 'Unknown'}</span>
+									{#if inv.isPendingReview}
+										<div class="holding-meta">Excluded from totals</div>
+									{/if}
+								</div>
 
-						{#each timelineChart.months as month, index}
-							{#if index % Math.max(1, Math.ceil(timelineChart.months.length / 10)) === 0 || index === timelineChart.months.length - 1}
-								<text
-									x={timelineChart.xForIndex(index)}
-									y={timelineChart.height - 14}
-									text-anchor="end"
-									transform={`rotate(-55 ${timelineChart.xForIndex(index)} ${timelineChart.height - 14})`}
-									class="timeline-x-label"
-								>
-									{timelineChart.labelForIndex(index)}
-								</text>
+								<div class="holding-cell" data-label="Invested">
+									<div class="holding-metric">{formatPortfolioMoney(inv.amountInvested)}</div>
+									<div class="holding-meta">{inv.dateInvested ? formatCardDate(inv.dateInvested) : 'Date not set'}</div>
+								</div>
+
+								<div class="holding-cell" data-label="Year 1 Cash Flow">
+									<div class="holding-metric">{displayCashFlowValue(inv)}</div>
+									<div class="holding-metric-source">{formatMetricSource(inv.displayYear1CashFlowSource) || 'No data yet'}</div>
+								</div>
+
+								<div class="holding-cell" data-label="Year 1 Depreciation">
+									<div class="holding-metric">{displayDepreciationValue(inv)}</div>
+									<div class="holding-metric-source">{formatMetricSource(inv.displayYear1DepreciationSource) || 'No data yet'}</div>
+								</div>
+
+								<div class="holding-cell" data-label="Target IRR">
+									<div class="holding-metric">{inv.targetIRR ? `${inv.targetIRR}%` : '—'}</div>
+								</div>
+
+								<div class="holding-cell" data-label="Hold Period">
+									<div class="holding-metric">{formatHoldPeriodValue(inv.holdPeriod)}</div>
+								</div>
+
+								<div class="holding-cell holding-cell--action" data-label="Actions">
+									<button
+										class="btn-edit"
+										class:btn-edit--active={editingId === inv.id}
+										onclick={() => (editingId === inv.id ? closeInlineEditor() : openAddModal(inv.id))}
+									>
+										{editingId === inv.id ? 'Close' : inv._missingDetails ? 'Add Details' : 'Edit'}
+									</button>
+								</div>
+							</div>
+
+							{#if editingId === inv.id}
+								<div class="holding-editor">
+									<div class="holding-editor-header">
+										<div>
+											<div class="holding-editor-title">{hasPersistedDetails ? 'Edit line item' : 'Add line-item details'}</div>
+											<div class="holding-editor-copy">Use actual LP-level results when you have them. Those actuals will override projected values in the holdings table.</div>
+										</div>
+									</div>
+
+									<div class="holding-editor-grid">
+										<label class="editor-field">
+											<span>Investment Name *</span>
+											<input bind:value={modalData.investmentName} placeholder="e.g. Acme Multi-Family Fund II" />
+										</label>
+										<label class="editor-field">
+											<span>Sponsor</span>
+											<input bind:value={modalData.sponsor} placeholder="e.g. Acme Capital" />
+										</label>
+										<label class="editor-field">
+											<span>Asset Class</span>
+											<select bind:value={modalData.assetClass}>
+												<option value="">Select...</option>
+												<option>Multi Family</option>
+												<option>Self Storage</option>
+												<option>Industrial</option>
+												<option>Lending</option>
+												<option>Short Term Rental</option>
+												<option>Hotels/Hospitality</option>
+												<option>Mixed-Use</option>
+												<option>RV/Mobile Home Parks</option>
+												<option>Senior Living</option>
+												<option>Land</option>
+												<option>Car Wash</option>
+												<option>Oil & Gas</option>
+												<option>Other</option>
+											</select>
+										</label>
+										<label class="editor-field">
+											<span>Amount Invested ($)</span>
+											<input type="number" bind:value={modalData.amountInvested} placeholder="50000" />
+										</label>
+										<label class="editor-field">
+											<span>Date Invested</span>
+											<input type="date" bind:value={modalData.dateInvested} />
+										</label>
+										<label class="editor-field">
+											<span>Status</span>
+											<select bind:value={modalData.status}>
+												<option>Active</option>
+												<option>Distributing</option>
+												<option>Exited</option>
+												<option>Pending</option>
+											</select>
+										</label>
+										<label class="editor-field">
+											<span>Actual Year 1 Cash Flow ($)</span>
+											<input type="number" bind:value={modalData.actualYear1CashFlow} placeholder="8200" />
+										</label>
+										<label class="editor-field">
+											<span>Actual Year 1 Depreciation ($)</span>
+											<input type="number" bind:value={modalData.actualYear1Depreciation} placeholder="21000" />
+										</label>
+										<label class="editor-field">
+											<span>Target IRR (%)</span>
+											<input type="number" step="0.1" bind:value={modalData.targetIRR} placeholder="15" />
+										</label>
+										<label class="editor-field">
+											<span>Hold Period (years)</span>
+											<input bind:value={modalData.holdPeriod} placeholder="e.g. 5" />
+										</label>
+										<label class="editor-field">
+											<span>Distributions Received ($)</span>
+											<input type="number" bind:value={modalData.distributionsReceived} placeholder="0" />
+										</label>
+										<label class="editor-field">
+											<span>Investing Entity</span>
+											<input bind:value={modalData.investingEntity} placeholder="e.g. My LLC" />
+										</label>
+										<label class="editor-field full-width">
+											<span>Entity Invested Into</span>
+											<input bind:value={modalData.entityInvestedInto} placeholder="e.g. Acme Fund II LLC" />
+										</label>
+										<label class="editor-field full-width">
+											<span>Notes</span>
+											<textarea bind:value={modalData.notes} rows="3" placeholder="Optional notes about this investment..."></textarea>
+										</label>
+									</div>
+
+									<div class="holding-projection-card">
+										<div class="holding-projection-title">Deal-projected first-year performance</div>
+										<div class="holding-projection-grid">
+											<div class="holding-projection-metric">
+												<span>Projected cash flow</span>
+												<strong>{inv.projectedYear1CashFlow !== '' ? formatPortfolioMoney(inv.projectedYear1CashFlow) : 'Not available'}</strong>
+											</div>
+											<div class="holding-projection-metric">
+												<span>Projected depreciation</span>
+												<strong>{inv.projectedYear1DepreciationText || 'Not available'}</strong>
+											</div>
+										</div>
+										<div class="holding-projection-copy">Projected figures stay attached to the deal for reference. Your LP-entered actuals become the primary numbers shown in holdings when available.</div>
+									</div>
+
+									<div class="holding-editor-actions">
+										{#if hasPersistedDetails}
+											<button class="btn-danger" onclick={() => deleteInvestment(editingId)}>Delete Line Item</button>
+										{/if}
+										<div class="holding-editor-actions-spacer"></div>
+										<button class="btn-cancel" onclick={closeInlineEditor}>Cancel</button>
+										<button class="btn-primary" onclick={saveInvestment}>{hasPersistedDetails ? 'Save Changes' : 'Save Line Item'}</button>
+									</div>
+								</div>
 							{/if}
-						{/each}
-					</svg>
+						</div>
+					{/each}
 				</div>
+			</div>
+		{:else if canViewAnalysis}
+			<div class="analysis-panel">
+				<div class="holdings-header">
+					<div>
+						<div class="holdings-title">Portfolio Analysis</div>
+						<div class="holdings-copy">See how your current holdings are allocated, where concentration risk is building, and how quickly you are deploying capital against your plan.</div>
+					</div>
+				</div>
+
+				<div class="charts-row">
+					<div class="chart-card">
+						<div class="chart-card-title">Asset Class Allocation</div>
+						<div class="chartjs-donut-wrap">
+							{#if allocationSlices.length > 0}
+								<svg viewBox="0 0 160 160" class="allocation-donut" aria-hidden="true">
+									{#each allocationSlices as slice}
+										{#if slice.isOnly}
+											<circle cx="80" cy="80" r="60" fill={slice.color}></circle>
+										{:else}
+											<path
+												d={`M80,80 L${slice.x1},${slice.y1} A60,60 0 ${slice.largeArcFlag},1 ${slice.x2},${slice.y2} Z`}
+												fill={slice.color}
+											></path>
+										{/if}
+									{/each}
+									<circle cx="80" cy="80" r="33" fill="var(--bg-card)"></circle>
+								</svg>
+							{:else}
+								<div class="analysis-empty">Approved invested positions will populate allocation once they carry portfolio totals.</div>
+							{/if}
+						</div>
+						{#if allocationEntries.length > 0}
+							<div class="alloc-legend">
+								{#each allocationEntries as [cls, amt], i}
+									<div class="alloc-legend-item">
+										<span class="alloc-legend-dot" style="background:{PIE_COLORS[i % PIE_COLORS.length]}"></span>
+										<span class="alloc-legend-label">{cls}</span>
+										<span class="alloc-legend-pct">{((amt / totalInvested) * 100).toFixed(0)}%</span>
+									</div>
+								{/each}
+							</div>
+						{/if}
+						<div class="alloc-meta">
+							<div class="alloc-stat"><div class="alloc-num">{assetClasses.size}</div><div class="alloc-label">Asset Classes</div></div>
+							<div class="alloc-stat"><div class="alloc-num">{sponsors.size}</div><div class="alloc-label">Sponsors</div></div>
+						</div>
+					</div>
+					<div class="chart-card">
+						<div class="chart-card-title">Risk Analysis</div>
+						<div class="risk-badges">
+							{#each riskInsights as insight}
+								<div class="risk-badge" class:badge-danger={insight.type === 'danger'} class:badge-warn={insight.type === 'warn'} class:badge-ok={insight.type === 'ok'}>
+									<div class="risk-badge-content">
+										<div class="risk-badge-text">{insight.text}</div>
+										{#if insight.detail}
+											<div class="risk-badge-detail">{insight.detail}</div>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</div>
+
+				{#if timelineChart}
+					<div class="chart-card timeline-card">
+						<div class="timeline-card-header">
+							<div class="chart-card-title">Capital Deployed Over Time</div>
+							<div class="timeline-legend">
+								<span class="timeline-legend-item"><span class="timeline-legend-dot capital"></span>Capital Deployed</span>
+								<span class="timeline-legend-item"><span class="timeline-legend-dot goal"></span>Goal</span>
+							</div>
+						</div>
+						<div class="timeline-svg-shell ly-table-scroll">
+							<svg viewBox={`0 0 ${timelineChart.width} ${timelineChart.height}`} class="timeline-svg" aria-label="Capital deployed over time">
+								{#each timelineChart.tickValues as value}
+									{@const y = timelineChart.yForValue(value)}
+									<line x1={timelineChart.padding.left} y1={y} x2={timelineChart.width - timelineChart.padding.right} y2={y} class="timeline-grid-line"></line>
+									<text x={timelineChart.padding.left - 10} y={y + 4} text-anchor="end" class="timeline-axis-label">{formatAxisMoney(value)}</text>
+								{/each}
+
+								<line
+									x1={timelineChart.padding.left}
+									y1={timelineChart.goalY}
+									x2={timelineChart.width - timelineChart.padding.right}
+									y2={timelineChart.goalY}
+									class="timeline-goal-line"
+								></line>
+								<text x={timelineChart.width - timelineChart.padding.right} y={timelineChart.goalY - 8} text-anchor="end" class="timeline-goal-label">
+									Goal {formatAxisMoney(timelineChart.goal)}
+								</text>
+
+								<path d={timelineChart.areaPath} class="timeline-series-area"></path>
+								<path d={timelineChart.linePath} class="timeline-series-line"></path>
+
+								{#each timelineChart.markers as marker}
+									<circle cx={marker.x} cy={marker.y} r="4.5" class="timeline-marker"></circle>
+								{/each}
+
+								{#each timelineChart.months as month, index}
+									{#if index % Math.max(1, Math.ceil(timelineChart.months.length / 10)) === 0 || index === timelineChart.months.length - 1}
+										<text
+											x={timelineChart.xForIndex(index)}
+											y={timelineChart.height - 14}
+											text-anchor="end"
+											transform={`rotate(-55 ${timelineChart.xForIndex(index)} ${timelineChart.height - 14})`}
+											class="timeline-x-label"
+										>
+											{timelineChart.labelForIndex(index)}
+										</text>
+									{/if}
+								{/each}
+							</svg>
+						</div>
+					</div>
+				{:else}
+					<div class="chart-card analysis-empty-card">
+						<div class="chart-card-title">Capital Deployed Over Time</div>
+						<div class="analysis-empty">Add invested amounts and dates to see your deployment path against the capital goal in your plan.</div>
+					</div>
+				{/if}
+			</div>
+		{:else}
+			<div class="analysis-locked-card">
+				<div class="analysis-locked-eyebrow">Members only</div>
+				<div class="analysis-locked-title">Unlock portfolio analysis.</div>
+				<p>Free members can manage holdings today. Upgrade to see allocation, risk, and deployment analysis across your portfolio.</p>
+				<a href="/app/office-hours" class="analysis-locked-link">See Office Hours</a>
 			</div>
 		{/if}
-
-		<div class="inv-header">
-			<div class="inv-title">Active Investments</div>
-			<div class="inv-subtitle">Deals moved to <strong>Invested</strong> appear here automatically. Add amounts and notes as needed.</div>
-		</div>
-
-		<div class="inv-list">
-			{#each sorted as inv}
-				{@const sc = inv.isPendingReview ? '#f59e0b' : (statusColors[inv.status] || 'var(--text-muted)')}
-				<div class="inv-card">
-					<div class="inv-card-stripe" style="background:{sc}"></div>
-					<div class="inv-card-body">
-						<div class="inv-card-top">
-							<div class="inv-card-info">
-								<div class="inv-card-name">{inv.investmentName || 'Unnamed investment'}</div>
-								<div class="inv-card-sub">
-									{inv.sponsor || 'Unknown sponsor'}{inv.assetClass ? ` · ${inv.assetClass}` : ''}{inv.dateInvested ? ` · ${formatCardDate(inv.dateInvested)}` : ''}
-								</div>
-							</div>
-							<div class="inv-card-actions">
-								<span class="inv-status" style="--sc:{sc}">{inv.displayStatus || inv.status || 'Unknown'}</span>
-								<button class="btn-edit" onclick={() => openAddModal(inv.id)}>{inv._missingDetails ? 'Add Details' : 'Edit'}</button>
-							</div>
-						</div>
-						<div class="inv-card-metrics">
-							<div class="inv-metric">
-								<div class="m-label">Invested</div>
-								<div class="m-value">${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</div>
-							</div>
-							{#if inv.targetIRR}
-								<div class="inv-metric">
-									<div class="m-label">Target IRR</div>
-									<div class="m-value green">{inv.targetIRR}%</div>
-								</div>
-							{/if}
-							<div class="inv-metric">
-								<div class="m-label">Distributions</div>
-								<div class="m-value" class:green={parseFloat(inv.distributionsReceived || 0) > 0}>${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</div>
-							</div>
-							{#if inv.equityMultiple}
-								<div class="inv-metric">
-									<div class="m-label">Equity Multiple</div>
-									<div class="m-value">{inv.equityMultiple}x</div>
-								</div>
-							{/if}
-						</div>
-						{#if inv.notes}
-							<div class="inv-card-notes">{inv.notes}</div>
-						{:else if inv.isPendingReview}
-							<div class="inv-card-notes">This investment is visible now and will count toward your portfolio once the deal completes review.</div>
-						{:else if inv._missingDetails}
-							<div class="inv-card-notes">Add amount, date, and other details to complete this invested deal.</div>
-						{/if}
-					</div>
-				</div>
-			{/each}
-		</div>
 	{/if}
 	</div>
 </PageContainer>
@@ -705,68 +964,6 @@
 		onclose={() => (showIntakeModal = false)}
 		onsubmitted={handlePortfolioDealSubmission}
 	/>
-{/if}
-
-<!-- Add/Edit Investment Modal -->
-{#if showAddModal}
-	<div
-		class="modal-overlay"
-		role="button"
-		tabindex="0"
-		aria-label="Close investment form modal"
-		onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }}
-		onkeydown={(e) => {
-			if (e.target !== e.currentTarget) return;
-			if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				showAddModal = false;
-			}
-		}}
-	>
-		<div class="modal-card">
-			<div class="modal-top">
-				<div class="modal-title">{editingId ? (hasPersistedDetails ? 'Edit Details' : 'Add Details') : 'Add Investment'}</div>
-				<button class="modal-close" aria-label="Close investment form modal" onclick={() => showAddModal = false}>&times;</button>
-			</div>
-			<div class="modal-grid">
-				<div class="modal-field"><label for="portfolioInvestmentName">Investment Name *</label><input id="portfolioInvestmentName" bind:value={modalData.investmentName} placeholder="e.g. Acme Multi-Family Fund II"></div>
-				<div class="modal-field"><label for="portfolioSponsor">Sponsor</label><input id="portfolioSponsor" bind:value={modalData.sponsor} placeholder="e.g. Acme Capital"></div>
-				<div class="modal-field">
-					<label for="portfolioAssetClass">Asset Class</label>
-					<select id="portfolioAssetClass" bind:value={modalData.assetClass}>
-						<option value="">Select...</option>
-						<option>Multi Family</option><option>Self Storage</option><option>Industrial</option>
-						<option>Lending</option><option>Short Term Rental</option><option>Hotels/Hospitality</option>
-						<option>Mixed-Use</option><option>RV/Mobile Home Parks</option><option>Senior Living</option>
-						<option>Land</option><option>Car Wash</option><option>Oil & Gas</option><option>Other</option>
-					</select>
-				</div>
-				<div class="modal-field"><label for="portfolioAmountInvested">Amount Invested ($)</label><input id="portfolioAmountInvested" type="number" bind:value={modalData.amountInvested} placeholder="50000"></div>
-				<div class="modal-field"><label for="portfolioDateInvested">Date Invested</label><input id="portfolioDateInvested" type="date" bind:value={modalData.dateInvested}></div>
-				<div class="modal-field">
-					<label for="portfolioStatus">Status</label>
-					<select id="portfolioStatus" bind:value={modalData.status}>
-						<option>Active</option><option>Distributing</option><option>Exited</option><option>Pending</option>
-					</select>
-				</div>
-				<div class="modal-field"><label for="portfolioTargetIRR">Target IRR (%)</label><input id="portfolioTargetIRR" type="number" step="0.1" bind:value={modalData.targetIRR} placeholder="15"></div>
-				<div class="modal-field"><label for="portfolioDistributionsReceived">Distributions Received ($)</label><input id="portfolioDistributionsReceived" type="number" bind:value={modalData.distributionsReceived} placeholder="0"></div>
-				<div class="modal-field"><label for="portfolioEquityMultiple">Equity Multiple</label><input id="portfolioEquityMultiple" type="number" step="0.01" bind:value={modalData.equityMultiple} placeholder="1.8"></div>
-				<div class="modal-field"><label for="portfolioHoldPeriod">Hold Period (years)</label><input id="portfolioHoldPeriod" bind:value={modalData.holdPeriod} placeholder="e.g. 5"></div>
-				<div class="modal-field"><label for="portfolioInvestingEntity">Investing Entity</label><input id="portfolioInvestingEntity" bind:value={modalData.investingEntity} placeholder="e.g. My LLC"></div>
-				<div class="modal-field"><label for="portfolioEntityInvestedInto">Entity Invested Into</label><input id="portfolioEntityInvestedInto" bind:value={modalData.entityInvestedInto} placeholder="e.g. Acme Fund II LLC"></div>
-				<div class="modal-field full-width"><label for="portfolioNotes">Notes</label><textarea id="portfolioNotes" bind:value={modalData.notes} rows="2" placeholder="Optional notes about this investment..."></textarea></div>
-			</div>
-			<div class="modal-actions">
-				{#if editingId && hasPersistedDetails}
-					<button class="btn-danger" onclick={() => { showAddModal = false; deleteInvestment(editingId); }}>Delete Details</button>
-				{/if}
-				<div style="flex:1"></div>
-				<button class="btn-cancel" onclick={() => showAddModal = false}>Cancel</button>
-				<button class="btn-primary" onclick={saveInvestment}>{editingId ? 'Save Details' : 'Add Investment'}</button>
-			</div>
-		</div>
-	</div>
 {/if}
 
 <style>
@@ -809,15 +1006,18 @@
 		line-height: 1.6;
 		color: #7c5a00;
 	}
-	/* ── Summary Stat Cards ── */
-	.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
-	.summary-grid .stat-card:nth-child(5) { display: none; }
+
+	.summary-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		gap: 12px;
+		margin-bottom: 18px;
+	}
 	.stat-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 18px;
-		text-align: center;
+		padding: 18px 20px;
 	}
 	.stat-label {
 		font-size: 12px;
@@ -829,14 +1029,326 @@
 		letter-spacing: 0.5px;
 	}
 	.stat-value {
-		font-size: 24px;
+		font-size: 22px;
 		font-weight: 800;
 		color: var(--primary);
 		font-family: var(--font-ui);
+		font-variant-numeric: tabular-nums;
 	}
 
-	/* ── Charts Row ── */
-	.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+	.portfolio-view-switch {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 18px;
+		padding: 6px;
+		background: color-mix(in srgb, var(--bg-card) 86%, var(--bg-cream));
+		border: 1px solid var(--border);
+		border-radius: 999px;
+	}
+	.portfolio-tab {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 9px 16px;
+		border-radius: 999px;
+		border: none;
+		background: transparent;
+		color: var(--text-secondary);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+	.portfolio-tab:hover:not(:disabled) {
+		background: rgba(81, 190, 123, 0.08);
+		color: var(--text-dark);
+	}
+	.portfolio-tab--active {
+		background: var(--primary);
+		color: #fff;
+	}
+	.portfolio-tab--locked {
+		opacity: 0.78;
+	}
+	.portfolio-tab:disabled {
+		cursor: not-allowed;
+	}
+	.portfolio-tab-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 2px 7px;
+		border-radius: 999px;
+		background: rgba(17, 24, 39, 0.08);
+		font-size: 10px;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+	.portfolio-tab--active .portfolio-tab-badge {
+		background: rgba(255, 255, 255, 0.18);
+		color: #fff;
+	}
+
+	.holdings-panel,
+	.analysis-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+	}
+	.holdings-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-end;
+		gap: 16px;
+	}
+	.holdings-title {
+		font-family: var(--font-ui);
+		font-size: 16px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+	.holdings-copy {
+		margin-top: 6px;
+		max-width: 720px;
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+
+	.holdings-table {
+		border: 1px solid var(--border);
+		border-radius: 22px;
+		background: var(--bg-card);
+		overflow: hidden;
+	}
+	.holdings-table-head,
+	.holdings-row-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 2.4fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(100px, 0.85fr) minmax(100px, 0.85fr) auto;
+		gap: 16px;
+		align-items: center;
+	}
+	.holdings-table-head {
+		padding: 14px 22px;
+		background: color-mix(in srgb, var(--bg-card) 78%, var(--bg-cream));
+		border-bottom: 1px solid var(--border);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-muted);
+	}
+	.holdings-row + .holdings-row {
+		border-top: 1px solid var(--border);
+	}
+	.holdings-row--editing {
+		background: color-mix(in srgb, var(--bg-card) 92%, var(--bg-cream));
+	}
+	.holdings-row-grid {
+		padding: 18px 22px;
+	}
+	.holding-cell {
+		min-width: 0;
+	}
+	.holding-cell--primary {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.holding-cell--action {
+		display: flex;
+		justify-content: flex-end;
+	}
+	.holding-primary {
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+	.holding-secondary,
+	.holding-meta,
+	.holding-note,
+	.holding-metric-source {
+		font-family: var(--font-body);
+		font-size: 12px;
+		line-height: 1.5;
+		color: var(--text-muted);
+	}
+	.holding-note {
+		color: var(--text-secondary);
+	}
+	.holding-metric {
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 800;
+		color: var(--text-dark);
+		font-variant-numeric: tabular-nums;
+	}
+	.holding-metric-source {
+		margin-top: 2px;
+	}
+	.inv-status {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 5px 12px;
+		border-radius: 999px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		background: color-mix(in srgb, var(--sc) 8%, transparent);
+		color: var(--sc);
+	}
+	.btn-edit {
+		background: transparent;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 7px 12px;
+		cursor: pointer;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--text-muted);
+		transition: all 0.15s ease;
+		white-space: nowrap;
+	}
+	.btn-edit:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+	.btn-edit--active {
+		border-color: rgba(81, 190, 123, 0.3);
+		background: rgba(81, 190, 123, 0.1);
+		color: var(--primary);
+	}
+
+	.holding-editor {
+		padding: 0 22px 22px;
+		border-top: 1px solid rgba(17, 24, 39, 0.06);
+	}
+	.holding-editor-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 16px;
+		padding: 18px 0 14px;
+	}
+	.holding-editor-title {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+	.holding-editor-copy {
+		margin-top: 4px;
+		max-width: 760px;
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+	.holding-editor-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 14px 16px;
+	}
+	.editor-field {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.editor-field.full-width {
+		grid-column: 1 / -1;
+	}
+	.editor-field span {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-muted);
+	}
+	.editor-field input,
+	.editor-field select,
+	.editor-field textarea {
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--bg-card);
+		color: var(--text-dark);
+		font-family: var(--font-body);
+		font-size: 14px;
+		box-sizing: border-box;
+	}
+	.editor-field textarea {
+		resize: vertical;
+		min-height: 88px;
+	}
+	.editor-field input:focus,
+	.editor-field select:focus,
+	.editor-field textarea:focus {
+		outline: none;
+		border-color: var(--primary);
+	}
+	.holding-projection-card {
+		margin-top: 16px;
+		padding: 16px 18px;
+		border: 1px solid rgba(81, 190, 123, 0.18);
+		border-radius: 16px;
+		background: rgba(81, 190, 123, 0.05);
+	}
+	.holding-projection-title {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--primary);
+	}
+	.holding-projection-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+		margin-top: 12px;
+	}
+	.holding-projection-metric span {
+		display: block;
+		font-size: 12px;
+		color: var(--text-secondary);
+	}
+	.holding-projection-metric strong {
+		display: block;
+		margin-top: 4px;
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+	.holding-projection-copy {
+		margin-top: 12px;
+		font-size: 12px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+	.holding-editor-actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-top: 16px;
+	}
+	.holding-editor-actions-spacer {
+		flex: 1;
+	}
+
+	.charts-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 20px;
+	}
 	.chart-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
@@ -851,12 +1363,24 @@
 		color: var(--text-dark);
 		margin-bottom: 16px;
 	}
-	.alloc-meta { display: flex; justify-content: center; gap: 24px; margin-top: 16px; }
+	.analysis-empty-card {
+		margin-top: 0;
+	}
+	.analysis-empty {
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+	.alloc-meta {
+		display: flex;
+		justify-content: center;
+		gap: 24px;
+		margin-top: 16px;
+	}
 	.alloc-stat { text-align: center; }
 	.alloc-num { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); }
 	.alloc-label { font-family: var(--font-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
-
-	/* ── Allocation Donut ── */
 	.chartjs-donut-wrap {
 		display: flex;
 		justify-content: center;
@@ -874,8 +1398,6 @@
 	.alloc-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 	.alloc-legend-label { flex: 1; color: var(--text-secondary); }
 	.alloc-legend-pct { font-weight: 700; color: var(--text-dark); }
-
-	/* ── Risk Insights (matches old border-left style) ── */
 	.risk-badges { display: flex; flex-direction: column; gap: 10px; }
 	.risk-badge {
 		background: var(--bg-card);
@@ -887,8 +1409,6 @@
 		font-size: 14px;
 		color: var(--text-dark);
 	}
-	.risk-badge-icon { display: none; }
-	.risk-badge-icon svg { width: 20px; height: 20px; }
 	.risk-badge-content { flex: 1; }
 	.risk-badge-text { font-family: var(--font-ui); font-size: 13px; font-weight: 700; line-height: 1.4; }
 	.risk-badge-detail { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: 2px; }
@@ -897,22 +1417,17 @@
 		border: 1px solid var(--border);
 		border-left: 4px solid var(--red, #D04040);
 	}
-	.risk-badge.badge-danger .risk-badge-text { color: var(--text-dark); }
 	.risk-badge.badge-warn {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-left: 4px solid var(--orange);
 	}
-	.risk-badge.badge-warn .risk-badge-text { color: var(--text-dark); }
 	.risk-badge.badge-ok {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-left: 4px solid var(--green);
 	}
-	.risk-badge.badge-ok .risk-badge-text { color: var(--text-dark); }
-
-	/* ── Timeline Chart ── */
-	.timeline-card { margin-bottom: 20px; }
+	.timeline-card { margin-bottom: 0; }
 	.timeline-card-header {
 		display: flex;
 		align-items: center;
@@ -992,90 +1507,6 @@
 		fill: #f59e0b;
 	}
 
-	/* ── Investment List Header ── */
-	.inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-	.inv-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
-	.inv-subtitle { max-width: 420px; font-family: var(--font-body); font-size: 13px; line-height: 1.5; color: var(--text-secondary); text-align: right; }
-	.pending-section-label {
-		margin: 20px 0 8px;
-		scroll-margin-top: 96px;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-	}
-
-	/* ── Investment Cards ── */
-	.inv-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
-	.inv-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		overflow: hidden;
-		display: flex;
-		transition: all 0.25s ease;
-		box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
-	}
-	.inv-card:hover { border-color: color-mix(in srgb, var(--primary) 18%, var(--border)); }
-	.inv-card-stripe { width: 5px; flex-shrink: 0; }
-	.inv-card-body { flex: 1; padding: 18px 22px; }
-	.inv-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
-	.inv-card-info { min-width: 0; flex: 1; }
-	.inv-card-name { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; }
-	.inv-card-sub { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); }
-	.inv-card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: 12px; }
-	.inv-status { padding: 4px 12px; border-radius: 100px; font-family: var(--font-ui); font-size: 11px; font-weight: 700; background: color-mix(in srgb, var(--sc) 8%, transparent); color: var(--sc); }
-	.pending-status {
-		--sc: #f59e0b;
-		background: rgba(245, 158, 11, 0.08);
-		color: #f59e0b;
-	}
-	.btn-edit {
-		background: transparent;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		padding: 5px 12px;
-		cursor: pointer;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--text-muted);
-		transition: all 0.15s ease;
-	}
-	.btn-edit:hover {
-		background: transparent;
-		border-color: var(--primary);
-		color: var(--primary);
-	}
-	.inv-card-metrics { display: flex; gap: 28px; flex-wrap: wrap; }
-	.inv-metric { min-width: 110px; }
-	.m-label { font-family: var(--font-ui); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-	.m-value { font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: var(--text-dark); font-variant-numeric: tabular-nums; }
-	.m-value.green { color: var(--primary); }
-	.pending-stripe { background: #f59e0b; }
-	.pending-card-desc {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-secondary);
-		line-height: 1.5;
-	}
-	.btn-pending-add {
-		padding: 6px 14px;
-		background: var(--primary);
-		color: #fff;
-		border: none;
-		border-radius: var(--radius-sm);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		cursor: pointer;
-		white-space: nowrap;
-	}
-	.btn-pending-add:hover { background: var(--primary-hover); }
-
-	/* ── Import / Empty Card ── */
 	.import-section {
 		max-width: 520px;
 		margin: 0 auto;
@@ -1113,19 +1544,6 @@
 		margin: 0 0 24px;
 		line-height: 1.5;
 	}
-	.btn-manual {
-		padding: 10px 24px;
-		background: var(--primary);
-		color: #fff;
-		border: 1px solid var(--primary);
-		border-radius: var(--radius-sm);
-		font-family: var(--font-ui);
-		font-weight: 700;
-		font-size: 13px;
-		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s;
-	}
-	.btn-manual:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: #fff; }
 	.browse-link {
 		margin-top: 20px;
 		padding-top: 20px;
@@ -1141,154 +1559,6 @@
 	}
 	.browse-link a:hover { text-decoration: underline; }
 
-	/* ── Investment Notes ── */
-	.inv-card-notes {
-		margin-top: 10px;
-		padding-top: 10px;
-		border-top: 1px solid var(--border);
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-secondary);
-		line-height: 1.5;
-	}
-
-	/* ── Deal Search Modal ── */
-	.deal-search-hint { font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; }
-	.deal-search-input {
-		width: 100%;
-		padding: 10px 14px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		font-family: var(--font-body);
-		font-size: 14px;
-		margin-bottom: 12px;
-		box-sizing: border-box;
-		background: var(--bg-card);
-		color: var(--text-dark);
-	}
-	.deal-search-input:focus { outline: none; border-color: var(--primary); }
-	.deal-search-results { max-height: 280px; overflow-y: auto; margin-bottom: 16px; }
-	.deal-search-empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
-	.deal-search-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 10px 12px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		margin-bottom: 6px;
-		cursor: pointer;
-		transition: background 0.15s;
-		width: 100%;
-		background: none;
-		text-align: left;
-		font-family: inherit;
-	}
-	.deal-search-item:hover:not(:disabled) { background: var(--bg-cream); }
-	.deal-search-item.already { opacity: 0.5; cursor: default; }
-	.deal-search-name { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); }
-	.deal-search-sub { font-size: 11px; color: var(--text-secondary); }
-	.deal-search-action { font-size: 11px; color: var(--text-muted); font-weight: 600; flex-shrink: 0; margin-left: 12px; }
-	.deal-search-item.already .deal-search-action { color: var(--primary); }
-	.deal-search-divider { border-top: 1px solid var(--border); padding-top: 12px; text-align: center; }
-	.btn-manual-add {
-		padding: 10px 20px;
-		background: transparent;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		font-family: var(--font-ui);
-		font-weight: 600;
-		font-size: 13px;
-		cursor: pointer;
-		color: var(--text-secondary);
-		transition: border-color 0.2s, color 0.2s;
-	}
-	.btn-manual-add:hover { border-color: var(--primary); color: var(--primary); }
-
-	/* ── Modal ── */
-	.modal-overlay {
-		position: fixed;
-		top: 0; left: 0; right: 0; bottom: 0;
-		background: rgba(0,0,0,0.22);
-		z-index: 9999;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 20px;
-		animation: modalFadeIn 0.2s ease;
-	}
-	@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-	@keyframes modalSlideUp {
-		from { opacity: 0; transform: translateY(12px) scale(0.98); }
-		to { opacity: 1; transform: translateY(0) scale(1); }
-	}
-	.modal-card {
-		background: var(--bg-card);
-		border-radius: 16px;
-		padding: 28px;
-		max-width: 600px;
-		width: 100%;
-		max-height: 90vh;
-		overflow-y: auto;
-		box-shadow: 0 24px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.03);
-		animation: modalSlideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-	}
-	:global(html.dark) .modal-card { box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); }
-	.modal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-	.modal-title {
-		font-family: var(--font-ui);
-		font-size: 17px;
-		font-weight: 700;
-		color: var(--text-dark);
-		letter-spacing: -0.2px;
-	}
-	.modal-close {
-		width: 30px;
-		height: 30px;
-		border-radius: 50%;
-		border: none;
-		background: var(--bg-cream);
-		color: var(--text-muted);
-		font-size: 15px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.15s ease;
-		line-height: 1;
-	}
-	.modal-close:hover { background: var(--border); color: var(--text-dark); }
-	.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-	.modal-field { margin-bottom: 16px; }
-	.modal-field.full-width { grid-column: 1 / -1; }
-	.modal-field label {
-		display: block;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-		margin-bottom: 6px;
-	}
-	.modal-field input,
-	.modal-field select,
-	.modal-field textarea {
-		width: 100%;
-		padding: 10px 14px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		background: var(--bg-card);
-		color: var(--text-dark);
-		font-family: var(--font-body);
-		font-size: 14px;
-		box-sizing: border-box;
-	}
-	.modal-field textarea { resize: vertical; min-height: 60px; }
-	.modal-field input:focus,
-	.modal-field select:focus,
-	.modal-field textarea:focus { outline: none; border-color: var(--primary); }
-	.modal-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
 	.btn-cancel {
 		padding: 10px 20px;
 		background: transparent;
@@ -1329,33 +1599,145 @@
 	}
 	.btn-danger:hover { background: #fde8e8; }
 
+	.analysis-locked-card {
+		padding: 26px 24px;
+		border-radius: 22px;
+		border: 1px solid rgba(81, 190, 123, 0.16);
+		background: linear-gradient(135deg, rgba(81, 190, 123, 0.08), rgba(245, 158, 11, 0.06));
+	}
+	.analysis-locked-eyebrow {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--primary);
+	}
+	.analysis-locked-title {
+		margin-top: 8px;
+		font-family: var(--font-ui);
+		font-size: 22px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+	.analysis-locked-card p {
+		margin: 10px 0 0;
+		max-width: 640px;
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--text-secondary);
+	}
+	.analysis-locked-link {
+		display: inline-flex;
+		align-items: center;
+		margin-top: 18px;
+		padding: 10px 16px;
+		border-radius: 999px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		color: var(--text-dark);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		text-decoration: none;
+	}
+	.analysis-locked-link:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.summary-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
-
+		.holdings-table-head,
+		.holdings-row-grid {
+			grid-template-columns: minmax(0, 2fr) repeat(6, minmax(90px, 1fr)) auto;
+			gap: 14px;
+		}
 		.charts-row {
 			grid-template-columns: minmax(0, 1fr);
 			gap: 20px;
 		}
-
 		.import-section {
 			max-width: 640px;
 			padding: 40px 24px;
 		}
-
-		.modal-card {
-			max-width: 560px;
-		}
 	}
 
-	/* ── Mobile Breakpoints ── */
 	@media (max-width: 768px) {
+		.summary-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.portfolio-view-switch {
+			display: flex;
+			width: 100%;
+		}
+		.portfolio-tab {
+			flex: 1;
+			justify-content: center;
+		}
+		.holdings-header {
+			align-items: stretch;
+		}
+		.holdings-table {
+			border-radius: 18px;
+		}
+		.holdings-table-head {
+			display: none;
+		}
+		.holdings-row-grid {
+			grid-template-columns: 1fr;
+			gap: 12px;
+			padding: 16px;
+		}
+		.holding-cell {
+			display: flex;
+			align-items: baseline;
+			justify-content: space-between;
+			gap: 14px;
+		}
+		.holding-cell::before {
+			content: attr(data-label);
+			flex-shrink: 0;
+			font-family: var(--font-ui);
+			font-size: 10px;
+			font-weight: 800;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			color: var(--text-muted);
+		}
+		.holding-cell--primary,
+		.holding-cell--action {
+			display: block;
+		}
+		.holding-cell--primary::before,
+		.holding-cell--action::before {
+			content: none;
+		}
+		.holding-cell--action {
+			margin-top: 2px;
+		}
+		.holding-editor {
+			padding: 0 16px 16px;
+		}
+		.holding-editor-grid,
+		.holding-projection-grid {
+			grid-template-columns: 1fr;
+		}
+		.holding-editor-actions {
+			flex-wrap: wrap;
+		}
+		.holding-editor-actions-spacer {
+			display: none;
+		}
+		.holding-editor-actions .btn-danger,
+		.holding-editor-actions .btn-cancel,
+		.holding-editor-actions .btn-primary {
+			width: 100%;
+		}
 		.charts-row { grid-template-columns: 1fr; }
-		.modal-grid { grid-template-columns: 1fr; }
-		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }
 		.section-add-btn { width: 100%; }
-		.summary-grid { grid-template-columns: repeat(2, 1fr); }
 		.chart-card { padding: 18px 16px; }
 		.chartjs-donut-wrap {
 			width: 100%;
@@ -1379,5 +1761,11 @@
 			gap: 16px;
 		}
 		.timeline-svg { min-width: 760px; }
+		.analysis-locked-card {
+			padding: 22px 18px;
+		}
+		.analysis-locked-title {
+			font-size: 20px;
+		}
 	}
 </style>
