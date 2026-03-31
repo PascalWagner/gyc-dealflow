@@ -28,9 +28,32 @@
 	const view = $derived(payload?.view || null);
 	const filing = $derived(payload?.filing || null);
 	const search = $derived(payload?.search || { hasRun: false, candidates: [], bestMatch: null, queries: [] });
+	const searchContext = $derived(search?.searchContext || { dealName: '', sponsorName: '', legalEntities: {}, priorityMode: 'deal_first' });
 	const gate = $derived(view?.gate || buildSecVerificationGate('pending'));
 	const tone = $derived(view?.currentTone || 'pending');
 	const disableManualResolution = $derived(Boolean(filing?.id || view?.currentStatus === 'verified'));
+
+	function formatMoney(value) {
+		if (value === null || value === undefined || value === '') return '—';
+		const numeric = Number(value);
+		if (!Number.isFinite(numeric)) return '—';
+		return new Intl.NumberFormat('en-US', {
+			style: 'currency',
+			currency: 'USD',
+			maximumFractionDigits: 0
+		}).format(numeric);
+	}
+
+	function formatExemptions(values = []) {
+		if (!Array.isArray(values) || values.length === 0) return '—';
+		return values
+			.map((value) => (value === '06b' ? '506(b)' : value === '06c' ? '506(c)' : value))
+			.join(', ');
+	}
+
+	function formatPeople(values = []) {
+		return Array.isArray(values) ? values.filter(Boolean).join(' • ') : '';
+	}
 
 	function emitChange(nextPayload) {
 		onchange({
@@ -215,6 +238,10 @@
 			<span class="sec-stage__meta-label">Applicability</span>
 			<span>{view?.applicability?.isApplicable === false ? 'Not expected' : 'Review required'}</span>
 		</div>
+		<div>
+			<span class="sec-stage__meta-label">Search mode</span>
+			<span>{searchContext.priorityMode === 'issuer_first' ? 'Issuer entity first' : 'Deal name first'}</span>
+		</div>
 		{#if view?.checkedAt}
 			<div>
 				<span class="sec-stage__meta-label">Last checked</span>
@@ -231,7 +258,7 @@
 
 	<div class="sec-stage__actions">
 		<button type="button" class="sec-stage__button sec-stage__button--primary" disabled={loading || submitting || !dealId} onclick={refreshMatch}>
-			{search.hasRun ? 'Refresh SEC match' : 'Run SEC issuer check'}
+			{search.hasRun ? 'Refresh SEC filing search' : 'Search SEC Form D filings'}
 		</button>
 		<button
 			type="button"
@@ -249,6 +276,53 @@
 		>
 			Mark not applicable
 		</button>
+	</div>
+
+	<div class="sec-stage__search-plan">
+		<div class="sec-stage__panel">
+			<div class="sec-stage__panel-header">
+				<strong>Search context</strong>
+			</div>
+			<div class="sec-stage__context-grid">
+				<div>
+					<span>Deal name</span>
+					<strong>{searchContext.dealName || '—'}</strong>
+				</div>
+				<div>
+					<span>Sponsor</span>
+					<strong>{searchContext.sponsorName || '—'}</strong>
+				</div>
+				<div>
+					<span>Issuer entity</span>
+					<strong>{searchContext.legalEntities?.issuerEntity || '—'}</strong>
+				</div>
+				<div>
+					<span>GP entity</span>
+					<strong>{searchContext.legalEntities?.gpEntity || '—'}</strong>
+				</div>
+				<div>
+					<span>Sponsor entity</span>
+					<strong>{searchContext.legalEntities?.sponsorEntity || '—'}</strong>
+				</div>
+				<div>
+					<span>Operator legal entity</span>
+					<strong>{searchContext.legalEntities?.operatorLegalEntity || '—'}</strong>
+				</div>
+			</div>
+		</div>
+
+		{#if search.hasRun && search.queries?.length > 0}
+			<div class="sec-stage__panel">
+				<div class="sec-stage__panel-header">
+					<strong>Queries run</strong>
+				</div>
+				<div class="sec-stage__query-list">
+					{#each search.queries as query}
+						<span class="sec-stage__query-chip">{query}</span>
+					{/each}
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	<label class="sec-stage__note">
@@ -280,37 +354,99 @@
 			<div class="sec-stage__details">
 				<div><span>CIK</span><strong>{filing.cik || '—'}</strong></div>
 				<div><span>Accession</span><strong>{filing.accessionNumber || '—'}</strong></div>
-				<div><span>Filed</span><strong>{filing.filingDate || filing.dateOfFirstSale || '—'}</strong></div>
+				<div><span>Filed</span><strong>{filing.filingDate || '—'}</strong></div>
+				<div><span>First sale</span><strong>{filing.dateOfFirstSale || '—'}</strong></div>
+				<div><span>Form</span><strong>{filing.filingType || '—'}</strong></div>
+				<div><span>Exemptions</span><strong>{formatExemptions(filing.federalExemptions)}</strong></div>
+				<div><span>Minimum</span><strong>{formatMoney(filing.minimumInvestment)}</strong></div>
+				<div><span>Amount sold</span><strong>{formatMoney(filing.totalAmountSold)}</strong></div>
 				<div><span>Investors</span><strong>{filing.totalInvestors ?? '—'}</strong></div>
 			</div>
+			{#if formatPeople(filing.relatedPeople)}
+				<div class="sec-stage__inline-list">
+					<span>Related people</span>
+					<strong>{formatPeople(filing.relatedPeople)}</strong>
+				</div>
+			{/if}
+			{#if filing.discrepancies?.length > 0}
+				<div class="sec-stage__warnings">
+					<strong>Review these differences</strong>
+					{#each filing.discrepancies as discrepancy}
+						<div class="sec-stage__warning-item">
+							<span>{discrepancy.label}</span>
+							<strong>{discrepancy.detail}</strong>
+						</div>
+					{/each}
+				</div>
+			{/if}
 		</div>
 	{:else if search.hasRun && search.candidates.length > 0}
 		<div class="sec-stage__matches">
-			<div class="sec-stage__matches-title">Potential SEC matches</div>
+			<div class="sec-stage__matches-title">Candidate SEC filings</div>
 			{#each search.candidates as candidate}
 				<div class="sec-stage__candidate">
 					<div class="sec-stage__candidate-copy">
 						<div class="sec-stage__candidate-name">{candidate.entityName || 'Unnamed SEC issuer'}</div>
 						<div class="sec-stage__candidate-meta">
+							<span>{candidate.form || 'D'}</span>
 							<span>{candidate.fileDate || 'Unknown filing date'}</span>
-							<span>{candidate.cik || 'No CIK'}</span>
+							<span>CIK {candidate.cik || '—'}</span>
 							<span>{formatSecVerificationConfidence(candidate.matchScore) || 'No confidence score'}</span>
 						</div>
+						<div class="sec-stage__details">
+							<div><span>Issuer type</span><strong>{candidate.entityType || '—'}</strong></div>
+							<div><span>Jurisdiction</span><strong>{candidate.jurisdiction || candidate.issuerState || '—'}</strong></div>
+							<div><span>Minimum</span><strong>{formatMoney(candidate.minimumInvestment)}</strong></div>
+							<div><span>Amount sold</span><strong>{formatMoney(candidate.totalAmountSold)}</strong></div>
+							<div><span>Investors</span><strong>{candidate.totalInvestors ?? '—'}</strong></div>
+							<div><span>Exemptions</span><strong>{formatExemptions(candidate.federalExemptions)}</strong></div>
+						</div>
+						{#if candidate.reasons?.length > 0}
+							<div class="sec-stage__reason-list">
+								{#each candidate.reasons as reason}
+									<span class="sec-stage__reason-chip">{reason}</span>
+								{/each}
+							</div>
+						{/if}
+						{#if formatPeople(candidate.relatedPeople)}
+							<div class="sec-stage__inline-list">
+								<span>Related people</span>
+								<strong>{formatPeople(candidate.relatedPeople)}</strong>
+							</div>
+						{/if}
+						{#if candidate.discrepancies?.length > 0}
+							<div class="sec-stage__warnings">
+								<strong>Review these differences</strong>
+								{#each candidate.discrepancies as discrepancy}
+									<div class="sec-stage__warning-item">
+										<span>{discrepancy.label}</span>
+										<strong>{discrepancy.detail}</strong>
+									</div>
+								{/each}
+							</div>
+						{/if}
 					</div>
-					<button
-						type="button"
-						class="sec-stage__button sec-stage__button--small"
-						disabled={submitting}
-						onclick={() => confirmMatch(candidate)}
-					>
-						Verify with this filing
-					</button>
+					<div class="sec-stage__candidate-actions">
+						{#if candidate.edgarUrl}
+							<a class="sec-stage__button sec-stage__button--small" href={candidate.edgarUrl} target="_blank" rel="noreferrer">
+								Open filing
+							</a>
+						{/if}
+						<button
+							type="button"
+							class="sec-stage__button sec-stage__button--small"
+							disabled={submitting}
+							onclick={() => confirmMatch(candidate)}
+						>
+							This is the filing
+						</button>
+					</div>
 				</div>
 			{/each}
 		</div>
 	{:else if search.hasRun}
 		<div class="sec-stage__panel">
-			No SEC matches were found from the current issuer and sponsor names. If the deal has not filed yet, mark that state explicitly.
+			No SEC matches were found from the current search context. Review the extracted issuer fields above, then run the search again or choose a manual state if the issuer has not filed yet.
 		</div>
 	{/if}
 </section>
@@ -419,6 +555,11 @@
 		gap: 10px;
 	}
 
+	.sec-stage__search-plan {
+		display: grid;
+		gap: 12px;
+	}
+
 	.sec-stage__button {
 		border: 1px solid color-mix(in srgb, var(--border-color, #d7dadd) 88%, white);
 		background: white;
@@ -503,6 +644,18 @@
 		gap: 12px;
 	}
 
+	.sec-stage__context-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		gap: 12px;
+	}
+
+	.sec-stage__context-grid div {
+		display: grid;
+		gap: 4px;
+		font-size: 13px;
+	}
+
 	.sec-stage__details div,
 	.sec-stage__candidate-meta {
 		display: flex;
@@ -511,13 +664,36 @@
 		font-size: 13px;
 	}
 
-	.sec-stage__details span {
+	.sec-stage__details span,
+	.sec-stage__context-grid span,
+	.sec-stage__inline-list span,
+	.sec-stage__warning-item span {
 		color: color-mix(in srgb, currentColor 70%, white);
 	}
 
 	.sec-stage__matches {
 		display: grid;
 		gap: 10px;
+	}
+
+	.sec-stage__query-list,
+	.sec-stage__reason-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.sec-stage__query-chip,
+	.sec-stage__reason-chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 7px 10px;
+		border-radius: 999px;
+		border: 1px solid color-mix(in srgb, var(--border-color, #d7dadd) 84%, white);
+		background: #f5f7fa;
+		color: var(--text, #111827);
+		font-size: 12px;
+		font-weight: 600;
 	}
 
 	.sec-stage__matches-title {
@@ -528,7 +704,7 @@
 
 	.sec-stage__candidate {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		justify-content: space-between;
 		gap: 12px;
 		padding: 12px 14px;
@@ -539,7 +715,8 @@
 
 	.sec-stage__candidate-copy {
 		display: grid;
-		gap: 4px;
+		gap: 10px;
+		flex: 1;
 	}
 
 	.sec-stage__candidate-name {
@@ -551,6 +728,31 @@
 		color: var(--text-muted, #5f6c7b);
 	}
 
+	.sec-stage__candidate-actions {
+		display: grid;
+		gap: 8px;
+		justify-items: end;
+	}
+
+	.sec-stage__inline-list {
+		display: grid;
+		gap: 4px;
+	}
+
+	.sec-stage__warnings {
+		display: grid;
+		gap: 8px;
+		padding: 12px;
+		border-radius: 14px;
+		background: #fff5f3;
+		color: #7a271a;
+	}
+
+	.sec-stage__warning-item {
+		display: grid;
+		gap: 2px;
+	}
+
 	@media (max-width: 720px) {
 		.sec-stage__header,
 		.sec-stage__candidate {
@@ -560,6 +762,10 @@
 
 		.sec-stage__actions {
 			flex-direction: column;
+		}
+
+		.sec-stage__candidate-actions {
+			justify-items: stretch;
 		}
 	}
 </style>

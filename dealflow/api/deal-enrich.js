@@ -6,6 +6,8 @@
 
 import { getAdminClient, setCors } from './_supabase.js';
 
+const EXTRACTION_TEXT_LIMIT = 120000;
+
 const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extract the following fields from this PPM/offering document text. Return ONLY valid JSON with these exact keys. Use null for any field you cannot find.
 
 {
@@ -38,6 +40,14 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "sponsorCoinvest": "GP co-investment percentage or amount if mentioned",
   "taxForm": "K-1, 1099, etc.",
   "secEntityName": "The exact legal entity name of the issuer as it appears on the PPM cover page (e.g. 'NCG Burgundy Investors LLC'). This is the entity filed with the SEC, not the marketing name.",
+  "issuerEntity": "The exact legal issuer entity being offered to the investor. Prefer the Company or issuer defined in the PPM opening paragraphs.",
+  "gpEntity": "General partner or governing legal entity if explicitly named.",
+  "sponsorEntity": "Sponsor, manager, or operating entity legal name if explicitly named.",
+  "servicingAgentEntity": "Servicing or loan-origination legal entity if explicitly named.",
+  "issuerEntityType": "Issuer entity type exactly as stated.",
+  "issuerJurisdiction": "Issuer jurisdiction / state of formation exactly as stated.",
+  "issuerAddress": "Issuer mailing or business address exactly as stated.",
+  "issuerPhone": "Issuer phone number exactly as stated.",
   "propertyAddress": "Full street address of the property if a single-asset deal",
   "unitCount": "Number of units (apartments, storage units, etc.)",
   "yearBuilt": "Year the property was built",
@@ -67,7 +77,8 @@ IMPORTANT:
 - Be precise — only extract what's explicitly stated, don't infer
 - For the waterfall, return a JSON array of tier objects with "tier", "threshold", and "split" keys
 - purchasePrice is the PROPERTY acquisition cost from Sources & Uses, NOT the equity raise (offeringSize)
-- For fees, extract BOTH the "fees" field (full text description) AND the individual fee percentage fields`;
+- For fees, extract BOTH the "fees" field (full text description) AND the individual fee percentage fields
+- For secEntityName and issuerEntity, return the exact legal issuer name rather than the marketing name`;
 
 // Map Claude extraction keys → Supabase column names
 const SUPABASE_FIELD_MAP = {
@@ -116,6 +127,9 @@ const SUPABASE_FIELD_MAP = {
   constructionMgmtFeePct: 'construction_mgmt_fee_pct',
   waterfallDetails:       'waterfall_details',
   secEntityName:          'sec_entity_name',
+  issuerEntity:           'issuer_entity',
+  gpEntity:               'gp_entity',
+  sponsorEntity:          'sponsor_entity',
 };
 
 export default async function handler(req, res) {
@@ -134,7 +148,7 @@ export default async function handler(req, res) {
   }
 
   // Truncate to ~50K chars to stay within context limits
-  const truncated = ppmText.substring(0, 50000);
+  const truncated = ppmText.substring(0, EXTRACTION_TEXT_LIMIT);
 
   try {
     // Call Claude API for extraction

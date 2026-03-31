@@ -7,7 +7,9 @@
 // API fallback chain: Gemini (free tier) → Anthropic → OpenAI
 
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
-import { XMLParser } from 'fast-xml-parser';
+import { fetchAndStoreSecFiling, findSecMatchesForDeal } from './_sec-edgar.js';
+
+const EXTRACTION_TEXT_LIMIT = 120000;
 
 // ── Quality fields to track ──────────────────────────────────────────────────
 
@@ -86,7 +88,7 @@ function extractTextFromPdfBuffer(buffer) {
     }
   }
 
-  return textChunks.join(' ').substring(0, 50000);
+  return textChunks.join(' ').substring(0, EXTRACTION_TEXT_LIMIT);
 }
 
 // ── Extraction prompt (matches deal-enrich.js format) ────────────────────────
@@ -109,12 +111,23 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "offeringSize": "Total offering size / equity raise in dollars (number only)",
   "purchasePrice": "Actual property purchase price from Sources & Uses table (number only). This is the total acquisition cost of the property, NOT the equity raise. For example if a building costs $26M and LPs raise $7.5M, the purchase price is 26000000",
   "offeringType": "506(b) or 506(c)",
+  "availableTo": "Accredited Investors, Non-Accredited Investors, Both, or Qualified Purchasers if stated",
   "distributions": "Monthly, Quarterly, Annual, or None",
   "lpGpSplit": "e.g. 80/20",
   "fees": "Full fee structure description",
   "financials": "Audited or Unaudited",
   "investingGeography": "Geographic focus",
   "instrument": "Debt, Equity, Preferred Equity, or Hybrid",
+  "secEntityName": "The exact legal entity name of the issuer as it appears in the PPM. This is the SEC filing entity, not the marketing name.",
+  "issuerEntity": "The exact legal issuer entity being offered to the investor. Prefer the named Company or issuer from the PPM cover and opening paragraphs.",
+  "gpEntity": "General partner or governing legal entity if explicitly named",
+  "sponsorEntity": "Sponsor, manager, or operating entity legal name if explicitly named",
+  "servicingAgentEntity": "Servicing, origination, or affiliated operating entity legal name if explicitly named",
+  "issuerEntityType": "Issuer entity type exactly as stated",
+  "issuerJurisdiction": "Issuer jurisdiction / state of formation exactly as stated",
+  "issuerAddress": "Issuer mailing or business address exactly as stated",
+  "issuerPhone": "Issuer phone number exactly as stated",
+  "relatedPeople": "Array of people named in the PPM with role context, e.g. [{\"name\": \"Michael C. Anderson\", \"role\": \"President\"}]",
   "status": "One of: open, closed, coming_soon, evergreen, fully_funded, completed"
 }
 
@@ -122,7 +135,31 @@ IMPORTANT:
 - For percentages, convert to decimals (15% → 0.15)
 - For dollar amounts, return raw numbers (no $ or commas)
 - If a field clearly doesn't apply to this deal type, use null
-- Be precise — only extract what's explicitly stated, don't infer`;
+- Be precise — only extract what's explicitly stated, don't infer
+- For secEntityName and issuerEntity, return the exact legal issuer name rather than the marketing name
+- Use the full document as context, not only the cover pages, but prefer the most formal issuer definition when multiple names appear`;
+
+const SEC_IDENTITY_PROMPT = `You are a private placement compliance analyst. Extract the exact SEC issuer identity and related legal entities from this full PPM, offering memorandum, or subscription document. Return ONLY valid JSON with these exact keys and use null when unknown.
+
+{
+  "issuerEntity": "Exact legal issuer entity being offered to the investor",
+  "secEntityName": "Exact legal entity name that would appear on a Form D filing, if stated",
+  "gpEntity": "General partner or governing entity if explicitly stated",
+  "sponsorEntity": "Sponsor, manager, or operating entity legal name if explicitly stated",
+  "servicingAgentEntity": "Servicing or loan-origination legal entity if explicitly stated",
+  "issuerEntityType": "Issuer entity type exactly as stated",
+  "issuerJurisdiction": "Issuer jurisdiction / state of formation exactly as stated",
+  "issuerAddress": "Issuer mailing or business address exactly as stated",
+  "issuerPhone": "Issuer phone number exactly as stated",
+  "offeringType": "506(b), 506(c), Reg D, Reg A, or other if explicitly stated",
+  "investmentMinimum": "Minimum investment in dollars (number only)",
+  "relatedPeople": "Array of key people named in the PPM with role context, e.g. [{\"name\": \"Michael C. Anderson\", \"role\": \"President\"}]"
+}
+
+IMPORTANT:
+- Prefer the named Company or issuer from the formal opening language over marketing names.
+- Use the full document as context, not just the first pages.
+- Do not infer a legal entity if the document does not explicitly state it.`;
 
 // Map AI extraction keys → Supabase column names
 const FIELD_MAP = {
@@ -140,14 +177,112 @@ const FIELD_MAP = {
   offeringSize:        'offering_size',
   purchasePrice:       'purchase_price',
   offeringType:        'offering_type',
+  availableTo:         'available_to',
   distributions:       'distributions',
   lpGpSplit:           'lp_gp_split',
   fees:                'fees',
   financials:          'financials',
   investingGeography:  'investing_geography',
   instrument:          'instrument',
+  secEntityName:       'sec_entity_name',
+  issuerEntity:        'issuer_entity',
+  gpEntity:            'gp_entity',
+  sponsorEntity:       'sponsor_entity',
   status:              'status',
 };
+
+function cleanEntityValue(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function dedupeStrings(values = []) {
+  const seen = new Set();
+  const deduped = [];
+  for (const value of values) {
+    const cleaned = cleanEntityValue(value);
+    if (!cleaned) continue;
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(cleaned);
+  }
+  return deduped;
+}
+
+function extractIssuerHintFromText(text) {
+  const raw = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!raw) return '';
+
+  const patterns = [
+    /([A-Z][A-Za-z0-9,&.'’()\- ]+?\b(?:LLC|L\.L\.C\.|LP|L\.P\.|INC\.?|CORP\.?|TRUST))\s*,?\s+an?\s+[A-Za-z ,\-]+limited liability company/i,
+    /([A-Z][A-Za-z0-9,&.'’()\- ]+?\b(?:LLC|L\.L\.C\.|LP|L\.P\.|INC\.?|CORP\.?|TRUST))\s+is pleased to offer/i,
+    /Private Placement Memorandum[^A-Za-z0-9]+([A-Z][A-Za-z0-9,&.'’()\- ]+?\b(?:LLC|L\.L\.C\.|LP|L\.P\.|INC\.?|CORP\.?|TRUST))/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    if (match?.[1]) return cleanEntityValue(match[1]);
+  }
+
+  return '';
+}
+
+function mergeSecIdentityFields(target, identity = {}) {
+  if (identity.issuerEntity && !target.issuer_entity) {
+    target.issuer_entity = identity.issuerEntity;
+  }
+  if ((identity.secEntityName || identity.issuerEntity) && !target.sec_entity_name) {
+    target.sec_entity_name = identity.secEntityName || identity.issuerEntity;
+  }
+  if (identity.gpEntity && !target.gp_entity) {
+    target.gp_entity = identity.gpEntity;
+  }
+  if (identity.sponsorEntity && !target.sponsor_entity) {
+    target.sponsor_entity = identity.sponsorEntity;
+  }
+  if (identity.offeringType && !target.offering_type) {
+    target.offering_type = identity.offeringType;
+  }
+  if (identity.investmentMinimum && !target.investment_minimum) {
+    target.investment_minimum = identity.investmentMinimum;
+  }
+}
+
+function buildSecIdentityContext(extracted = {}, ppmText = '') {
+  const issuerHint = extractIssuerHintFromText(ppmText);
+  const issuerEntity = cleanEntityValue(
+    extracted.issuerEntity || extracted.secEntityName || extracted.entityInvestedInto || issuerHint
+  );
+  const secEntityName = cleanEntityValue(extracted.secEntityName || issuerEntity);
+  const gpEntity = cleanEntityValue(extracted.gpEntity);
+  const sponsorEntity = cleanEntityValue(extracted.sponsorEntity || extracted.managementCompany);
+  const servicingAgentEntity = cleanEntityValue(extracted.servicingAgentEntity);
+
+  return {
+    issuerEntity,
+    secEntityName,
+    gpEntity,
+    sponsorEntity,
+    servicingAgentEntity,
+    offeringType: cleanEntityValue(extracted.offeringType),
+    investmentMinimum: (() => {
+      const rawMinimum =
+        typeof extracted.investmentMinimum === 'number'
+          ? extracted.investmentMinimum
+          : extracted.investmentMinimum
+            ? Number(String(extracted.investmentMinimum).replace(/[$,]/g, '').trim())
+            : null;
+      return Number.isFinite(rawMinimum) ? rawMinimum : null;
+    })(),
+    queryPriority: dedupeStrings([
+      issuerEntity,
+      secEntityName,
+      extracted.investmentName,
+      sponsorEntity,
+      servicingAgentEntity
+    ])
+  };
+}
 
 // ── AI API abstraction with fallback chain ───────────────────────────────────
 
@@ -405,6 +540,18 @@ async function enrichDeal(supabase, deal, operatorName) {
   const allConfidence = {};
   const allSources = [];
   const steps = [];
+  let ppmTextCache = '';
+  let deckTextCache = '';
+  let secIdentity = {
+    issuerEntity: cleanEntityValue(deal.issuer_entity),
+    secEntityName: cleanEntityValue(deal.sec_entity_name || deal.issuer_entity),
+    gpEntity: cleanEntityValue(deal.gp_entity),
+    sponsorEntity: cleanEntityValue(deal.sponsor_entity || operatorName),
+    servicingAgentEntity: '',
+    offeringType: cleanEntityValue(deal.offering_type),
+    investmentMinimum: deal.investment_minimum || null,
+    queryPriority: dedupeStrings([deal.issuer_entity, deal.sec_entity_name, deal.investment_name, operatorName])
+  };
 
   // Helper: which fields are still missing after merging found data
   function stillMissing() {
@@ -415,107 +562,129 @@ async function enrichDeal(supabase, deal, operatorName) {
     return getMissingFields(tempDeal);
   }
 
-  // ── Step 0: SEC EDGAR Form D lookup (authoritative) ───────────────────
-  try {
-    const searchName = operatorName || deal.investment_name || '';
-    if (searchName) {
-      const edgarUA = 'GYC Research pascal@growyourcashflow.com';
-      const eftsUrl = `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(searchName)}%22&forms=D`;
-      const eftsResp = await fetch(eftsUrl, { headers: { 'User-Agent': edgarUA } });
-      if (eftsResp.ok) {
-        const eftsData = await eftsResp.json();
-        const hits = (eftsData.hits && eftsData.hits.hits) || [];
-        if (hits.length > 0) {
-          // Take the highest-scored (most relevant) filing
-          const best = hits[0]._source;
-          const cik = (best.ciks && best.ciks[0] || '').replace(/^0+/, '');
-          const accession = best.adsh;
-          if (cik && accession) {
-            const accPath = accession.replace(/-/g, '');
-            const xmlUrl = `https://www.sec.gov/Archives/edgar/data/${cik}/${accPath}/primary_doc.xml`;
-            const xmlResp = await fetch(xmlUrl, { headers: { 'User-Agent': edgarUA } });
-            if (xmlResp.ok) {
-              const xmlText = await xmlResp.text();
-              const parser = new XMLParser({
-                ignoreAttributes: true,
-                isArray: (name) => ['relatedPersonInfo', 'item', 'relationship'].includes(name)
-              });
-              const doc = parser.parse(xmlText);
-              const sub = doc.edgarSubmission || doc;
-              const issuer = sub.primaryIssuer || {};
-              const offering = sub.offeringData || {};
-              const amounts = offering.offeringSalesAmounts || {};
-              const exemptions = offering.federalExemptionsExclusions || {};
-              const exemptionItems = Array.isArray(exemptions.item) ? exemptions.item : (exemptions.item ? [exemptions.item] : []);
-              const is506b = exemptionItems.some(e => e === '06b');
-              const is506c = exemptionItems.some(e => e === '06c');
+  // ── Step 0a: Extract issuer identity from the full PPM before SEC search ─
+  if (deal.ppm_url) {
+    try {
+      const pdfBuffer = await downloadPdf(supabase, deal.ppm_url);
+      ppmTextCache = extractTextFromPdfBuffer(pdfBuffer);
 
-              // Authoritative fields (always set)
-              if (is506b) { allFound.offering_type = '506(b)'; allConfidence.offering_type = 'verified'; }
-              else if (is506c) { allFound.offering_type = '506(c)'; allConfidence.offering_type = 'verified'; }
-              allFound.is_506b = is506b;
-              allFound.sec_cik = cik;
-              if (offering.minimumInvestmentAccepted) { allFound.investment_minimum = parseFloat(offering.minimumInvestmentAccepted); allConfidence.investment_minimum = 'verified'; }
-              if (amounts.totalOfferingAmount) { allFound.offering_size = parseFloat(amounts.totalOfferingAmount); allConfidence.offering_size = 'verified'; }
-              if (amounts.totalAmountSold) { allFound.total_amount_sold = parseFloat(amounts.totalAmountSold); }
-              const investors = offering.investors || {};
-              if (investors.totalNumberAlreadyInvested) { allFound.total_investors = parseInt(investors.totalNumberAlreadyInvested); }
-              const dateOfFirstSale = ((offering.typeOfFiling || {}).dateOfFirstSale || {}).value;
-              if (dateOfFirstSale) { allFound.date_of_first_sale = dateOfFirstSale; }
+      const heuristicIssuer = extractIssuerHintFromText(ppmTextCache);
+      let identityFieldCount = heuristicIssuer ? 1 : 0;
+      const identityStep = { step: 'ppm_issuer_identity', fields_found: 0, note: '' };
 
-              // Safe-update fields (only if empty)
-              if (!deal.investment_name && issuer.entityName) { allFound.investment_name = issuer.entityName; allConfidence.investment_name = 'verified'; }
+      if (ppmTextCache && ppmTextCache.length >= 100) {
+        const result = await callAI(SEC_IDENTITY_PROMPT + '\n\nDOCUMENT TEXT:\n' + ppmTextCache);
+        const extracted = parseAIResponse(result.text) || {};
+        secIdentity = buildSecIdentityContext(
+          {
+            ...extracted,
+            issuerEntity: extracted.issuerEntity || heuristicIssuer || extracted.secEntityName
+          },
+          ppmTextCache
+        );
 
-              allSources.push('SEC EDGAR Form D');
-              steps.push(`Step 0 (EDGAR): Found ${best.form} filing for ${(issuer.entityName || searchName)} (CIK ${cik}). ${exemptionItems.map(e => e === '06c' ? '506(c)' : e === '06b' ? '506(b)' : e).join(', ')}, $${(amounts.totalAmountSold || 0).toLocaleString()} sold, ${investors.totalNumberAlreadyInvested || 0} investors.`);
-
-              // Store the filing in sec_filings table
-              try {
-                await supabase.from('sec_filings').upsert({
-                  opportunity_id: deal.id,
-                  management_company_id: deal.management_company_id || null,
-                  cik, accession_number: accession,
-                  filing_type: best.form || 'D',
-                  is_latest_amendment: true,
-                  entity_name: issuer.entityName || '',
-                  entity_type: issuer.entityType || '',
-                  jurisdiction: issuer.jurisdictionOfInc || '',
-                  year_of_inc: (issuer.yearOfInc || {}).value ? parseInt(issuer.yearOfInc.value) : null,
-                  issuer_city: (issuer.issuerAddress || {}).city || '',
-                  issuer_state: (issuer.issuerAddress || {}).stateOrCountry || '',
-                  issuer_zip: (issuer.issuerAddress || {}).zipCode || '',
-                  federal_exemptions: exemptionItems,
-                  date_of_first_sale: dateOfFirstSale || null,
-                  minimum_investment: offering.minimumInvestmentAccepted ? parseFloat(offering.minimumInvestmentAccepted) : null,
-                  total_offering_amount: amounts.totalOfferingAmount ? parseFloat(amounts.totalOfferingAmount) : null,
-                  total_amount_sold: amounts.totalAmountSold ? parseFloat(amounts.totalAmountSold) : null,
-                  total_remaining: amounts.totalRemaining ? parseFloat(amounts.totalRemaining) : null,
-                  total_investors: investors.totalNumberAlreadyInvested ? parseInt(investors.totalNumberAlreadyInvested) : null,
-                  has_non_accredited: !!investors.hasNonAccreditedInvestors,
-                  issuer_size: (offering.issuerSize || {}).revenueRange || '',
-                  industry_group: (offering.industryGroup || {}).industryGroupType || '',
-                  is_equity: !!(offering.typesOfSecuritiesOffered || {}).isEquityType,
-                  is_debt: !!(offering.typesOfSecuritiesOffered || {}).isDebtType,
-                  is_pooled_fund: !!(offering.typesOfSecuritiesOffered || {}).isPooledInvestmentFundType,
-                  raw_xml: xmlText,
-                  edgar_url: xmlUrl
-                }, { onConflict: 'accession_number' });
-              } catch (storeErr) { console.error('EDGAR store error:', storeErr); }
-            }
-          }
-        }
+        const beforeMergeCount = Object.keys(allFound).length;
+        mergeSecIdentityFields(allFound, secIdentity);
+        identityFieldCount += Object.keys(allFound).length - beforeMergeCount;
+        if (secIdentity.issuerEntity) allConfidence.issuer_entity = 'high';
+        if (secIdentity.secEntityName || secIdentity.issuerEntity) allConfidence.sec_entity_name = 'high';
+        if (secIdentity.gpEntity) allConfidence.gp_entity = 'high';
+        if (secIdentity.sponsorEntity) allConfidence.sponsor_entity = 'high';
+        identityStep.fields_found = identityFieldCount;
+        identityStep.api = result.api_used;
+        identityStep.note = secIdentity.issuerEntity
+          ? `Primary issuer entity identified as ${secIdentity.issuerEntity}.`
+          : 'No exact issuer legal entity was identified from the PPM.';
+      } else {
+        identityStep.note = 'PPM text was too sparse for issuer extraction.';
       }
+
+      steps.push(identityStep);
+    } catch (err) {
+      steps.push({ step: 'ppm_issuer_identity', fields_found: 0, error: err.message });
+    }
+  } else {
+    steps.push({ step: 'ppm_issuer_identity', fields_found: 0, note: 'No PPM uploaded' });
+  }
+
+  // ── Step 0b: SEC EDGAR Form D lookup (authoritative) ──────────────────
+  try {
+    const searchSeed = {
+      ...deal,
+      investment_name: deal.investment_name || secIdentity.issuerEntity || secIdentity.secEntityName || '',
+      sponsor_name: deal.sponsor_name || (operatorName && operatorName !== '—' ? operatorName : ''),
+      issuer_entity: secIdentity.issuerEntity || deal.issuer_entity || '',
+      gp_entity: secIdentity.gpEntity || deal.gp_entity || '',
+      sponsor_entity: secIdentity.sponsorEntity || deal.sponsor_entity || '',
+      offering_type: deal.offering_type || secIdentity.offeringType || '',
+      investment_minimum: deal.investment_minimum || secIdentity.investmentMinimum || null,
+      management_company: {
+        operator_name: operatorName && operatorName !== '—' ? operatorName : '',
+        legal_entity: secIdentity.sponsorEntity || ''
+      }
+    };
+    const secSearch = await findSecMatchesForDeal(searchSeed, { maxQueries: 8 });
+    if (secSearch.bestMatch) {
+      const stored = await fetchAndStoreSecFiling({
+        supabase,
+        match: secSearch.bestMatch,
+        opportunityId: deal.id,
+        managementCompanyId: deal.management_company_id || null
+      });
+      const filing = stored.filing || {};
+      const is506b = Array.isArray(filing.federal_exemptions) && filing.federal_exemptions.includes('06b');
+      const is506c = Array.isArray(filing.federal_exemptions) && filing.federal_exemptions.includes('06c');
+
+      if (is506b) { allFound.offering_type = '506(b)'; allConfidence.offering_type = 'verified'; }
+      else if (is506c) { allFound.offering_type = '506(c)'; allConfidence.offering_type = 'verified'; }
+      if (is506b) allFound.is_506b = true;
+      if (filing.cik) allFound.sec_cik = filing.cik;
+      if (filing.minimum_investment) { allFound.investment_minimum = filing.minimum_investment; allConfidence.investment_minimum = 'verified'; }
+      if (filing.total_offering_amount) { allFound.offering_size = filing.total_offering_amount; allConfidence.offering_size = 'verified'; }
+      if (filing.total_amount_sold) allFound.total_amount_sold = filing.total_amount_sold;
+      if (filing.total_investors) allFound.total_investors = filing.total_investors;
+      if (filing.date_of_first_sale) allFound.date_of_first_sale = filing.date_of_first_sale;
+      if (!deal.investment_name && filing.entity_name) { allFound.investment_name = filing.entity_name; allConfidence.investment_name = 'verified'; }
+      if (filing.entity_name && !allFound.issuer_entity) {
+        allFound.issuer_entity = filing.entity_name;
+        allFound.sec_entity_name = filing.entity_name;
+        allConfidence.issuer_entity = 'verified';
+        allConfidence.sec_entity_name = 'verified';
+      }
+
+      allSources.push('SEC EDGAR Form D');
+      steps.push({
+        step: 'sec_form_d',
+        fields_found: ['offering_type', 'sec_cik', 'investment_minimum', 'offering_size', 'total_amount_sold', 'total_investors', 'date_of_first_sale', 'issuer_entity']
+          .filter((key) => allFound[key] !== undefined && allFound[key] !== null && allFound[key] !== '')
+          .length,
+        matched_entity: filing.entity_name || secSearch.bestMatch.entityName || '',
+        accession: filing.accession_number || secSearch.bestMatch.accession || '',
+        cik: filing.cik || secSearch.bestMatch.cik || '',
+        queries: secSearch.queries,
+        note: `Matched SEC filing ${filing.accession_number || secSearch.bestMatch.accession || ''} using ${secIdentity.issuerEntity ? 'issuer legal entity first' : 'deal-name first'} search order.`
+      });
+    } else {
+      steps.push({
+        step: 'sec_form_d',
+        fields_found: 0,
+        queries: secSearch.queries,
+        note: 'No SEC Form D match found from the current issuer, deal, and sponsor search terms.'
+      });
     }
   } catch (edgarErr) {
     console.error('EDGAR Step 0 error:', edgarErr);
-    steps.push('Step 0 (EDGAR): Error - ' + edgarErr.message);
+    steps.push({ step: 'sec_form_d', fields_found: 0, error: edgarErr.message });
   }
 
   // ── Step 1: Extract from Deck PDF ──────────────────────────────────────
   if (deal.deck_url) {
     try {
-      const pdfBuffer = await downloadPdf(supabase, deal.deck_url);
-      const pdfText = extractTextFromPdfBuffer(pdfBuffer);
+      if (!deckTextCache) {
+        const pdfBuffer = await downloadPdf(supabase, deal.deck_url);
+        deckTextCache = extractTextFromPdfBuffer(pdfBuffer);
+      }
+      const pdfText = deckTextCache;
 
       if (pdfText && pdfText.length >= 100) {
         const result = await callAI(EXTRACTION_PROMPT + '\n\nDOCUMENT TEXT:\n' + pdfText);
@@ -550,8 +719,11 @@ async function enrichDeal(supabase, deal, operatorName) {
   const afterDeck = stillMissing();
   if (afterDeck.length > 0 && deal.ppm_url) {
     try {
-      const pdfBuffer = await downloadPdf(supabase, deal.ppm_url);
-      const pdfText = extractTextFromPdfBuffer(pdfBuffer);
+      if (!ppmTextCache) {
+        const pdfBuffer = await downloadPdf(supabase, deal.ppm_url);
+        ppmTextCache = extractTextFromPdfBuffer(pdfBuffer);
+      }
+      const pdfText = ppmTextCache;
 
       if (pdfText && pdfText.length >= 100) {
         const result = await callAI(EXTRACTION_PROMPT + '\n\nDOCUMENT TEXT:\n' + pdfText);
@@ -567,6 +739,7 @@ async function enrichDeal(supabase, deal, operatorName) {
               ppmFieldCount++;
             }
           }
+          mergeSecIdentityFields(allFound, buildSecIdentityContext(extracted, pdfText));
           steps.push({ step: 'ppm_pdf', fields_found: ppmFieldCount, api: result.api_used });
           allSources.push('PPM Document');
         } else {
@@ -737,11 +910,23 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No updates to apply' });
       }
 
-      const allowedFields = QUALITY_FIELDS.map(f => f.key).concat([
-        'equity_multiple', 'location', 'property_address',
-        'available_to', 'debt_position', 'fund_aum',
-        'sponsor_in_deal_pct', 'investing_geography'
-      ]);
+      const allowedFields = Array.from(new Set([
+        ...QUALITY_FIELDS.map(f => f.key),
+        ...Object.values(FIELD_MAP),
+        'equity_multiple',
+        'location',
+        'property_address',
+        'available_to',
+        'debt_position',
+        'fund_aum',
+        'sponsor_in_deal_pct',
+        'investing_geography',
+        'sec_cik',
+        'date_of_first_sale',
+        'total_amount_sold',
+        'total_investors',
+        'is_506b'
+      ]));
 
       const safeUpdates = {};
       for (const [key, val] of Object.entries(updates)) {

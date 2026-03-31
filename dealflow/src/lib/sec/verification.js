@@ -95,7 +95,7 @@ export function buildDealSecSearchContext(deal = {}) {
 			])
 		),
 		legalEntities: {
-			issuerEntity: normalizeText(readValue(deal, ['issuerEntity', 'issuer_entity'])),
+			issuerEntity: normalizeText(readValue(deal, ['issuerEntity', 'issuer_entity', 'secEntityName', 'sec_entity_name', 'entityInvestedInto', 'entity_invested_into'])),
 			gpEntity: normalizeText(readValue(deal, ['gpEntity', 'gp_entity'])),
 			sponsorEntity: normalizeText(readValue(deal, ['sponsorEntity', 'sponsor_entity'])),
 			operatorLegalEntity: normalizeText(

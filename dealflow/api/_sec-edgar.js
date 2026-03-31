@@ -4,6 +4,7 @@ import { buildDealSecSearchContext } from '../src/lib/sec/verification.js';
 export const EDGAR_USER_AGENT = 'GYC Research pascal@growyourcashflow.com';
 export const EFTS_SEARCH_URL = 'https://efts.sec.gov/LATEST/search-index';
 export const EDGAR_ARCHIVE_URL = 'https://www.sec.gov/Archives/edgar/data';
+const EDGAR_INDEX_URL = 'https://www.sec.gov/Archives/edgar/data';
 
 const GENERIC_WORDS =
 	/\b(apartments?|fund|capital|group|partners|investments?|properties|holdings|llc|lp|inc|corp|company|co|the|real estate|realty|management|equity|ventures|advisors?|asset|wealth|financial|solutions)\b/gi;
@@ -61,6 +62,63 @@ export function normalizeSecMatchText(value) {
 	return normalizeForMatch(value);
 }
 
+const ROMAN_NUMERAL_REPLACEMENTS = [
+	[' III ', ' 3 '],
+	[' II ', ' 2 '],
+	[' IV ', ' 4 '],
+	[' VI ', ' 6 '],
+	[' VII ', ' 7 '],
+	[' VIII ', ' 8 '],
+	[' IX ', ' 9 '],
+	[' X ', ' 10 ']
+];
+
+function buildQueryVariants(value) {
+	const raw = String(value || '').trim();
+	if (!raw) return [];
+
+	const variants = new Set([raw]);
+	const commaStripped = raw.replace(/,/g, '').replace(/\s+/g, ' ').trim();
+	if (commaStripped) variants.add(commaStripped);
+
+	const padded = ` ${commaStripped || raw} `;
+	for (const [roman, digit] of ROMAN_NUMERAL_REPLACEMENTS) {
+		if (padded.includes(roman)) {
+			variants.add(padded.replace(roman, digit).trim());
+		}
+		if (padded.includes(digit)) {
+			variants.add(padded.replace(digit, roman).trim());
+		}
+	}
+
+	return [...variants].map((item) => item.trim()).filter(Boolean);
+}
+
+function parseFormDNumber(value) {
+	if (value === null || value === undefined || value === '') return null;
+	const numeric = typeof value === 'number' ? value : Number.parseFloat(String(value).replace(/,/g, '').trim());
+	return Number.isFinite(numeric) ? numeric : null;
+}
+
+function entitySuffix(value) {
+	const normalized = normalizeForMatch(value);
+	if (!normalized) return '';
+	if (normalized.endsWith(' llc')) return 'llc';
+	if (normalized.endsWith(' lp')) return 'lp';
+	if (normalized.endsWith(' inc')) return 'inc';
+	if (normalized.endsWith(' corp')) return 'corp';
+	if (normalized.endsWith(' trust')) return 'trust';
+	return '';
+}
+
+export function buildEdgarIndexUrl(cik, accession) {
+	const normalizedCik = String(cik || '').replace(/^0+/, '');
+	const normalizedAccession = String(accession || '').trim();
+	if (!normalizedCik || !normalizedAccession) return '';
+	const accessionPath = normalizedAccession.replace(/-/g, '');
+	return `${EDGAR_INDEX_URL}/${normalizedCik}/${accessionPath}/${normalizedAccession}-index.html`;
+}
+
 export async function searchEdgar(companyName) {
 	const url = `${EFTS_SEARCH_URL}?q=%22${encodeURIComponent(companyName)}%22&forms=D`;
 	const resp = await fetch(url, {
@@ -87,13 +145,15 @@ export async function searchEdgar(companyName) {
 }
 
 export async function fetchFilingXml(cik, accession) {
+	const normalizedCik = String(cik || '').replace(/^0+/, '');
 	const accessionPath = String(accession || '').replace(/-/g, '');
-	const url = `${EDGAR_ARCHIVE_URL}/${cik}/${accessionPath}/primary_doc.xml`;
-	const resp = await fetch(url, {
+	const xmlUrl = `${EDGAR_ARCHIVE_URL}/${normalizedCik}/${accessionPath}/primary_doc.xml`;
+	const url = buildEdgarIndexUrl(normalizedCik, accession);
+	const resp = await fetch(xmlUrl, {
 		headers: { 'User-Agent': EDGAR_USER_AGENT }
 	});
-	if (!resp.ok) throw new Error(`EDGAR filing fetch failed: ${resp.status} for ${url}`);
-	return { xml: await resp.text(), url };
+	if (!resp.ok) throw new Error(`EDGAR filing fetch failed: ${resp.status} for ${xmlUrl}`);
+	return { xml: await resp.text(), url, xmlUrl };
 }
 
 export function parseFormD(xmlText) {
@@ -165,29 +225,23 @@ export function parseFormD(xmlText) {
 		isEquity: Boolean(securities.isEquityType),
 		isDebt: Boolean(securities.isDebtType),
 		isPooledFund: Boolean(securities.isPooledInvestmentFundType),
-		minimumInvestment: offering.minimumInvestmentAccepted ? parseFloat(offering.minimumInvestmentAccepted) : null,
-		totalOfferingAmount: amounts.totalOfferingAmount ? parseFloat(amounts.totalOfferingAmount) : null,
-		totalAmountSold: amounts.totalAmountSold ? parseFloat(amounts.totalAmountSold) : null,
-		totalRemaining: amounts.totalRemaining ? parseFloat(amounts.totalRemaining) : null,
+		minimumInvestment: parseFormDNumber(offering.minimumInvestmentAccepted),
+		totalOfferingAmount: parseFormDNumber(amounts.totalOfferingAmount),
+		totalAmountSold: parseFormDNumber(amounts.totalAmountSold),
+		totalRemaining: parseFormDNumber(amounts.totalRemaining),
 		totalInvestors: investors.totalNumberAlreadyInvested ? parseInt(investors.totalNumberAlreadyInvested, 10) : null,
 		hasNonAccredited: Boolean(investors.hasNonAccreditedInvestors),
-		salesCommissions: (commissions.salesCommissions || {}).dollarAmount
-			? parseFloat(commissions.salesCommissions.dollarAmount)
-			: null,
-		findersFees: (commissions.findersFees || {}).dollarAmount
-			? parseFloat(commissions.findersFees.dollarAmount)
-			: null,
-		grossProceedsUsed: (proceeds.grossProceedsUsed || {}).dollarAmount
-			? parseFloat(proceeds.grossProceedsUsed.dollarAmount)
-			: null,
+		salesCommissions: parseFormDNumber((commissions.salesCommissions || {}).dollarAmount),
+		findersFees: parseFormDNumber((commissions.findersFees || {}).dollarAmount),
+		grossProceedsUsed: parseFormDNumber((proceeds.grossProceedsUsed || {}).dollarAmount),
 		proceedsClarification: proceeds.clarificationOfResponse || '',
 		relatedPersons
 	};
 }
 
-export function nameScore(dealName, edgarName) {
-	const deal = normalizeForMatch(dealName);
-	const edgar = normalizeForMatch(edgarName);
+export function nameScore(leftName, rightName) {
+	const deal = normalizeForMatch(leftName);
+	const edgar = normalizeForMatch(rightName);
 	if (!deal || !edgar) return 0;
 	if (deal === edgar) return 1;
 	if (deal.includes(edgar) || edgar.includes(deal)) return 0.85;
@@ -211,40 +265,98 @@ export function nameScore(dealName, edgarName) {
 	return overlap / Math.max(dealWords.size, edgarWords.size);
 }
 
-export function pickBestSecMatch(dealName, sponsorName, allHits = []) {
+function buildMatchBreakdown(searchContext = {}, hit = {}) {
+	const dealName = searchContext.dealName || '';
+	const sponsorName = searchContext.sponsorName || '';
+	const legalEntities = searchContext.legalEntities || {};
+	const dealScore = nameScore(dealName, hit.entityName);
+	const issuerScore = nameScore(legalEntities.issuerEntity, hit.entityName);
+	const gpScore = nameScore(legalEntities.gpEntity, hit.entityName);
+	const sponsorEntityScore = nameScore(legalEntities.sponsorEntity, hit.entityName);
+	const operatorLegalEntityScore = nameScore(legalEntities.operatorLegalEntity, hit.entityName);
+	let sponsorScore = 0;
+
+	if (sponsorName) {
+		const rawSponsorScore = nameScore(sponsorName, hit.entityName);
+		if (rawSponsorScore > 0.5) {
+			const normalizedEntity = normalizeForMatch(hit.entityName);
+			const dealKeywords = normalizeForMatch(dealName)
+				.split(' ')
+				.filter(
+					(word) =>
+						word.length > 2
+						&& !word.match(/apartments?|fund|llc|lp|the|inc|investment|capital|group|partners/i)
+				);
+			const dealOverlap = dealKeywords.some((word) => normalizedEntity.includes(word));
+			sponsorScore = dealOverlap ? rawSponsorScore * 0.95 : rawSponsorScore * 0.4;
+		}
+	}
+
+	const normalizedEntityName = normalizeForMatch(hit.entityName);
+	const exactIssuerMatch = Boolean(
+		legalEntities.issuerEntity && normalizedEntityName === normalizeForMatch(legalEntities.issuerEntity)
+	);
+	const exactDealMatch = Boolean(dealName && normalizedEntityName === normalizeForMatch(dealName));
+	const exactSponsorEntityMatch = Boolean(
+		legalEntities.sponsorEntity && normalizedEntityName === normalizeForMatch(legalEntities.sponsorEntity)
+	);
+	const exactGpMatch = Boolean(
+		legalEntities.gpEntity && normalizedEntityName === normalizeForMatch(legalEntities.gpEntity)
+	);
+	const exactOperatorLegalMatch = Boolean(
+		legalEntities.operatorLegalEntity && normalizedEntityName === normalizeForMatch(legalEntities.operatorLegalEntity)
+	);
+
+	const hitEntitySuffix = entitySuffix(hit.entityName);
+	const issuerEntitySuffix = entitySuffix(legalEntities.issuerEntity);
+	const suffixMismatchPenalty =
+		hitEntitySuffix && issuerEntitySuffix && hitEntitySuffix !== issuerEntitySuffix ? 0.14 : 0;
+
+	const baseScore = Math.max(
+		dealScore,
+		sponsorScore,
+		issuerScore,
+		gpScore * 0.92,
+		sponsorEntityScore * 0.88,
+		operatorLegalEntityScore * 0.88
+	);
+	const exactBonus =
+		(exactIssuerMatch ? 0.35 : 0)
+		+ (!exactIssuerMatch && exactDealMatch ? 0.18 : 0)
+		+ (!exactIssuerMatch && (exactGpMatch || exactSponsorEntityMatch || exactOperatorLegalMatch) ? 0.16 : 0);
+	const compositeScore = Math.max(0, baseScore + exactBonus - suffixMismatchPenalty + (Number(hit.score || 0) / 10000));
+
+	return {
+		dealScore,
+		sponsorScore,
+		issuerScore,
+		gpScore,
+		sponsorEntityScore,
+		operatorLegalEntityScore,
+		exactIssuerMatch,
+		exactDealMatch,
+		exactGpMatch,
+		exactSponsorEntityMatch,
+		exactOperatorLegalMatch,
+		suffixMismatchPenalty,
+		matchScore: compositeScore
+	};
+}
+
+export function pickBestSecMatch(dealName, sponsorName, allHits = [], legalEntities = {}) {
 	if (!Array.isArray(allHits) || allHits.length === 0) return null;
 
 	let best = null;
 	let bestScore = 0;
+	const searchContext = { dealName, sponsorName, legalEntities };
 
 	for (const hit of allHits) {
-		const dealScore = nameScore(dealName, hit.entityName);
-		let sponsorScore = 0;
-
-		if (sponsorName) {
-			const rawSponsorScore = nameScore(sponsorName, hit.entityName);
-			if (rawSponsorScore > 0.5) {
-				const normalizedEntity = normalizeForMatch(hit.entityName);
-				const dealKeywords = normalizeForMatch(dealName)
-					.split(' ')
-					.filter(
-						(word) =>
-							word.length > 2
-							&& !word.match(/apartments?|fund|llc|lp|the|inc|investment|capital|group|partners/i)
-					);
-				const dealOverlap = dealKeywords.some((word) => normalizedEntity.includes(word));
-				sponsorScore = dealOverlap ? rawSponsorScore * 0.95 : rawSponsorScore * 0.4;
-			}
-		}
-
-		const compositeScore = Math.max(dealScore, sponsorScore) + (Number(hit.score || 0) / 10000);
-		if (compositeScore > bestScore) {
-			bestScore = compositeScore;
+		const breakdown = buildMatchBreakdown(searchContext, hit);
+		if (breakdown.matchScore > bestScore) {
+			bestScore = breakdown.matchScore;
 			best = {
 				...hit,
-				dealScore,
-				sponsorScore,
-				matchScore: compositeScore
+				...breakdown
 			};
 		}
 	}
@@ -257,10 +369,11 @@ function buildDealNameQueries(dealName) {
 	const seen = new Set();
 
 	function add(value) {
-		const cleaned = String(value || '').trim();
-		if (cleaned && cleaned.length > 2 && !seen.has(cleaned.toLowerCase())) {
-			seen.add(cleaned.toLowerCase());
-			queries.push(cleaned);
+		for (const variant of buildQueryVariants(value)) {
+			if (variant && variant.length > 2 && !seen.has(variant.toLowerCase())) {
+				seen.add(variant.toLowerCase());
+				queries.push(variant);
+			}
 		}
 	}
 
@@ -279,15 +392,16 @@ function buildDealNameQueries(dealName) {
 	return queries;
 }
 
-function buildFallbackQueries(dealName, sponsorName, legalEntities = {}) {
+function buildLegalEntityQueries(legalEntities = {}) {
 	const queries = [];
 	const seen = new Set();
 
 	function add(value) {
-		const cleaned = String(value || '').trim();
-		if (cleaned && cleaned.length > 2 && !seen.has(cleaned.toLowerCase())) {
-			seen.add(cleaned.toLowerCase());
-			queries.push(cleaned);
+		for (const variant of buildQueryVariants(value)) {
+			if (variant && variant.length > 2 && !seen.has(variant.toLowerCase())) {
+				seen.add(variant.toLowerCase());
+				queries.push(variant);
+			}
 		}
 	}
 
@@ -295,6 +409,24 @@ function buildFallbackQueries(dealName, sponsorName, legalEntities = {}) {
 	add(legalEntities.gpEntity);
 	add(legalEntities.sponsorEntity);
 	add(legalEntities.operatorLegalEntity);
+
+	return queries;
+}
+
+function buildFallbackQueries(dealName, sponsorName, legalEntities = {}) {
+	const queries = [];
+	const seen = new Set();
+
+	function add(value) {
+		for (const variant of buildQueryVariants(value)) {
+			if (variant && variant.length > 2 && !seen.has(variant.toLowerCase())) {
+				seen.add(variant.toLowerCase());
+				queries.push(variant);
+			}
+		}
+	}
+
+	for (const query of buildLegalEntityQueries(legalEntities)) add(query);
 	add(sponsorName);
 
 	if (sponsorName && dealName) {
@@ -312,10 +444,12 @@ export function generateSecSearchQueries(dealName, sponsorName, legalEntities = 
 	const mode = String(options.mode || 'all');
 	const primaryQueries = buildDealNameQueries(dealName);
 	const fallbackQueries = buildFallbackQueries(dealName, sponsorName, legalEntities);
+	const legalQueries = buildLegalEntityQueries(legalEntities);
 
 	if (mode === 'deal') return primaryQueries;
+	if (mode === 'legal') return legalQueries;
 	if (mode === 'fallback') return fallbackQueries;
-	return [...primaryQueries, ...fallbackQueries.filter((query) => !primaryQueries.includes(query))];
+	return [...legalQueries, ...primaryQueries, ...fallbackQueries.filter((query) => !legalQueries.includes(query) && !primaryQueries.includes(query))];
 }
 
 export function dedupeSecHits(hits = []) {
@@ -335,17 +469,29 @@ export async function findSecMatchesForDeal(
 	{ maxQueries = 6, earlyMatchScore = 0.75, fallbackTriggerScore = 0.72 } = {}
 ) {
 	const searchContext = buildDealSecSearchContext(deal);
-	const primaryQueries = generateSecSearchQueries(
+	const legalQueries = generateSecSearchQueries(
+		searchContext.dealName,
+		searchContext.sponsorName,
+		searchContext.legalEntities,
+		{ mode: 'legal' }
+	);
+	const dealQueries = generateSecSearchQueries(
 		searchContext.dealName,
 		searchContext.sponsorName,
 		searchContext.legalEntities,
 		{ mode: 'deal' }
-	).slice(0, maxQueries);
-	const fallbackQueries = generateSecSearchQueries(
+	);
+	const sponsorFallbackQueries = generateSecSearchQueries(
 		searchContext.dealName,
 		searchContext.sponsorName,
 		searchContext.legalEntities,
 		{ mode: 'fallback' }
+	);
+	const useLegalEntityFirst = Boolean(searchContext.legalEntities?.issuerEntity);
+	const primaryQueries = (useLegalEntityFirst ? legalQueries : dealQueries).slice(0, maxQueries);
+	const fallbackQueries = (useLegalEntityFirst
+		? [...dealQueries, ...sponsorFallbackQueries.filter((query) => !dealQueries.includes(query))]
+		: [...legalQueries, ...sponsorFallbackQueries.filter((query) => !legalQueries.includes(query))]
 	).slice(0, maxQueries);
 
 	let hits = [];
@@ -355,31 +501,27 @@ export async function findSecMatchesForDeal(
 		const results = await searchEdgar(query);
 		hits = dedupeSecHits([...hits, ...results]);
 		executedQueries.push(query);
-		const earlyMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits);
+		const earlyMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits, searchContext.legalEntities);
 		if (earlyMatch && earlyMatch.matchScore >= earlyMatchScore) break;
 	}
 
-	const primaryBestMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits);
+	const primaryBestMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits, searchContext.legalEntities);
 
 	if (!primaryBestMatch || primaryBestMatch.matchScore < fallbackTriggerScore) {
 		for (const query of fallbackQueries) {
 			const results = await searchEdgar(query);
 			hits = dedupeSecHits([...hits, ...results]);
 			executedQueries.push(query);
-			const earlyMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits);
+			const earlyMatch = pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, hits, searchContext.legalEntities);
 			if (earlyMatch && earlyMatch.matchScore >= earlyMatchScore) break;
 		}
 	}
 
 	const candidates = hits
 		.map((hit) => {
-			const dealScore = nameScore(searchContext.dealName, hit.entityName);
-			const sponsorScore = nameScore(searchContext.sponsorName, hit.entityName);
 			return {
 				...hit,
-				dealScore,
-				sponsorScore,
-				matchScore: Math.max(dealScore, sponsorScore) + (Number(hit.score || 0) / 10000)
+				...buildMatchBreakdown(searchContext, hit)
 			};
 		})
 		.sort((left, right) => right.matchScore - left.matchScore)
@@ -391,17 +533,17 @@ export async function findSecMatchesForDeal(
 		fallbackQueries,
 		searchContext,
 		candidates,
-		bestMatch: pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, candidates)
+		bestMatch: pickBestSecMatch(searchContext.dealName, searchContext.sponsorName, candidates, searchContext.legalEntities)
 	};
 }
 
-function buildFilingRow({ opportunityId = null, managementCompanyId = null, accession, cik, parsed, xml, url }) {
+function buildFilingRow({ opportunityId = null, managementCompanyId = null, accession, cik, parsed, xml, url, fileDate = null }) {
 	return {
 		opportunity_id: opportunityId || null,
 		management_company_id: managementCompanyId || null,
 		cik: String(parsed.cik || cik || '').replace(/^0+/, ''),
 		accession_number: accession,
-		filing_date: parsed.dateOfFirstSale || null,
+		filing_date: fileDate || null,
 		filing_type: parsed.filingType,
 		is_latest_amendment: true,
 		entity_name: parsed.entityName,
@@ -443,7 +585,8 @@ export async function upsertParsedSecFiling({
 	cik,
 	parsed,
 	xml,
-	url
+	url,
+	fileDate = null
 }) {
 	const normalizedCik = String(parsed.cik || cik || '').replace(/^0+/, '');
 
@@ -460,7 +603,8 @@ export async function upsertParsedSecFiling({
 		cik: normalizedCik,
 		parsed,
 		xml,
-		url
+		url,
+		fileDate
 	});
 
 	const { data: filing, error } = await supabase
@@ -519,7 +663,8 @@ export async function fetchAndStoreSecFiling({
 		cik: parsed.cik || match.cik,
 		parsed,
 		xml,
-		url
+		url,
+		fileDate: match.fileDate || null
 	});
 }
 
@@ -540,6 +685,8 @@ export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}) {
 	if (filing.total_amount_sold) updates.total_amount_sold = filing.total_amount_sold;
 	if (filing.total_investors) updates.total_investors = filing.total_investors;
 	if (filing.cik) updates.sec_cik = filing.cik;
+	if ('issuer_entity' in deal && !deal.issuer_entity && filing.entity_name) updates.issuer_entity = filing.entity_name;
+	if ('sec_entity_name' in deal && !deal.sec_entity_name && filing.entity_name) updates.sec_entity_name = filing.entity_name;
 
 	if (!deal.investment_name && filing.entity_name) updates.investment_name = filing.entity_name;
 	if (!deal.instrument) {

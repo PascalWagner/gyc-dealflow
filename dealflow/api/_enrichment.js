@@ -6,6 +6,7 @@
 // All enrichment phases (2-5) run in parallel after AI extraction completes.
 
 const SITE_URL = process.env.SITE_URL || 'https://deals.growyourcashflow.io';
+const EXTRACTION_TEXT_LIMIT = 120000;
 
 // ── Full enrichment prompt (PPM is source of truth) ──────────────────────────
 export const ENRICHMENT_PROMPT = `You are a real estate private placement analyst. Extract the following fields from this PPM, offering memorandum, subscription agreement, or pitch deck. Return ONLY valid JSON with these exact keys. Use null for any field you cannot find.
@@ -42,6 +43,15 @@ If this is a PPM or subscription agreement, prioritize the INVESTOR'S specific d
   "sponsorCoinvest": "GP co-investment percentage or amount if mentioned",
   "taxForm": "K-1, 1099, etc.",
   "secEntityName": "The exact legal entity name of the issuer as it appears on the PPM cover page (e.g. 'NCG Burgundy Investors LLC'). This is the entity filed with the SEC, not the marketing name",
+  "issuerEntity": "The exact legal issuer entity being offered to the investor. Prefer the named Company or issuer from the PPM cover and opening paragraph.",
+  "gpEntity": "General partner or governing entity if explicitly named in the PPM",
+  "sponsorEntity": "Sponsor, manager, or operating entity legal name if explicitly named in the PPM",
+  "servicingAgentEntity": "Servicing or loan-origination legal entity if explicitly named in the PPM",
+  "issuerEntityType": "Issuer entity type exactly as stated (e.g. Limited Liability Company, Limited Partnership)",
+  "issuerJurisdiction": "Issuer jurisdiction / state of formation exactly as stated",
+  "issuerAddress": "Issuer mailing or business address exactly as stated",
+  "issuerPhone": "Issuer phone number exactly as stated",
+  "relatedPeople": "Array of key people named in the PPM with role context, e.g. [{\"name\": \"Michael C. Anderson\", \"role\": \"President\"}]",
   "propertyAddress": "Full street address of the property if a single-asset deal (include city, state, ZIP)",
   "zipCode": "ZIP code of the property or primary investment location (5-digit number)",
   "unitCount": "Number of units (apartments, storage units, etc.)",
@@ -78,7 +88,8 @@ IMPORTANT:
 - purchasePrice is the PROPERTY acquisition cost from Sources & Uses, NOT the equity raise (offeringSize)
 - For fees, extract BOTH the "fees" field (full text description) AND the individual fee percentage fields
 - PRIORITIZE investor-specific details (amountInvested, dateInvested, investingEntity) from signature pages
-- For secEntityName: return the exact legal entity name, not the marketing name`;
+- For secEntityName and issuerEntity: return the exact legal entity name, not the marketing name
+- Use the full document as context, not only the cover pages, but prefer the most formal issuer definitions when multiple names are present`;
 
 // ── AI Extraction with fallback chain ────────────────────────────────────────
 
@@ -156,7 +167,11 @@ export async function runEnrichmentCascade(extracted, supabase) {
   const enrichmentSteps = [];
 
   // SEC EDGAR
-  const secQuery = extracted.secEntityName || extracted.investmentName || extracted.managementCompany;
+  const secQuery =
+    extracted.issuerEntity
+    || extracted.secEntityName
+    || extracted.investmentName
+    || extracted.managementCompany;
   if (secQuery) {
     enrichmentPromises.sec = runSecEdgar(secQuery).catch(e => {
       console.warn('SEC enrichment failed:', e.message);
@@ -275,7 +290,7 @@ async function callClaudePdf(fileBuffer, prompt) {
 }
 
 async function callClaudeText(text, prompt) {
-  const truncated = text.substring(0, 50000);
+  const truncated = text.substring(0, EXTRACTION_TEXT_LIMIT);
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -294,7 +309,7 @@ async function callClaudeText(text, prompt) {
 }
 
 async function callOpenAI(text, prompt) {
-  const truncated = text.substring(0, 80000);
+  const truncated = text.substring(0, EXTRACTION_TEXT_LIMIT);
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -320,7 +335,7 @@ async function callOpenAI(text, prompt) {
 }
 
 async function callGrok(text, prompt) {
-  const truncated = text.substring(0, 80000);
+  const truncated = text.substring(0, EXTRACTION_TEXT_LIMIT);
   const resp = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -578,6 +593,9 @@ const SUPABASE_FIELD_MAP = {
   constructionMgmtFeePct: 'construction_mgmt_fee_pct',
   waterfallDetails:       'waterfall_details',
   secEntityName:          'sec_entity_name',
+  issuerEntity:           'issuer_entity',
+  gpEntity:               'gp_entity',
+  sponsorEntity:          'sponsor_entity',
 };
 
 const NUMERIC_COLS = new Set([

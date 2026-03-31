@@ -1,62 +1,31 @@
 import { canViewerAccessDeal, resolveDealViewerContext } from './_deal-access.js';
 import { getAdminClient, setCors } from './_supabase.js';
 import {
+	buildDealSecSearchContext,
 	buildSecVerificationView,
 	deriveSecApplicability,
 	normalizeSecVerificationStatus
 } from '../src/lib/sec/verification.js';
 import {
 	applySecFilingToDeal,
+	buildEdgarIndexUrl,
 	dedupeSecHits,
+	fetchFilingXml,
 	fetchAndStoreSecFiling,
-	findSecMatchesForDeal
+	findSecMatchesForDeal,
+	parseFormD
 } from './_sec-edgar.js';
 
 const DEAL_SELECT = `
-	id,
-	investment_name,
-	sponsor_name,
-	status,
-	lifecycle_status,
-	offering_type,
-	available_to,
-	sec_cik,
-	date_of_first_sale,
-	management_company_id,
-	issuer_entity,
-	gp_entity,
-	sponsor_entity,
-	is_506b,
-	management_company:management_companies(id, operator_name)
+	*,
+	management_company:management_companies(*)
 `;
 
-const FILING_SELECT = `
-	id,
-	cik,
-	accession_number,
-	filing_date,
-	filing_type,
-	is_latest_amendment,
-	entity_name,
-	federal_exemptions,
-	date_of_first_sale,
-	total_offering_amount,
-	total_amount_sold,
-	total_investors,
-	edgar_url,
-	minimum_investment,
-	is_equity,
-	is_debt,
-	is_pooled_fund,
-	issuer_city,
-	issuer_state,
-	issuer_zip,
-	year_of_inc
-`;
+const FILING_SELECT = `*`;
 
 const VERIFICATION_SELECT = `
 	*,
-	sec_filing:sec_filings(${FILING_SELECT})
+	sec_filing:sec_filings(*)
 `;
 
 function isUuid(value) {
@@ -67,7 +36,147 @@ function formatIsoNow() {
 	return new Date().toISOString();
 }
 
-function buildFilingSummary(filing) {
+function toNumber(value) {
+	if (value === null || value === undefined || value === '') return null;
+	const numericValue = typeof value === 'number' ? value : Number(String(value).replace(/,/g, '').trim());
+	return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+function normalizeText(value) {
+	return String(value || '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+function formatOfferingTypeFromFiling(filing) {
+	const federalExemptions = Array.isArray(filing?.federal_exemptions) ? filing.federal_exemptions : [];
+	if (federalExemptions.includes('06b')) return '506(b)';
+	if (federalExemptions.includes('06c')) return '506(c)';
+	return '';
+}
+
+function buildSearchContextSummary(searchContext = {}) {
+	const legalEntities = searchContext?.legalEntities || {};
+	return {
+		dealName: searchContext?.dealName || '',
+		sponsorName: searchContext?.sponsorName || '',
+		legalEntities: {
+			issuerEntity: legalEntities.issuerEntity || '',
+			gpEntity: legalEntities.gpEntity || '',
+			sponsorEntity: legalEntities.sponsorEntity || '',
+			operatorLegalEntity: legalEntities.operatorLegalEntity || ''
+		},
+		priorityMode: legalEntities.issuerEntity ? 'issuer_first' : 'deal_first'
+	};
+}
+
+function buildCandidateEdgarUrl(candidate, filing = null) {
+	return (
+		filing?.edgar_url
+		|| buildEdgarIndexUrl(candidate?.cikPadded || candidate?.cik || filing?.cik || '', candidate?.accession || filing?.accession_number || '')
+		|| ''
+	);
+}
+
+function buildSecDiscrepancies({ deal = {}, filing = null, searchContext = {} } = {}) {
+	if (!filing) return [];
+
+	const discrepancies = [];
+	const expectedIssuer = searchContext?.legalEntities?.issuerEntity || '';
+	const expectedOfferingType = String(deal?.offering_type || deal?.offeringType || '').trim();
+	const expectedAvailableTo = String(deal?.available_to || deal?.availableTo || '').trim().toLowerCase();
+	const expectedMinimum = toNumber(deal?.investment_minimum ?? deal?.investmentMinimum);
+	const expectedCik = String(deal?.sec_cik || deal?.secCik || '').trim();
+	const filingOfferingType = formatOfferingTypeFromFiling(filing);
+	const filingMinimum = toNumber(filing?.minimum_investment);
+	const filingCik = String(filing?.cik || '').trim();
+
+	if (expectedIssuer && filing.entity_name && normalizeText(expectedIssuer) !== normalizeText(filing.entity_name)) {
+		discrepancies.push({
+			label: 'Issuer name differs',
+			detail: `PPM/deal says ${expectedIssuer}; SEC filing says ${filing.entity_name}.`
+		});
+	}
+
+	if (expectedOfferingType && filingOfferingType && expectedOfferingType !== filingOfferingType) {
+		discrepancies.push({
+			label: 'Offering type differs',
+			detail: `Deal says ${expectedOfferingType}; SEC filing says ${filingOfferingType}.`
+		});
+	}
+
+	if (expectedMinimum !== null && filingMinimum !== null && Math.abs(expectedMinimum - filingMinimum) > 1) {
+		discrepancies.push({
+			label: 'Minimum investment differs',
+			detail: `Deal says $${expectedMinimum.toLocaleString()}; SEC filing says $${filingMinimum.toLocaleString()}.`
+		});
+	}
+
+	if (expectedAvailableTo === 'accredited investors' && filing?.has_non_accredited === true) {
+		discrepancies.push({
+			label: 'Investor eligibility differs',
+			detail: 'The deal is marked accredited-only, but the SEC filing reports non-accredited investors.'
+		});
+	}
+
+	if (expectedCik && filingCik && expectedCik !== filingCik) {
+		discrepancies.push({
+			label: 'CIK differs',
+			detail: `Deal says ${expectedCik}; SEC filing says ${filingCik}.`
+		});
+	}
+
+	return discrepancies;
+}
+
+function buildCandidateReasons({ deal = {}, searchContext = {}, candidate = null, filing = null } = {}) {
+	if (!candidate) return [];
+	const reasons = [];
+	const dealMinimum = toNumber(deal?.investment_minimum ?? deal?.investmentMinimum);
+	const filingMinimum = toNumber(filing?.minimum_investment);
+	const filingOfferingType = formatOfferingTypeFromFiling(filing);
+	const dealOfferingType = String(deal?.offering_type || deal?.offeringType || '').trim();
+
+	if (candidate.exactIssuerMatch) reasons.push('Exact issuer legal entity match');
+	else if ((candidate.issuerScore || 0) >= 0.75) reasons.push('Issuer legal entity closely matches');
+
+	if (candidate.exactDealMatch) reasons.push('Exact deal name match');
+	else if ((candidate.dealScore || 0) >= 0.75) reasons.push('Deal name closely matches');
+
+	if ((candidate.sponsorScore || 0) >= 0.6) reasons.push('Sponsor / management name overlaps');
+	if (candidate.exactGpMatch || candidate.exactSponsorEntityMatch || candidate.exactOperatorLegalMatch) {
+		reasons.push('Related legal entity matches');
+	}
+
+	if (dealOfferingType && filingOfferingType && dealOfferingType === filingOfferingType) {
+		reasons.push(`${filingOfferingType} exemption matches`);
+	}
+
+	if (dealMinimum !== null && filingMinimum !== null && Math.abs(dealMinimum - filingMinimum) <= 1) {
+		reasons.push('Minimum investment matches');
+	}
+
+	const jurisdiction = String(filing?.jurisdiction || '').trim();
+	if (jurisdiction) reasons.push(`SEC jurisdiction: ${jurisdiction}`);
+
+	return [...new Set(reasons)].slice(0, 4);
+}
+
+function buildFilingRelatedPeople(filing = null) {
+	const people = Array.isArray(filing?.related_persons) ? filing.related_persons : [];
+	return people
+		.map((person) => {
+			const fullName = [person?.first_name, person?.last_name].filter(Boolean).join(' ').trim();
+			const relationship = Array.isArray(person?.relationships) ? person.relationships.join(', ') : '';
+			return [fullName, relationship].filter(Boolean).join(' — ').trim();
+		})
+		.filter(Boolean)
+		.slice(0, 4);
+}
+
+function buildFilingSummary(filing, deal = null, searchContext = {}) {
 	if (!filing?.id) return null;
 	return {
 		id: filing.id,
@@ -76,13 +185,22 @@ function buildFilingSummary(filing) {
 		filingDate: filing.filing_date || '',
 		filingType: filing.filing_type || 'D',
 		entityName: filing.entity_name || '',
+		entityType: filing.entity_type || '',
+		jurisdiction: filing.jurisdiction || '',
 		federalExemptions: Array.isArray(filing.federal_exemptions) ? filing.federal_exemptions : [],
 		dateOfFirstSale: filing.date_of_first_sale || '',
 		totalOfferingAmount: filing.total_offering_amount ?? null,
 		totalAmountSold: filing.total_amount_sold ?? null,
 		totalInvestors: filing.total_investors ?? null,
 		minimumInvestment: filing.minimum_investment ?? null,
-		edgarUrl: filing.edgar_url || ''
+		hasNonAccredited: filing.has_non_accredited === true,
+		issuerCity: filing.issuer_city || '',
+		issuerState: filing.issuer_state || '',
+		issuerZip: filing.issuer_zip || '',
+		issuerPhone: filing.issuer_phone || '',
+		edgarUrl: filing.edgar_url || buildEdgarIndexUrl(filing.cik || '', filing.accession_number || ''),
+		relatedPeople: buildFilingRelatedPeople(filing),
+		discrepancies: buildSecDiscrepancies({ deal, filing, searchContext })
 	};
 }
 
@@ -108,21 +226,36 @@ function buildRecordSummary(record) {
 	};
 }
 
-function buildCandidateSummary(candidate, linkedFiling = null) {
+function buildCandidateSummary(candidate, linkedFiling = null, deal = null, searchContext = {}) {
 	if (!candidate) return null;
 	return {
 		cik: candidate.cik || '',
 		cikPadded: candidate.cikPadded || '',
 		accession: candidate.accession || '',
 		entityName: candidate.entityName || '',
-		fileDate: candidate.fileDate || '',
-		location: candidate.location || '',
-		form: candidate.form || 'D',
+		fileDate: linkedFiling?.filing_date || candidate.fileDate || '',
+		location: candidate.location || [linkedFiling?.issuer_city, linkedFiling?.issuer_state].filter(Boolean).join(', '),
+		form: linkedFiling?.filing_type || candidate.form || 'D',
 		score: candidate.score || 0,
 		matchScore: candidate.matchScore || 0,
 		dealScore: candidate.dealScore || 0,
 		sponsorScore: candidate.sponsorScore || 0,
-		existingSecFilingId: linkedFiling?.id || null
+		issuerScore: candidate.issuerScore || 0,
+		existingSecFilingId: linkedFiling?.id || null,
+		edgarUrl: buildCandidateEdgarUrl(candidate, linkedFiling),
+		entityType: linkedFiling?.entity_type || '',
+		jurisdiction: linkedFiling?.jurisdiction || '',
+		federalExemptions: Array.isArray(linkedFiling?.federal_exemptions) ? linkedFiling.federal_exemptions : [],
+		dateOfFirstSale: linkedFiling?.date_of_first_sale || '',
+		minimumInvestment: linkedFiling?.minimum_investment ?? null,
+		totalAmountSold: linkedFiling?.total_amount_sold ?? null,
+		totalInvestors: linkedFiling?.total_investors ?? null,
+		hasNonAccredited: linkedFiling?.has_non_accredited === true,
+		issuerState: linkedFiling?.issuer_state || '',
+		issuerCity: linkedFiling?.issuer_city || '',
+		relatedPeople: buildFilingRelatedPeople(linkedFiling),
+		reasons: buildCandidateReasons({ deal, searchContext, candidate, filing: linkedFiling }),
+		discrepancies: buildSecDiscrepancies({ deal, filing: linkedFiling, searchContext })
 	};
 }
 
@@ -167,6 +300,19 @@ async function loadDealContext(supabase, dealId, viewerContext) {
 		filing = linkedFiling || null;
 	}
 
+	if (filing?.id) {
+		const { data: relatedPeople, error: relatedPeopleError } = await supabase
+			.from('related_persons')
+			.select('first_name, last_name, relationships')
+			.eq('sec_filing_id', filing.id)
+			.order('last_name', { ascending: true });
+		if (relatedPeopleError) throw relatedPeopleError;
+		filing = {
+			...filing,
+			related_persons: relatedPeople || []
+		};
+	}
+
 	return { deal, record: record || null, filing };
 }
 
@@ -187,6 +333,49 @@ async function loadFilingsByAccession(supabase, accessions = []) {
 	);
 }
 
+async function hydrateCandidateDetails(candidates = []) {
+	const detailsByAccession = {};
+	await Promise.allSettled(
+		(candidates || []).slice(0, 4).map(async (candidate) => {
+			if (!candidate?.accession || !candidate?.cik && !candidate?.cikPadded) return;
+			const { xml, url } = await fetchFilingXml(candidate.cikPadded || candidate.cik, candidate.accession);
+			const parsed = parseFormD(xml);
+			detailsByAccession[candidate.accession] = {
+				cik: String(parsed.cik || candidate.cik || '').replace(/^0+/, ''),
+				accession_number: candidate.accession,
+				filing_date: candidate.fileDate || null,
+				filing_type: parsed.filingType || candidate.form || 'D',
+				entity_name: parsed.entityName || candidate.entityName || '',
+				entity_type: parsed.entityType || '',
+				jurisdiction: parsed.jurisdiction || '',
+				issuer_phone: parsed.issuerPhone || '',
+				issuer_city: parsed.issuerCity || '',
+				issuer_state: parsed.issuerState || '',
+				issuer_zip: parsed.issuerZip || '',
+				federal_exemptions: parsed.federalExemptions || [],
+				date_of_first_sale: parsed.dateOfFirstSale || null,
+				minimum_investment: parsed.minimumInvestment,
+				total_offering_amount: parsed.totalOfferingAmount,
+				total_amount_sold: parsed.totalAmountSold,
+				total_investors: parsed.totalInvestors,
+				has_non_accredited: parsed.hasNonAccredited === true,
+				is_equity: parsed.isEquity === true,
+				is_debt: parsed.isDebt === true,
+				is_pooled_fund: parsed.isPooledFund === true,
+				related_persons: Array.isArray(parsed.relatedPersons)
+					? parsed.relatedPersons.map((person) => ({
+						first_name: person.firstName || '',
+						last_name: person.lastName || '',
+						relationships: person.relationships || []
+					}))
+					: [],
+				edgar_url: url || buildEdgarIndexUrl(candidate.cikPadded || candidate.cik, candidate.accession)
+			};
+		})
+	);
+	return detailsByAccession;
+}
+
 async function buildResponsePayload({
 	supabase,
 	deal,
@@ -197,20 +386,23 @@ async function buildResponsePayload({
 	const searchCandidates = Array.isArray(search?.candidates) ? search.candidates : [];
 	const accessions = searchCandidates.map((candidate) => candidate.accession).filter(Boolean);
 	const filingsByAccession = await loadFilingsByAccession(supabase, accessions);
+	const candidateDetailsByAccession = search?.candidateDetails || {};
+	const searchContext = buildSearchContextSummary(search?.searchContext || buildDealSecSearchContext(deal));
 	const candidateSummaries = searchCandidates.map((candidate) =>
-		buildCandidateSummary(candidate, filingsByAccession[candidate.accession])
+		buildCandidateSummary(candidate, candidateDetailsByAccession[candidate.accession] || filingsByAccession[candidate.accession], deal, searchContext)
 	);
 	const bestMatch = search?.bestMatch
-		? buildCandidateSummary(search.bestMatch, filingsByAccession[search.bestMatch.accession])
+		? buildCandidateSummary(search.bestMatch, candidateDetailsByAccession[search.bestMatch.accession] || filingsByAccession[search.bestMatch.accession], deal, searchContext)
 		: null;
 
 	return {
 		dealId: deal.id,
 		record: buildRecordSummary(record),
-		filing: buildFilingSummary(filing),
+		filing: buildFilingSummary(filing, deal, searchContext),
 		search: {
 			hasRun: Boolean(search),
 			queries: Array.isArray(search?.queries) ? search.queries : [],
+			searchContext,
 			searchedAt: search?.searchedAt || null,
 			bestMatch,
 			candidates: candidateSummaries
@@ -281,6 +473,7 @@ async function handleRefreshMatch(req, res, supabase, viewerContext) {
 	if (!context.deal) return res.status(404).json({ error: 'Deal not found' });
 
 	const search = await findSecMatchesForDeal(context.deal);
+	search.candidateDetails = await hydrateCandidateDetails(search.candidates);
 	search.searchedAt = formatIsoNow();
 	const applicability = deriveSecApplicability(context.deal);
 	const currentStatus = normalizeSecVerificationStatus(context.record?.status);
