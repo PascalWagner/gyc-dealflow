@@ -5,28 +5,9 @@ import { ADMIN_EMAILS, getAdminClient, resolveUserFromAccessToken, setCors, rate
 const ACADEMY_TIERS = new Set(['academy', 'founding', 'inner-circle', 'alumni', 'investor', 'paid', 'member', 'family_office']);
 const LESSON_CATALOG_PATH = new URL('../src/lib/data/cashflow-academy-lessons.json', import.meta.url);
 const { sections: SECTIONS = [], lessons: LESSONS = [] } = JSON.parse(fs.readFileSync(LESSON_CATALOG_PATH, 'utf8'));
-const PLACEHOLDER_VIDEO_IDS = new Set([
-  'dQw4w9WgXcQ', '_ivzzmkVtQ4', '31MeoDcwJXQ', 'Z6o05fE7jnE', 'ScMzIvxBSi4',
-  'SU-3z6HSF5I', 'n26rrKOgc9s', 'ZbZSe6N_BXs', 'fWvuCWJtGG4', '2Vv-BfVoq4g',
-  'ainJXyIk9PQ', 'W24lfMeJj8A', 'TGMyCVD-mGU', 'LXb3EKWsInQ', 'fJ9rUzIMcZQ',
-  'kJQP7kiw5Fk', 'lxg95vEVO9U', 'vc1tABmjbf4', 'JGwWNGJdvx8', 'qthre9LQBks',
-  'YVK3cZRtowY', 'dpU7VxTOVtk', '9bZkp7q19f0', 'wZWhUTA357w', 'ee5vzoeNV9I',
-  'IwP6nLFClCo', '-HKW5B3Af84', 'w1VXLmZEuXQ', 'YQHsXMglC9A', '4punR111vHw',
-  'CevxZvSJLk8', 'OPf0YbXqDm0', 'C0WChru4DRc', 'sxOIzbJkk9U', '1ZMj-vRHCfw',
-  'Mhm7u1OFz1U', 'RgKAFK5djSk', 'ZU8hcallDX8', '3rJKwu_SF2I', '223iJ3UobpQ',
-  '60ItHLz5WEA', 'hT_nvWreIhg', 'l482T0yNkeo', 'pRpeEdMmmQ0', 'fLexgOxsZu0',
-  'IcrbM1l_BoI', 'vlqAJBEsfQs', 'oI-rYMhAEvM', 'YxAm0pvwRXw', 'dgFqqhezprY',
-  'M7lc1UVf-VE', 'zelS0E186CE', 'KJbjaJR9iOg', 'QH2-TGUlwu4', '09R8_2nJtjg',
-  'V-_O7nl0Ii0', 'DLzxrzFCyOs'
-]);
-
-function isPlaceholderVideoId(youtubeId) {
-  return PLACEHOLDER_VIDEO_IDS.has(String(youtubeId || '').trim());
-}
 
 function mapLessonToVideo(lesson) {
   const section = SECTIONS.find(s => s.id === lesson.section);
-  const placeholderVideo = isPlaceholderVideoId(lesson.youtubeId);
   return {
     id: lesson.id,
     title: lesson.lesson_title,
@@ -34,13 +15,12 @@ function mapLessonToVideo(lesson) {
     category: section ? section.title : 'Education',
     section: lesson.section,
     module: lesson.module,
-    youtubeId: placeholderVideo ? '' : lesson.youtubeId,
-    thumbnail: !placeholderVideo && lesson.youtubeId ? `https://img.youtube.com/vi/${lesson.youtubeId}/hqdefault.jpg` : '',
+    youtubeId: lesson.youtubeId || '',
+    thumbnail: lesson.youtubeId ? `https://img.youtube.com/vi/${lesson.youtubeId}/hqdefault.jpg` : '',
     duration: lesson.duration || '',
     order_index: lesson.order_index,
     featured: lesson.featured || false,
-    isPlaceholderVideo: placeholderVideo,
-    playable: !placeholderVideo && Boolean(lesson.youtubeId)
+    playable: Boolean(lesson.youtubeId)
   };
 }
 
