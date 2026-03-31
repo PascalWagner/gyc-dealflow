@@ -155,6 +155,7 @@
 	let extractionError = $state('');
 	let extractionSummary = $state(null);
 	let autoExtractionHandled = $state(false);
+	let secStageRefreshKey = $state(0);
 	let intakeSponsorResults = $state([]);
 	let intakeSponsorLoading = $state(false);
 	let intakeSponsorOpen = $state(false);
@@ -373,6 +374,29 @@
 		updateField('slug', slugify(form.investmentName));
 	}
 
+	function listFromDealValue(nextDeal, snakeKey, camelKey) {
+		if (Array.isArray(nextDeal?.[snakeKey])) return nextDeal[snakeKey];
+		if (Array.isArray(nextDeal?.[camelKey])) return nextDeal[camelKey];
+		return [];
+	}
+
+	function syncDealState(nextDeal, { clearSaveMessage = false } = {}) {
+		if (!nextDeal) return;
+		deal = nextDeal;
+		const hydrated = createDealReviewFormFromDeal(nextDeal);
+		form = hydrated.form;
+		fieldWarnings = hydrated.warnings;
+		fieldErrors = {};
+		manualBranch = nextDeal?.deal_branch || nextDeal?.dealBranch || manualBranch || '';
+		sourceRiskFactors = listFromDealValue(nextDeal, 'source_risk_factors', 'sourceRiskFactors');
+		highlightedRisks = listFromDealValue(nextDeal, 'highlighted_risks', 'highlightedRisks');
+		dirty = false;
+		saveError = '';
+		if (clearSaveMessage) {
+			saveMessage = '';
+		}
+	}
+
 	function resetForm() {
 		if (!deal) return;
 		const hydrated = createDealReviewFormFromDeal(deal);
@@ -460,9 +484,14 @@
 	}
 
 	async function uploadDocument({ base64, file, docType, actor }) {
-		if (!file || !base64) return null;
+		if (!file || !base64) {
+			return { payload: null, warning: null };
+		}
 		if (!actor.session?.token) {
-			return 'Your session is missing the upload token needed for documents.';
+			return {
+				payload: null,
+				warning: 'Your session is missing the upload token needed for documents.'
+			};
 		}
 
 		const response = await fetch('/api/deck-upload', {
@@ -483,9 +512,17 @@
 			})
 		});
 
-		if (response.ok) return null;
 		const data = await response.json().catch(() => ({}));
-		return data?.error || `Could not upload the ${docType.toUpperCase()} file.`;
+		if (response.ok) {
+			return {
+				payload: data,
+				warning: null
+			};
+		}
+		return {
+			payload: data,
+			warning: data?.error || `Could not upload the ${docType.toUpperCase()} file.`
+		};
 	}
 
 	async function continueFromIntake({ autoExtract = true } = {}) {
@@ -502,6 +539,7 @@
 
 		try {
 			await saveIntakeDetails();
+			let nextDealState = deal ? { ...deal } : null;
 
 			if (deckFile || ppmFile) {
 				const actor = getActorFromSession();
@@ -513,28 +551,44 @@
 				}
 
 				const warnings = [];
-				const deckWarning = await uploadDocument({
+				const deckUpload = await uploadDocument({
 					base64: deckFileBase64,
 					file: deckFile,
 					docType: 'deck',
 					actor
 				});
-				if (deckWarning) warnings.push(deckWarning);
+				if (deckUpload.warning) warnings.push(deckUpload.warning);
+				if (deckUpload.payload?.driveUrl) {
+					nextDealState = {
+						...(nextDealState || {}),
+						deck_url: deckUpload.payload.driveUrl,
+						deckUrl: deckUpload.payload.driveUrl
+					};
+				}
 
-				const ppmWarning = await uploadDocument({
+				const ppmUpload = await uploadDocument({
 					base64: ppmFileBase64,
 					file: ppmFile,
 					docType: 'ppm',
 					actor
 				});
-				if (ppmWarning) warnings.push(ppmWarning);
+				if (ppmUpload.warning) warnings.push(ppmUpload.warning);
+				if (ppmUpload.payload?.driveUrl) {
+					nextDealState = {
+						...(nextDealState || {}),
+						ppm_url: ppmUpload.payload.driveUrl,
+						ppmUrl: ppmUpload.payload.driveUrl
+					};
+				}
 
 				if (warnings.length > 0) {
 					throw new Error(warnings.join('\n'));
 				}
 			}
 
-			await loadDeal();
+			if (nextDealState) {
+				syncDealState(nextDealState);
+			}
 			autoExtractionHandled = false;
 			await goto(buildReviewHref({ stage: 'sec', extract: autoExtract, from: cameFromQueue ? 'queue' : 'intake' }), {
 				replaceState: true,
@@ -577,12 +631,7 @@
 			throw new Error(payload?.error || 'Could not save the intake details.');
 		}
 
-		deal = payload.deal;
-		const hydrated = createDealReviewFormFromDeal(payload.deal);
-		form = hydrated.form;
-		fieldWarnings = hydrated.warnings;
-		fieldErrors = {};
-		dirty = false;
+		syncDealState(payload.deal);
 	}
 
 	function getManagementCompanyId() {
@@ -720,24 +769,7 @@
 				throw new Error(payload?.error || 'Failed to load deal.');
 			}
 
-			deal = payload.deal;
-			const hydrated = createDealReviewFormFromDeal(payload.deal);
-			form = hydrated.form;
-			fieldWarnings = hydrated.warnings;
-			fieldErrors = {};
-			manualBranch = payload.deal?.deal_branch || payload.deal?.dealBranch || '';
-			sourceRiskFactors = Array.isArray(payload.deal?.source_risk_factors)
-				? payload.deal.source_risk_factors
-				: Array.isArray(payload.deal?.sourceRiskFactors)
-					? payload.deal.sourceRiskFactors
-					: [];
-			highlightedRisks = Array.isArray(payload.deal?.highlighted_risks)
-				? payload.deal.highlighted_risks
-				: Array.isArray(payload.deal?.highlightedRisks)
-					? payload.deal.highlightedRisks
-					: [];
-			dirty = false;
-			saveError = '';
+			syncDealState(payload.deal, { clearSaveMessage: true });
 			if (!shouldAutoExtract) {
 				extractionError = '';
 			}
@@ -805,23 +837,13 @@
 				throw new Error(payload?.error || 'Failed to save deal.');
 			}
 
-			deal = payload.deal;
-			const hydrated = createDealReviewFormFromDeal(payload.deal);
-			form = hydrated.form;
-			fieldWarnings = hydrated.warnings;
-			fieldErrors = {};
-			dirty = false;
-			manualBranch = payload.deal?.deal_branch || payload.deal?.dealBranch || manualBranch || branchInfo.branch;
-			sourceRiskFactors = Array.isArray(payload.deal?.source_risk_factors)
-				? payload.deal.source_risk_factors
-				: Array.isArray(payload.deal?.sourceRiskFactors)
-					? payload.deal.sourceRiskFactors
-					: sourceRiskFactors;
-			highlightedRisks = Array.isArray(payload.deal?.highlighted_risks)
-				? payload.deal.highlighted_risks
-				: Array.isArray(payload.deal?.highlightedRisks)
-					? payload.deal.highlightedRisks
-					: highlightedRisks;
+			syncDealState(
+				{
+					...(deal || {}),
+					...payload.deal
+				},
+				{ clearSaveMessage: true }
+			);
 			if (!quiet) {
 				saveMessage = 'Deal saved.';
 			}
@@ -889,9 +911,16 @@
 					? applyPayload.fields_updated.length
 					: Object.keys(updates).length;
 
-				await loadDeal();
+				if (applyPayload?.data) {
+					syncDealState({
+						...(deal || {}),
+						...applyPayload.data
+					});
+				}
 			}
 
+			await loadSecVerificationSummary();
+			secStageRefreshKey += 1;
 			extractionSummary = {
 				fieldsFound: Object.keys(updates).length,
 				fieldsApplied: appliedCount,
@@ -1328,6 +1357,7 @@
 						<SecVerificationStage
 							dealId={dealId}
 							deal={deal}
+							refreshKey={secStageRefreshKey}
 							onchange={(nextContext) => {
 								secVerificationContext = nextContext;
 							}}

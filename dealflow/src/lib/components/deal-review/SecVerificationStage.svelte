@@ -12,6 +12,7 @@
 		dealId = '',
 		deal = null,
 		autoload = true,
+		refreshKey = 0,
 		onchange = () => {}
 	} = $props();
 
@@ -21,6 +22,7 @@
 	let payload = $state(null);
 	let noteDraft = $state('');
 	let lastLoadedDealId = $state('');
+	let lastRefreshKey = $state(0);
 
 	const fallbackApplicability = $derived(deriveSecApplicability(deal || {}));
 	const view = $derived(payload?.view || null);
@@ -68,9 +70,11 @@
 		return nextPayload;
 	}
 
-	async function load() {
+	async function load({ background = false } = {}) {
 		if (!dealId) return;
-		loading = true;
+		if (!background) {
+			loading = true;
+		}
 		error = '';
 
 		try {
@@ -80,7 +84,9 @@
 		} catch (err) {
 			error = err?.message || 'Could not load SEC verification.';
 		} finally {
-			loading = false;
+			if (!background) {
+				loading = false;
+			}
 		}
 	}
 
@@ -158,6 +164,7 @@
 	onMount(() => {
 		if (autoload && dealId) {
 			lastLoadedDealId = dealId;
+			lastRefreshKey = refreshKey;
 			void load();
 		}
 	});
@@ -170,6 +177,15 @@
 		noteDraft = '';
 		lastLoadedDealId = dealId;
 		void load();
+	});
+
+	$effect(() => {
+		if (!autoload || !dealId) return;
+		if (!payload) return;
+		if (dealId !== lastLoadedDealId) return;
+		if (refreshKey === lastRefreshKey) return;
+		lastRefreshKey = refreshKey;
+		void load({ background: true });
 	});
 </script>
 
