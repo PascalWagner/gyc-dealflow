@@ -184,35 +184,59 @@
 	async function loadSchema() {
 		schemaLoading = true;
 		try {
-			const result = await adminFetch({ action: 'schema' });
-			if (result.success && result.tables) {
-				schemaTables = result.tables;
-			} else {
-				// Hardcoded fallback schema from Supabase
-				schemaTables = [
-					{ name: 'deals', rows: null, description: 'All deal listings with financials, sponsors, and metadata', columns: ['id', 'name', 'sponsor', 'asset_class', 'target_raise', 'min_investment', 'irr_target', 'status'] },
-					{ name: 'user_profiles', rows: null, description: 'Investor profiles, onboarding state, and preferences', columns: ['id', 'email', 'name', 'tier', 'signed_up_at', 'last_active', 'onboarded'] },
-					{ name: 'user_deal_stages', rows: null, description: 'Deal pipeline stages per user (saved, diligence, decision, invested, passed)', columns: ['user_id', 'deal_id', 'stage', 'updated_at'] },
-					{ name: 'management_companies', rows: null, description: 'Operators / sponsors with track records and contact info', columns: ['id', 'name', 'aum', 'deal_count', 'contact_email', 'website'] },
-					{ name: 'portfolio_investments', rows: null, description: 'User investment records with amounts and distributions', columns: ['id', 'user_id', 'deal_id', 'amount_invested', 'distributions_received', 'status'] },
-					{ name: 'deal_documents', rows: null, description: 'Pitch decks, PPMs, and DD documents linked to deals', columns: ['id', 'deal_id', 'type', 'url', 'filename'] },
-					{ name: 'dd_checklists', rows: null, description: '10-item due diligence checklists per user per deal', columns: ['user_id', 'deal_id', 'item_key', 'completed', 'notes'] },
-					{ name: 'deal_qna', rows: null, description: 'Q&A threads on deals', columns: ['id', 'deal_id', 'user_id', 'question', 'answer', 'created_at'] },
-					{ name: 'intro_requests', rows: null, description: 'LP-to-GP introduction requests', columns: ['id', 'user_id', 'deal_id', 'status', 'created_at'] },
-					{ name: 'buy_box_profiles', rows: null, description: 'User investment criteria from wizard', columns: ['user_id', 'branch', 'asset_classes', 'min_investment', 'target_return'] },
-					{ name: 'sec_form_d', rows: null, description: '730K+ SEC Form D filings for market intelligence', columns: ['cik', 'entity_name', 'filing_date', 'total_offering', 'amount_sold'] },
-					{ name: 'gdrive_deck_index', rows: null, description: 'Google Drive deck file index matched to deals', columns: ['id', 'file_id', 'deal_id', 'filename', 'matched_at'] },
-					{ name: 'user_feedback', rows: null, description: 'Platform feedback submissions', columns: ['id', 'user_id', 'type', 'text', 'rating', 'created_at'] },
-					{ name: 'analytics_events', rows: null, description: 'User activity tracking events', columns: ['id', 'user_id', 'event', 'metadata', 'created_at'] },
-					{ name: 'operator_outreach', rows: null, description: 'GP outreach pipeline status tracking', columns: ['id', 'company_id', 'status', 'priority', 'contact_email', 'notes'] },
-					{ name: 'case_studies', rows: null, description: 'Member success stories and investment case studies', columns: ['id', 'title', 'deal_id', 'user_id', 'content'] },
-					{ name: 'weekly_digests', rows: null, description: 'Weekly email digest content and send status', columns: ['id', 'week', 'content', 'sent_at'] },
-					{ name: 'ppm_financial_details', rows: null, description: 'Extracted PPM financial terms and fee structures', columns: ['deal_id', 'mgmt_fee', 'carry', 'pref_return', 'waterfall'] },
-					{ name: 'share_classes', rows: null, description: 'Deal share class definitions with different terms', columns: ['id', 'deal_id', 'class_name', 'min_investment', 'pref_return'] },
-					{ name: 'deal_properties', rows: null, description: 'Physical property assets linked to deals', columns: ['id', 'deal_id', 'address', 'city', 'state', 'units'] },
-					{ name: 'background_checks', rows: null, description: 'SEC, FINRA, OFAC, and court check results', columns: ['id', 'entity_name', 'check_type', 'result', 'checked_at'] }
-				];
-			}
+			const result = await adminFetch({ action: 'table-counts' });
+			const counts = result.success ? (result.counts || {}) : {};
+			const tableAliases = {
+				deals: 'opportunities',
+				portfolio_investments: 'user_portfolio',
+				deal_documents: 'deck_submissions',
+				dd_checklists: 'dd_checklist',
+				deal_qna: 'deal_qa',
+				buy_box_profiles: 'user_buy_box',
+				sec_form_d: 'sec_filings',
+				gdrive_deck_index: 'gdrive_deck_files',
+				user_feedback: 'user_feedback',
+				analytics_events: 'user_events',
+				operator_outreach: 'operator_interactions',
+				case_studies: 'case_studies',
+				weekly_digests: 'weekly_digests',
+				ppm_financial_details: 'investment_memos',
+				share_classes: 'share_classes',
+				deal_properties: 'deal_properties',
+				background_checks: 'background_checks'
+			};
+
+			const fallbackSchema = [
+				{ name: 'deals', rows: null, description: 'All deal listings with financials, sponsors, and metadata', columns: ['id', 'name', 'sponsor', 'asset_class', 'target_raise', 'min_investment', 'irr_target', 'status'] },
+				{ name: 'user_profiles', rows: null, description: 'Investor profiles, onboarding state, and preferences', columns: ['id', 'email', 'name', 'tier', 'signed_up_at', 'last_active', 'onboarded'] },
+				{ name: 'user_deal_stages', rows: null, description: 'Deal pipeline stages per user (saved, diligence, decision, invested, passed)', columns: ['user_id', 'deal_id', 'stage', 'updated_at'] },
+				{ name: 'management_companies', rows: null, description: 'Operators / sponsors with track records and contact info', columns: ['id', 'name', 'aum', 'deal_count', 'contact_email', 'website'] },
+				{ name: 'portfolio_investments', rows: null, description: 'User investment records with amounts and distributions', columns: ['id', 'user_id', 'deal_id', 'amount_invested', 'distributions_received', 'status'] },
+				{ name: 'deal_documents', rows: null, description: 'Pitch decks, PPMs, and DD documents linked to deals', columns: ['id', 'deal_id', 'type', 'url', 'filename'] },
+				{ name: 'dd_checklists', rows: null, description: '10-item due diligence checklists per user per deal', columns: ['user_id', 'deal_id', 'item_key', 'completed', 'notes'] },
+				{ name: 'deal_qna', rows: null, description: 'Q&A threads on deals', columns: ['id', 'deal_id', 'user_id', 'question', 'answer', 'created_at'] },
+				{ name: 'intro_requests', rows: null, description: 'LP-to-GP introduction requests', columns: ['id', 'user_id', 'deal_id', 'status', 'created_at'] },
+				{ name: 'buy_box_profiles', rows: null, description: 'User investment criteria from wizard', columns: ['user_id', 'branch', 'asset_classes', 'min_investment', 'target_return'] },
+				{ name: 'sec_form_d', rows: null, description: '730K+ SEC Form D filings for market intelligence', columns: ['cik', 'entity_name', 'filing_date', 'total_offering', 'amount_sold'] },
+				{ name: 'gdrive_deck_index', rows: null, description: 'Google Drive deck file index matched to deals', columns: ['id', 'file_id', 'deal_id', 'filename', 'matched_at'] },
+				{ name: 'user_feedback', rows: null, description: 'Platform feedback submissions', columns: ['id', 'user_id', 'type', 'text', 'rating', 'created_at'] },
+				{ name: 'analytics_events', rows: null, description: 'User activity tracking events', columns: ['id', 'user_id', 'event', 'metadata', 'created_at'] },
+				{ name: 'operator_outreach', rows: null, description: 'GP outreach pipeline status tracking', columns: ['id', 'company_id', 'status', 'priority', 'contact_email', 'notes'] },
+				{ name: 'case_studies', rows: null, description: 'Member success stories and investment case studies', columns: ['id', 'title', 'deal_id', 'user_id', 'content'] },
+				{ name: 'weekly_digests', rows: null, description: 'Weekly email digest content and send status', columns: ['id', 'week', 'content', 'sent_at'] },
+				{ name: 'ppm_financial_details', rows: null, description: 'Extracted PPM financial terms and fee structures', columns: ['deal_id', 'mgmt_fee', 'carry', 'pref_return', 'waterfall'] },
+				{ name: 'share_classes', rows: null, description: 'Deal share class definitions with different terms', columns: ['id', 'deal_id', 'class_name', 'min_investment', 'pref_return'] },
+				{ name: 'deal_properties', rows: null, description: 'Physical property assets linked to deals', columns: ['id', 'deal_id', 'address', 'city', 'state', 'units'] },
+				{ name: 'background_checks', rows: null, description: 'SEC, FINRA, OFAC, and court check results', columns: ['id', 'entity_name', 'check_type', 'result', 'checked_at'] }
+			];
+
+			schemaTables = fallbackSchema.map((table) => {
+				const sourceTable = tableAliases[table.name] || table.name;
+				return {
+					...table,
+					rows: counts[sourceTable] ?? null
+				};
+			});
 		} catch (e) { console.error(e); }
 		finally { schemaLoading = false; }
 	}
