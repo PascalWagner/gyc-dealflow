@@ -39,7 +39,8 @@ export function buildDealShareSmsHref(deal = {}, pageUrl = '') {
 }
 
 export function buildDealInviteSharePayload({ deal = {}, viewerName = 'Someone', inviteUrl = '' } = {}) {
-	const dealName = deal.investmentName || deal.name || '';
+	const safeDeal = deal || {};
+	const dealName = safeDeal.investmentName || safeDeal.name || '';
 	return {
 		emailSubject: encodeURIComponent(`${viewerName} shared a deal with you: ${dealName}`),
 		emailBody: encodeURIComponent(

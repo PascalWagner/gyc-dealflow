@@ -1018,7 +1018,7 @@
 					{@const compareAnalytics = getDealCompareAnalyticsForCard(deal, compareAction)}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<div onclick={() => trackDealView(deal.id)}>
+					<div class="deal-card-slot" onclick={() => trackDealView(deal.id)}>
 						<DealCard
 							{deal}
 							footerActions={actionModel.footerActions}
@@ -1433,6 +1433,12 @@
 		--ly-grid-tablet: 2;
 		--ly-grid-mobile: 1;
 		--ly-grid-gap: 18px;
+	}
+
+	.deal-card-slot {
+		display: flex;
+		min-width: 0;
+		height: 100%;
 	}
 
 	.loading-state { padding: 20px 0; }

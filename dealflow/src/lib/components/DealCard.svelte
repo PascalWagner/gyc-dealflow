@@ -485,6 +485,10 @@
 		cursor: pointer;
 		transition: all 0.25s ease;
 		position: relative;
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		height: 100%;
 	}
 
 	.deal-card:hover {
@@ -626,6 +630,9 @@
 	.card-body {
 		padding: 0;
 		color: inherit;
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 auto;
 	}
 
 	.card-copy {
@@ -633,6 +640,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
+		min-height: 102px;
+		justify-content: flex-start;
 	}
 
 	.card-title {
@@ -714,9 +723,10 @@
 		color: var(--text-dark);
 		margin-top: 2px;
 		line-height: 1.2;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+		white-space: normal;
+		overflow-wrap: anywhere;
+		word-break: break-word;
+		min-height: 26px;
 	}
 
 	.metric-value.highlight {
@@ -729,6 +739,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+		margin-top: auto;
 	}
 
 	.card-secondary-row,
@@ -894,6 +905,10 @@
 	}
 
 	@media (max-width: 560px) {
+		.card-copy {
+			min-height: 96px;
+		}
+
 		.metric {
 			padding: 6px 6px;
 		}

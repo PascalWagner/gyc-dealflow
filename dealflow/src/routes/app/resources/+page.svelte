@@ -48,6 +48,10 @@
 		return '';
 	}
 
+	function isPlayable(video) {
+		return Boolean(video?.playable || video?.youtubeId || video?.url);
+	}
+
 	function closeModal() {
 		selectedVideo = null;
 		if (browser) document.body.style.overflow = '';
@@ -55,6 +59,7 @@
 
 	function openVideo(video) {
 		if (!video) return;
+		if (!isPlayable(video)) return;
 		if (video.youtubeId) {
 			selectedVideo = video;
 			if (browser) document.body.style.overflow = 'hidden';
@@ -184,18 +189,30 @@
 		{:else}
 			<div class="resource-grid">
 				{#each filteredVideos as video}
-					<button class="resource-card" onclick={() => openVideo(video)}>
+					<button
+						class="resource-card"
+						class:is-disabled={!isPlayable(video)}
+						onclick={() => openVideo(video)}
+						disabled={!isPlayable(video)}
+					>
 						<div class="resource-thumb">
 							{#if getThumbnail(video)}
 								<img src={getThumbnail(video)} alt="" loading="lazy" />
-							{/if}
-							<div class="play-overlay">
-								<div class="play-btn">
-									<svg viewBox="0 0 24 24" fill="none" width="22" height="22">
-										<polygon points="7 5 19 12 7 19 7 5" fill="#17343a" />
-									</svg>
+							{:else}
+								<div class="resource-thumb-fallback">
+									<span>{video.category}</span>
+									<strong>{video.module || 'Lesson'}</strong>
 								</div>
-							</div>
+							{/if}
+							{#if isPlayable(video)}
+								<div class="play-overlay">
+									<div class="play-btn">
+										<svg viewBox="0 0 24 24" fill="none" width="22" height="22">
+											<polygon points="7 5 19 12 7 19 7 5" fill="#17343a" />
+										</svg>
+									</div>
+								</div>
+							{/if}
 						</div>
 						<div class="resource-meta">
 							<div class="resource-meta-top">
@@ -206,7 +223,7 @@
 							<p>{video.description}</p>
 							<div class="resource-meta-bottom">
 								{#if video.duration}<span>{video.duration}</span>{/if}
-								<span>Watch lesson</span>
+								<span>{isPlayable(video) ? 'Watch lesson' : 'Video link coming soon'}</span>
 							</div>
 						</div>
 					</button>
@@ -320,6 +337,39 @@
 		font-family: var(--font-body);
 		font-size: 14px;
 		color: var(--text-dark);
+	}
+
+	.resource-thumb-fallback {
+		height: 100%;
+		background: linear-gradient(135deg, #0d2a30 0%, #204951 100%);
+		color: rgba(255, 255, 255, 0.88);
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 18px;
+		box-sizing: border-box;
+		font-family: var(--font-ui);
+		text-align: left;
+	}
+
+	.resource-thumb-fallback span {
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: rgba(255, 255, 255, 0.62);
+	}
+
+	.resource-thumb-fallback strong {
+		font-size: 20px;
+		font-weight: 800;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
+	}
+
+	.resource-card.is-disabled {
+		cursor: default;
 	}
 	.resource-filters {
 		display: flex;
