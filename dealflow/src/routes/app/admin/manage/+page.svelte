@@ -356,19 +356,19 @@
 	function computeDealWorkflowStats(rows) {
 		return {
 			totalDeals: rows.length,
-			hidden: rows.filter((row) => !row.isVisibleToUsers).length,
+			hidden: rows.filter((row) => row.lifecycleStatus !== 'published').length,
 			draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
 			inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
 			approved: rows.filter((row) => row.lifecycleStatus === 'approved').length,
 			archived: rows.filter((row) => row.lifecycleStatus === 'archived').length,
-			published: rows.filter((row) => row.lifecycleStatus === 'published' && row.isVisibleToUsers).length
+			published: rows.filter((row) => row.lifecycleStatus === 'published').length
 		};
 	}
 
 	function matchesDealFilter(row, filterKey) {
 		switch (filterKey) {
 			case 'hidden':
-				return !row.isVisibleToUsers;
+				return row.lifecycleStatus !== 'published';
 			case 'draft':
 			case 'in_review':
 			case 'approved':
@@ -398,39 +398,6 @@
 		return 'incomplete';
 	}
 
-	function buildIssueChips(row) {
-		if (row.missingRequiredFields?.length) {
-			if (row.missingRequiredFields.length <= 3) {
-				return row.missingRequiredFields.map((field) => ({ tone: 'required', label: field }));
-			}
-			return [{ tone: 'required', label: `Missing ${row.missingRequiredFields.length} required fields` }];
-		}
-
-		if (row.missingRecommendedFields?.length) {
-			return row.missingRecommendedFields.slice(0, 2).map((field) => ({ tone: 'recommended', label: field }));
-		}
-
-		return [];
-	}
-
-	function getIssueFallback(row) {
-		if (row.missingRequiredFields?.length) {
-			return `Missing ${row.missingRequiredFields.length} required field${row.missingRequiredFields.length === 1 ? '' : 's'}`;
-		}
-		if (row.missingRecommendedFields?.length) {
-			return `${row.missingRecommendedFields.length} recommended gap${row.missingRecommendedFields.length === 1 ? '' : 's'}`;
-		}
-		return 'No major issues';
-	}
-
-	function isVisibilityToggleDisabled(row) {
-		return !row.isVisibleToUsers && !!row.visibilityDisabledReason;
-	}
-
-	function visibilityLabel(row) {
-		return row.isVisibleToUsers ? 'Live in catalog' : 'Hidden from catalog';
-	}
-
 	function updateDealWorkflowRow(nextRow) {
 		dealWorkflowRows = dealWorkflowRows.map((row) => (row.id === nextRow.id ? nextRow : row));
 	}
@@ -447,22 +414,6 @@
 		rowActionPendingId = null;
 		if (!result.success) {
 			alert(result.message || result.error || 'Could not update lifecycle status.');
-			return;
-		}
-		updateDealWorkflowRow(result.data);
-	}
-
-	async function toggleVisibility(row) {
-		if (isVisibilityToggleDisabled(row) || rowActionPendingId === row.id) return;
-		rowActionPendingId = row.id;
-		const result = await adminFetch({
-			action: 'update-deal-workflow',
-			id: row.id,
-			isVisibleToUsers: !row.isVisibleToUsers
-		});
-		rowActionPendingId = null;
-		if (!result.success) {
-			alert(result.message || result.error || 'Could not update visibility.');
 			return;
 		}
 		updateDealWorkflowRow(result.data);
@@ -527,7 +478,7 @@
 					<div class="queue-banner__eyebrow">Deal QA Work Queue</div>
 					<div class="queue-banner__title">Review imported deals, fill the gaps, then publish only what is trustworthy.</div>
 					<p class="queue-banner__copy">
-						Hidden drafts surface first. Use completeness, row-level QA issues, lifecycle status, and the catalog toggle together to move one deal at a time from intake to published.
+						Hidden deals surface first. Use completeness and lifecycle status to move one deal at a time from intake to published.
 					</p>
 				</section>
 
@@ -582,15 +533,12 @@
 										<th>Deal Name</th>
 										<th>Sponsor</th>
 										<th>Completeness</th>
-										<th>Missing / Issues</th>
 										<th>Lifecycle Status</th>
-										<th>Visibility</th>
 										<th>Edit</th>
 									</tr>
 								</thead>
 								<tbody>
 									{#each filteredDealRows as row}
-										{@const chips = buildIssueChips(row)}
 										<tr class:is-pending={rowActionPendingId === row.id}>
 											<td>
 												<div class="deal-cell">
@@ -623,20 +571,6 @@
 												</div>
 											</td>
 											<td>
-												{#if chips.length > 0}
-													<div class="issue-chip-wrap">
-														{#each chips as chip}
-															<span class={`issue-chip tone-${chip.tone}`}>{chip.label}</span>
-														{/each}
-													</div>
-													{#if row.missingRequiredFields?.length > 3 || (!row.missingRequiredFields?.length && row.missingRecommendedFields?.length > 2)}
-														<div class="issue-fallback">{getIssueFallback(row)}</div>
-													{/if}
-												{:else}
-													<div class="issue-fallback">No major issues</div>
-												{/if}
-											</td>
-											<td>
 												<div class="lifecycle-cell">
 													<span class={`status-pill tone-${lifecycleTone(row.lifecycleStatus)}`}>{formatLifecycleLabel(row.lifecycleStatus)}</span>
 													<select
@@ -650,26 +584,6 @@
 														{/each}
 													</select>
 												</div>
-											</td>
-											<td>
-												<button
-													class={`visibility-toggle ${row.isVisibleToUsers ? 'is-on' : 'is-off'}`}
-													role="switch"
-													aria-checked={row.isVisibleToUsers}
-													disabled={isVisibilityToggleDisabled(row) || rowActionPendingId === row.id}
-													title={row.visibilityDisabledReason || visibilityLabel(row)}
-													onclick={() => toggleVisibility(row)}
-												>
-													<span class="visibility-track">
-														<span class="visibility-knob"></span>
-													</span>
-														<span class="visibility-text">
-															<span class="visibility-label">{visibilityLabel(row)}</span>
-															<span class="visibility-sub">
-																{row.visibilityDisabledReason || (row.isVisibleToUsers ? 'Included in member-facing Deal Flow' : 'Excluded from member-facing Deal Flow')}
-															</span>
-														</span>
-												</button>
 											</td>
 											<td>
 												<button class="edit-link" onclick={() => openDealEditor(row)}>Edit</button>

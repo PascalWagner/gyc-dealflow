@@ -326,14 +326,16 @@ export function buildDealWorkflowRecord(deal) {
 		updatedAt,
 		...completeness,
 		readyToPublish:
-			lifecycleStatus === 'approved' && !isVisibleToUsers && completeness.hasBlockingIssues === false,
+			lifecycleStatus === 'approved' && completeness.hasBlockingIssues === false,
 		visibilityDisabledReason
 	};
 }
 
 export function compareDealWorkflowRecords(left, right) {
-	if (left.isVisibleToUsers !== right.isVisibleToUsers) {
-		return left.isVisibleToUsers ? 1 : -1;
+	const leftIsLive = left.lifecycleStatus === 'published';
+	const rightIsLive = right.lifecycleStatus === 'published';
+	if (leftIsLive !== rightIsLive) {
+		return leftIsLive ? 1 : -1;
 	}
 
 	const lifecycleDelta =

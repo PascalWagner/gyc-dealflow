@@ -45,11 +45,15 @@ async function listDealsWorkflow(supabase, body) {
 		total: rows.length,
 		stats: {
 			totalDeals: rows.length,
-			hidden: rows.filter((row) => !row.isVisibleToUsers).length,
-			visible: rows.filter((row) => row.isVisibleToUsers).length,
+			hidden: rows.filter((row) => row.lifecycleStatus !== 'published').length,
+			visible: rows.filter((row) => row.lifecycleStatus === 'published').length,
+			draft: rows.filter((row) => row.lifecycleStatus === 'draft').length,
+			inReview: rows.filter((row) => row.lifecycleStatus === 'in_review').length,
+			approved: rows.filter((row) => row.lifecycleStatus === 'approved').length,
+			archived: rows.filter((row) => row.lifecycleStatus === 'archived').length,
 			missingRequiredFields: rows.filter((row) => row.hasBlockingIssues).length,
 			readyToPublish: rows.filter((row) => row.readyToPublish).length,
-			published: rows.filter((row) => row.lifecycleStatus === 'published' && row.isVisibleToUsers).length
+			published: rows.filter((row) => row.lifecycleStatus === 'published').length
 		}
 	};
 }
