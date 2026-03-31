@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import PipelineTabs from '$lib/components/PipelineTabs.svelte';
 	import DealCard from '$lib/components/DealCard.svelte';
+	import DealFlowViewToggle from '$lib/components/DealFlowViewToggle.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
 	import DealMap from '$lib/components/DealMap.svelte';
 	import CompareView from '$lib/components/CompareView.svelte';
@@ -24,7 +25,7 @@
 		MAX_COMPARE_DEALS,
 		STAGE_META
 	} from '$lib/stores/deals.js';
-	import { accessTier, getStoredSessionUser } from '$lib/stores/auth.js';
+	import { accessTier, getStoredSessionUser, isAdmin } from '$lib/stores/auth.js';
 	import {
 		buildDealCardFooterAnalyticsPayload,
 		buildDealCardUtilityAnalyticsPayload,
@@ -319,6 +320,11 @@
 		dealFlowViewMode.set(mode);
 	}
 
+	function handleAddDeal() {
+		if (!browser) return;
+		window.location.href = '/app/admin/manage';
+	}
+
 	function showPageNotice(message) {
 		if (!browser) return;
 		pageNotice = message;
@@ -470,7 +476,7 @@
 		}
 	};
 	const currentStageContent = $derived(stageDescriptions[currentTab] || stageDescriptions.filter);
-	const showSwipeFeed = $derived(isMobile && currentTab === 'filter');
+	const showSwipeFeed = $derived(isMobile && currentTab === 'filter' && $dealFlowViewMode === 'grid');
 
 	function clearFilters() {
 		search = '';
@@ -675,12 +681,6 @@
 	});
 
 	$effect(() => {
-		if (isMobile && $dealFlowViewMode !== 'grid') {
-			dealFlowViewMode.set('grid');
-		}
-	});
-
-	$effect(() => {
 		if (!browser || !filtersReady) return;
 
 		const request = {
@@ -738,13 +738,20 @@
 			{#if isMobile}
 				<div class="mobile-toolbar">
 					<div class="mobile-pipeline-row">
-						<div class="mobile-pipeline-label">Pipeline</div>
-						<div class="mobile-pipeline-control">
-							<PipelineTabs
-								{currentTab}
-								counts={$stageCounts}
-								onswitch={switchTab}
-								mobileCountStyle="inline"
+						<div class="mobile-pipeline-label deals-page-title deals-page-title-mobile">Dealflow</div>
+						<div class="mobile-pipeline-right">
+							<div class="mobile-pipeline-control">
+								<PipelineTabs
+									{currentTab}
+									counts={$stageCounts}
+									onswitch={switchTab}
+									mobileCountStyle="inline"
+								/>
+							</div>
+							<DealFlowViewToggle
+								value={$dealFlowViewMode}
+								onchange={switchView}
+								className="mobile-view-toggle"
 							/>
 						</div>
 					</div>
@@ -774,36 +781,14 @@
 			{:else}
 				<div class="desktop-toolbar">
 					<div class="desktop-toolbar-row desktop-toolbar-row-primary">
-						<div class="toolbar-stage-tabs">
-							<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
+						<div class="toolbar-stage-group">
+							<div class="deals-page-title">Dealflow</div>
+							<div class="toolbar-stage-tabs">
+								<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
+							</div>
 						</div>
 
-						<div class="view-toggle" role="tablist" aria-label="Deal Flow view mode">
-							<button
-								class="view-btn"
-								class:active={$dealFlowViewMode === 'grid'}
-								onclick={() => switchView('grid')}
-								title="Grid view"
-							>
-								Grid
-							</button>
-							<button
-								class="view-btn"
-								class:active={$dealFlowViewMode === 'compare'}
-								onclick={() => switchView('compare')}
-								title="Compare view"
-							>
-								Compare
-							</button>
-							<button
-								class="view-btn"
-								class:active={$dealFlowViewMode === 'location'}
-								onclick={() => switchView('location')}
-								title="Map view"
-							>
-								Map
-							</button>
-						</div>
+						<DealFlowViewToggle value={$dealFlowViewMode} onchange={switchView} />
 					</div>
 
 					<div class="desktop-toolbar-row desktop-toolbar-row-secondary deals-filters" bind:this={filterAnchor}>
@@ -820,6 +805,8 @@
 							{sortBy}
 							{showArchived}
 							{buyBoxApplied}
+							showAddDeal={$isAdmin}
+							onadddeal={handleAddDeal}
 							onchange={handleFilterChange}
 							onclear={clearFilters}
 							ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
@@ -854,7 +841,7 @@
 			<div class="empty-desc">{$memberDealsError}</div>
 			<button class="btn-browse" onclick={() => fetchMemberDeals($memberDealsMeta.filters || {}).catch(() => {})}>Try Again</button>
 		</div>
-	{:else if !isMobile && $dealFlowViewMode === 'compare'}
+	{:else if $dealFlowViewMode === 'compare'}
 		<div class="compare-mode-layout">
 			<CompareView
 				deals={compareSelectedDeals}
@@ -921,8 +908,8 @@
 							<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
 						{/if}
 					</div>
-				{:else}
-					<div class="deals-grid ly-grid">
+					{:else}
+						<div class="deals-grid ly-grid">
 						{#each filteredDeals as deal (deal.id)}
 							{@const actionModel = getDealCardActionModelForCard(deal)}
 							{@const utilityAction = actionModel.utilityAction}
@@ -948,7 +935,7 @@
 				{/if}
 			</div>
 		</div>
-	{:else if !isMobile && $dealFlowViewMode === 'location'}
+	{:else if $dealFlowViewMode === 'location'}
 		<div class="location-mode-layout">
 			<div class="location-map-shell">
 				<div class="location-map-head">
@@ -1011,8 +998,20 @@
 							<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
 						{/if}
 					</div>
-				{:else}
-					<div class="deals-grid ly-grid">
+		{:else if showSwipeFeed}
+			<SwipeFeed
+				deals={filteredDeals}
+				compareIds={$compareDealIds}
+				getActionModel={getDealCardActionModelForCard}
+				getUtilityAnalytics={getDealUtilityAnalyticsForCard}
+				{pendingFooterActionByDealId}
+				isCompareAtLimit={isDealCompareAtLimit}
+				onutilityaction={handleDealCardUtilityAction}
+				onfooteraction={handleDealCardFooterAction}
+				oncardview={trackDealView}
+			/>
+		{:else}
+			<div class="deals-grid ly-grid">
 						{#each filteredDeals as deal (deal.id)}
 							{@const actionModel = getDealCardActionModelForCard(deal)}
 							{@const utilityAction = actionModel.utilityAction}
@@ -1072,13 +1071,6 @@
 				<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
 			{/if}
 		</div>
-	{:else if showSwipeFeed}
-		<SwipeFeed
-			deals={filteredDeals}
-			compareIds={$compareDealIds}
-			compareLimit={MAX_COMPARE_DEALS}
-			oncomparetoggle={handleCompareToggle}
-		/>
 	{:else}
 		<div class="deals-grid ly-grid">
 			{#each filteredDeals as deal (deal.id)}
@@ -1187,6 +1179,25 @@
 		display: block;
 	}
 
+	.toolbar-stage-group {
+		display: flex;
+		align-items: center;
+		gap: 18px;
+		min-width: 0;
+		flex: 1 1 auto;
+	}
+
+	.deals-page-title {
+		flex-shrink: 0;
+		font-family: var(--font-headline);
+		font-size: 22px;
+		font-weight: 400;
+		line-height: 1.1;
+		letter-spacing: -0.3px;
+		color: var(--text-dark);
+		white-space: nowrap;
+	}
+
 	.toolbar-stage-tabs {
 		min-width: 0;
 		flex: 1 1 auto;
@@ -1201,45 +1212,6 @@
 		scroll-margin-top: 20px;
 	}
 
-	.view-toggle {
-		display: inline-flex;
-		align-items: center;
-		gap: 2px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		padding: 4px;
-		flex-shrink: 0;
-	}
-
-	.view-btn {
-		min-width: 78px;
-		height: 36px;
-		padding: 0 14px;
-		border: none;
-		background: none;
-		border-radius: 8px;
-		cursor: pointer;
-		color: var(--text-muted);
-		transition: all 0.15s ease;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 700;
-		white-space: nowrap;
-	}
-
-	.view-btn:hover {
-		color: var(--text-dark);
-	}
-
-	.view-btn.active {
-		background: var(--primary);
-		color: #fff;
-	}
-
 	.mobile-toolbar {
 		gap: 10px;
 	}
@@ -1251,19 +1223,30 @@
 		gap: 12px;
 	}
 
+	.mobile-pipeline-right {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 8px;
+		min-width: 0;
+	}
+
 	.mobile-pipeline-label {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 800;
+		font-size: 18px;
+		font-weight: 400;
 		color: var(--text-dark);
-		text-transform: uppercase;
-		letter-spacing: 0.32px;
+		letter-spacing: -0.2px;
+	}
+
+	.deals-page-title-mobile {
+		font-size: 18px;
 	}
 
 	.mobile-pipeline-control {
 		display: flex;
 		justify-content: flex-end;
 		min-width: 0;
+		flex: 0 1 auto;
 	}
 
 	.mobile-stage-helper {
@@ -1510,9 +1493,12 @@
 			gap: 14px;
 		}
 
-		.view-btn {
-			min-width: 72px;
-			padding-inline: 12px;
+		.toolbar-stage-group {
+			gap: 14px;
+		}
+
+		.deals-page-title {
+			font-size: 20px;
 		}
 
 		.compare-grid-shell {
@@ -1545,8 +1531,12 @@
 			gap: 10px;
 		}
 
+		.mobile-pipeline-right {
+			gap: 6px;
+		}
+
 		.mobile-pipeline-label {
-			font-size: 12px;
+			font-size: 17px;
 		}
 
 		.mobile-stage-helper {

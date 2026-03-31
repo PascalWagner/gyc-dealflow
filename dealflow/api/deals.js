@@ -8,6 +8,7 @@
 //   - Caching still works the same way (Vercel edge cache headers)
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
+import { getDealHistoricalReturns } from '../src/lib/utils/dealReturns.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -109,7 +110,12 @@ export default async function handler(req, res) {
         constructionMgmtFeePct: row.construction_mgmt_fee_pct,
         waterfallDetails: row.waterfall_details
       };
-      return res.status(200).json({ deal });
+      return res.status(200).json({
+        deal: {
+          ...deal,
+          historicalReturns: getDealHistoricalReturns(deal)
+        }
+      });
     }
 
     // Run deals + sponsors queries in parallel (was sequential — ~2x faster)
@@ -246,7 +252,7 @@ export default async function handler(req, res) {
       .map(d => {
         const mc = d.management_company || {};
         const staleness = computeStaleness(d);
-        return {
+        const normalizedDeal = {
           id: d.id,
           dealNumber: d.deal_number,
           investmentName: d.investment_name,
@@ -340,6 +346,11 @@ export default async function handler(req, res) {
           gpEntity: d.gp_entity || '',
           sponsorEntity: d.sponsor_entity || '',
           sponsors: sponsorsByDeal[d.id] || []
+        };
+
+        return {
+          ...normalizedDeal,
+          historicalReturns: getDealHistoricalReturns(normalizedDeal)
         };
       });
 

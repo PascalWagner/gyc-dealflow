@@ -1,4 +1,6 @@
 <script>
+	import { goto } from '$app/navigation';
+	import DealReturnsMiniChart from '$lib/components/DealReturnsMiniChart.svelte';
 	import { networkCounts } from '$lib/stores/deals.js';
 	import {
 		getDealCardUtilityActionLabel,
@@ -6,6 +8,7 @@
 		trackDealCardUtilityActionImpression
 	} from '$lib/utils/dealCardUtilityAction.js';
 	import { getDealHeroImage } from '$lib/utils/dealHero.js';
+	import { getDealHistoricalReturns, isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
 	import { tapLight } from '$lib/utils/haptics.js';
 
 	let {
@@ -20,6 +23,18 @@
 		onutilityaction = () => {},
 		onfooteraction = () => {}
 	} = $props();
+
+	const CARD_CONTROL_SELECTOR = [
+		'button',
+		'a',
+		'input',
+		'select',
+		'textarea',
+		'summary',
+		'[role="button"]',
+		'[role="link"]',
+		'[data-card-control="true"]'
+	].join(', ');
 
 	function fmtPct(val) {
 		if (!val) return '—';
@@ -85,8 +100,25 @@
 		onfooteraction({ deal, action });
 	}
 
-	function handleCardClick() {
+	function isCardControlTarget(target) {
+		return target instanceof Element && Boolean(target.closest(CARD_CONTROL_SELECTOR));
+	}
+
+	function openDeal() {
 		tapLight();
+		goto(`/deal/${deal.id}`);
+	}
+
+	function handleCardClick(event) {
+		if (isCardControlTarget(event.target)) return;
+		openDeal();
+	}
+
+	function handleCardKeydown(event) {
+		if (isCardControlTarget(event.target)) return;
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		openDeal();
 	}
 
 	function handleUtilityAction(event) {
@@ -116,6 +148,8 @@
 
 	const hero = $derived(assetHeroes[deal.assetClass] || { gradient: 'linear-gradient(135deg, #0A1E21 0%, #1F5159 100%)', icon: '🏠' });
 	const heroImg = $derived(deal.propertyImageUrl || getDealHeroImage(deal) || deal.imageUrl || '');
+	const historicalReturns = $derived(getDealHistoricalReturns(deal));
+	const showReturnsMiniChart = $derived(isDebtOrLendingDeal(deal) && historicalReturns.length >= 2);
 	const managerTier = $derived(getManagerTier(deal));
 	const strategySummary = $derived(getStrategySummary(deal));
 	const fundingPct = $derived(deal.pctFunded ? Math.min(Number(deal.pctFunded), 100) : 0);
@@ -152,9 +186,18 @@
 	});
 </script>
 
-<div class="deal-card" class:is-compared={compareSelected}>
+<div
+	class="deal-card"
+	class:is-compared={compareSelected}
+	role="link"
+	tabindex="0"
+	aria-label={`Open ${deal.investmentName || 'deal'}`}
+	onclick={handleCardClick}
+	onkeydown={handleCardKeydown}
+>
 	<div
 		class="card-hero"
+		class:has-returns-chart={showReturnsMiniChart}
 		style="background:{heroImg ? `linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.5) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}"
 	>
 		<div class="hero-badges">
@@ -171,19 +214,25 @@
 			{/if}
 		</div>
 
-		{#if !heroImg}
+		{#if showReturnsMiniChart}
+			<div class="hero-returns" aria-hidden="true">
+				<DealReturnsMiniChart series={historicalReturns} />
+			</div>
+		{/if}
+
+		{#if !heroImg && !showReturnsMiniChart}
 			<div class="hero-icon">{hero.icon}</div>
 		{/if}
 
 		{#if deal.targetIRR}
-			<div class="hero-irr">
+			<div class="hero-irr" class:has-returns-chart={showReturnsMiniChart}>
 				<span class="irr-value">{fmtPct(deal.targetIRR)}</span>
 				<span class="irr-label">Target IRR</span>
 			</div>
 		{/if}
 	</div>
 
-	<a href="/deal/{deal.id}" class="card-body" onclick={handleCardClick}>
+	<div class="card-body">
 		<div class="card-title">{deal.investmentName}</div>
 		<div class="card-manager">{deal.managementCompany || ''}</div>
 		{#if deal.location}
@@ -261,12 +310,13 @@
 				<span>{networkProof.text}</span>
 			</div>
 		{/if}
-	</a>
+	</div>
 
 	<div class="card-footer">
 		{#if utilityVisible}
 			<div class="card-utility-row">
 				<button
+					data-card-control="true"
 					class="card-btn utility-btn"
 					class:btn-compare-selected={utilityAction?.action === 'compare' && compareSelected}
 					class:btn-compare-limit={utilityAction?.action === 'compare' && compareAtLimit && !compareSelected}
@@ -314,6 +364,7 @@
 			{#each footerActions as action}
 				{@const isLoadingAction = stageActionPending && pendingFooterActionId === action.id}
 				<button
+					data-card-control="true"
 					class="card-btn"
 					class:btn-primary={action.tone === 'primary'}
 					class:btn-negative={action.tone === 'negative'}
@@ -384,6 +435,11 @@
 		border-color: #D4C9AD;
 	}
 
+	.deal-card:focus-visible {
+		outline: 2px solid rgba(81, 190, 123, 0.55);
+		outline-offset: 3px;
+	}
+
 	.deal-card.is-compared {
 		border-color: rgba(81, 190, 123, 0.35);
 		box-shadow: 0 0 0 2px rgba(81, 190, 123, 0.12), var(--shadow-card);
@@ -398,6 +454,10 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
+	}
+
+	.card-hero.has-returns-chart .hero-badges {
+		max-width: calc(100% - 18px);
 	}
 
 	.hero-badges {
@@ -452,12 +512,27 @@
 		pointer-events: none;
 	}
 
+	.hero-returns {
+		position: absolute;
+		right: 12px;
+		bottom: 10px;
+		width: min(56%, 224px);
+		height: 102px;
+		z-index: 1;
+		pointer-events: none;
+	}
+
 	.hero-irr {
 		position: relative;
 		z-index: 1;
 		display: flex;
 		flex-direction: column;
 		align-self: flex-start;
+	}
+
+	.hero-irr.has-returns-chart {
+		max-width: 40%;
+		padding-bottom: 4px;
 	}
 
 	.irr-value {
@@ -824,6 +899,17 @@
 
 		.card-btn {
 			flex-basis: 104px;
+		}
+
+		.hero-returns {
+			right: 10px;
+			bottom: 10px;
+			width: min(58%, 212px);
+			height: 94px;
+		}
+
+		.hero-irr.has-returns-chart {
+			max-width: 36%;
 		}
 	}
 </style>

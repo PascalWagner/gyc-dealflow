@@ -6,6 +6,7 @@ import {
 	rateLimit,
 	setCors
 } from '../_supabase.js';
+import { getDealHistoricalReturns } from '../../src/lib/utils/dealReturns.js';
 
 const DEAL_SELECT = `*,
 management_company:management_companies (
@@ -230,7 +231,7 @@ function transformDeals(allDeals, sponsorRows, { include506b = false } = {}) {
 		.map((deal) => {
 			const managementCompany = deal.management_company || {};
 			const staleness = computeStaleness(deal);
-			return {
+			const normalizedDeal = {
 				id: deal.id,
 				dealNumber: deal.deal_number,
 				investmentName: deal.investment_name,
@@ -322,6 +323,11 @@ function transformDeals(allDeals, sponsorRows, { include506b = false } = {}) {
 				gpEntity: deal.gp_entity || '',
 				sponsorEntity: deal.sponsor_entity || '',
 				sponsors: sponsorsByDeal[deal.id] || []
+			};
+
+			return {
+				...normalizedDeal,
+				historicalReturns: getDealHistoricalReturns(normalizedDeal)
 			};
 		});
 }

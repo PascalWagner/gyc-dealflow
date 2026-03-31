@@ -4,6 +4,7 @@
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
 	import { getStoredSessionToken, isMember, userToken } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import {
 		downloadEventIcs,
 		formatCanonicalDate,
@@ -251,26 +252,22 @@
 	<title>Office Hours | GYC</title>
 </svelte:head>
 
-<PageContainer className="office-hours-shell">
-<div class="office-hours-page">
-	<div class="office-hours-hero">
-		<div>
-			<div class="page-eyebrow">Cashflow Academy</div>
-			<h1>Office Hours</h1>
-			<p class="hero-copy">
-				Your private concierge window with Pascal. Bring live deals, capital allocation decisions, and
-				anything blocking your next move.
-			</p>
-		</div>
-		<div class="hero-actions">
+<PageContainer className="office-hours-shell ly-page-stack">
+	<PageHeader
+		title="Office Hours"
+		subtitle="Your private concierge window with Pascal. Bring live deals, capital allocation decisions, and anything blocking your next move."
+		className="office-hours-page-header"
+	>
+		<div slot="actions" class="office-hours-header-actions">
 			<div class="hero-badge">Members only</div>
-			<a class="hero-link" href={replayLibraryUrl}>Replay Library</a>
+			<a class="header-link" href={replayLibraryUrl}>Replay Library</a>
 		</div>
-	</div>
+	</PageHeader>
 
-	{#if loading}
-		<div class="office-hours-grid">
-			<div class="schedule-card skeleton-card"></div>
+	<div class="office-hours-page">
+		{#if loading}
+			<div class="office-hours-grid">
+				<div class="schedule-card skeleton-card"></div>
 			<div class="schedule-card skeleton-card"></div>
 		</div>
 	{:else if forbidden && !canAccess}
@@ -384,19 +381,25 @@
 					</div>
 				{/if}
 
-				<a class="hero-link replay-link" href={replayLibraryUrl}>Browse replay library</a>
-			</section>
-		</div>
-	{/if}
-</div>
+					<a class="header-link replay-link" href={replayLibraryUrl}>Browse replay library</a>
+				</section>
+			</div>
+		{/if}
+	</div>
 </PageContainer>
 
 <style>
-	.office-hours-shell { --ly-frame-max: 1220px; }
-	.office-hours-page { max-width: 1220px; margin: 0; padding: 0 0 48px; }
+		.office-hours-page { min-width: 0; }
 
-	.office-hours-hero {
-		display: flex;
+		.office-hours-header-actions {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+
+		.office-hours-hero {
+			display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
 		gap: 24px;

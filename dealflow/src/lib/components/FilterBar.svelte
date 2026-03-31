@@ -14,9 +14,11 @@
 		sortBy = 'newest',
 		showArchived = false,
 		buyBoxApplied = false,
+		showAddDeal = false,
 		onchange = () => {},
 		onclear = () => {},
-		ontoggleBuyBox = () => {}
+		ontoggleBuyBox = () => {},
+		onadddeal = () => {}
 	} = $props();
 
 	let filterPanelOpen = $state(false);
@@ -251,6 +253,16 @@
 				<span class="filter-count-badge">{activeFilterCount}</span>
 			{/if}
 		</button>
+
+		{#if showAddDeal}
+			<button class="add-deal-btn desktop-add-deal" onclick={onadddeal}>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13">
+					<line x1="12" y1="5" x2="12" y2="19"></line>
+					<line x1="5" y1="12" x2="19" y2="12"></line>
+				</svg>
+				Add Deal
+			</button>
+		{/if}
 	</div>
 
 	<div class="mobile-toolbar ly-mobile-only">
@@ -403,7 +415,7 @@
 
 	.filter-toolbar {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto auto auto;
+		grid-template-columns: minmax(0, 1fr) auto auto auto auto;
 		align-items: center;
 		gap: 12px;
 		min-width: 0;
@@ -461,6 +473,7 @@
 
 	.buybox-toggle,
 	.filters-toggle,
+	.add-deal-btn,
 	.mobile-filter-button,
 	.clear-btn,
 	.done-btn,
@@ -508,6 +521,20 @@
 	.filters-toggle.active {
 		border-color: var(--primary);
 		color: var(--primary);
+	}
+
+	.add-deal-btn {
+		height: var(--toolbar-control-height);
+		padding: 0 14px;
+		border-radius: 10px;
+		border: 1px solid transparent;
+		background: var(--primary);
+		color: #fff;
+		white-space: nowrap;
+	}
+
+	.add-deal-btn:hover {
+		background: #3ca96b;
 	}
 
 	.filter-count-badge,
@@ -738,12 +765,22 @@
 
 	@media (max-width: 1080px) {
 		.filter-toolbar {
-			grid-template-columns: minmax(0, 1fr) minmax(170px, auto) auto auto;
+			grid-template-columns: minmax(0, 1fr) minmax(170px, auto) auto auto auto;
 			gap: 10px;
 		}
 
 		.filter-panel-grid {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 1023px) {
+		.desktop-add-deal {
+			display: none;
+		}
+
+		.filter-toolbar {
+			grid-template-columns: minmax(0, 1fr) minmax(170px, auto) auto auto;
 		}
 	}
 

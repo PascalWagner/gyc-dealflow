@@ -22,6 +22,7 @@
 
 import { getAdminClient } from '../_supabase.js';
 import { verifyApiKey, logRequest, setApiCors, apiError } from './_auth.js';
+import { getDealHistoricalReturns } from '../../src/lib/utils/dealReturns.js';
 
 export default async function handler(req, res) {
   setApiCors(res);
@@ -138,7 +139,7 @@ export default async function handler(req, res) {
 
 // Format a deal for the public API (snake_case, clean structure)
 function formatDeal(d, mc) {
-  return {
+  const formattedDeal = {
     id: d.id,
     deal_number: d.deal_number,
     name: d.investment_name,
@@ -202,6 +203,21 @@ function formatDeal(d, mc) {
     // Timestamps
     added_date: d.added_date,
     updated_at: d.updated_at
+  };
+
+  return {
+    ...formattedDeal,
+    historical_returns: getDealHistoricalReturns({
+      id: formattedDeal.id,
+      investment_name: formattedDeal.name,
+      asset_class: formattedDeal.asset_class,
+      strategy: formattedDeal.strategy,
+      instrument: formattedDeal.instrument,
+      target_irr: formattedDeal.target_irr
+    }).map((entry) => ({
+      year: entry.year,
+      value: entry.value
+    }))
   };
 }
 

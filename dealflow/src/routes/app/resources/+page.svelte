@@ -109,17 +109,22 @@
 </script>
 
 <svelte:head>
-	<title>Cashflow Academy | GYC</title>
+	<title>Resources | GYC</title>
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
 
-<PageContainer className="resources-shell">
-<div class="resources-page">
-	{#if !$isMember}
-		<div class="gate-wrap">
-			<div class="academy-gate-cta">
-				{#if nativeCompanionMode}
+<PageContainer className="resources-shell ly-page-stack">
+	<PageHeader
+		title="Resources"
+		subtitle="Structured video courses covering strategy, deal sourcing, and execution — everything you need to invest in commercial real estate with confidence."
+	/>
+
+	<div class="resources-page">
+		{#if !$isMember}
+			<div class="gate-wrap">
+				<div class="academy-gate-cta">
+					{#if nativeCompanionMode}
 					<CompanionGate
 						title="Available to existing members"
 						message="Cashflow Academy lessons, deal reviews, and office hours are available to existing members on the web."
@@ -152,18 +157,10 @@
 				{/each}
 			</div>
 		</div>
-	{:else}
-		<PageHeader title="Cashflow Academy" className="resources-page-header">
-			<div slot="secondaryRow" class="resources-header-copy">
-				<p class="page-desc">
-					Structured video courses covering strategy, deal sourcing, and execution — everything you need to invest in commercial real estate with confidence.
-				</p>
-			</div>
-		</PageHeader>
-
-		<div class="library-toolbar">
-			<div class="search-wrap">
-				<svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
+		{:else}
+			<div class="library-toolbar">
+				<div class="search-wrap">
+					<svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16">
 					<circle cx="11" cy="11" r="8" />
 					<line x1="21" y1="21" x2="16.65" y2="16.65" />
 				</svg>
@@ -215,9 +212,9 @@
 					</button>
 				{/each}
 			</div>
+			{/if}
 		{/if}
-	{/if}
-</div>
+	</div>
 
 {#if selectedVideo}
 	<div class="resource-modal-overlay" onclick={handleOverlayClick} role="dialog" tabindex="-1">
@@ -246,22 +243,11 @@
 			</div>
 		</div>
 	</div>
-{/if}
+	{/if}
 </PageContainer>
 
 <style>
-	.resources-shell { --ly-frame-max: 1180px; }
-	.resources-page { max-width: 1180px; margin: 0; padding: 0 0 48px; }
-	.resources-page-header { margin-bottom: 22px; }
-	.resources-header-copy { display: grid; gap: 10px; }
-	.page-desc {
-		max-width: 640px;
-		margin: 0;
-		font-family: var(--font-body);
-		font-size: 15px;
-		line-height: 1.7;
-		color: var(--text-secondary);
-	}
+	.resources-page { min-width: 0; }
 	.gate-btn {
 		display: inline-flex;
 		align-items: center;

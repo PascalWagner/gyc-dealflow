@@ -536,4 +536,94 @@ test.describe('session and persona smoke', () => {
 		await expect(page.locator('.person-header-name')).toHaveText(PERSON_NAME);
 		await expect(page.locator('.person-header-role a')).toHaveText(SPONSOR_NAME);
 	});
+
+	test('deal card non-control surfaces navigate to the deal detail page', async ({ page }) => {
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}));
+
+		await page.goto('/app/deals');
+		await expect(page.locator('.deal-card').first()).toBeVisible();
+
+		await page.locator('.deal-card').first().locator('.card-hero').click();
+		await expect(page).toHaveURL(/\/deal\/deal-yield-1$/);
+
+		await page.goBack();
+		await expect(page).toHaveURL(/\/app\/deals$/);
+		await expect(page.locator('.deal-card').first()).toBeVisible();
+
+		await page.locator('.deal-card').first().locator('.badge').first().click();
+		await expect(page).toHaveURL(/\/deal\/deal-yield-1$/);
+
+		await page.goBack();
+		await expect(page).toHaveURL(/\/app\/deals$/);
+		await expect(page.locator('.deal-card').first()).toBeVisible();
+
+		await page.locator('.deal-card').first().locator('.hero-irr').click();
+		await expect(page).toHaveURL(/\/deal\/deal-yield-1$/);
+
+		await page.goBack();
+		await expect(page).toHaveURL(/\/app\/deals$/);
+		await expect(page.locator('.deal-card').first()).toBeVisible();
+
+		await page.locator('.deal-card').first().locator('.card-title').click();
+		await expect(page).toHaveURL(/\/deal\/deal-yield-1$/);
+	});
+
+	test('deal card footer controls act locally without opening the detail page', async ({ page }) => {
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}));
+
+		await page.goto('/app/deals');
+		await expect(page.locator('.deal-card')).toHaveCount(2);
+
+		const saveRequest = page.waitForRequest((request) =>
+			request.method() === 'POST' &&
+			request.url().includes('/api/userdata') &&
+			(request.postData() || '').includes('"dealId":"deal-yield-1"') &&
+			(request.postData() || '').includes('"review"')
+		);
+		await page.locator('.deal-card').first().getByRole('button', { name: 'Save Deal' }).click();
+		await saveRequest;
+
+		await expect(page).toHaveURL(/\/app\/deals$/);
+		await expect(page.locator('.deal-card')).toHaveCount(1);
+		await expect(page.locator('.deal-card').first().locator('.card-title')).toContainText('Multi-Family');
+
+		const skipRequest = page.waitForRequest((request) =>
+			request.method() === 'POST' &&
+			request.url().includes('/api/userdata') &&
+			(request.postData() || '').includes('"dealId":"deal-yield-2"') &&
+			(request.postData() || '').includes('"skipped"')
+		);
+		await page.locator('.deal-card').first().getByRole('button', { name: 'Not Interested' }).click();
+		await skipRequest;
+
+		await expect(page).toHaveURL(/\/app\/deals$/);
+		await expect(page.locator('.deal-card')).toHaveCount(0);
+		await expect(page.locator('.empty-title')).toContainText('No deals available');
+	});
+
+	test('mobile swipe cards keep hero clicks navigable', async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}));
+
+		await page.goto('/app/deals');
+		await expect(page.locator('.swipe-card-shell .deal-card').first()).toBeVisible();
+
+		await page.locator('.swipe-card-shell .deal-card').first().locator('.card-hero').click();
+		await expect(page).toHaveURL(/\/deal\/deal-yield-1$/);
+	});
 });

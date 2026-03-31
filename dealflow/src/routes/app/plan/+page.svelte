@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
+	import MarketSnapshot from '$lib/components/MarketSnapshot.svelte';
 	import OnboardingAppLayout from '$lib/components/onboarding/OnboardingAppLayout.svelte';
 	import LegacyOnboardingFlow from '$lib/components/onboarding/LegacyOnboardingFlow.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
@@ -140,10 +141,6 @@
 
 	function percent(value, digits = 1) {
 		return `${Number(value || 0).toFixed(digits)}%`;
-	}
-
-	function formatLockup(value) {
-		return `${Number(value || 0).toFixed(value % 1 === 0 ? 0 : 1)} yrs`;
 	}
 
 	function parseCapitalRange(value) {
@@ -962,35 +959,7 @@
 				<section class="plan-card market-card">
 					<div class="section-eyebrow">Market Snapshot</div>
 					<div class="section-subcopy">Deals in the database right now that line up with your selected asset classes.</div>
-					<div class="snapshot-table">
-						<div class="snapshot-head snapshot-row">
-							<div>Asset Class</div>
-							<div>Target IRR</div>
-							<div>Cash Yield</div>
-							<div>Avg Lockup</div>
-							<div>Newest Deal</div>
-						</div>
-						{#each snapshotRows as row}
-							<div class="snapshot-row">
-								<div class="snapshot-asset">
-									<span class="snapshot-icon" style={`background:${row.color}`}>{row.icon}</span>
-									<div>
-										<div class="snapshot-name">{row.label}</div>
-										<div class="snapshot-meta">{row.dealCount} deals</div>
-									</div>
-								</div>
-								<div>{percent(row.irrMin)} - {percent(row.irrMax)}</div>
-								<div>{percent(row.cashYield)}</div>
-								<div>{formatLockup(row.lockup)}</div>
-								<div>{row.newestDays} days ago</div>
-							</div>
-						{/each}
-					</div>
-					<div class="market-footer">
-						<div class="market-match-total">{totalMatches} total deals match</div>
-						<a href="/app/deals" class="browse-btn">Browse Matching Deals →</a>
-						<div class="market-match-new">{totalNewMatches} new this month</div>
-					</div>
+					<MarketSnapshot rows={snapshotRows} {totalMatches} totalNewMatches={totalNewMatches} />
 				</section>
 
 				<section class="plan-card growth-card">
@@ -1393,76 +1362,6 @@
 	.market-card {
 		padding-top: 18px;
 	}
-	.snapshot-table {
-		margin-top: 18px;
-		border-top: 1px solid var(--border-light);
-	}
-	.snapshot-row {
-		display: grid;
-		grid-template-columns: minmax(240px, 1.6fr) 1fr 1fr 1fr 1fr;
-		align-items: center;
-		gap: 12px;
-		padding: 14px 0;
-		border-bottom: 1px solid var(--border-light);
-		font-family: var(--font-ui);
-		font-size: 13px;
-		color: var(--text-dark);
-	}
-	.snapshot-head {
-		padding-top: 12px;
-		padding-bottom: 12px;
-		font-size: 10px;
-		font-weight: 700;
-		letter-spacing: 0.6px;
-		text-transform: uppercase;
-		color: var(--text-muted);
-	}
-	.snapshot-asset {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-	.snapshot-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 34px;
-		height: 34px;
-		border-radius: 10px;
-		color: #fff;
-		font-size: 11px;
-		font-weight: 700;
-	}
-	.snapshot-name {
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-	.snapshot-meta {
-		margin-top: 2px;
-		font-size: 12px;
-		color: var(--text-muted);
-	}
-	.market-footer {
-		display: grid;
-		grid-template-columns: 1fr auto 1fr;
-		align-items: center;
-		gap: 16px;
-		padding-top: 18px;
-	}
-	.market-match-total {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-	.market-match-new {
-		text-align: right;
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--primary);
-	}
-	.browse-btn,
 	.btn-cta {
 		display: inline-flex;
 		align-items: center;
@@ -2158,9 +2057,6 @@
 	}
 
 	@media (max-width: 1024px) {
-		.snapshot-row {
-			grid-template-columns: minmax(200px, 1.8fr) repeat(4, minmax(0, 1fr));
-		}
 		.growth-chart {
 			gap: 8px;
 		}
@@ -2173,7 +2069,6 @@
 		}
 		.plan-card-top,
 		.schedule-topline,
-		.market-footer,
 		.growth-topline {
 			flex-direction: column;
 			align-items: flex-start;
@@ -2182,17 +2077,6 @@
 		.locked-actions {
 			width: 100%;
 			justify-content: flex-start;
-		}
-		.snapshot-table {
-			border-top: none;
-		}
-		.snapshot-head {
-			display: none;
-		}
-		.snapshot-row {
-			grid-template-columns: 1fr;
-			gap: 6px;
-			padding: 14px 0;
 		}
 		.growth-chart {
 			grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -2211,7 +2095,6 @@
 		.wizard-modal {
 			padding: 24px 18px;
 		}
-		.browse-btn,
 		.btn-cta {
 			width: 100%;
 		}
