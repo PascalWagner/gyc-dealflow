@@ -3,6 +3,7 @@ import {
   expectBooleanish,
   expectEnum,
   expectNonEmptyString,
+  expectOptionalString,
   expectOptionalNumber,
   expectPlainObject
 } from '../_validation.js';
@@ -31,7 +32,7 @@ export function validateAdminActionInput(action, params) {
   }
 
   if (SEARCHABLE_ACTIONS.has(action) && params.search !== undefined) {
-    expectNonEmptyString(String(params.search), 'search');
+    expectOptionalString(params.search, 'search', '');
   }
 
   switch (action) {
