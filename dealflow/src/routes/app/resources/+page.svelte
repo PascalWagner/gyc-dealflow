@@ -44,7 +44,7 @@
 
 	function getThumbnail(video) {
 		if (video.thumbnail) return video.thumbnail;
-		if (video.youtubeId) return `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`;
+		if (video.youtubeId) return `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`;
 		return '';
 	}
 
