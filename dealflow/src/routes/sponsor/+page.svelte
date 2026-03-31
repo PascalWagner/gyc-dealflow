@@ -10,6 +10,7 @@
 		user
 	} from '$lib/stores/auth.js';
 	import { PRIMARY_MOBILE_NAV_ITEMS } from '$lib/navigation/app-nav.js';
+	import DealCard from '$lib/components/DealCard.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { tapLight } from '$lib/utils/haptics.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
@@ -22,6 +23,16 @@
 		{ key: 'iapd', name: 'SEC Investment Adviser', icon: 'iapd', description: "Searches the SEC's Investment Adviser Public Disclosure database for adviser registrations and any enforcement actions.", benefit: "Shows if they're a registered investment adviser and any disclosure events" },
 		{ key: 'ofac', name: 'OFAC Sanctions', icon: 'ofac', description: "Screens against the U.S. Treasury's Specially Designated Nationals (SDN) list for sanctions matches.", benefit: 'Ensures the sponsor is not on any government sanctions or watchlists' },
 		{ key: 'court', name: 'Federal Court Records', icon: 'court', description: "Searches PACER/CourtListener for federal lawsuits, bankruptcies, and judgments involving the person.", benefit: 'Surfaces any litigation history, bankruptcies, or legal judgments' }
+	];
+
+	const VIEW_DEAL_FOOTER_ACTIONS = [
+		{
+			id: 'viewDeal',
+			label: 'View Deal',
+			next: 'open',
+			tone: 'primary',
+			full: true
+		}
 	];
 
 	let loading = $state(true);
@@ -62,6 +73,10 @@
 		if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
 		if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
 		return '$' + n.toLocaleString();
+	}
+
+	function handleOpenDeal({ deal }) {
+		goto(`/deal/${deal.id}`);
 	}
 
 	let avgIRR = $derived(deals.length ? deals.reduce((sum, d) => sum + (d.targetIRR || 0), 0) / deals.length : null);
@@ -429,30 +444,13 @@
 							<div class="empty-inline"><p>No deals listed from this sponsor yet.</p></div>
 						{:else}
 							<div class="deals-grid">
-								{#each deals as d}
-									<a href="/app/deals?id={d.id}" class="deal-card">
-										<div class="deal-card-header">
-											<div class="deal-card-badges">
-												<span class="deal-badge {statusClass(d.status)}">{d.status || 'Open'}</span>
-												{#if d.strategy}
-													<span class="deal-badge orange">{d.strategy}</span>
-												{/if}
-											</div>
-											<div class="deal-card-title">{d.name}</div>
-											<div class="deal-card-subtitle">{d.assetClass || ''}{d.dealType ? ' \u00B7 ' + d.dealType : ''}</div>
-										</div>
-										<div class="deal-card-metrics">
-											<div><div class="deal-metric-label">Target IRR</div><div class="deal-metric-value">{pct(d.targetIRR)}</div></div>
-											<div><div class="deal-metric-label">Equity Multiple</div><div class="deal-metric-value">{multiple(d.equityMultiple)}</div></div>
-											<div><div class="deal-metric-label">Pref Return</div><div class="deal-metric-value">{pct(d.prefReturn)}</div></div>
-											<div><div class="deal-metric-label">Min Investment</div><div class="deal-metric-value">{currency(d.minInvestment)}</div></div>
-										</div>
-										<div class="deal-card-footer">
-											<span class="deal-footer-tag">{d.holdPeriod ? d.holdPeriod + ' yr hold' : ''}</span>
-											<span class="deal-footer-link">View Deal &rarr;</span>
-										</div>
-									</a>
-								{/each}
+									{#each deals as d}
+										<DealCard
+											deal={d}
+											footerActions={VIEW_DEAL_FOOTER_ACTIONS}
+											onfooteraction={handleOpenDeal}
+										/>
+									{/each}
 							</div>
 						{/if}
 					</div>

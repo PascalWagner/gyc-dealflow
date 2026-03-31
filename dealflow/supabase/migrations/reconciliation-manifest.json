@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "trackedDebt": {
+    "duplicatePrefixes": {
+      "022": {
+        "files": [
+          "022_background_checks.sql",
+          "022_legal_entities.sql"
+        ],
+        "status": "needs_forward_renumber",
+        "reason": "Independent features landed with the same prefix after the legal-entity migration."
+      },
+      "025": {
+        "files": [
+          "025_fix_foundations_asset_class.sql",
+          "025_intro_requests.sql",
+          "025_strategy_cleanup.sql"
+        ],
+        "status": "needs_forward_renumber",
+        "reason": "One schema migration and two data cleanup migrations reused prefix 025."
+      },
+      "026": {
+        "files": [
+          "026_ir_contact.sql",
+          "026_market_data_cache.sql"
+        ],
+        "status": "needs_forward_renumber",
+        "reason": "Two unrelated features reused the same sequence number."
+      },
+      "030": {
+        "files": [
+          "030_buybox_missing_columns.sql",
+          "030_invite_links_and_deal_claims.sql"
+        ],
+        "status": "needs_forward_renumber",
+        "reason": "Two unrelated schema additions reused prefix 030."
+      },
+      "031": {
+        "files": [
+          "031_activity_columns_and_v1v2_migration.sql",
+          "031_portfolio_plans.sql"
+        ],
+        "status": "needs_forward_renumber",
+        "reason": "Portfolio-plan creation and onboarding-activity backfill landed with the same prefix."
+      },
+      "039": {
+        "files": [
+          "039_stake_listings.sql",
+          "039_unified_onboarding.sql"
+        ],
+        "status": "needs_forward_renumber",
+        "reason": "Stake listings and unified onboarding reused prefix 039."
+      }
+    },
+    "createTableCollisions": {
+      "public.intro_requests": {
+        "files": [
+          "025_intro_requests.sql",
+          "042_intro_requests.sql",
+          "047_reconcile_intro_requests.sql"
+        ],
+        "status": "needs_reconciliation_migration",
+        "reason": "042 extends the intro_requests table originally created in 025; 047_reconcile_intro_requests.sql is now the forward-only repair for the final shape."
+      }
+    }
+  }
+}

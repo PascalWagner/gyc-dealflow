@@ -9,6 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "audit:routes": "node scripts/audit-route-contracts.mjs",
+    "audit:migrations": "node scripts/audit-migrations.mjs",
+    "audit:migrations:strict": "node scripts/audit-migrations.mjs --strict",
     "verify:push": "npm run audit:routes && npm run build",
     "deploy:sandbox": "bash scripts/deploy-sandbox.sh",
     "promote:sandbox": "bash scripts/promote-sandbox.sh",

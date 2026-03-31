@@ -5,12 +5,23 @@
 	import {
 		bootstrapProtectedRouteSession
 	} from '$lib/stores/auth.js';
+	import DealCard from '$lib/components/DealCard.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	const PERSON_API_URL = '/api/person';
 	const PERSON_PHOTOS = {
 		'grant cardone': 'https://cardonecapital.com/wp-content/uploads/2024/05/gc-new-headshot.jpg'
 	};
+
+	const VIEW_DEAL_FOOTER_ACTIONS = [
+		{
+			id: 'viewDeal',
+			label: 'View Deal',
+			next: 'open',
+			tone: 'primary',
+			full: true
+		}
+	];
 
 	let loading = $state(true);
 	let person = $state(null);
@@ -31,6 +42,7 @@
 		return 'green';
 	}
 	function getPersonPhotoUrl(name) { return name ? PERSON_PHOTOS[name.toLowerCase()] || null : null; }
+	function handleOpenDeal({ deal }) { goto(`/deal/${deal.id}`); }
 
 	let photoUrl = $derived(person ? getPersonPhotoUrl(person.name) : null);
 
@@ -202,32 +214,17 @@
 					<div class="section-body ly-panel-body">
 						{#if deals.length === 0}
 							<div class="empty-inline"><p>No deals found for this person.</p></div>
-						{:else}
-							<div class="deals-grid">
-								{#each deals as d}
-									<a href="/app/deals?id={d.id}" class="deal-card">
-										<div class="deal-card-header">
-											<div class="deal-card-badges">
-												<span class="deal-badge {statusClass(d.status)}">{d.status || 'Open'}</span>
-												{#if d.strategy}<span class="deal-badge orange">{d.strategy}</span>{/if}
-											</div>
-											<div class="deal-card-title">{d.name}</div>
-											<div class="deal-card-subtitle">{d.companyName || ''}{d.assetClass ? ' \u00B7 ' + d.assetClass : ''}{d.dealType ? ' \u00B7 ' + d.dealType : ''}</div>
-										</div>
-										<div class="deal-card-metrics">
-											<div><div class="deal-metric-label">Target IRR</div><div class="deal-metric-value">{pct(d.targetIRR)}</div></div>
-											<div><div class="deal-metric-label">Equity Multiple</div><div class="deal-metric-value">{multiple(d.equityMultiple)}</div></div>
-											<div><div class="deal-metric-label">Pref Return</div><div class="deal-metric-value">{pct(d.prefReturn)}</div></div>
-											<div><div class="deal-metric-label">Min Investment</div><div class="deal-metric-value">{currency(d.minInvestment)}</div></div>
-										</div>
-										<div class="deal-card-footer">
-											<span class="deal-footer-tag">{d.holdPeriod ? d.holdPeriod + ' yr hold' : ''}</span>
-											<span class="deal-footer-link">View Deal &rarr;</span>
-										</div>
-									</a>
-								{/each}
-							</div>
-						{/if}
+							{:else}
+								<div class="deals-grid">
+									{#each deals as d}
+										<DealCard
+											deal={d}
+											footerActions={VIEW_DEAL_FOOTER_ACTIONS}
+											onfooteraction={handleOpenDeal}
+										/>
+									{/each}
+								</div>
+							{/if}
 					</div>
 				</div>
 

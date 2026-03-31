@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import {
 		accessTier,
+		getFreshSessionToken,
 		getStoredSessionToken,
 		getStoredSessionUser,
 		isAdmin,
@@ -327,7 +328,7 @@
 			const currentUser = getStoredSessionUser();
 			const realUser = inferAdminRealUser(currentUser);
 			const adminEmail = (realUser?.email || currentUser?.email || '').trim();
-			const adminToken = (realUser?.token || currentUser?.token || '').trim();
+			const adminToken = (await getFreshSessionToken()) || (realUser?.token || currentUser?.token || '').trim();
 			if (!adminToken) {
 				viewAsResults = [];
 				return;
@@ -362,24 +363,27 @@
 		if (!browser) return;
 		const currentUser = getStoredSessionUser();
 		if (!currentUser?.email || !currentUser?.token) return;
-		persistAdminViewContext(currentUser);
+		const adminToken = await getFreshSessionToken();
+		if (!adminToken) return;
+		const adminSession = getStoredSessionUser() || currentUser;
+		persistAdminViewContext(adminSession);
 
 		loadUserScopedData(targetUser.email);
 		let issuedSession = null;
 		try {
-			issuedSession = await lookupSessionUser(targetUser.email, currentUser.token);
+			issuedSession = await lookupSessionUser(targetUser.email, adminToken);
 		} catch (error) {
 			console.warn('View-as lookup failed:', error);
 			return;
 		}
 		const impersonatedUser = setStoredSessionUser(
-			buildImpersonatedSession(issuedSession, currentUser, targetUser)
+			buildImpersonatedSession(issuedSession, adminSession, targetUser)
 		);
 		if (!impersonatedUser?.email || !impersonatedUser?.token) return;
 		await hydrateUserScopedData({
 			email: impersonatedUser.email,
 			token: impersonatedUser.token,
-			adminEmail: currentUser.email
+			adminEmail: adminSession.email
 		}).catch(() => {});
 		showViewAsDropdown = false;
 		viewAsSearch = '';

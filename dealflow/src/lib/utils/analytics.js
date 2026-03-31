@@ -11,7 +11,10 @@ export async function trackUserEvent(event, data = {}) {
 	try {
 		const response = await fetch('/api/events', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json',
+				...(session?.token ? { Authorization: `Bearer ${session.token}` } : {})
+			},
 			body: JSON.stringify({ email, event, data })
 		});
 

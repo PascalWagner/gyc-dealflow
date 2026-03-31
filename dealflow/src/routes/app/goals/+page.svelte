@@ -6,6 +6,7 @@
 	import { getStoredSessionToken } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
 
 	let investorGoals = $state(null);
 	let portfolio = $state([]);
@@ -63,7 +64,7 @@
 			taxReduction: parseFloat(taxReduction) || 0,
 			createdAt: new Date().toISOString()
 		};
-		if (browser) localStorage.setItem('gycGoals', JSON.stringify(investorGoals));
+		if (browser) writeUserScopedJson('gycGoals', investorGoals);
 		try {
 			const token = getToken();
 			if (token) {
@@ -125,8 +126,8 @@
 	onMount(async () => {
 		if (!browser) return;
 		// Load from localStorage first for fast render
-		investorGoals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+		investorGoals = readUserScopedJson('gycGoals', null);
+		portfolio = readUserScopedJson('gycPortfolio', []);
 		if (investorGoals) populateFormFromGoals(investorGoals);
 
 		// Then try to load from API
@@ -152,7 +153,7 @@
 							createdAt: apiGoals.createdAt || new Date().toISOString()
 						};
 						investorGoals = normalized;
-						localStorage.setItem('gycGoals', JSON.stringify(normalized));
+						writeUserScopedJson('gycGoals', normalized);
 						populateFormFromGoals(normalized);
 					}
 				}

@@ -1,0 +1,35 @@
+name: Guardrails
+
+on:
+  push:
+    branches:
+      - main
+      - production
+      - 'codex/**'
+  pull_request:
+
+jobs:
+  build-and-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit route contracts
+        run: npm run audit:routes
+
+      - name: Audit migration guardrails
+        run: npm run audit:migrations
+
+      - name: Build
+        run: npm run build

@@ -35,6 +35,22 @@
 		'[data-card-control="true"]'
 	].join(', ');
 
+	function hasValue(value) {
+		if (value === undefined || value === null) return false;
+		if (typeof value === 'string') return value.trim() !== '';
+		if (Array.isArray(value)) return value.length > 0;
+		return true;
+	}
+
+	function firstDefined(...values) {
+		for (const value of values) {
+			if (!hasValue(value)) continue;
+			if (Array.isArray(value)) return value[0];
+			return typeof value === 'string' ? value.trim() : value;
+		}
+		return '';
+	}
+
 	function fmtPct(val) {
 		if (!val) return '—';
 		const n = typeof val === 'string' ? parseFloat(val) : val;
@@ -70,12 +86,15 @@
 		return val;
 	}
 
-	function formatDist(inputDeal) {
-		return inputDeal.distributionFrequency || inputDeal.distributions || '—';
+	function formatDist(value) {
+		return hasValue(value) ? value : '—';
 	}
 
-	function getManagerTier(inputDeal) {
-		const size = inputDeal.fundAUM || inputDeal.offeringSize || inputDeal.aum || inputDeal.managementCompanyAUM;
+	function getManagerTier(sizeValue) {
+		const size =
+			typeof sizeValue === 'string'
+				? parseFloat(String(sizeValue).replace(/[$,]/g, ''))
+				: Number(sizeValue);
 		if (!size) return { range: '—' };
 		if (size >= 1000000000) return { range: '$1B+' };
 		if (size >= 100000000) return { range: '$100M-1B' };
@@ -84,7 +103,12 @@
 	}
 
 	function getStrategySummary(inputDeal) {
-		const text = inputDeal.investmentStrategy || inputDeal.summary || inputDeal.description || inputDeal.teaser || '';
+		const text = firstDefined(
+			inputDeal.investmentStrategy,
+			inputDeal.summary,
+			inputDeal.description,
+			inputDeal.teaser
+		);
 		if (!text) return '';
 		const firstSentence = text.split(/(?<=[.!?])\s+/)[0];
 		const clean = (firstSentence || text).trim();
@@ -145,8 +169,86 @@
 		'Lending': { gradient: 'linear-gradient(135deg, #1a365d 0%, #2563eb 100%)', icon: '💵' }
 	};
 
-	const hero = $derived(assetHeroes[deal.assetClass] || { gradient: 'linear-gradient(135deg, #0A1E21 0%, #1F5159 100%)', icon: '🏠' });
-	const heroImg = $derived(deal.propertyImageUrl || getDealHeroImage(deal) || deal.imageUrl || '');
+	const assetClass = $derived(firstDefined(deal.assetClass, deal.asset_class, 'Real Estate'));
+	const dealType = $derived(firstDefined(deal.dealType, deal.deal_type, 'Fund'));
+	const strategyBadge = $derived(firstDefined(deal.strategy, deal.investmentStrategyType));
+	const targetIrr = $derived(firstDefined(deal.targetIRR, deal.targetIrr, deal.target_irr));
+	const preferredReturn = $derived(firstDefined(deal.preferredReturn, deal.prefReturn, deal.pref_return));
+	const minimumInvestment = $derived(
+		firstDefined(
+			deal.investmentMinimum,
+			deal.minimumInvestment,
+			deal.minimum_investment,
+			deal.minInvestment,
+			deal.min_investment
+		)
+	);
+	const holdPeriod = $derived(firstDefined(deal.holdPeriod, deal.hold_period));
+	const distributionValue = $derived(
+		firstDefined(deal.distributionFrequency, deal.distributions, deal.distribution_frequency)
+	);
+	const lpGpSplitValue = $derived(firstDefined(deal.lpGpSplit, deal.lp_gp_split));
+	const equityMultipleValue = $derived(firstDefined(deal.equityMultiple, deal.equity_multiple));
+	const managerAum = $derived(
+		firstDefined(
+			deal.fundAUM,
+			deal.offeringSize,
+			deal.offering_size,
+			deal.aum,
+			deal.managementCompanyAUM,
+			deal.managerAUM,
+			deal.manager_aum
+		)
+	);
+	const foundedYear = $derived(firstDefined(deal.mcFoundingYear, deal.foundedYear, deal.founded_year));
+	const totalRaised = $derived(firstDefined(deal.totalAmountSold, deal.amountRaised, deal.amount_raised));
+	const offeringSize = $derived(firstDefined(deal.offeringSize, deal.offering_size));
+	const pctFundedValue = $derived(
+		firstDefined(deal.pctFunded, deal.pct_funded, deal.fundingPercentage, deal.funding_percentage)
+	);
+	const titleText = $derived(
+		firstDefined(deal.investmentName, deal.investment_name, deal.name, 'Untitled Deal')
+	);
+	const sponsorText = $derived(
+		firstDefined(
+			deal.managementCompany,
+			deal.management_company,
+			deal.operator,
+			deal.operatorName,
+			deal.operator_name,
+			deal.companyName
+		)
+	);
+	const locationText = $derived(
+		firstDefined(deal.location, deal.cityState, deal.city_state, deal.city, deal.market)
+	);
+	const subtitleText = $derived.by(() => {
+		const parts = [sponsorText, locationText].filter(hasValue);
+		return parts.length ? parts.join(' • ') : '—';
+	});
+	const subtitleIsPlaceholder = $derived(subtitleText === '—');
+	const heroBadges = $derived.by(() => {
+		const list = [assetClass, dealType, strategyBadge];
+		if (firstDefined(deal.financials, deal.auditStatus, deal.audit_status) === 'Audited') {
+			list.push('Audited');
+		}
+		return list.filter(hasValue);
+	});
+	const hero = $derived(
+		assetHeroes[assetClass] || {
+			gradient: 'linear-gradient(135deg, #0A1E21 0%, #1F5159 100%)',
+			icon: '🏠'
+		}
+	);
+	const heroImg = $derived(
+		firstDefined(
+			deal.propertyImageUrl,
+			deal.property_image_url,
+			getDealHeroImage(deal),
+			deal.imageUrl,
+			deal.image_url
+		)
+	);
 	const historicalReturns = $derived(getDealHistoricalReturns(deal));
 	const usesReturnsHero = $derived(isDebtOrLendingDeal(deal));
 	const showReturnsHeroChart = $derived(usesReturnsHero && historicalReturns.length >= 2);
@@ -157,13 +259,30 @@
 		if (heroImg) {
 			return `background:linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.5) 100%), url(${heroImg});background-size:cover;background-position:center;`;
 		}
-		return `background:${hero.gradient};`;
-	});
-	const managerTier = $derived(getManagerTier(deal));
+			return `background:${hero.gradient};`;
+		});
+	const managerTier = $derived(getManagerTier(managerAum));
 	const strategySummary = $derived(getStrategySummary(deal));
-	const fundingPct = $derived(deal.pctFunded ? Math.min(Number(deal.pctFunded), 100) : 0);
-	const hasFunding = $derived(!!(deal.totalAmountSold && deal.offeringSize && deal.pctFunded));
-	const hasNoDeck = $derived(!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl));
+	const summaryText = $derived(strategySummary || '—');
+	const summaryIsPlaceholder = $derived(!strategySummary);
+	const heroHeadlineValue = $derived(fmtPct(targetIrr));
+	const fundingPct = $derived(pctFundedValue ? Math.min(Number(pctFundedValue), 100) : 0);
+	const fundingPctLabel = $derived(
+		pctFundedValue ? `${Math.round(Number(pctFundedValue))}% funded` : '—'
+	);
+	const hasFunding = $derived(hasValue(totalRaised) && hasValue(offeringSize) && hasValue(pctFundedValue));
+	const hasNoDeck = $derived(
+		!(
+			firstDefined(
+				deal.deckUrl,
+				deal.deck_url,
+				deal.ppmUrl,
+				deal.ppm_url,
+				deal.subAgreementUrl,
+				deal.sub_agreement_url
+			)
+		)
+	);
 	const utilityLabel = $derived(
 		getDealCardUtilityActionLabel(utilityAction, {
 			compareSelected,
@@ -182,6 +301,8 @@
 		}
 		return null;
 	});
+	const networkProofText = $derived(networkProof?.text || 'No network activity yet');
+	const networkProofIsPlaceholder = $derived(!networkProof);
 
 	$effect(() => {
 		if (!utilityVisible || !utilityAnalytics) return;
@@ -195,146 +316,129 @@
 	});
 </script>
 
-<div
-	class="deal-card"
-	class:is-compared={compareSelected}
-	role="link"
-	tabindex="0"
-	aria-label={`Open ${deal.investmentName || 'deal'}`}
-	onclick={handleCardClick}
-	onkeydown={handleCardKeydown}
->
+	<div
+		class="deal-card"
+		class:is-compared={compareSelected}
+		role="link"
+		tabindex="0"
+		aria-label={`Open ${titleText || 'deal'}`}
+		onclick={handleCardClick}
+		onkeydown={handleCardKeydown}
+	>
 	<div
 		class="card-hero"
 		class:lending-hero={usesReturnsHero}
 		class:lending-hero-empty={usesReturnsHero && !showReturnsHeroChart}
-		style={heroStyle}
-	>
-		<div class="hero-badges">
-			<span class="badge">{deal.assetClass || 'Real Estate'}</span>
-			<span class="badge">{deal.dealType || 'Fund'}</span>
-			{#if deal.strategy}
-				<span class="badge">{deal.strategy}</span>
-			{/if}
-			{#if deal.financials === 'Audited'}
-				<span class="badge audit">Audited</span>
-			{/if}
-			{#if hasNoDeck}
-				<span class="no-deck-bubble">No Deck</span>
-			{/if}
-		</div>
-
-		{#if usesReturnsHero}
-			<div class="hero-returns-surface" aria-hidden="true">
-				{#if showReturnsHeroChart}
-					<DealReturnsMiniChart series={historicalReturns} variant="hero" />
-				{:else}
-					<div class="hero-returns-empty">
-						<span class="hero-returns-empty-label">5 Year Returns</span>
-						<span class="hero-returns-empty-copy">Annual return history unavailable</span>
-					</div>
+			style={heroStyle}
+		>
+			<div class="hero-badges" aria-label="Deal tags">
+				{#each heroBadges as badgeText}
+					<span class="badge" class:audit={badgeText === 'Audited'}>{badgeText}</span>
+				{/each}
+				{#if hasNoDeck}
+					<span class="no-deck-bubble">No Deck</span>
 				{/if}
 			</div>
-		{:else}
-			{#if !heroImg}
-				<div class="hero-icon">{hero.icon}</div>
-			{/if}
 
-			{#if deal.targetIRR}
-				<div class="hero-irr">
-					<span class="irr-value">{fmtPct(deal.targetIRR)}</span>
-					<span class="irr-label">Target IRR</span>
-				</div>
-			{/if}
-		{/if}
-	</div>
+			<div class="hero-visual">
+				{#if usesReturnsHero}
+					<div class="hero-returns-surface" aria-hidden="true">
+						{#if showReturnsHeroChart}
+							<DealReturnsMiniChart series={historicalReturns} variant="hero" />
+						{:else}
+							<div class="hero-returns-empty">
+								<span class="hero-returns-empty-label">5 Year Returns</span>
+								<span class="hero-returns-empty-copy">Annual return history unavailable</span>
+							</div>
+						{/if}
+					</div>
+				{:else}
+				{#if !heroImg}
+					<div class="hero-icon">{hero.icon}</div>
+				{/if}
+				{/if}
+			</div>
 
-	<div class="card-body">
-		<div class="card-title">{deal.investmentName}</div>
-		<div class="card-manager">{deal.managementCompany || ''}</div>
-		{#if deal.location}
-			<div class="card-location">{deal.location}</div>
-		{/if}
-		{#if strategySummary}
-			<div class="card-summary">{strategySummary}</div>
-		{/if}
-
-		<div class="metrics">
-			<div class="metric">
-				<div class="metric-label">Pref Return</div>
-				<div class="metric-value highlight">{fmtPct(deal.preferredReturn)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Minimum</div>
-				<div class="metric-value">{fmtMoney(deal.investmentMinimum)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Lockup</div>
-				<div class="metric-value">{formatHold(deal.holdPeriod)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Distribution</div>
-				<div class="metric-value">{formatDist(deal)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">LP/GP Split</div>
-				<div class="metric-value">{deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit) ? deal.lpGpSplit : '—'}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Equity Mult.</div>
-				<div class="metric-value">{fmtMultiple(deal.equityMultiple)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Manager AUM</div>
-				<div class="metric-value">{managerTier.range}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Founded</div>
-				<div class="metric-value">{deal.mcFoundingYear || '—'}</div>
+			<div class="hero-headline">
+				<span class="irr-value" class:is-placeholder={heroHeadlineValue === '—'}>{heroHeadlineValue}</span>
+				<span class="irr-label">Target IRR</span>
 			</div>
 		</div>
 
-		{#if hasFunding}
-			<div class="funding-bar">
-				<div class="funding-labels">
-					<span>{fmtMoney(deal.totalAmountSold)} raised</span>
-					<span>{deal.pctFunded}% funded</span>
-				</div>
-				<div class="funding-track">
-					<div class="funding-fill" style="width:{fundingPct}%"></div>
-				</div>
+		<div class="card-body">
+			<div class="card-copy">
+				<div class="card-title">{titleText}</div>
+				<div class="card-subtitle" class:is-placeholder={subtitleIsPlaceholder}>{subtitleText}</div>
+				<div class="card-summary" class:is-placeholder={summaryIsPlaceholder}>{summaryText}</div>
 			</div>
-		{:else}
-			<div class="funding-bar no-data">
-				<div class="funding-labels">
-					<span>SEC filing data not available</span>
-					<span></span>
-				</div>
-				<div class="funding-track">
-					<div class="funding-fill empty"></div>
-				</div>
-			</div>
-		{/if}
 
-		{#if networkProof}
-			<div class="network-proof" class:is-invested={networkProof.emphasis}>
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-					<circle cx="9" cy="7" r="4"></circle>
-					<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-					<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-				</svg>
-				<span>{networkProof.text}</span>
+			<div class="metrics">
+				<div class="metric">
+					<div class="metric-label">Pref Return</div>
+					<div class="metric-value highlight">{fmtPct(preferredReturn)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Minimum</div>
+					<div class="metric-value">{fmtMoney(minimumInvestment)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Lockup</div>
+					<div class="metric-value">{formatHold(holdPeriod)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Distribution</div>
+					<div class="metric-value">{formatDist(distributionValue)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">LP/GP Split</div>
+					<div class="metric-value">{lpGpSplitValue && /\d+\s*\/\s*\d+/.test(lpGpSplitValue) ? lpGpSplitValue : '—'}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Equity Mult.</div>
+					<div class="metric-value">{fmtMultiple(equityMultipleValue)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Manager AUM</div>
+					<div class="metric-value">{managerTier.range}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Founded</div>
+					<div class="metric-value">{foundedYear || '—'}</div>
+				</div>
 			</div>
-		{/if}
-	</div>
 
-	<div class="card-footer">
-		{#if utilityVisible}
+			<div class="card-meta">
+				<div class="funding-bar" class:no-data={!hasFunding}>
+					<div class="funding-labels">
+						<span>{hasFunding ? `${fmtMoney(totalRaised)} raised` : 'SEC filing data not available'}</span>
+						<span>{fundingPctLabel}</span>
+					</div>
+					<div class="funding-track">
+						<div class="funding-fill" style="width:{fundingPct}%"></div>
+					</div>
+				</div>
+				<div
+					class="network-proof"
+					class:is-invested={networkProof?.emphasis}
+					class:is-placeholder={networkProofIsPlaceholder}
+				>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+						<circle cx="9" cy="7" r="4"></circle>
+						<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+						<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+					</svg>
+					<span>{networkProofText}</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="card-footer">
 			<div class="card-utility-row">
-				<button
-					data-card-control="true"
-					class="card-btn utility-btn"
+				{#if utilityVisible}
+					<button
+						data-card-control="true"
+						class="card-btn utility-btn"
 					class:btn-compare-selected={utilityAction?.action === 'compare' && compareSelected}
 					class:btn-compare-limit={utilityAction?.action === 'compare' && compareAtLimit && !compareSelected}
 					class:btn-utility-disabled={utilityAction?.disabled}
@@ -371,14 +475,16 @@
 							<line x1="15" y1="9" x2="9" y2="15"></line>
 							<line x1="9" y1="9" x2="15" y2="15"></line>
 						</svg>
-					{/if}
-					{utilityLabel}
-				</button>
+						{/if}
+						{utilityLabel}
+					</button>
+				{:else}
+					<div class="card-utility-placeholder" aria-hidden="true"></div>
+				{/if}
 			</div>
-		{/if}
 
-		<div class="card-actions-row">
-			{#each footerActions as action}
+			<div class="card-actions-row">
+				{#each footerActions as action}
 				{@const isLoadingAction = stageActionPending && pendingFooterActionId === action.id}
 				<button
 					data-card-control="true"
@@ -443,6 +549,7 @@
 		display: flex;
 		flex-direction: column;
 		position: relative;
+		height: 100%;
 		min-height: 100%;
 	}
 
@@ -468,20 +575,21 @@
 		height: 184px;
 		box-sizing: border-box;
 		overflow: hidden;
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
+		display: grid;
+		grid-template-rows: auto 1fr auto;
+		gap: 10px;
 	}
 
 	.card-hero.lending-hero {
-		gap: 12px;
-		justify-content: flex-start;
+		gap: 10px;
 	}
 
 	.hero-badges {
 		display: flex;
 		gap: 6px;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
+		min-height: 24px;
+		overflow: hidden;
 		position: relative;
 		z-index: 1;
 	}
@@ -501,6 +609,11 @@
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
 		border: 1px solid rgba(255, 255, 255, 0.12);
+		flex: 0 1 auto;
+		max-width: 46%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.badge.audit {
@@ -518,6 +631,16 @@
 		letter-spacing: 0.3px;
 		font-family: var(--font-ui);
 		text-transform: none;
+		flex: 0 0 auto;
+		max-width: 36%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.hero-visual {
+		position: relative;
+		min-height: 0;
 	}
 
 	.hero-icon {
@@ -567,12 +690,14 @@
 		max-width: 172px;
 	}
 
-	.hero-irr {
+	.hero-headline {
 		position: relative;
 		z-index: 1;
 		display: flex;
 		flex-direction: column;
 		align-self: flex-start;
+		justify-content: flex-end;
+		min-height: 42px;
 	}
 
 	.irr-value {
@@ -583,6 +708,10 @@
 		color: #fff;
 		letter-spacing: -0.5px;
 		line-height: 1;
+	}
+
+	.irr-value.is-placeholder {
+		color: rgba(255, 255, 255, 0.84);
 	}
 
 	.irr-label {
@@ -604,6 +733,13 @@
 		flex: 1;
 	}
 
+	.card-copy {
+		padding: 12px 15px 10px;
+		display: grid;
+		grid-template-rows: calc(2 * 1.3em) calc(1 * 1.35em) calc(2 * 1.4em);
+		row-gap: 4px;
+	}
+
 	.card-title {
 		font-family: var(--font-ui);
 		font-size: 14px;
@@ -612,37 +748,25 @@
 		margin-bottom: 2px;
 		line-height: 1.3;
 		letter-spacing: -0.2px;
-		padding: 11px 15px 0;
+		padding: 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-		min-height: calc(2 * 1.3em);
+		block-size: calc(2 * 1.3em);
 	}
 
-	.card-manager {
+	.card-subtitle {
 		font-family: var(--font-body);
 		font-size: 12px;
 		color: var(--text-muted);
 		font-weight: 500;
-		margin-bottom: 2px;
-		padding: 0 15px;
+		padding: 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 1;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-	}
-
-	.card-location {
-		font-family: var(--font-body);
-		font-size: 11px;
-		color: var(--text-muted);
-		padding: 0 15px;
-		margin-bottom: 4px;
-		display: -webkit-box;
-		-webkit-line-clamp: 1;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
+		block-size: calc(1 * 1.35em);
 	}
 
 	.card-summary {
@@ -650,20 +774,25 @@
 		font-size: 12px;
 		color: var(--text-secondary);
 		line-height: 1.4;
-		padding: 0 15px;
+		padding: 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-		min-height: calc(2 * 1.4em);
+		block-size: calc(2 * 1.4em);
+	}
+
+	.card-subtitle.is-placeholder,
+	.card-summary.is-placeholder {
+		color: var(--text-muted);
 	}
 
 	.metrics {
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-auto-rows: minmax(52px, 52px);
 		gap: 0;
 		border-top: 1px solid var(--border);
-		margin-top: 8px;
 	}
 
 	.metric {
@@ -685,29 +814,36 @@
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		color: var(--text-muted);
-		line-height: 1.2;
-		white-space: normal;
-	}
+			line-height: 1.2;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 
 	.metric-value {
 		font-family: var(--font-ui);
 		font-size: 11px;
-		font-weight: 700;
-		color: var(--text-dark);
-		margin-top: 2px;
-		line-height: 1.2;
-		white-space: normal;
-		word-break: break-word;
-		overflow-wrap: anywhere;
-	}
+			font-weight: 700;
+			color: var(--text-dark);
+			margin-top: 2px;
+			line-height: 1.2;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 
 	.metric-value.highlight {
 		color: var(--primary);
 	}
 
-	.funding-bar {
-		padding: 7px 12px 9px;
+	.card-meta {
 		margin-top: auto;
+	}
+
+	.funding-bar {
+		padding: 8px 12px 10px;
+		min-height: 44px;
+		box-sizing: border-box;
 	}
 
 	.funding-labels {
@@ -716,8 +852,15 @@
 		font-family: var(--font-ui);
 		font-size: 10px;
 		color: var(--text-muted);
-		margin-bottom: 4px;
-		gap: 12px;
+			margin-bottom: 4px;
+			gap: 12px;
+		}
+
+	.funding-labels span {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.funding-labels span:first-child {
@@ -736,6 +879,11 @@
 		height: 100%;
 		border-radius: 3px;
 		background: var(--primary);
+	}
+
+	.funding-bar.no-data .funding-fill {
+		width: 100%;
+		background: var(--border);
 	}
 
 	.funding-fill.empty {
@@ -760,12 +908,22 @@
 
 	.card-utility-row {
 		display: flex;
+		min-height: 38px;
+	}
+
+	.card-utility-placeholder {
+		flex: 1 1 100%;
+		min-height: 38px;
+		border-radius: 10px;
+		border: 1px dashed rgba(148, 163, 184, 0.16);
+		background: rgba(148, 163, 184, 0.04);
 	}
 
 	.card-actions-row {
 		display: flex;
 		gap: 8px;
 		flex-wrap: wrap;
+		min-height: 42px;
 	}
 
 	.network-proof {
@@ -774,10 +932,12 @@
 		gap: 6px;
 		padding: 6px 12px 8px;
 		font-family: var(--font-body);
-		font-size: 11px;
-		color: var(--text-secondary);
-		line-height: 1.4;
-	}
+			font-size: 11px;
+			color: var(--text-secondary);
+			line-height: 1.4;
+			min-height: 30px;
+			box-sizing: border-box;
+		}
 
 	.network-proof svg {
 		width: 14px;
@@ -789,6 +949,10 @@
 	.network-proof.is-invested {
 		color: var(--primary);
 		font-weight: 600;
+	}
+
+	.network-proof.is-placeholder {
+		color: var(--text-muted);
 	}
 
 	.card-btn {

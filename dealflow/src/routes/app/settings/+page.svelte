@@ -5,6 +5,7 @@
 	import { user } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
 
 	let activeTab = $state('plan');
 
@@ -342,7 +343,7 @@
 	async function saveNotifPrefs() {
 		const prefs = { frequency: notifFreq, deal_alerts: dealAlerts, weekly_digest: weeklyDigest };
 		if (browser) {
-			localStorage.setItem('gycNotifPrefs', JSON.stringify(prefs));
+			writeUserScopedJson('gycNotifPrefs', prefs);
 		}
 		try {
 			const token = getToken();
@@ -393,7 +394,7 @@
 		} catch {
 			// Use local fallback.
 		}
-		const local = browser ? JSON.parse(localStorage.getItem('gycNotifPrefs') || '{}') : {};
+		const local = browser ? readUserScopedJson('gycNotifPrefs', {}) : {};
 		if (local.frequency && prefs.frequency === 'weekly') prefs.frequency = local.frequency;
 		if (local.deal_alerts !== undefined) prefs.deal_alerts = local.deal_alerts;
 		if (local.weekly_digest !== undefined) prefs.weekly_digest = local.weekly_digest;
@@ -421,7 +422,7 @@
 	const reviewCount = $derived.by(() => {
 		if (!browser) return 0;
 		try {
-			const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+			const stages = readUserScopedJson('gycDealStages', {});
 			let count = 0;
 			for (const key in stages) {
 				const stage = stages[key];

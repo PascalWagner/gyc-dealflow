@@ -9,27 +9,14 @@
 //   { deals: [...], benchmarks: { byAssetClass: {...}, platform: {...} }, crossDeal: [...] }
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
-
-// Map DB stage values to canonical UI stages
-const STAGE_NORMALIZE = {
-  new: 'filter', browse: 'filter', filter: 'filter',
-  interested: 'review', saved: 'review', vetting: 'review', review: 'review',
-  duediligence: 'connect', dd: 'connect', diligence: 'connect', connect: 'connect',
-  ready: 'decide', decision: 'decide', decide: 'decide',
-  invested: 'invested', portfolio: 'invested',
-  passed: 'skipped', skipped: 'skipped'
-};
-
-function norm(stage) {
-  return STAGE_NORMALIZE[(stage || '').toLowerCase().trim()] || 'filter';
-}
+import { normalizeStage } from '../src/lib/utils/dealflow-contract.js';
 
 // Stage hierarchy for cumulative funnel (higher = further in pipeline)
 const STAGE_RANK = { filter: 0, review: 1, connect: 2, decide: 3, invested: 4, skipped: -1 };
 
 function stageReached(normalizedStage, skippedFrom) {
   if (normalizedStage === 'skipped') {
-    return STAGE_RANK[norm(skippedFrom)] ?? 0;
+    return STAGE_RANK[normalizeStage(skippedFrom)] ?? 0;
   }
   return STAGE_RANK[normalizedStage] ?? 0;
 }
@@ -44,7 +31,7 @@ function computeFunnel(stageRows) {
   const skippedBreakdown = { filter: 0, review: 0, connect: 0, decide: 0 };
 
   for (const row of stageRows) {
-    const s = norm(row.stage);
+    const s = normalizeStage(row.stage);
     if (s === 'filter') continue; // no entry = not engaged
     totalEngaged++;
 
@@ -57,7 +44,7 @@ function computeFunnel(stageRows) {
 
     if (s === 'skipped') {
       skipped++;
-      const fromStage = norm(row.skipped_from_stage || 'filter');
+      const fromStage = normalizeStage(row.skipped_from_stage || 'filter');
       if (skippedBreakdown[fromStage] !== undefined) {
         skippedBreakdown[fromStage]++;
       }

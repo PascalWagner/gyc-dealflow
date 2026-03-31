@@ -1,7 +1,7 @@
 	<script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { canonicalizeUserTier, user, isAdmin, userToken } from '$lib/stores/auth.js';
+	import { canonicalizeUserTier, user, isAdmin, getFreshSessionToken } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 
@@ -38,7 +38,7 @@
 	});
 
 	async function adminFetch(body) {
-		const token = $userToken;
+		const token = await getFreshSessionToken();
 		if (!token) return { success: false, error: 'Not signed in' };
 		let resp = await fetch('/api/admin-manage', {
 			method: 'POST',
@@ -49,7 +49,7 @@
 	}
 
 	async function outreachFetch(body) {
-		const token = $userToken;
+		const token = await getFreshSessionToken();
 		if (!token) return { success: false, error: 'Not signed in' };
 		const resp = await fetch('/api/operator-outreach', {
 			method: 'POST',

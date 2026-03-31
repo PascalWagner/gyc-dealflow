@@ -224,6 +224,29 @@ export async function ensureSessionUserToken(sessionUser) {
 	}
 }
 
+export async function ensureActiveSessionUser() {
+	const sessionUser = getStoredSessionUser();
+	if (!sessionUser?.email) {
+		return { ok: false, session: null, refreshed: false };
+	}
+
+	const tokenState = await ensureSessionUserToken(sessionUser);
+	if (!tokenState.ok || !tokenState.session) {
+		return { ok: false, session: null, refreshed: false };
+	}
+
+	if (tokenState.refreshed) {
+		user.set(tokenState.session);
+	}
+
+	return tokenState;
+}
+
+export async function getFreshSessionToken() {
+	const tokenState = await ensureActiveSessionUser();
+	return tokenState.ok ? tokenState.session?.token || '' : '';
+}
+
 export async function bootstrapProtectedRouteSession({
 	returnPath = '/',
 	hydrateScopedData = false,

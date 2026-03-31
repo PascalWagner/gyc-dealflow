@@ -6,7 +6,23 @@
 //   - Still syncs to GHL on write (so your automations keep working)
 //   - Read is instant (~20ms vs ~500ms from GHL)
 
-import { getAdminClient, getUserClient, setCors, rateLimit, ghlFetch } from './_supabase.js';
+import {
+  getAdminClient,
+  getUserClient,
+  setCors,
+  rateLimit,
+  ghlFetch,
+  resolveUserFromAccessToken,
+  verifyAdmin
+} from './_supabase.js';
+import {
+  expectBooleanish,
+  expectPlainObject,
+  expectOptionalString,
+  requireObjectBody,
+  RequestValidationError,
+  sendValidationError
+} from './_validation.js';
 
 // GHL field mapping (for sync): Supabase column → GHL custom field key
 // Only active v3 wizard fields — v1/v2 dead fields removed
@@ -74,6 +90,16 @@ for (const [wiz, col] of Object.entries(WIZARD_TO_COLUMN)) {
 }
 
 const ARRAY_COLUMNS = new Set(['asset_classes', 'strategies', 'deal_types']);
+const GOAL_TYPE_TO_BRANCH = {
+  passive_income: 'cashflow',
+  build_wealth: 'growth',
+  reduce_taxes: 'tax'
+};
+const BRANCH_TO_GOAL_LABEL = {
+  cashflow: 'Cash Flow (income now)',
+  growth: 'Equity Growth (wealth later)',
+  tax: 'Tax Optimization (tax shield now)'
+};
 
 function decodeNestedJson(value) {
   let current = value;
@@ -125,6 +151,50 @@ function normalizeWizardValue(column, value) {
   return decoded;
 }
 
+function applyGoalsOverlay(wizardBuyBox, goalsRow) {
+  if (!goalsRow) return wizardBuyBox;
+
+  const next = { ...wizardBuyBox };
+  const branch = GOAL_TYPE_TO_BRANCH[String(goalsRow.goal_type || '').trim().toLowerCase()]
+    || String(next._branch || '').trim().toLowerCase()
+    || '';
+
+  if (branch) {
+    next._branch = branch;
+    next.branch = branch;
+    next.goal = BRANCH_TO_GOAL_LABEL[branch] || next.goal || branch;
+  }
+
+  if (goalsRow.current_income !== undefined && goalsRow.current_income !== null) {
+    next.baselineIncome = goalsRow.current_income;
+  }
+
+  if (goalsRow.capital_available !== undefined && goalsRow.capital_available !== null && goalsRow.capital_available !== '') {
+    next.capital12mo = goalsRow.capital_available;
+  }
+
+  if (goalsRow.timeline !== undefined && goalsRow.timeline !== null && goalsRow.timeline !== '') {
+    next.capitalReadiness = String(goalsRow.timeline);
+  }
+
+  if (branch === 'growth') {
+    if (goalsRow.target_income !== undefined && goalsRow.target_income !== null && goalsRow.target_income !== '') {
+      next.growthCapital = goalsRow.target_income;
+      next.targetGrowth = goalsRow.target_income;
+    }
+  } else if (branch === 'tax') {
+    if (goalsRow.tax_reduction !== undefined && goalsRow.tax_reduction !== null && goalsRow.tax_reduction !== '') {
+      next.taxableIncome = goalsRow.tax_reduction;
+      next.targetTaxSavings = goalsRow.tax_reduction;
+    }
+  } else if (goalsRow.target_income !== undefined && goalsRow.target_income !== null && goalsRow.target_income !== '') {
+    next.targetCashFlow = goalsRow.target_income;
+    next.targetIncome = goalsRow.target_income;
+  }
+
+  return next;
+}
+
 async function syncToGhl(email, buyBoxRow) {
   try {
     const resp = await ghlFetch(
@@ -156,42 +226,114 @@ async function syncToGhl(email, buyBoxRow) {
   }
 }
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+async function resolveBuyBoxContext(req, requestedEmail, { allowImpersonation = false } = {}) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) {
+    return { ok: false, status: 401, error: 'Authorization token required' };
+  }
+
+  const { user, authError } = await resolveUserFromAccessToken(token);
+  const authenticatedEmail = normalizeEmail(user?.email);
+  if (!user?.id || !authenticatedEmail) {
+    return { ok: false, status: 401, error: authError?.message || 'Invalid or expired token' };
+  }
+
+  const normalizedRequestedEmail = normalizeEmail(requestedEmail);
+  const wantsImpersonation =
+    allowImpersonation &&
+    normalizedRequestedEmail &&
+    normalizedRequestedEmail !== authenticatedEmail;
+
+  if (!wantsImpersonation) {
+    return {
+      ok: true,
+      token,
+      user,
+      email: authenticatedEmail,
+      isAdminImpersonation: false
+    };
+  }
+
+  const adminAuth = await verifyAdmin(req);
+  if (!adminAuth.authorized) {
+    return { ok: false, status: 403, error: 'Admin access required for impersonation' };
+  }
+
+  return {
+    ok: true,
+    token,
+    user,
+    email: normalizedRequestedEmail,
+    isAdminImpersonation: true
+  };
+}
+
 export default async function handler(req, res) {
   setCors(res);
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (!rateLimit(req, res)) return;
 
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-
   // GET: Fetch buy box
   if (req.method === 'GET') {
-    const email = req.query.email;
-    if (!email) return res.status(400).json({ error: 'Email required' });
+    let requestedEmail = '';
+    let allowImpersonation = false;
+    try {
+      requestedEmail = expectOptionalString(req.query?.email, 'email', '');
+      allowImpersonation = expectBooleanish(req.query?.admin, 'admin', false);
+    } catch (error) {
+      if (error instanceof RequestValidationError) {
+        return sendValidationError(res, error);
+      }
+      throw error;
+    }
+
+    const context = await resolveBuyBoxContext(req, requestedEmail, {
+      allowImpersonation
+    });
+    if (!context.ok) {
+      return res.status(context.status).json({ error: context.error });
+    }
 
     try {
-      const supabase = getAdminClient();
+      const supabase = context.isAdminImpersonation
+        ? getAdminClient()
+        : getUserClient(context.token);
 
-      // Look up user profile by email
-      const { data: profile } = await supabase
+      // Look up user profile by verified identity unless an admin is explicitly impersonating.
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('id, full_name')
-        .eq('email', email.toLowerCase())
-        .single();
+        .eq(context.isAdminImpersonation ? 'email' : 'id', context.isAdminImpersonation ? context.email : context.user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
 
       if (!profile) {
         return res.status(404).json({ error: 'User not found', buyBox: {} });
       }
 
       // Get buy box
-      const { data: buyBox } = await supabase
+      const { data: buyBox, error: buyBoxError } = await supabase
         .from('user_buy_box')
         .select('*')
         .eq('user_id', profile.id)
-        .single();
+        .maybeSingle();
+      if (buyBoxError) throw buyBoxError;
+
+      const { data: goalsRow, error: goalsError } = await supabase
+        .from('user_goals')
+        .select('goal_type, current_income, target_income, capital_available, timeline, tax_reduction')
+        .eq('user_id', profile.id)
+        .maybeSingle();
+      if (goalsError) throw goalsError;
 
       // Convert column names back to wizard keys for frontend compatibility
-      const wizardBuyBox = {};
+      let wizardBuyBox = {};
       if (buyBox) {
         for (const [column, wizKey] of Object.entries(COLUMN_TO_WIZARD)) {
           if (buyBox[column] !== undefined && buyBox[column] !== null) {
@@ -220,6 +362,8 @@ export default async function handler(req, res) {
         }
       }
 
+      wizardBuyBox = applyGoalsOverlay(wizardBuyBox, goalsRow);
+
       return res.status(200).json({
         success: true,
         contactId: profile.id,
@@ -234,20 +378,42 @@ export default async function handler(req, res) {
 
   // POST: Save buy box
   if (req.method === 'POST') {
-    const { email, wizardData } = req.body || {};
-    if (!email || !wizardData) {
-      return res.status(400).json({ error: 'Email and wizardData required' });
+    const body = requireObjectBody(req, res);
+    if (!body) return;
+
+    let email = '';
+    let wizardData = null;
+    let allowImpersonation = false;
+    try {
+      email = expectOptionalString(body.email, 'email', '');
+      wizardData = expectPlainObject(body.wizardData, 'wizardData');
+      allowImpersonation = expectBooleanish(body.admin, 'admin', false);
+    } catch (error) {
+      if (error instanceof RequestValidationError) {
+        return sendValidationError(res, error);
+      }
+      throw error;
+    }
+
+    const context = await resolveBuyBoxContext(req, email, {
+      allowImpersonation
+    });
+    if (!context.ok) {
+      return res.status(context.status).json({ error: context.error });
     }
 
     try {
-      const supabase = getAdminClient();
+      const supabase = context.isAdminImpersonation
+        ? getAdminClient()
+        : getUserClient(context.token);
 
-      // Look up user
-      const { data: profile } = await supabase
+      // Look up the target user through verified identity, not caller-supplied email.
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('id')
-        .eq('email', email.toLowerCase())
-        .single();
+        .eq(context.isAdminImpersonation ? 'email' : 'id', context.isAdminImpersonation ? context.email : context.user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
 
       if (!profile) {
         return res.status(404).json({ error: 'User not found' });
@@ -285,7 +451,7 @@ export default async function handler(req, res) {
       if (error) throw error;
 
       // Sync to GHL in background (don't block response)
-      syncToGhl(email, saved).catch(() => {});
+      syncToGhl(context.email, saved).catch(() => {});
 
       return res.status(200).json({
         success: true,

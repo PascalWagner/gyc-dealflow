@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
+	import { deals, stageCounts, fetchDeals } from '$lib/stores/deals.js';
 	import { user } from '$lib/stores/auth.js';
 	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
@@ -23,43 +23,48 @@
 	const hasGoals = $derived(Boolean(goals && goals.targetIncome > 0));
 	const hasGoalContext = $derived(Boolean(branch) || hasGoals);
 	const hasCompletedDashboardPlan = $derived.by(() => hasCompletedPlan(wizardData || {}, portfolioPlan));
-
-	const totalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
-	const totalDistributions = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0));
-	const activeInvestments = $derived(portfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length);
-
-	// Goal progress
+	const totalInvested = $derived(portfolio.reduce((sum, investment) => sum + (parseFloat(investment.amountInvested) || 0), 0));
+	const totalDistributions = $derived(portfolio.reduce((sum, investment) => sum + (parseFloat(investment.distributionsReceived) || 0), 0));
+	const activeInvestments = $derived(portfolio.filter((investment) => investment.status === 'Active' || investment.status === 'Distributing').length);
 	const targetIncome = $derived(hasGoals ? goals.targetIncome : 0);
-
 	const currentIncome = $derived.by(() => {
 		let income = 0;
 		if (distributions.length > 0) {
-			let firstDist = null, totalDist = 0;
-			distributions.forEach(d => {
-				totalDist += (d.amount || 0);
-				const dt = new Date(d.date);
-				if (!firstDist || dt < firstDist) firstDist = dt;
+			let firstDistribution = null;
+			let totalDistributionAmount = 0;
+			distributions.forEach((distribution) => {
+				totalDistributionAmount += distribution.amount || 0;
+				const distributionDate = new Date(distribution.date);
+				if (!firstDistribution || distributionDate < firstDistribution) firstDistribution = distributionDate;
 			});
-			const months = Math.max(1, (new Date().getFullYear() - firstDist.getFullYear()) * 12 + (new Date().getMonth() - firstDist.getMonth()) + 1);
-			income = Math.round((totalDist / months) * 12);
+			const months = Math.max(
+				1,
+				(new Date().getFullYear() - firstDistribution.getFullYear()) * 12 +
+					(new Date().getMonth() - firstDistribution.getMonth()) +
+					1
+			);
+			income = Math.round((totalDistributionAmount / months) * 12);
 		} else if (totalDistributions > 0 && portfolio.length > 0) {
-			let oldest = null;
-			portfolio.forEach(p => {
-				if (p.dateInvested) {
-					const dt = new Date(p.dateInvested);
-					if (!oldest || dt < oldest) oldest = dt;
-				}
+			let oldestInvestment = null;
+			portfolio.forEach((investment) => {
+				if (!investment.dateInvested) return;
+				const investmentDate = new Date(investment.dateInvested);
+				if (!oldestInvestment || investmentDate < oldestInvestment) oldestInvestment = investmentDate;
 			});
-			const months = oldest ? Math.max(1, (new Date().getFullYear() - oldest.getFullYear()) * 12 + (new Date().getMonth() - oldest.getMonth()) + 1) : 12;
+			const months = oldestInvestment
+				? Math.max(
+					1,
+					(new Date().getFullYear() - oldestInvestment.getFullYear()) * 12 +
+						(new Date().getMonth() - oldestInvestment.getMonth()) +
+						1
+				)
+				: 12;
 			income = Math.round((totalDistributions / months) * 12);
 		}
 		if (income === 0 && goals?.currentIncome > 0) income = goals.currentIncome;
 		return income;
 	});
-
 	const goalProgress = $derived(hasGoals ? Math.min(100, Math.round((currentIncome / targetIncome) * 100)) : 0);
-
-	// Goal label
 	const goalLabel = $derived.by(() => {
 		if (hasGoals) return 'YOUR PASSIVE INCOME GOAL';
 		if (branch === 'cashflow') return 'PASSIVE INCOME GOAL';
@@ -67,156 +72,54 @@
 		if (branch === 'growth') return 'WEALTH GROWTH GOAL';
 		return 'YOUR PASSIVE INCOME GOAL';
 	});
-
 	const goalValueText = $derived.by(() => {
 		if (hasGoals) return `$${currentIncome.toLocaleString()} / $${targetIncome.toLocaleString()} per year`;
 		if (branch === 'cashflow') {
-			const t = parseDollar(wizardData.targetCashFlow) || 100000;
-			return `$0 / $${t.toLocaleString()} per year`;
+			const target = parseDollar(wizardData.targetCashFlow) || 100000;
+			return `$0 / $${target.toLocaleString()} per year`;
 		}
 		if (branch === 'tax') {
-			const t = parseDollar(wizardData.taxableIncome) || 200000;
-			return `$0 / $${t.toLocaleString()} offset`;
+			const target = parseDollar(wizardData.taxableIncome) || 200000;
+			return `$0 / $${target.toLocaleString()} offset`;
 		}
 		if (branch === 'growth') {
-			const c = parseDollar(wizardData.growthCapital) || 500000;
-			return `$${c.toLocaleString()} → $${(c * 2).toLocaleString()}`;
+			const capital = parseDollar(wizardData.growthCapital) || 500000;
+			return `$${capital.toLocaleString()} → $${(capital * 2).toLocaleString()}`;
 		}
 		return '';
 	});
-
-	// Stats row
 	const statsLine = $derived(
 		activeInvestments > 0
 			? `${activeInvestments} active investment${activeInvestments !== 1 ? 's' : ''} · $${totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(2) + 'M' : totalInvested.toLocaleString()} deployed`
 			: 'No investments yet — start building your portfolio'
 	);
 
-	// Slot progress
-	const planSlots = $derived(portfolioPlan && (portfolioPlan.slots || portfolioPlan.buckets));
-	const filledCount = $derived(planSlots ? planSlots.filter(s => s.filled_by).length : 0);
-	const hasPlanBlueprint = $derived.by(() => Array.isArray(planSlots) && planSlots.some((slot) => slot?.asset_class));
-	const slotLine = $derived(
-		hasPlanBlueprint
-			? ` · ${filledCount} of ${planSlots.length} investments made`
-			: ''
-	);
-	const totalPlanSlots = $derived(planSlots?.length || 0);
-	const filledPlanSlots = $derived.by(() => (planSlots || []).filter(slot => slot.filled_by));
-	const totalPlanIncome = $derived.by(() => (planSlots || []).reduce((sum, slot) => sum + (slot.est_income || 0), 0));
-	const filledPlanIncome = $derived.by(() => filledPlanSlots.reduce((sum, slot) => sum + (slot.est_income || 0), 0));
-	const planTargetIncome = $derived(portfolioPlan?.target_income || totalPlanIncome || targetIncome || 0);
-	const blendedYieldPct = $derived.by(() => {
-		if (!planSlots || planSlots.length === 0) return 0;
-		const total = planSlots.reduce((sum, slot) => sum + (slot.target_coc || 0), 0);
-		return Math.round((total / planSlots.length) * 100);
-	});
-	const blueprintProgress = $derived(
-		planTargetIncome > 0 ? Math.min(100, Math.round((filledPlanIncome / planTargetIncome) * 100)) : 0
-	);
-	const yearsToGoal = $derived.by(() => {
-		if (!planSlots || planSlots.length === 0) return 0;
-		const dealsPerYear = portfolioPlan?.deals_per_year || 1;
-		return Math.ceil((planSlots.length - filledCount) / dealsPerYear);
-	});
-	const nextPlanSlot = $derived.by(() => (planSlots || []).find(slot => !slot.filled_by) || null);
-	const planCheckSize = $derived(portfolioPlan?.check_size || nextPlanSlot?.check_size || wizardData.checkSize || 100000);
-
-	// Action items
-	function assetKey(value) {
-		return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-	}
-
-	function slotMatchesDeal(slot, deal) {
-		const slotAsset = assetKey(slot?.asset_class);
-		const dealAsset = assetKey(deal?.assetClass);
-		const lendingKeys = ['privatedebtcredit', 'lending', 'debt'];
-		if (!slotAsset) return true;
-		if (lendingKeys.includes(slotAsset)) {
-			return lendingKeys.includes(dealAsset) || assetKey(deal?.strategy) === 'lending';
-		}
-		return slotAsset === dealAsset;
-	}
-
-	const nextSlotMatchCount = $derived.by(() => {
-		if (!nextPlanSlot || !$deals.length) return 0;
-		return $deals.filter((deal) => {
-			const stage = $dealStages[deal.id] || 'filter';
-			return stage !== 'skipped' && slotMatchesDeal(nextPlanSlot, deal);
-		}).length;
-	});
-
 	const actionItems = $derived.by(() => {
 		const items = [];
 		const review = $stageCounts.review || 0;
 		const connect = $stageCounts.connect || 0;
-		const investedDealIds = Object.entries($dealStages)
-			.filter(([, stage]) => stage === 'invested')
-			.map(([id]) => id);
-		const portfolioDealIds = portfolio.map((investment) => investment.dealId).filter(Boolean);
-		const unloggedInvested = investedDealIds.filter((id) => !portfolioDealIds.includes(id));
-
-		if (hasPlanBlueprint && filledCount > 0 && nextPlanSlot) {
-			items.push({
-				icon: 'plan',
-				text: `<strong>${filledCount} of ${totalPlanSlots}</strong> plan slots filled. Next: <strong>${nextPlanSlot.asset_class}</strong> at ${fmtDollar(nextPlanSlot.check_size)}`,
-				link: 'View Plan',
-				page: 'plan'
-			});
-		}
-
-		if (unloggedInvested.length > 0) {
-			const unloggedDeal = ($deals || []).find((deal) => deal.id === unloggedInvested[0]);
-			items.push({
-				icon: 'card',
-				text: `${unloggedDeal ? `<strong>${unloggedDeal.investmentName}</strong>` : `<strong>${unloggedInvested.length} deal${unloggedInvested.length !== 1 ? 's' : ''}</strong>`} marked as invested but not logged in portfolio`,
-				link: 'Log Now',
-				page: 'portfolio'
-			});
-		}
-
-		if (review > 0) {
-			items.push({
-				icon: 'bookmark',
-				text: `You have <strong>${review} deal${review !== 1 ? 's' : ''} to review</strong> — pick one and work through the checklist`,
-				link: 'Review Deals', page: 'deals'
-			});
-		}
 		if (connect > 0) {
 			items.push({
 				icon: 'connect',
 				text: `<strong>${connect} deal${connect !== 1 ? 's' : ''} ready to connect</strong> — request an intro with the operator`,
-				link: 'Connect Now', page: 'deals'
+				link: 'Connect Now',
+				page: 'deals',
+				href: '/app/deals?tab=connect'
 			});
 		}
-		// Tax prep seasonal reminder (Jan-April)
-		if (browser) {
-			const month = new Date().getMonth();
-			if (month >= 0 && month <= 3 && portfolio.length > 0) {
-				const taxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
-				const taxYear = new Date().getFullYear() - 1;
-				const pending = taxDocs.filter(d => d.taxYear == taxYear && d.uploadStatus === 'Pending');
-				if (pending.length > 0) {
-					items.push({
-						icon: 'tax',
-						text: `<strong>${pending.length} K-1${pending.length > 1 ? 's' : ''} still pending</strong> for ${taxYear} tax year`,
-						link: 'Open Tax Docs',
-						page: 'portfolio',
-						href: '/app/portfolio#tax-documents'
-					});
-				}
-			}
-		}
-		if (items.length === 0 && !hasCompletedDashboardPlan && portfolio.length === 0 && $deals.length > 0) {
+		if (review > 0) {
 			items.push({
-				icon: 'browse',
-				text: `Browse <strong>${$deals.length} deals</strong> and start building your pipeline`,
-				link: 'Explore Deals',
-				page: 'deals'
+				icon: 'bookmark',
+				text: `You have <strong>${review} deal${review !== 1 ? 's' : ''} to review</strong> — pick one and work through the checklist`,
+				link: 'Review Deals',
+				page: 'deals',
+				href: '/app/deals?tab=review'
 			});
 		}
 		return items;
 	});
+	const primaryAction = $derived.by(() => actionItems[0] || null);
+	const secondaryActionItems = $derived.by(() => actionItems.slice(1));
 
 	// First name
 	const firstName = $derived.by(() => {
@@ -225,16 +128,10 @@
 		return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() : '';
 	});
 
-	function parseDollar(s) {
-		if (typeof s === 'number') return s;
-		if (!s) return 0;
-		return parseInt(String(s).replace(/[$,\s]/g, ''), 10) || 0;
-	}
-
-	function fmtDollar(n) {
-		if (!n || isNaN(n)) return '$0';
-		if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
-		return '$' + n.toLocaleString();
+	function parseDollar(value) {
+		if (typeof value === 'number') return value;
+		if (!value) return 0;
+		return parseInt(String(value).replace(/[$,\s]/g, ''), 10) || 0;
 	}
 
 	function openWizard() {
@@ -291,7 +188,6 @@
 				</div>
 			</div>
 		{:else}
-		<!-- Hero Progress Card -->
 		{#if hasGoalContext}
 			<div class="dash-hero">
 				<div class="dash-hero-label">{goalLabel}</div>
@@ -302,58 +198,11 @@
 					<div class="dash-hero-value">{goalValueText}</div>
 					<div class="dash-hero-pct">{goalProgress}%</div>
 				</div>
-				<div class="dash-hero-stats">{statsLine}{slotLine}</div>
+				<div class="dash-hero-stats">{statsLine}</div>
 			</div>
-			{/if}
+		{/if}
 
-		{#if hasPlanBlueprint}
-			<div class="blueprint-card">
-				<div class="blueprint-header">
-					<div class="blueprint-eyebrow">Your Investment Plan</div>
-					<a href="/app/plan?edit=1" class="blueprint-link">Edit Plan</a>
-				</div>
-				<div class="blueprint-summary">
-					<strong>{filledCount} of {totalPlanSlots}</strong> investments ·
-					<strong class="summary-accent">{fmtDollar(filledPlanIncome)}</strong>
-					of {fmtDollar(planTargetIncome)}/yr
-				</div>
-				<div class="blueprint-meta">
-					{totalPlanSlots} deals × {fmtDollar(planCheckSize)} · ~{blendedYieldPct}% avg yield{#if yearsToGoal > 0} · ~{yearsToGoal} yr to goal{/if}
-				</div>
-				<div class="blueprint-track">
-					<div class="blueprint-fill" style="width:{blueprintProgress}%"></div>
-				</div>
-
-				{#if filledPlanSlots.length > 0}
-					<div class="blueprint-list">
-						{#each filledPlanSlots as slot}
-							<div class="blueprint-row">
-								<span class="blueprint-dot"></span>
-								<div class="blueprint-row-copy">
-									<div class="blueprint-row-title">{slot.filled_name || 'Investment'}</div>
-									<div class="blueprint-row-meta">{slot.asset_class} · {fmtDollar(slot.check_size)} · {fmtDollar(slot.est_income)}/yr</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-
-				{#if nextPlanSlot}
-					<div class="blueprint-next">
-						<div class="blueprint-next-copy">
-							<div class="blueprint-next-label">Next Investment</div>
-							<div class="blueprint-next-title">
-								<strong>{nextPlanSlot.asset_class}</strong> · {fmtDollar(nextPlanSlot.check_size)} · ~{Math.round((nextPlanSlot.target_coc || 0) * 100)}% CoC · ~{fmtDollar(nextPlanSlot.est_income)}/yr
-							</div>
-							{#if nextSlotMatchCount > 0}
-								<div class="blueprint-next-matches">{nextSlotMatchCount} deal{nextSlotMatchCount === 1 ? '' : 's'} match</div>
-							{/if}
-						</div>
-						<a href="/app/deals" class="btn-primary blueprint-next-btn">Browse Deals →</a>
-					</div>
-				{/if}
-			</div>
-		{:else if hasGoalContext && !hasCompletedDashboardPlan}
+		{#if hasGoalContext && !hasCompletedDashboardPlan}
 			<div class="plan-cta-card">
 				<div>
 					<div class="plan-cta-eyebrow">Your Investment Plan</div>
@@ -365,10 +214,20 @@
 		{/if}
 
 		<div class="dashboard-stack" data-dashboard-version="overview-cleanup-2">
-			{#if actionItems.length > 0}
+			{#if primaryAction}
 				<div class="action-card">
-					<div class="action-header">Action Items</div>
-					{#each actionItems as item}
+					<div class="action-header">What To Do Next</div>
+					<div class="next-action-panel">
+						<div class="next-action-copy">
+							<div class="next-action-kicker">Next Best Action</div>
+							<div class="next-action-text">{@html primaryAction.text}</div>
+						</div>
+						<a href={primaryAction.href || `/app/${primaryAction.page}`} class="btn-primary next-action-btn">{primaryAction.link} →</a>
+					</div>
+					{#if secondaryActionItems.length > 0}
+						<div class="secondary-actions-label">Also On Deck</div>
+					{/if}
+					{#each secondaryActionItems as item}
 						<a href={item.href || `/app/${item.page}`} class="action-row">
 							<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
 								{#if item.icon === 'plan'}
@@ -389,6 +248,15 @@
 							<span class="action-link">{item.link} →</span>
 						</a>
 					{/each}
+				</div>
+			{:else}
+				<div class="empty-dashboard-card">
+					<div class="action-header">What To Do Next</div>
+					<div class="empty-dashboard-title">You’re caught up for now.</div>
+					<div class="empty-dashboard-copy">Use this page to launch the next meaningful action, not to monitor a bunch of dashboard metrics. Right now there isn’t anything urgent blocking you.</div>
+					<div class="empty-dashboard-actions">
+						<a href="/app/deals" class="btn-primary">Browse Deals →</a>
+					</div>
 				</div>
 			{/if}
 		</div>
@@ -450,8 +318,6 @@
 		text-decoration: none;
 	}
 
-	/* ── Empty Plan Card ── */
-	/* ── Hero Progress Card ── */
 	.dash-hero {
 		background: #fff;
 		border: 1px solid #d4dee3;
@@ -511,9 +377,7 @@
 		margin-top: 18px;
 	}
 
-	/* ── Plan Blueprint ── */
-	.plan-cta-card,
-	.blueprint-card {
+	.plan-cta-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
@@ -528,7 +392,6 @@
 		flex-wrap: wrap;
 	}
 	.plan-cta-eyebrow,
-	.blueprint-eyebrow,
 	.action-header {
 		font-family: var(--font-ui);
 		font-size: 11px;
@@ -553,122 +416,6 @@
 		max-width: 560px;
 	}
 	.plan-cta-btn {
-		white-space: nowrap;
-	}
-	.blueprint-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		margin-bottom: 4px;
-	}
-	.blueprint-link {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--primary);
-		text-decoration: none;
-	}
-	.blueprint-summary {
-		font-family: var(--font-body);
-		font-size: 14px;
-		color: var(--text-dark);
-	}
-	.summary-accent {
-		color: var(--primary);
-	}
-	.blueprint-meta {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		color: var(--text-muted);
-		margin-top: 6px;
-	}
-	.blueprint-track {
-		height: 8px;
-		background: var(--border-light);
-		border-radius: 4px;
-		overflow: hidden;
-		margin: 14px 0 12px;
-	}
-	.blueprint-fill {
-		height: 100%;
-		min-width: 0;
-		border-radius: 4px;
-		background: linear-gradient(90deg, var(--primary), #3bba78);
-	}
-	.blueprint-list {
-		margin-bottom: 14px;
-	}
-	.blueprint-row {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 8px 0;
-		border-bottom: 1px solid var(--border);
-	}
-	.blueprint-row:last-child {
-		border-bottom: none;
-	}
-	.blueprint-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: var(--primary);
-		flex-shrink: 0;
-	}
-	.blueprint-row-copy {
-		min-width: 0;
-	}
-	.blueprint-row-title {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-	.blueprint-row-meta {
-		font-family: var(--font-body);
-		font-size: 11px;
-		color: var(--text-muted);
-		margin-top: 1px;
-	}
-	.blueprint-next {
-		padding: 14px 18px;
-		background: linear-gradient(135deg, rgba(81, 190, 123, 0.06), rgba(37, 99, 235, 0.06));
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 14px;
-		flex-wrap: wrap;
-	}
-	.blueprint-next-copy {
-		flex: 1;
-		min-width: 220px;
-	}
-	.blueprint-next-label {
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-		margin-bottom: 4px;
-	}
-	.blueprint-next-title {
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-dark);
-		line-height: 1.5;
-	}
-	.blueprint-next-matches {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		color: var(--primary);
-		margin-top: 4px;
-	}
-	.blueprint-next-btn {
-		flex-shrink: 0;
 		white-space: nowrap;
 	}
 
@@ -702,6 +449,43 @@
 	.action-header {
 		padding: 16px 16px 0;
 		margin-bottom: 12px;
+	}
+	.next-action-panel {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 18px;
+		padding: 0 16px 16px;
+		flex-wrap: wrap;
+	}
+	.next-action-copy {
+		flex: 1;
+		min-width: 220px;
+	}
+	.next-action-kicker,
+	.secondary-actions-label {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+	}
+	.next-action-text {
+		margin-top: 8px;
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1.6;
+		color: var(--text-dark);
+	}
+	.next-action-text :global(strong) {
+		font-weight: 700;
+	}
+	.next-action-btn {
+		flex-shrink: 0;
+	}
+	.secondary-actions-label {
+		padding: 0 16px 8px;
 	}
 	.action-row {
 		display: flex;
@@ -744,11 +528,33 @@
 		font-weight: 700;
 	}
 	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
-
-	@media (min-width: 769px) and (max-width: 1024px) {
-		.dash-hero {
-			padding: 30px 28px 22px;
-		}
+	.empty-dashboard-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 0 0 18px;
+	}
+	.empty-dashboard-title {
+		padding: 0 16px;
+		font-family: var(--font-ui);
+		font-size: 18px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.empty-dashboard-copy {
+		padding: 8px 16px 0;
+		max-width: 640px;
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+	.empty-dashboard-actions {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		flex-wrap: wrap;
+		padding: 18px 16px 0;
 	}
 
 	/* ── Mobile Responsive ── */
@@ -760,11 +566,22 @@
 		.dashboard-onboarding-title {
 			font-size: 24px;
 		}
-		.dash-hero { padding: 24px 18px 18px; }
-		.dash-hero-value { font-size: 16px; }
-		.dash-hero-stats { font-size: 12px; }
-		.plan-cta-card,
-		.blueprint-card { padding: 18px 16px; }
-		.blueprint-next { padding: 14px; }
+		.dash-hero {
+			padding: 24px 18px 18px;
+		}
+		.dash-hero-value {
+			font-size: 16px;
+		}
+		.dash-hero-stats {
+			font-size: 12px;
+		}
+		.plan-cta-card { padding: 18px 16px; }
+		.next-action-panel {
+			align-items: flex-start;
+		}
+		.next-action-btn {
+			width: 100%;
+			text-align: center;
+		}
 	}
 </style>

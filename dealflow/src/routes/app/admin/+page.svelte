@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { user, isAdmin, userToken, userEmail } from '$lib/stores/auth.js';
+	import { user, isAdmin, userEmail, getFreshSessionToken } from '$lib/stores/auth.js';
 	import { deals } from '$lib/stores/deals.js';
 	import { onboardingReviewGroups } from '$lib/onboarding/reviewLinks.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
@@ -92,7 +92,7 @@
 	});
 
 	async function adminFetch(body) {
-		const token = $userToken;
+		const token = await getFreshSessionToken();
 		if (!token) return { success: false, error: 'Not signed in' };
 		const resp = await fetch('/api/admin-manage', {
 			method: 'POST',

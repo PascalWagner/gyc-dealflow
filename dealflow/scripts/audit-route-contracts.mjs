@@ -35,10 +35,19 @@ const onboardingPage = read('src/routes/onboarding/+page.svelte');
 const gpOnboardingPage = read('src/routes/gp-onboarding/+page.svelte');
 const appLayout = read('src/routes/app/+layout.svelte');
 const appShell = read('src/lib/layout/AppShell.svelte');
+const appNav = read('src/lib/navigation/app-nav.js');
 const sidebar = read('src/lib/components/Sidebar.svelte');
 const filterBar = read('src/lib/components/FilterBar.svelte');
 const swipeFeed = read('src/lib/components/SwipeFeed.svelte');
 const compareView = read('src/lib/components/CompareView.svelte');
+const supabaseApi = read('api/_supabase.js');
+const userdataApi = read('api/userdata.js');
+const userdataRead = read('api/userdata/read.js');
+const userdataWrite = read('api/userdata/write.js');
+const buyboxApi = read('api/buybox.js');
+const eventsApi = read('api/events.js');
+const gpDealPerformanceApi = read('api/gp-deal-performance.js');
+const userScopedState = read('src/lib/utils/userScopedState.js');
 const smokeSpec = read('tests/session-persona.smoke.spec.ts');
 const layoutCss = read('src/lib/css/layout.css');
 
@@ -60,10 +69,6 @@ assert(
 	'Deal Flow page must import the shared PageContainer.'
 );
 assert(
-	dealFlowPage.includes("import PageHeader from '$lib/layout/PageHeader.svelte';"),
-	'Deal Flow page must import the shared PageHeader.'
-);
-assert(
 	dealFlowPage.includes('<PageContainer className="deals-page">'),
 	'Deal Flow page must use the shared page wrapper.'
 );
@@ -72,12 +77,16 @@ assert(
 	'Deal Flow page must use the shared stack shell.'
 );
 assert(
-	dealFlowPage.includes('<PageHeader title="Deal Flow"'),
-	'Deal Flow page must use the shared PageHeader.'
+	dealFlowPage.includes('class="deals-top"') &&
+		dealFlowPage.includes('class="desktop-toolbar-row desktop-toolbar-row-primary"') &&
+		dealFlowPage.includes('class="desktop-toolbar-row desktop-toolbar-row-secondary deals-filters"') &&
+		dealFlowPage.includes('class="mobile-pipeline-row"'),
+	'Deal Flow page must keep its custom top toolbar grouped inside the shared page shell.'
 );
 assert(
-	dealFlowPage.includes('class="header-row"'),
-	'Deal Flow page must keep its header controls inside the shared header row.'
+	dealFlowPage.includes('class="deals-page-title"') &&
+		dealFlowPage.includes('Dealflow'),
+	'Deal Flow page must keep the explicit Dealflow section title in its toolbar.'
 );
 assert(
 	dealFlowPage.includes('class="deals-grid ly-grid"'),
@@ -97,12 +106,14 @@ assert(
 	'Shared layout CSS must provide the reusable pill-tab primitive.'
 );
 assert(
-	filterBar.includes('class="mobile-filter-shell ly-mobile-only"'),
-	'Deal Flow filter bar must provide the mobile filter shell.'
+	filterBar.includes('class="mobile-toolbar ly-mobile-only"') &&
+		filterBar.includes('class="mobile-filter-modal ly-mobile-only"'),
+	'Deal Flow filter bar must provide the mobile toolbar and modal filter shell.'
 );
 assert(
-	swipeFeed.includes('class="swipe-mode-toggle ly-pill-tabs"'),
-	'SwipeFeed must use the shared pill-tab primitive for mobile mode switching.'
+	swipeFeed.includes("import DealCard from '$lib/components/DealCard.svelte';") &&
+		swipeFeed.includes('<DealCard'),
+	'SwipeFeed must render the shared DealCard instead of a separate mobile card variant.'
 );
 assert(
 	!swipeFeed.includes('toolbar-search'),
@@ -111,6 +122,48 @@ assert(
 assert(
 	compareView.includes('class="compare-table-wrap ly-table-scroll"'),
 	'CompareView must use the shared table-scroll wrapper.'
+);
+assert(
+	!supabaseApi.includes('decodeJwtPayload'),
+	'Auth helper must not contain an unverified JWT payload fallback.'
+);
+assert(
+	!supabaseApi.includes('usedFallback: true'),
+	'Auth helper must not report a decode fallback path.'
+);
+assert(
+	userdataApi.includes("from './userdata/read.js'") &&
+		userdataApi.includes("from './userdata/write.js'"),
+	'userdata API must delegate to modular read/write handlers.'
+);
+assert(
+	!userdataApi.includes('const TABLE_MAP ='),
+	'userdata API must not redefine table mapping inline.'
+);
+assert(
+	userdataRead.includes('handleUserdataAdminGet') &&
+		userdataWrite.includes('handleUserdataPost') &&
+		userdataWrite.includes('handleUserdataDelete'),
+	'userdata module split must keep dedicated read/write handlers.'
+);
+assert(
+	buyboxApi.includes('applyGoalsOverlay('),
+	'Buybox API must compose canonical goals into the read model.'
+);
+assert(
+	eventsApi.includes('resolveUserFromAccessToken') &&
+		eventsApi.includes('Admin access required for cross-user events'),
+	'Events API must require verified identity and explicit admin impersonation.'
+);
+assert(
+	gpDealPerformanceApi.includes("from '../src/lib/utils/dealflow-contract.js'") &&
+		gpDealPerformanceApi.includes('normalizeStage('),
+	'GP deal performance API must use the shared dealflow stage contract.'
+);
+assert(
+	userScopedState.includes('STATIC_SCOPED_KEYS') &&
+		userScopedState.includes('PREFIX_SCOPED_KEYS'),
+	'User-scoped storage helper must define scoped key registries.'
 );
 
 for (const [label, source] of [
@@ -244,8 +297,11 @@ assert(
 );
 
 assert(
-	appShell.includes("href: '/app/market-intel'"),
-	'Shared AppShell mobile navigation must link to /app/market-intel.'
+	appShell.includes("import { PRIMARY_MOBILE_NAV_ITEMS } from '$lib/navigation/app-nav.js';") &&
+		appShell.includes('const mobileNavItems = PRIMARY_MOBILE_NAV_ITEMS;') &&
+		appNav.includes("key: 'more'") &&
+		appNav.includes("href: APP_ROUTES.more"),
+	'Shared AppShell mobile navigation must come from the shared app-nav contract.'
 );
 
 assert(

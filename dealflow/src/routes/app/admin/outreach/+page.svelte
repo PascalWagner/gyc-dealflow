@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { isAdmin, userToken } from '$lib/stores/auth.js';
+	import { isAdmin, getFreshSessionToken } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 
@@ -39,7 +39,8 @@
 	});
 
 	async function outreachFetch(body) {
-		const token = $userToken;
+		const token = await getFreshSessionToken();
+		if (!token) return { success: false, error: 'Not signed in' };
 		const resp = await fetch('/api/operator-outreach', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },

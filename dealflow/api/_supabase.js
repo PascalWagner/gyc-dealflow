@@ -3,49 +3,32 @@
 // and the anon key for user-scoped queries (respects RLS)
 
 import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+import { optionalServerEnv, requireServerEnv } from './_env.js';
 
 // Admin client: bypasses RLS. Use for admin operations and data reads
 // that need to see all data (like the public deals endpoint).
 let _adminClient = null;
 export function getAdminClient() {
   if (!_adminClient) {
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
-    }
-    _adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+    _adminClient = createClient(
+      requireServerEnv('SUPABASE_URL'),
+      requireServerEnv('SUPABASE_SERVICE_ROLE_KEY'),
+      {
       auth: { persistSession: false }
-    });
+      }
+    );
   }
   return _adminClient;
 }
 
 // User client: respects RLS. Pass the user's JWT to scope queries.
 export function getUserClient(accessToken) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be set');
-  }
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  return createClient(requireServerEnv('SUPABASE_URL'), requireServerEnv('SUPABASE_ANON_KEY'), {
     auth: { persistSession: false },
     global: {
       headers: { Authorization: `Bearer ${accessToken}` }
     }
   });
-}
-
-export function decodeJwtPayload(token) {
-  try {
-    const [, payload] = String(token || '').split('.');
-    if (!payload) return null;
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
-    return JSON.parse(Buffer.from(padded, 'base64').toString());
-  } catch {
-    return null;
-  }
 }
 
 export async function resolveUserFromAccessToken(accessToken) {
@@ -58,36 +41,8 @@ export async function resolveUserFromAccessToken(accessToken) {
       return { user, authError: null, usedFallback: false };
     }
 
-    const payload = decodeJwtPayload(accessToken);
-    if (payload?.sub || payload?.email) {
-      return {
-        user: {
-          id: payload.sub || null,
-          email: payload.email || '',
-          app_metadata: payload.app_metadata || {},
-          user_metadata: payload.user_metadata || {}
-        },
-        authError,
-        usedFallback: true
-      };
-    }
-
     return { user: null, authError, usedFallback: false };
   } catch (authError) {
-    const payload = decodeJwtPayload(accessToken);
-    if (payload?.sub || payload?.email) {
-      return {
-        user: {
-          id: payload.sub || null,
-          email: payload.email || '',
-          app_metadata: payload.app_metadata || {},
-          user_metadata: payload.user_metadata || {}
-        },
-        authError,
-        usedFallback: true
-      };
-    }
-
     return { user: null, authError, usedFallback: false };
   }
 }
@@ -140,14 +95,6 @@ export async function verifyAdmin(req) {
     return { authorized: true, user };
   }
 
-  // Fallback: decode the JWT payload to extract email even if expired.
-  // The token was originally issued by Supabase, so the email is trustworthy
-  // as long as we verify it matches our admin list.
-  const payload = decodeJwtPayload(token);
-  if (payload?.email && ADMIN_EMAILS.includes(payload.email)) {
-    return { authorized: true, user: { email: payload.email, id: payload.sub } };
-  }
-
   return { authorized: false, error: 'Invalid or expired token' };
 }
 
@@ -186,8 +133,8 @@ export function rateLimit(req, res, { maxRequests = RATE_MAX_REQUESTS, windowMs 
 }
 
 // GHL API call with retry (1 retry after 1s delay)
-const GHL_API_KEY = process.env.GHL_API_KEY;
 export async function ghlFetch(url, options = {}) {
+  const GHL_API_KEY = optionalServerEnv('GHL_API_KEY', '');
   if (!GHL_API_KEY) return null;
 
   const opts = {

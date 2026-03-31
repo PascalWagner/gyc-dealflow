@@ -5,6 +5,7 @@
 	import { getStoredSessionToken } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
 
 	let portfolio = $state([]);
 	let taxDocuments = $state([]);
@@ -365,14 +366,14 @@
 	function savePortfolioLocal(nextPortfolio) {
 		portfolio = [...nextPortfolio];
 		if (browser) {
-			localStorage.setItem('gycPortfolio', JSON.stringify(portfolio));
+			writeUserScopedJson('gycPortfolio', portfolio);
 		}
 	}
 
 	function saveTaxDocsLocal(nextDocs) {
 		taxDocuments = nextDocs.map((doc) => normalizeTaxDoc(doc));
 		if (browser) {
-			localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocuments));
+			writeUserScopedJson('gycTaxDocs', taxDocuments);
 		}
 	}
 
@@ -490,11 +491,11 @@
 
 	async function loadPortfolioData() {
 		if (!browser) return;
-		const localPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]').map((item) => normalizePortfolioRecord(item));
-		const localTaxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]').map((item) => normalizeTaxDoc(item));
+		const localPortfolio = readUserScopedJson('gycPortfolio', []).map((item) => normalizePortfolioRecord(item));
+		const localTaxDocs = readUserScopedJson('gycTaxDocs', []).map((item) => normalizeTaxDoc(item));
 		savePortfolioLocal(localPortfolio);
 		saveTaxDocsLocal(localTaxDocs);
-		wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+		wizardData = readUserScopedJson('gycBuyBoxWizard', {});
 
 		const token = getToken();
 		let effectiveTaxDocs = localTaxDocs;
@@ -1049,7 +1050,7 @@
 		</div>
 
 		{#if investedUnloggedDeals.length > 0}
-			<div class="pending-section-label">Needs Investment Details</div>
+			<div class="pending-section-label" id="needs-investment-details">Needs Investment Details</div>
 			<div class="inv-list pending-list">
 				{#each investedUnloggedDeals as deal}
 					<div class="inv-card pending-card">
@@ -1645,6 +1646,7 @@
 	.inv-table-actions { display: flex; align-items: center; gap: 8px; }
 	.pending-section-label {
 		margin: 20px 0 8px;
+		scroll-margin-top: 96px;
 		font-family: var(--font-ui);
 		font-size: 12px;
 		font-weight: 700;
@@ -1791,6 +1793,7 @@
 	/* ── Tax Section ── */
 	.tax-shell {
 		margin-top: 28px;
+		scroll-margin-top: 96px;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);

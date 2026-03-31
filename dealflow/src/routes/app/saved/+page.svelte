@@ -1,16 +1,29 @@
 <script>
-	import { onMount } from 'svelte';
-	import { user, isLoggedIn, userToken } from '$lib/stores/auth.js';
 	import { deals, dealStages } from '$lib/stores/deals.js';
 	import { goto } from '$app/navigation';
+	import DealCard from '$lib/components/DealCard.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+
+	const VIEW_DEAL_FOOTER_ACTIONS = [
+		{
+			id: 'viewDeal',
+			label: 'View Deal',
+			next: 'open',
+			tone: 'primary',
+			full: true
+		}
+	];
 
 	const savedDeals = $derived.by(() => {
 		const allDeals = $deals || [];
 		const stages = $dealStages || {};
 		return allDeals.filter(d => stages[d.id] === 'saved' || stages[d.id] === 'review');
 	});
+
+	function handleOpenDeal({ deal }) {
+		goto(`/deal/${deal.id}`);
+	}
 </script>
 
 <svelte:head><title>Saved Deals | GYC</title></svelte:head>
@@ -29,27 +42,17 @@
 		<div class="empty-desc">Bookmark deals from the Deal Flow page by clicking the save icon. They'll show up here for easy access.</div>
 		<a href="/app/deals" class="btn-cta">Browse Live Deals</a>
 	</div>
-{:else}
-	<div class="card-grid">
-		{#each savedDeals as deal}
-			<a class="deal-card" href="/deal/{deal.id}">
-				<div class="deal-name">{deal.name || deal.investmentName || 'Untitled Deal'}</div>
-				<div class="deal-operator">{deal.managementCompany || deal.operator || ''}</div>
-				<div class="deal-meta">
-					{#if deal.assetClass}
-						<span class="deal-tag">{Array.isArray(deal.assetClass) ? deal.assetClass[0] : deal.assetClass}</span>
-					{/if}
-					{#if deal.targetIRR}
-						<span class="deal-stat">{(deal.targetIRR * 100).toFixed(1)}% IRR</span>
-					{/if}
-					{#if deal.minimumInvestment}
-						<span class="deal-stat">${(deal.minimumInvestment / 1000).toFixed(0)}K min</span>
-					{/if}
-				</div>
-			</a>
-		{/each}
-	</div>
-{/if}
+	{:else}
+		<div class="card-grid">
+			{#each savedDeals as deal}
+				<DealCard
+					{deal}
+					footerActions={VIEW_DEAL_FOOTER_ACTIONS}
+					onfooteraction={handleOpenDeal}
+				/>
+			{/each}
+		</div>
+	{/if}
 </PageContainer>
 
 <style>
@@ -71,20 +74,6 @@
 		display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 		gap: 16px;
 	}
-	.deal-card {
-		background: var(--bg-card); border: 1px solid var(--border-light);
-		border-radius: var(--radius-sm); padding: 20px; text-decoration: none;
-		color: inherit; transition: all 0.2s;
-	}
-	.deal-card:hover { border-color: var(--primary); transform: translateY(-2px); }
-	.deal-name { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
-	.deal-operator { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
-	.deal-meta { display: flex; gap: 8px; flex-wrap: wrap; }
-	.deal-tag {
-		padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;
-		background: rgba(44, 110, 73, 0.08); color: #2C6E49; font-family: var(--font-ui);
-	}
-	.deal-stat { font-family: var(--font-ui); font-size: 11px; color: var(--text-secondary); font-weight: 600; }
 
 	@media (max-width: 768px) {
 		.card-grid { grid-template-columns: 1fr; }

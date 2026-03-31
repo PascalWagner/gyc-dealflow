@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     // 2. Aggregate buy box preferences
     const { data: buyBoxRows } = await supabase
       .from('user_buy_box')
-      .select('asset_classes, check_size, distributions, goal, deal_structure, strategies, completed_at')
+      .select('user_id, asset_classes, check_size, distributions, goal, deal_structure, strategies, completed_at')
       .not('completed_at', 'is', null);
 
     const completedBuyBoxes = buyBoxRows || [];
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     // 3. Aggregate user goals
     const { data: goalRows } = await supabase
       .from('user_goals')
-      .select('goal_type, capital_available');
+      .select('user_id, goal_type, capital_available');
 
     const goals = goalRows || [];
 
@@ -299,20 +299,24 @@ export default async function handler(req, res) {
     const goalCounts = {};
     for (const label of GOAL_LABELS) goalCounts[label] = 0;
 
-    // From user_goals
-    for (const g of goals) {
-      if (g.goal_type) {
-        const normalized = GOAL_MAP[g.goal_type] || GOAL_MAP[g.goal_type.toLowerCase()] || null;
-        if (normalized) goalCounts[normalized]++;
-      }
-    }
+    const goalsByUser = new Map(
+      goals
+        .filter((goal) => goal?.user_id)
+        .map((goal) => [goal.user_id, goal])
+    );
 
-    // From buy box goal field
-    for (const bb of completedBuyBoxes) {
-      if (bb.goal) {
-        const normalized = GOAL_MAP[bb.goal] || GOAL_MAP[bb.goal.toLowerCase()] || null;
-        if (normalized) goalCounts[normalized]++;
-      }
+    const buyBoxGoalsByUser = new Map(
+      completedBuyBoxes
+        .filter((buyBox) => buyBox?.user_id)
+        .map((buyBox) => [buyBox.user_id, buyBox])
+    );
+
+    const goalUsers = new Set([...goalsByUser.keys(), ...buyBoxGoalsByUser.keys()]);
+    for (const userId of goalUsers) {
+      const goalType = goalsByUser.get(userId)?.goal_type || buyBoxGoalsByUser.get(userId)?.goal;
+      if (!goalType) continue;
+      const normalized = GOAL_MAP[goalType] || GOAL_MAP[String(goalType).toLowerCase()] || null;
+      if (normalized) goalCounts[normalized]++;
     }
 
     const totalGoalVotes = Object.values(goalCounts).reduce((a, b) => a + b, 0) || 1;
@@ -324,10 +328,12 @@ export default async function handler(req, res) {
       .sort((a, b) => b.pct - a.pct);
 
     // ---- Total unique investors ----
-    const buyBoxUsers = new Set(completedBuyBoxes.map(() => 'bb')); // approximate
-    const goalUsers = new Set(goals.map(() => 'g'));
-    // Count distinct users across all sources
-    const totalInvestors = Math.max(completedBuyBoxes.length, goals.length, stageUsers.size);
+    const buyBoxUsers = new Set(completedBuyBoxes.map((buyBox) => buyBox.user_id).filter(Boolean));
+    const totalInvestors = new Set([
+      ...buyBoxUsers,
+      ...goals.map((goal) => goal.user_id).filter(Boolean),
+      ...stageUsers
+    ]).size;
 
     return res.status(200).json({
       topAssetClasses,

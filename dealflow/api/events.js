@@ -6,7 +6,20 @@
 //   - Still syncs tags + fields to GHL for CRM automations
 //   - You can now run analytics queries on user behavior
 
-import { getAdminClient, setCors, rateLimit, ghlFetch } from './_supabase.js';
+import {
+  getAdminClient,
+  setCors,
+  rateLimit,
+  ghlFetch,
+  resolveUserFromAccessToken,
+  verifyAdmin
+} from './_supabase.js';
+import {
+  expectEnum,
+  isPlainObject,
+  normalizeNonEmptyString,
+  requireObjectBody
+} from './_validation.js';
 
 const EVENT_TAGS = {
   wizard_complete: 'wizard-complete',
@@ -27,6 +40,24 @@ const EVENT_FUNNEL = {
   deal_saved: 'high-intent',
   call_booked: 'call-booked'
 };
+const VALID_EVENTS = [
+  'academy_cta_clicked',
+  'call_booked',
+  'deal_saved',
+  'deal_viewed',
+  'fund_cta_clicked',
+  'goals_complete',
+  'page_view',
+  'session_start',
+  'wizard_abandoned',
+  'wizard_complete',
+  'wizard_started',
+  'wizard_step'
+];
+
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
 
 async function syncEventToGhl(email, event, data) {
   try {
@@ -109,9 +140,42 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!rateLimit(req, res)) return;
 
-  const { email, event, data } = req.body || {};
-  if (!email || !event) {
+  const body = requireObjectBody(req, res);
+  if (!body) return;
+
+  const requestedEmailInput = normalizeNonEmptyString(body.email);
+  let event = normalizeNonEmptyString(body.event);
+  const data = body.data === undefined ? {} : body.data;
+
+  if (!requestedEmailInput || !event) {
     return res.status(400).json({ error: 'email and event required' });
+  }
+  try {
+    event = expectEnum(event, 'event', VALID_EVENTS);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  if (!isPlainObject(data)) {
+    return res.status(400).json({ error: 'data must be a JSON object when provided' });
+  }
+
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) {
+    return res.status(401).json({ error: 'Authorization token required' });
+  }
+
+  const { user, authError } = await resolveUserFromAccessToken(token);
+  const authenticatedEmail = normalizeEmail(user?.email);
+  const requestedEmail = normalizeEmail(requestedEmailInput);
+  if (!user?.id || !authenticatedEmail) {
+    return res.status(401).json({ error: authError?.message || 'Invalid or expired token' });
+  }
+
+  if (requestedEmail !== authenticatedEmail) {
+    const adminAuth = await verifyAdmin(req);
+    if (!adminAuth.authorized) {
+      return res.status(403).json({ error: 'Admin access required for cross-user events' });
+    }
   }
 
   try {
@@ -121,7 +185,7 @@ export default async function handler(req, res) {
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('id')
-      .eq('email', email.toLowerCase())
+      .eq('email', requestedEmail)
       .single();
 
     if (!profile) {
@@ -174,26 +238,11 @@ export default async function handler(req, res) {
       console.warn('Profile update skipped (columns may not exist):', profileErr.message);
     }
 
-    // Persist goals_complete data to user_goals
-    if (event === 'goals_complete' && data) {
-      const goalsUpdate = {};
-      if (data.incomeGoal !== undefined) goalsUpdate.monthly_goal = data.incomeGoal;
-      if (data.incomeGap !== undefined) goalsUpdate.income_gap = data.incomeGap;
-      if (Object.keys(goalsUpdate).length > 0) {
-        await supabase
-          .from('user_goals')
-          .update(goalsUpdate)
-          .eq('user_id', profile.id)
-          .then(() => {})
-          .catch(e => console.warn('Goals event persist failed:', e.message));
-      }
-    }
-
     // Always try GHL sync — but never block or fail the response
     // If GHL is down or rate-limited, the cron job catches it later
     let ghlResult = { fieldsUpdated: 0, tagsAdded: [] };
     try {
-      ghlResult = await syncEventToGhl(email, event, data);
+      ghlResult = await syncEventToGhl(requestedEmail, event, data);
     } catch (ghlErr) {
       console.warn('GHL sync failed (will retry via cron):', ghlErr.message);
     }
