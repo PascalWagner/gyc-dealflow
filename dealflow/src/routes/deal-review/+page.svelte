@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
@@ -67,6 +67,11 @@
 	let extractionError = $state('');
 	let extractionSummary = $state(null);
 	let autoExtractionHandled = $state(false);
+	let intakeSponsorResults = $state([]);
+	let intakeSponsorLoading = $state(false);
+	let intakeSponsorOpen = $state(false);
+	let intakeSponsorBlurTimer = $state(null);
+	let intakeSponsorSearchTimer = $state(null);
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
 	const reviewStep = $derived($page.url.searchParams.get('step') === 'intake' ? 'intake' : 'review');
@@ -121,8 +126,106 @@
 		updateField('sponsor', {
 			id: keepLinkedRecord ? sponsor.id : '',
 			name: nextName,
-			createIfMissing: !keepLinkedRecord && Boolean(trimmedName)
+			createIfMissing: false
 		});
+		queueIntakeSponsorSearch(nextName);
+	}
+
+	async function runIntakeSponsorSearch(query) {
+		const trimmed = String(query || '').trim();
+		if (trimmed.length < 2) {
+			intakeSponsorResults = [];
+			intakeSponsorLoading = false;
+			return;
+		}
+
+		intakeSponsorLoading = true;
+		try {
+			const response = await fetch(`/api/company-search?q=${encodeURIComponent(trimmed)}`);
+			const payload = await response.json().catch(() => ({}));
+			intakeSponsorResults = Array.isArray(payload?.results) ? payload.results : [];
+		} catch {
+			intakeSponsorResults = [];
+		} finally {
+			intakeSponsorLoading = false;
+		}
+	}
+
+	function queueIntakeSponsorSearch(query) {
+		if (intakeSponsorSearchTimer) clearTimeout(intakeSponsorSearchTimer);
+		intakeSponsorOpen = true;
+		intakeSponsorSearchTimer = setTimeout(() => {
+			void runIntakeSponsorSearch(query);
+		}, 180);
+	}
+
+	function closeIntakeSponsorMenuSoon() {
+		if (intakeSponsorBlurTimer) clearTimeout(intakeSponsorBlurTimer);
+		intakeSponsorBlurTimer = setTimeout(() => {
+			intakeSponsorOpen = false;
+		}, 140);
+	}
+
+	function cancelIntakeSponsorBlur() {
+		if (intakeSponsorBlurTimer) clearTimeout(intakeSponsorBlurTimer);
+	}
+
+	function selectIntakeSponsor(result) {
+		intakeSponsorResults = [];
+		intakeSponsorOpen = false;
+		form = {
+			...form,
+			sponsor: {
+				id: result?.id || '',
+				name: result?.operator_name || result?.name || '',
+				createIfMissing: false
+			},
+			companyWebsite: form.companyWebsite || result?.website || ''
+		};
+		fieldErrors = {
+			...fieldErrors,
+			sponsor: ''
+		};
+		dirty = true;
+		saveMessage = '';
+	}
+
+	function createIntakeSponsor() {
+		const nextName = String(form.sponsor?.name || '').trim();
+		if (!nextName) return;
+		intakeSponsorResults = [];
+		intakeSponsorOpen = false;
+		updateField('sponsor', {
+			id: '',
+			name: nextName,
+			createIfMissing: true
+		});
+	}
+
+	function intakeSponsorLabel(result) {
+		const name = result?.operator_name || result?.name || 'Unknown sponsor';
+		const detail = [result?.type, Array.isArray(result?.asset_classes) ? result.asset_classes[0] : '']
+			.filter(Boolean)
+			.join(' · ');
+		return detail ? `${name} — ${detail}` : name;
+	}
+
+	function getDocumentUrl(kind) {
+		if (kind === 'deck') return String(deal?.deckUrl || deal?.deck_url || '').trim();
+		if (kind === 'ppm') return String(deal?.ppmUrl || deal?.ppm_url || '').trim();
+		return '';
+	}
+
+	function getDocumentName(url, fallbackLabel) {
+		const trimmed = String(url || '').trim();
+		if (!trimmed) return fallbackLabel;
+		try {
+			const parsed = new URL(trimmed);
+			const filename = decodeURIComponent(parsed.pathname.split('/').pop() || '');
+			return filename || fallbackLabel;
+		} catch {
+			return fallbackLabel;
+		}
 	}
 
 	function generateSlug() {
@@ -307,11 +410,12 @@
 
 	async function saveIntakeDetails() {
 		const sponsorName = String(form.sponsor?.name || '').trim();
+		const sponsorId = String(form.sponsor?.id || '').trim();
 		const intakePayload = {
 			investmentName: form.investmentName,
 			sponsorName,
-			managementCompanyId: String(form.sponsor?.id || '').trim(),
-			createManagementCompany: Boolean(sponsorName && !String(form.sponsor?.id || '').trim()),
+			managementCompanyId: sponsorId,
+			createManagementCompany: Boolean(form.sponsor?.createIfMissing && sponsorName && !sponsorId),
 			companyWebsite: form.companyWebsite,
 			slug: form.slug || slugify(form.investmentName)
 		};
@@ -524,6 +628,11 @@
 		await loadDeal();
 	});
 
+	onDestroy(() => {
+		if (intakeSponsorBlurTimer) clearTimeout(intakeSponsorBlurTimer);
+		if (intakeSponsorSearchTimer) clearTimeout(intakeSponsorSearchTimer);
+	});
+
 	$effect(() => {
 		if (!dealId || dealId === previousDealId) return;
 		previousDealId = dealId;
@@ -603,16 +712,50 @@
 							<small>This should be the exact name you want to review and eventually publish.</small>
 						</label>
 
-						<label class="intake-field">
+						<div class="intake-field intake-field--entity">
 							<span>Management company</span>
-							<input
-								type="text"
-								value={form.sponsor?.name || ''}
-								placeholder="Blue Bay Capital"
-								oninput={(event) => updateIntakeSponsorName(event.currentTarget.value)}
-							>
+							<div class="intake-entity-shell" onfocusin={cancelIntakeSponsorBlur} onfocusout={closeIntakeSponsorMenuSoon}>
+								<input
+									type="text"
+									value={form.sponsor?.name || ''}
+									placeholder="Blue Bay Capital"
+									autocomplete="off"
+									onfocus={() => {
+										intakeSponsorOpen = true;
+										queueIntakeSponsorSearch(form.sponsor?.name || '');
+									}}
+									oninput={(event) => updateIntakeSponsorName(event.currentTarget.value)}
+								>
+								{#if form.sponsor?.id}
+									<div class="intake-field-meta intake-field-meta--success">Linked to existing management company</div>
+								{:else if form.sponsor?.createIfMissing}
+									<div class="intake-field-meta intake-field-meta--info">Will create a new management company when you continue</div>
+								{/if}
+
+								{#if intakeSponsorOpen && (intakeSponsorLoading || intakeSponsorResults.length > 0 || String(form.sponsor?.name || '').trim().length >= 2)}
+									<div class="intake-entity-menu">
+										{#if intakeSponsorLoading}
+											<div class="intake-entity-empty">Searching management companies...</div>
+										{:else}
+											{#each intakeSponsorResults as result}
+												<button type="button" class="intake-entity-option" onclick={() => selectIntakeSponsor(result)}>
+													{intakeSponsorLabel(result)}
+												</button>
+											{/each}
+											{#if String(form.sponsor?.name || '').trim().length >= 2 && !intakeSponsorResults.some((result) => String(result?.operator_name || result?.name || '').trim().toLowerCase() === String(form.sponsor?.name || '').trim().toLowerCase())}
+												<button type="button" class="intake-entity-option intake-entity-option--create" onclick={createIntakeSponsor}>
+													Create new management company: {String(form.sponsor?.name || '').trim()}
+												</button>
+											{/if}
+											{#if intakeSponsorResults.length === 0}
+												<div class="intake-entity-empty">No existing management companies matched that search.</div>
+											{/if}
+										{/if}
+									</div>
+								{/if}
+							</div>
 							<small>Use the sponsor or operator name. We’ll link or create the company record from here.</small>
-						</label>
+						</div>
 
 						<label class="intake-field">
 							<span>Company website</span>
@@ -630,13 +773,25 @@
 						<div class="doc-status-card">
 							<div class="doc-status-card__label">Investment Deck</div>
 							<div class="doc-status-card__value">
-								{deckFile ? deckFile.name : deal?.deckUrl || deal?.deck_url ? 'Already attached' : 'Not uploaded'}
+								{#if deckFile}
+									{deckFile.name}
+								{:else if getDocumentUrl('deck')}
+									<a href={getDocumentUrl('deck')} target="_blank" rel="noopener"> {getDocumentName(getDocumentUrl('deck'), 'Investment Deck')} </a>
+								{:else}
+									Not uploaded
+								{/if}
 							</div>
 						</div>
 						<div class="doc-status-card">
 							<div class="doc-status-card__label">PPM</div>
 							<div class="doc-status-card__value">
-								{ppmFile ? ppmFile.name : deal?.ppmUrl || deal?.ppm_url ? 'Already attached' : 'Not uploaded'}
+								{#if ppmFile}
+									{ppmFile.name}
+								{:else if getDocumentUrl('ppm')}
+									<a href={getDocumentUrl('ppm')} target="_blank" rel="noopener"> {getDocumentName(getDocumentUrl('ppm'), 'PPM')} </a>
+								{:else}
+									Not uploaded
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -1041,6 +1196,29 @@
 		color: var(--text-dark);
 	}
 
+	.intake-field--entity {
+		position: relative;
+	}
+
+	.intake-entity-shell {
+		position: relative;
+	}
+
+	.intake-field-meta {
+		margin-top: 6px;
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	.intake-field-meta--success {
+		color: #167a52;
+	}
+
+	.intake-field-meta--info {
+		color: #1f5159;
+	}
+
 	.intake-field small {
 		font-size: 12px;
 		line-height: 1.5;
@@ -1071,6 +1249,65 @@
 		font-weight: 700;
 		color: var(--text-dark);
 		line-height: 1.5;
+	}
+
+	.doc-status-card__value a {
+		color: var(--primary);
+		text-decoration: none;
+		word-break: break-word;
+	}
+
+	.doc-status-card__value a:hover {
+		text-decoration: underline;
+	}
+
+	.intake-entity-menu {
+		position: absolute;
+		top: calc(100% + 8px);
+		left: 0;
+		right: 0;
+		z-index: 30;
+		padding: 8px;
+		border-radius: 16px;
+		border: 1px solid rgba(31, 81, 89, 0.12);
+		background: rgba(255, 255, 255, 0.98);
+		box-shadow: 0 18px 34px rgba(16, 37, 42, 0.14);
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		max-height: 260px;
+		overflow-y: auto;
+	}
+
+	.intake-entity-option,
+	.intake-entity-empty {
+		padding: 10px 12px;
+		border-radius: 12px;
+		font-size: 13px;
+		line-height: 1.4;
+	}
+
+	.intake-entity-option {
+		border: none;
+		background: rgba(247, 250, 251, 0.9);
+		color: var(--text-dark);
+		text-align: left;
+		cursor: pointer;
+		font-family: var(--font-body);
+	}
+
+	.intake-entity-option:hover {
+		background: rgba(81, 190, 123, 0.1);
+	}
+
+	.intake-entity-option--create {
+		background: rgba(31, 81, 89, 0.08);
+		font-weight: 700;
+	}
+
+	.intake-entity-empty {
+		color: var(--text-muted);
+		background: rgba(247, 250, 251, 0.65);
 	}
 
 	.intake-screen__actions,
