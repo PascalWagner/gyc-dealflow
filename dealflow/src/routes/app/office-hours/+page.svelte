@@ -267,11 +267,11 @@
 	<div class="office-hours-page">
 		{#if loading}
 			<div class="office-hours-grid">
-				<div class="schedule-card skeleton-card"></div>
-			<div class="schedule-card skeleton-card"></div>
+				<div class="schedule-card skeleton-card ly-surface ly-surface--muted"></div>
+			<div class="schedule-card skeleton-card ly-surface ly-surface--muted"></div>
 		</div>
 	{:else if forbidden && !canAccess}
-		<div class="gate-card">
+		<div class="gate-card ly-surface ly-surface--strong">
 			{#if nativeCompanionMode}
 				<CompanionGate
 					title="Available to existing members"
@@ -292,7 +292,7 @@
 			{/if}
 		</div>
 	{:else if error}
-		<div class="gate-card">
+		<div class="gate-card ly-surface ly-surface--strong">
 			<div class="gate-pill">Schedule unavailable</div>
 			<h2>Office Hours couldn’t be loaded.</h2>
 			<p>{error}</p>
@@ -303,7 +303,7 @@
 		</div>
 	{:else}
 		<div class="office-hours-grid simple-office-hours-grid">
-			<section class="schedule-card featured-card next-window-card">
+			<section class="schedule-card featured-card next-window-card ly-surface ly-surface--accent ly-surface--strong">
 				<div class="card-label">Next Live Window</div>
 
 				{#if nextSession}
@@ -344,11 +344,11 @@
 					</div>
 
 					<div class="detail-grid">
-						<div class="detail-card">
+						<div class="detail-card ly-surface ly-surface--muted">
 							<div class="detail-label">Source</div>
 							<div class="detail-value">{sourceLabel}</div>
 						</div>
-						<div class="detail-card detail-card-wide">
+						<div class="detail-card detail-card-wide ly-surface ly-surface--muted">
 							<div class="detail-label">Time Reference</div>
 							<div class="detail-value">{timezoneSummary}</div>
 						</div>
@@ -358,7 +358,7 @@
 				{/if}
 			</section>
 
-			<section class="schedule-card rhythm-card">
+			<section class="schedule-card rhythm-card ly-surface">
 				<div class="card-label">Session Rhythm</div>
 				<h2 class="rhythm-title">Keep the cadence in view.</h2>
 				<p class="card-copy">
@@ -497,19 +497,11 @@
 
 	.schedule-card,
 	.gate-card {
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 251, 0.98));
-		border: 1px solid rgba(15, 23, 42, 0.08);
-		border-radius: 28px;
 		padding: 28px;
-		box-shadow:
-			0 22px 52px rgba(12, 24, 28, 0.08),
-			inset 0 1px 0 rgba(255, 255, 255, 0.65);
 	}
 
 	.featured-card {
-		background:
-			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 34%),
-			linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(244, 249, 246, 0.98));
+		position: relative;
 	}
 
 	.card-header {
@@ -573,8 +565,8 @@
 		gap: 18px;
 		padding: 20px;
 		border-radius: 24px;
-		border: 1px solid rgba(16, 37, 42, 0.08);
-		background: linear-gradient(180deg, rgba(250, 252, 252, 0.92), rgba(242, 248, 245, 0.96));
+		border: 1px solid var(--surface-border);
+		background: var(--surface-2);
 		margin-bottom: 18px;
 	}
 
@@ -684,9 +676,9 @@
 	}
 
 	.secondary-btn {
-		background: rgba(255, 255, 255, 0.9);
+		background: var(--surface-1);
 		color: var(--text-dark);
-		border: 1px solid var(--border);
+		border: 1px solid var(--surface-border);
 	}
 
 	.button-reset {
@@ -1086,9 +1078,7 @@
 
 	.next-window-card,
 	.rhythm-card {
-		background:
-			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 34%),
-			linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 251, 248, 0.98));
+		position: relative;
 	}
 
 	.rhythm-card {
@@ -1131,9 +1121,6 @@
 	}
 
 	.detail-card {
-		border: 1px solid rgba(15, 23, 42, 0.08);
-		border-radius: 18px;
-		background: rgba(255, 255, 255, 0.92);
 		padding: 14px 16px;
 	}
 

@@ -185,7 +185,7 @@
 		<div class="loading-state">
 			<div class="resource-grid">
 				{#each Array(6) as _}
-					<div class="sk-card">
+					<div class="sk-card ly-surface ly-surface--muted">
 						<div class="sk-thumb"></div>
 						<div class="sk-text" style="width:68%"></div>
 						<div class="sk-text" style="width:40%"></div>
@@ -194,7 +194,7 @@
 			</div>
 		</div>
 		{:else}
-			<div class="resources-library-shell">
+			<div class="resources-library-shell ly-surface">
 				<div class="resources-library-content" class:is-locked={!academyUnlocked}>
 					<div class="library-toolbar">
 						<div class="search-wrap">
@@ -215,7 +215,7 @@
 				</div>
 
 				{#if filteredVideos.length === 0}
-					<div class="empty-state">
+					<div class="empty-state ly-surface ly-surface--muted">
 						<div class="empty-title">No lessons match that search.</div>
 						<div class="empty-desc">Try a different keyword or switch back to all sections.</div>
 					</div>
@@ -223,7 +223,7 @@
 					<div class="resource-grid">
 						{#each filteredVideos as video}
 							<button
-								class="resource-card"
+								class="resource-card ly-surface"
 								class:is-disabled={!isPlayable(video) || !academyUnlocked}
 								onclick={() => openVideo(video)}
 								disabled={!isPlayable(video) || !academyUnlocked}
@@ -267,7 +267,7 @@
 
 				{#if !academyUnlocked}
 					<div class="resource-lock-overlay">
-						<div class="academy-gate-cta">
+						<div class="academy-gate-cta ly-surface ly-surface--strong">
 							{#if nativeCompanionMode}
 								<CompanionGate
 									title="Unlock with the Academy"
@@ -329,6 +329,7 @@
 	.resources-library-shell {
 		position: relative;
 		min-height: 320px;
+		padding: 24px;
 	}
 	.resources-library-content.is-locked {
 		filter: blur(10px);
@@ -409,9 +410,9 @@
 		width: 100%;
 		box-sizing: border-box;
 		padding: 12px 16px 12px 40px;
-		border: 1px solid var(--border);
+		border: 1px solid var(--surface-border);
 		border-radius: 16px;
-		background: var(--bg-card);
+		background: var(--surface-2);
 		font-family: var(--font-body);
 		font-size: 14px;
 		color: var(--text-dark);
@@ -459,9 +460,9 @@
 	}
 	.resource-filter-btn {
 		padding: 8px 16px;
-		border: 1px solid var(--border);
+		border: 1px solid var(--surface-border);
 		border-radius: 999px;
-		background: var(--bg-card);
+		background: var(--surface-2);
 		font-family: var(--font-ui);
 		font-size: 12px;
 		font-weight: 700;
@@ -488,9 +489,6 @@
 		appearance: none;
 		-webkit-appearance: none;
 		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: 20px;
-		background: var(--bg-card);
 		overflow: hidden;
 		cursor: pointer;
 		text-align: left;
@@ -592,6 +590,7 @@
 	.academy-gate-cta {
 		max-width: 440px;
 		margin: 0 auto;
+		padding: 28px 24px;
 	}
 	.gate-icon {
 		width: 48px;
@@ -620,8 +619,6 @@
 
 	.empty-state {
 		padding: 48px 16px;
-		border: 1px dashed var(--border);
-		border-radius: 20px;
 		text-align: center;
 		color: var(--text-muted);
 	}
@@ -648,9 +645,6 @@
 		animation: skPulse 1.5s infinite;
 	}
 	.sk-card {
-		border: 1px solid var(--border);
-		border-radius: 20px;
-		background: var(--bg-card);
 		overflow: hidden;
 	}
 	.sk-thumb {

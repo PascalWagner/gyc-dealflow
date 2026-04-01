@@ -456,7 +456,7 @@
 <PageContainer className="settings-shell-page">
 <div class="settings-page">
 	<PageHeader title="Settings" className="settings-header">
-		<div slot="secondaryRow" class="settings-tabs">
+		<div slot="secondaryRow" class="settings-tabs ly-surface ly-surface--muted">
 			<button class="settings-tab" class:active={activeTab === 'profile'} onclick={() => activeTab = 'profile'}>Profile</button>
 			<button class="settings-tab" class:active={activeTab === 'plan'} onclick={() => activeTab = 'plan'}>My Plan</button>
 			<button class="settings-tab" class:active={activeTab === 'privacy'} onclick={() => activeTab = 'privacy'}>Privacy</button>
@@ -469,7 +469,7 @@
 			<div class="settings-page-title">Your Profile</div>
 			<div class="settings-page-desc">Manage your account information and how others reach you.</div>
 
-			<div class="settings-card">
+			<div class="settings-card ly-surface">
 				<div class="settings-card-title">Personal Information</div>
 				<div class="settings-card-desc">This information is shown to GPs when you request an introduction.</div>
 				<div class="avatar-row profile-avatar-row">
@@ -515,7 +515,7 @@
 				</div>
 			</div>
 
-			<div class="settings-card">
+			<div class="settings-card ly-surface">
 				<div class="settings-card-title">Investment Background</div>
 				<div class="settings-card-desc">Help GPs understand your background and investment capacity when you request introductions.</div>
 				<div class="profile-row">
@@ -565,7 +565,7 @@
 			<div class="settings-page-title">Your Membership</div>
 			<div class="settings-page-desc">See what's included in your current plan.</div>
 
-			<div class="settings-card membership-status-card">
+			<div class="settings-card membership-status-card ly-surface">
 				<div class="tier-badge" class:tier-badge-free={activeMembershipKey === 'free'} style={`--tier-accent: ${currentPlanMeta.accent};`}>
 					<span class="tier-dot"></span>
 					{currentPlanMeta.label}
@@ -585,7 +585,7 @@
 			<div class="plan-grid">
 				{#each membershipPlans as plan}
 					<div
-						class="plan-card"
+						class="plan-card ly-surface"
 						class:current={plan.key === activeMembershipKey}
 						class:subsumed={(planOrder[plan.key] || 0) < (planOrder[activeMembershipKey] || 0)}
 						style={`--plan-accent:${plan.accent};`}
@@ -622,7 +622,7 @@
 			</div>
 
 			{#if activeMembershipKey === 'academy'}
-				<div class="settings-card alumni-note-card">
+				<div class="settings-card alumni-note-card ly-surface ly-surface--accent ly-surface--strong">
 					<div class="alumni-note-header">
 						<span>After your first year</span>
 						<span class="alumni-pill">Alumni</span>
@@ -634,7 +634,7 @@
 			{/if}
 
 			{#if activeMembershipKey !== 'free'}
-				<div class="settings-card billing-card">
+				<div class="settings-card billing-card ly-surface">
 					<div class="settings-card-title billing-title">Billing</div>
 					<div class="billing-row">
 						<div>
@@ -667,7 +667,7 @@
 			<div class="settings-page-title">Privacy &amp; Sharing</div>
 			<div class="settings-page-desc">Control what other GYC members can see about your deal activity. Your financial details are never shared.</div>
 
-			<div class="settings-card always-private">
+			<div class="settings-card always-private ly-surface ly-surface--muted">
 				<div class="card-header-row">
 					<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="18" height="18"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
 					<div class="settings-card-title" style="margin-bottom:0;">Always Private</div>
@@ -682,7 +682,7 @@
 				</div>
 			</div>
 
-			<div class="settings-card" style="margin-top:16px;">
+			<div class="settings-card ly-surface" style="margin-top:16px;">
 				<div class="settings-card-title">Portfolio Visibility</div>
 				<div class="settings-card-desc" style="margin-bottom:16px;">When on, your deal activity can contribute to shared community visibility features. Your name and dollar amounts are never shown.</div>
 				<div class="toggle-row">
@@ -696,7 +696,7 @@
 				</div>
 			</div>
 
-			<div class="settings-card" style="margin-top:16px;">
+			<div class="settings-card ly-surface" style="margin-top:16px;">
 				<div class="settings-card-title">Preview: Your Profile</div>
 				<div class="settings-card-desc">How other members see you in the network.</div>
 				<div class="preview-box">
@@ -722,7 +722,7 @@
 				</div>
 			</div>
 
-			<div class="settings-card" style="margin-top:16px;">
+			<div class="settings-card ly-surface" style="margin-top:16px;">
 				<div class="settings-card-title">Preview: How you appear on deals</div>
 				<div class="settings-card-desc">What shows on deal cards and deal pages when you're in the pipeline.</div>
 				<div class="preview-box">
@@ -759,7 +759,7 @@
 			<div class="settings-page-title">Notification Preferences</div>
 			<div class="settings-page-desc">Control how and when you receive deal alert emails.</div>
 
-			<div class="notif-card">
+			<div class="notif-card ly-surface">
 				<div class="notif-title">Deal Alert Frequency</div>
 				<div class="notif-desc">We'll email you new deals that match your buy box. Choose how often.</div>
 				<div class="notif-btns">
@@ -782,7 +782,7 @@
 				</div>
 			</div>
 
-			<div class="notif-card" style="margin-top:16px;">
+			<div class="notif-card ly-surface" style="margin-top:16px;">
 				<div class="notif-title">Deal Alerts</div>
 				<div class="notif-desc">Get notified when new deals match your buy box criteria.</div>
 				<div class="toggle-row">
@@ -796,7 +796,7 @@
 				</div>
 			</div>
 
-			<div class="notif-card" style="margin-top:16px;">
+			<div class="notif-card ly-surface" style="margin-top:16px;">
 				<div class="notif-title">Weekly Digest</div>
 				<div class="notif-desc">A summary of new deals, market insights, and your portfolio activity.</div>
 				<div class="toggle-row">
@@ -838,14 +838,14 @@
 	}
 	.settings-tabs {
 		display: flex;
-		gap: 0;
-		border-bottom: 2px solid var(--border-light);
+		gap: 8px;
+		padding: 6px;
 		margin-bottom: 24px;
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
 	}
 	.settings-tab {
-		padding: 12px 24px;
+		padding: 10px 18px;
 		font-family: var(--font-ui);
 		font-size: 13px;
 		font-weight: 600;
@@ -853,19 +853,22 @@
 		cursor: pointer;
 		border: none;
 		background: none;
-		border-bottom: 2px solid transparent;
-		margin-bottom: -2px;
+		border-radius: 999px;
 		transition: all var(--transition, 0.2s);
 		white-space: nowrap;
 	}
 	.settings-tab:hover { color: var(--text-dark); }
-	.settings-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+	.settings-tab.active {
+		background: var(--surface-1);
+		color: var(--text-dark);
+		box-shadow: var(--shadow-sm);
+	}
 	.settings-page-title { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin-bottom: 8px; }
 	.settings-page-desc { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; }
-	.settings-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
+	.settings-card { padding: 20px; margin-bottom: 16px; }
 	.settings-card-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
 	.settings-card-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
-	.always-private { background: var(--bg-cream); border: 1px solid var(--border-light); }
+	.always-private { position: relative; }
 	.card-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 	.private-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
 	.private-item { display: flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
@@ -876,16 +879,40 @@
 	.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 	.avatar-actions { display: flex; flex-direction: column; gap: 6px; }
 	.avatar-help { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-	.upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); cursor: pointer; transition: all 0.15s; }
-	.upload-btn:hover { border-color: var(--primary); }
+	.upload-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 16px;
+		background: var(--surface-1);
+		border: 1px solid var(--surface-border);
+		border-radius: var(--radius-sm);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text-dark);
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+	.upload-btn:hover { border-color: var(--surface-border-strong); background: var(--surface-2); }
 
 	.profile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 	.profile-field { margin-bottom: 20px; }
 	.profile-row .profile-field { margin-bottom: 0; }
 	.profile-label { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-	.profile-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 14px; color: var(--text-dark); background: var(--bg-card); box-sizing: border-box; }
+	.profile-input {
+		width: 100%;
+		padding: 10px 14px;
+		border: 1px solid var(--surface-border);
+		border-radius: var(--radius-sm);
+		font-family: var(--font-body);
+		font-size: 14px;
+		color: var(--text-dark);
+		background: var(--surface-2);
+		box-sizing: border-box;
+	}
 	.profile-input:focus { outline: none; border-color: var(--primary); }
-	.profile-input[readonly] { background: var(--bg-cream); color: var(--text-muted); }
+	.profile-input[readonly] { background: var(--surface-2); color: var(--text-muted); }
 
 	.settings-save-bar { display: flex; gap: 12px; align-items: center; padding: 20px 0; border-top: 1px solid var(--border-light); margin-top: 24px; }
 	.settings-save-bar .btn-cta-primary { width: auto; padding: 12px 32px; }
@@ -924,9 +951,6 @@
 		flex-direction: column;
 		gap: 10px;
 		padding: 18px 14px 14px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 12px;
 		min-height: 100%;
 	}
 	.plan-card.current { border: 2px solid var(--primary); }
@@ -964,9 +988,9 @@
 		text-decoration: none;
 	}
 	.primary-action { background: var(--primary); color: #fff; }
-	.secondary-action { background: transparent; color: var(--text-dark); border: 1px solid var(--border); }
+	.secondary-action { background: transparent; color: var(--text-dark); border: 1px solid var(--surface-border); }
 
-	.alumni-note-card { background: rgba(81,190,123,0.04); border: 1px dashed rgba(81,190,123,0.3); }
+	.alumni-note-card { position: relative; }
 	.alumni-note-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); }
 	.alumni-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: rgba(81,190,123,0.12); color: var(--primary); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
 	.alumni-note-copy { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); line-height: 1.5; }
@@ -978,20 +1002,20 @@
 	.billing-row.no-border { border-bottom: none; padding-bottom: 0; }
 	.billing-label { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); }
 	.billing-value { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
-	.billing-btn { padding: 8px 16px; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark); cursor: pointer; }
+	.billing-btn { padding: 8px 16px; background: transparent; border: 1px solid var(--surface-border); border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark); cursor: pointer; }
 	.billing-toggle-wrap { display: flex; align-items: center; gap: 10px; }
 	.billing-saving { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); }
 
-	.toggle-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--bg-cream); border: 1px solid var(--border-light); border-radius: var(--radius-sm); }
-	.toggle-track { position: relative; width: 48px; height: 26px; flex-shrink: 0; cursor: pointer; border: none; background: var(--border); border-radius: 13px; transition: background 0.2s; padding: 0; }
+	.toggle-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--surface-2); border: 1px solid var(--surface-border); border-radius: var(--radius-sm); }
+	.toggle-track { position: relative; width: 48px; height: 26px; flex-shrink: 0; cursor: pointer; border: none; background: var(--surface-border-strong); border-radius: 13px; transition: background 0.2s; padding: 0; }
 	.toggle-track.on { background: var(--teal-deep, var(--primary)); }
-	.toggle-thumb { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s; pointer-events: none; }
+	.toggle-thumb { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; background: var(--surface-1); border-radius: 50%; box-shadow: var(--shadow-sm); transition: transform 0.2s; pointer-events: none; }
 	.toggle-track.on .toggle-thumb { transform: translateX(22px); }
 	.toggle-track:disabled { opacity: 0.6; cursor: not-allowed; }
 	.toggle-label { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
 	.toggle-desc { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 
-	.preview-box { margin-top: 12px; padding: 16px; background: var(--bg-cream); border: 1px solid var(--border-light); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 14px; }
+	.preview-box { margin-top: 12px; padding: 16px; background: var(--surface-2); border: 1px solid var(--surface-border); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 14px; }
 	.preview-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-weight: 700; font-size: 16px; flex-shrink: 0; overflow: hidden; }
 	.preview-avatar img { width: 100%; height: 100%; object-fit: cover; }
 	.preview-name { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
@@ -1002,16 +1026,16 @@
 	.deal-preview-sub.green { color: var(--primary); }
 	.deal-preview-sub.muted { color: var(--text-muted); }
 
-	.notif-card { margin-top: 24px; padding: 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-card); }
+	.notif-card { margin-top: 24px; padding: 24px; }
 	.notif-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
 	.notif-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
 	.notif-btns { display: flex; gap: 10px; flex-wrap: wrap; }
-	.notif-freq-btn { flex: 1; min-width: 120px; padding: 14px 20px; border: 2px solid var(--border); border-radius: 10px; background: var(--bg-main); font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: 0.2s; text-align: left; }
+	.notif-freq-btn { flex: 1; min-width: 120px; padding: 14px 20px; border: 1px solid var(--surface-border); border-radius: 10px; background: var(--surface-2); font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: 0.2s; text-align: left; }
 	.notif-freq-btn:hover { border-color: var(--primary) !important; color: var(--primary) !important; }
-	.notif-freq-btn.active { border-color: var(--primary); background: rgba(81,190,123,0.08); color: var(--primary); }
+	.notif-freq-btn.active { border-color: var(--surface-border-accent); background: color-mix(in srgb, var(--surface-2) 72%, rgba(81,190,123,0.14)); color: var(--primary); box-shadow: inset 0 0 0 1px rgba(81,190,123,0.12); }
 	.notif-freq-sub { font-size: 11px; font-weight: 400; color: var(--text-muted); margin-top: 4px; }
 	.notif-freq-btn.active .notif-freq-sub { color: var(--text-secondary); }
-	.notif-saved-msg { margin-top: 16px; padding: 12px 16px; background: #F0F9F4; border-radius: 8px; font-size: 13px; color: #059669; font-weight: 600; text-align: center; }
+	.notif-saved-msg { margin-top: 16px; padding: 12px 16px; background: color-mix(in srgb, var(--surface-2) 78%, rgba(81,190,123,0.18)); border: 1px solid var(--surface-border-accent); border-radius: 8px; font-size: 13px; color: #059669; font-weight: 600; text-align: center; }
 
 	.logout-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
 	.logout-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
