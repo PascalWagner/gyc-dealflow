@@ -15,7 +15,7 @@
 <div
 	class={`ly-app-shell ly-sidebar-shell ${className}`.trim()}
 	style={showMobileTabs
-		? `--ly-main-pad-bottom-tablet: ${mobileTabBarOffset}; --ly-main-pad-bottom-mobile: ${mobileTabBarOffset};`
+		? `--ly-mobile-tab-bar-offset: ${mobileTabBarOffset}; --ly-main-pad-bottom-tablet: ${mobileTabBarOffset}; --ly-main-pad-bottom-mobile: ${mobileTabBarOffset};`
 		: ''}
 >
 	<Sidebar {currentPage} />

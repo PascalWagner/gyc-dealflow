@@ -785,11 +785,15 @@
 	}
 
 	/* ── Mobile Responsive ── */
-	@media (max-width: 768px) {
-		.coach-card {
-			flex-direction: column;
-			padding: 20px 18px;
-			margin-bottom: 16px;
+		@media (max-width: 768px) {
+			.content-area {
+				padding-bottom: calc(var(--ly-mobile-tab-bar-offset, 72px) + 20px);
+			}
+
+			.coach-card {
+				flex-direction: column;
+				padding: 20px 18px;
+				margin-bottom: 16px;
 		}
 		.coach-title {
 			font-size: 24px;
