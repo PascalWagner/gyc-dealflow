@@ -766,6 +766,72 @@
 		flex-wrap: wrap;
 	}
 
+	.ghost-btn,
+	.primary-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 40px;
+		padding: 10px 14px;
+		border-radius: 12px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.01em;
+		text-decoration: none;
+		cursor: pointer;
+		transition:
+			background 0.16s ease,
+			border-color 0.16s ease,
+			color 0.16s ease,
+			box-shadow 0.16s ease,
+			transform 0.16s ease;
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	.ghost-btn {
+		border: 1px solid rgba(31, 81, 89, 0.14);
+		background: rgba(255, 255, 255, 0.92);
+		color: var(--text-dark);
+		box-shadow: 0 6px 16px rgba(16, 37, 42, 0.04);
+	}
+
+	.ghost-btn:hover {
+		border-color: rgba(31, 81, 89, 0.22);
+		background: rgba(255, 255, 255, 1);
+		transform: translateY(-1px);
+		box-shadow: 0 10px 20px rgba(16, 37, 42, 0.08);
+	}
+
+	.primary-btn {
+		border: 1px solid rgba(31, 81, 89, 0.16);
+		background: linear-gradient(135deg, #1f5159, #10252a);
+		color: #fff;
+		box-shadow: 0 12px 24px rgba(16, 37, 42, 0.16);
+	}
+
+	.primary-btn:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 16px 28px rgba(16, 37, 42, 0.2);
+	}
+
+	.primary-btn:disabled,
+	.ghost-btn:disabled {
+		opacity: 0.55;
+		cursor: default;
+		transform: none;
+		box-shadow: none;
+	}
+
+	.primary-btn:focus-visible,
+	.ghost-btn:focus-visible,
+	.contact-picker-card:focus-visible,
+	.icon-btn:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12);
+	}
+
 	.same-person-toggle {
 		display: inline-flex;
 		align-items: center;
@@ -835,6 +901,13 @@
 		border-style: dashed;
 	}
 
+	.contact-picker-card:hover {
+		border-color: rgba(31, 81, 89, 0.18);
+		background: rgba(255, 255, 255, 0.84);
+		transform: translateY(-1px);
+		box-shadow: 0 12px 22px rgba(16, 37, 42, 0.06);
+	}
+
 	.team-edit-grid {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -899,6 +972,12 @@
 
 	.ghost-btn--danger {
 		color: #8c2328;
+	}
+
+	.ghost-btn--danger:hover {
+		border-color: rgba(180, 35, 40, 0.22);
+		color: #8c2328;
+		background: rgba(180, 35, 40, 0.06);
 	}
 
 	@media (max-width: 900px) {
