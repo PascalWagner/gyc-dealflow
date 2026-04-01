@@ -452,9 +452,6 @@
 		max-width: 520px;
 		margin: 36px 0 0;
 		padding: 36px 28px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
 		text-align: left;
 	}
 	.dashboard-onboarding-icon {
@@ -513,11 +510,6 @@
 		gap: 18px;
 		padding: 22px 24px;
 		margin-bottom: 18px;
-		background:
-			linear-gradient(135deg, rgba(81, 190, 123, 0.1), rgba(37, 99, 235, 0.05)),
-			var(--bg-card);
-		border: 1px solid rgba(81, 190, 123, 0.18);
-		border-radius: var(--radius);
 	}
 	.coach-copy {
 		max-width: 680px;
@@ -570,10 +562,6 @@
 	}
 
 	.dash-hero {
-		background: #fff;
-		border: 1px solid #d4dee3;
-		border-radius: 14px;
-		box-shadow: 0 2px 10px rgba(16, 24, 40, 0.05);
 		padding: 34px 36px 24px;
 		margin-bottom: 22px;
 	}
@@ -583,12 +571,12 @@
 		font-weight: 700;
 		letter-spacing: 1.6px;
 		text-transform: uppercase;
-		color: #8a9aa0;
+		color: var(--text-muted);
 		margin-bottom: 20px;
 	}
 	.dash-hero-bar {
 		height: 12px;
-		background: #e8eef1;
+		background: var(--border-light);
 		border-radius: 999px;
 		overflow: hidden;
 	}
@@ -621,17 +609,14 @@
 	.dash-hero-stats {
 		font-family: var(--font-body);
 		font-size: 13px;
-		color: #8a9aa0;
+		color: var(--text-muted);
 		margin-bottom: 0;
 		padding-top: 18px;
-		border-top: 1px solid #e6ecef;
+		border-top: 1px solid var(--border-light);
 		margin-top: 18px;
 	}
 
 	.plan-cta-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
 		padding: 20px 18px;
 		margin-bottom: 18px;
 	}
@@ -692,9 +677,6 @@
 
 	/* ── Action Items ── */
 	.action-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
 		overflow: hidden;
 	}
 	.action-header {
@@ -760,7 +742,7 @@
 		color: inherit;
 	}
 	.action-row:last-child { border-bottom: none; }
-	.action-row:hover { background: var(--bg-cream); }
+	.action-row:hover { background: var(--surface-2); }
 	.action-icon {
 		width: 20px;
 		height: 20px;
@@ -791,9 +773,6 @@
 	}
 	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
 	.empty-dashboard-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
 		padding: 0 0 18px;
 	}
 	.empty-dashboard-title {

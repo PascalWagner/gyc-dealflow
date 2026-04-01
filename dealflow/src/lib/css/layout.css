@@ -181,6 +181,26 @@
 	max-width: 100%;
 }
 
+.ly-surface {
+	background: var(--surface-1, var(--bg-card));
+	border: 1px solid var(--surface-border, var(--border));
+	border-radius: var(--surface-radius, var(--radius-lg, 16px));
+	box-shadow: var(--surface-shadow, var(--shadow-card));
+}
+
+.ly-surface--accent {
+	background: var(--surface-accent, var(--surface-1, var(--bg-card)));
+	border-color: var(--surface-border-accent, var(--surface-border, var(--border)));
+}
+
+.ly-surface--muted {
+	background: var(--surface-2, var(--surface-1, var(--bg-card)));
+}
+
+.ly-surface--strong {
+	border-color: var(--surface-border-strong, var(--surface-border, var(--border)));
+}
+
 .ly-min-0 {
 	min-width: 0 !important;
 }
