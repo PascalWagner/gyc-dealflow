@@ -39,6 +39,14 @@ export function formatLocalDateTimeRange(startIso, endIso, timeZone) {
 	return `${date} • ${time}`;
 }
 
+export function formatLocalTimeRange(startIso, endIso, timeZone) {
+	if (!timeZone) return null;
+	const start = new Date(startIso);
+	const end = new Date(endIso);
+	if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+	return `${formatTime(start, timeZone)} to ${formatTime(end, timeZone)} ${formatTimeZoneName(start, timeZone)}`;
+}
+
 export function downloadEventIcs(event) {
 	const blob = new Blob([buildIcsContent(event)], {
 		type: 'text/calendar;charset=utf-8'

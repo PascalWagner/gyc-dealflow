@@ -10,6 +10,7 @@
 		formatCanonicalDate,
 		formatCanonicalTimeRange,
 		formatLocalDateTimeRange,
+		formatLocalTimeRange,
 		resolveBrowserTimeZone
 	} from '$lib/utils/memberEvents.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
@@ -81,14 +82,12 @@
 		return formatLocalDateTimeRange(event.startDateTime, event.endDateTime, localTimeZone);
 	}
 
-	function calendarTime(event) {
-		const date = new Date(event.startDateTime);
-		if (Number.isNaN(date.getTime())) return '';
-		return new Intl.DateTimeFormat('en-US', {
-			timeZone: localTimeZone || undefined,
-			hour: 'numeric',
-			minute: '2-digit'
-		}).format(date);
+	function rhythmTime(event) {
+		return formatLocalTimeRange(event.startDateTime, event.endDateTime, localTimeZone) || canonicalTime(event);
+	}
+
+	function rhythmZoneLabel() {
+		return localTimeZone ? `${timeZoneLabel(localTimeZone)} Time` : 'Eastern Time';
 	}
 
 	function weekdayShort(event) {
@@ -562,9 +561,9 @@
 							<article class="rhythm-row" class:rhythm-row-active={event.id === nextSession?.id}>
 								<div class="rhythm-copy">
 									<div class="rhythm-date-line">{monthDay(event)} • {weekdayShort(event)}</div>
-									<div class="rhythm-local-line">{calendarTime(event)} Local</div>
+									<div class="rhythm-local-line">{rhythmZoneLabel()}</div>
 								</div>
-								<div class="rhythm-time-line">{canonicalTime(event)} ET</div>
+								<div class="rhythm-time-line">{rhythmTime(event)}</div>
 							</article>
 						{/each}
 					</div>
