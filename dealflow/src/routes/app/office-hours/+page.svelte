@@ -28,6 +28,14 @@
 
 	const replayLibraryUrl = '/app/resources?category=Office%20Hours';
 	const calendarDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const DEFAULT_SESSION_INTRO = 'Open office hours for Cashflow Academy members.';
+	const DEFAULT_SESSION_TOPICS = [
+		'Deal questions',
+		'Portfolio decisions',
+		'Capital allocation tradeoffs',
+		"Anything you're stuck on"
+	];
+	const DEFAULT_SESSION_NOTE = 'Drop in anytime during the window.';
 
 	const canAccess = $derived($isMember);
 	const timezoneSummary = $derived.by(() => {
@@ -43,6 +51,7 @@
 	const activeCalendarMonth = $derived.by(() => calendarMonths[safeMonthIndex] || null);
 	const activeMonthEvents = $derived.by(() => activeCalendarMonth?.events || []);
 	const visibleUpcomingSessions = $derived.by(() => events.slice(0, 6));
+	const nextSessionBrief = $derived.by(() => buildSessionBrief(nextSession?.description));
 	const activeMonthSummary = $derived.by(() => {
 		const count = activeMonthEvents.length;
 		if (count === 0) return 'No live sessions scheduled for this month yet.';
@@ -246,6 +255,69 @@
 		if (Number.isNaN(date.getTime())) return '';
 		return new Intl.DateTimeFormat('en-US', { timeZone, ...options }).format(date);
 	}
+
+	function buildSessionBrief(description) {
+		const fallback = {
+			intro: DEFAULT_SESSION_INTRO,
+			topics: DEFAULT_SESSION_TOPICS,
+			note: DEFAULT_SESSION_NOTE
+		};
+		if (!description) return fallback;
+
+		const sanitized = String(description)
+			.replace(/\r/g, '\n')
+			.replace(/Join with Google Meet:\s*https?:\/\/\S+/gi, '')
+			.replace(/Or dial:[^\n]*/gi, '')
+			.replace(/PIN:\s*[^\n]*/gi, '')
+			.replace(/More phone numbers:\s*https?:\/\/\S+/gi, '')
+			.replace(/Learn more about Meet at:\s*https?:\/\/\S+/gi, '')
+			.replace(/\bhttps?:\/\/\S+/g, '')
+			.replace(/[ \t]+\n/g, '\n');
+
+		const [introPart, topicsPart = ''] = sanitized.split(/come with:/i);
+		const intro = normalizeSentence(introPart) || fallback.intro;
+
+		let topicSource = topicsPart;
+		let note = '';
+		const noteMatch = topicSource.match(/drop in anytime[^.]*\.?/i);
+		if (noteMatch) {
+			note = normalizeSentence(noteMatch[0]);
+			topicSource = topicSource.replace(noteMatch[0], ' ');
+		}
+
+		const topics = extractTopics(topicSource);
+
+		return {
+			intro,
+			topics: topics.length ? topics : fallback.topics,
+			note: note || fallback.note
+		};
+	}
+
+	function normalizeSentence(value) {
+		if (!value) return '';
+		const cleaned = String(value)
+			.replace(/\s+/g, ' ')
+			.replace(/\s*•\s*/g, ' ')
+			.replace(/\s+,/g, ',')
+			.trim();
+		if (!cleaned) return '';
+		return /[.!?]$/.test(cleaned) ? cleaned : `${cleaned}.`;
+	}
+
+	function extractTopics(value) {
+		if (!value) return [];
+		return String(value)
+			.replace(/\r/g, ' ')
+			.replace(/\n+/g, ' ')
+			.replace(/[•·]/g, '|')
+			.replace(/\s*\|\s*/g, '|')
+			.replace(/\s{2,}/g, ' ')
+			.split('|')
+			.map((topic) => topic.replace(/\s+/g, ' ').trim())
+			.map((topic) => topic.replace(/^[,:-]\s*/, '').replace(/[.,;:]+$/g, '').trim())
+			.filter(Boolean);
+	}
 </script>
 
 <svelte:head>
@@ -325,9 +397,16 @@
 						</div>
 					</div>
 
-					<p class="session-description session-description-wide">
-						{nextSession.description || 'Open office hours for Cashflow Academy members. Bring live deal questions, portfolio decisions, and anything you want to pressure-test during the hour.'}
-					</p>
+					<div class="session-brief">
+						<p class="session-description session-description-wide">{nextSessionBrief.intro}</p>
+						<div class="session-topics-label">Bring to the session</div>
+						<div class="session-topics">
+							{#each nextSessionBrief.topics as topic}
+								<span class="session-topic-chip">{topic}</span>
+							{/each}
+						</div>
+						<p class="session-note">{nextSessionBrief.note}</p>
+					</div>
 
 					<div class="action-row">
 						<a class="primary-btn" href={nextSession.googleCalendarUrl} target="_blank" rel="noreferrer"
@@ -638,6 +717,53 @@
 
 	.session-description {
 		margin: 0 0 18px;
+	}
+
+	.session-brief {
+		display: grid;
+		gap: 12px;
+		margin-bottom: 18px;
+	}
+
+	.session-description-wide {
+		margin: 0;
+	}
+
+	.session-topics-label {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.session-topics {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.session-topic-chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: var(--surface-2);
+		border: 1px solid var(--surface-border);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 1;
+		color: var(--text-dark);
+	}
+
+	.session-note {
+		margin: 0;
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--text-secondary);
 	}
 
 	.source-note {
@@ -1116,7 +1242,6 @@
 
 	.session-description-wide {
 		max-width: 100%;
-		margin-top: 6px;
 	}
 
 	.detail-grid {
