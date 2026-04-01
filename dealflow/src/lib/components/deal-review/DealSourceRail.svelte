@@ -59,10 +59,12 @@
 		display: grid;
 		gap: 12px;
 		padding: 18px;
-		border-radius: 20px;
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 251, 0.98));
-		border: 1px solid rgba(31, 81, 89, 0.1);
-		box-shadow: 0 16px 34px rgba(16, 37, 42, 0.05);
+		border-radius: 24px;
+		background:
+			linear-gradient(180deg, rgba(252, 251, 247, 0.98), rgba(245, 246, 241, 0.98)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 44%);
+		border: 1px solid rgba(31, 81, 89, 0.09);
+		box-shadow: 0 18px 40px rgba(16, 37, 42, 0.05);
 	}
 
 	.source-rail__eyebrow {
@@ -83,11 +85,18 @@
 		display: grid;
 		gap: 4px;
 		padding: 12px;
-		border-radius: 14px;
-		background: rgba(247, 250, 251, 0.88);
-		border: 1px solid rgba(31, 81, 89, 0.08);
+		border-radius: 16px;
+		background: rgba(255, 255, 255, 0.52);
+		border: 1px solid rgba(31, 81, 89, 0.07);
 		text-decoration: none;
 		color: inherit;
+		transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+	}
+
+	.source-link:hover {
+		transform: translateY(-1px);
+		background: rgba(255, 255, 255, 0.74);
+		border-color: rgba(81, 190, 123, 0.22);
 	}
 
 	.source-link__label {
@@ -116,8 +125,8 @@
 
 	.source-rail__status {
 		padding: 12px;
-		border-radius: 14px;
-		background: rgba(81, 190, 123, 0.08);
+		border-radius: 16px;
+		background: rgba(81, 190, 123, 0.1);
 		color: #165c47;
 	}
 

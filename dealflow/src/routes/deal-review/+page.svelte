@@ -4,7 +4,7 @@
 	import { page } from '$app/stores';
 	import { onDestroy, onMount } from 'svelte';
 	import DealOnboardingProgress from '$lib/components/deal-review/DealOnboardingProgress.svelte';
-	import DealSourceRail from '$lib/components/deal-review/DealSourceRail.svelte';
+	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import KeyDetailsStage from '$lib/components/deal-review/stages/KeyDetailsStage.svelte';
 	import RiskSourceValidationStage from '$lib/components/deal-review/RiskSourceValidationStage.svelte';
@@ -13,10 +13,12 @@
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import {
-		buildFallbackTeamContacts,
+		deriveTeamRoleAssignments,
+		mergeSuggestedTeamContacts,
 		normalizeTeamContacts,
 		pickInvestorRelationsContact,
 		pickPrimaryTeamContact,
+		serializeTeamContactsForApi,
 		validateTeamContacts
 	} from '$lib/onboarding/teamContacts.js';
 	import {
@@ -53,25 +55,9 @@
 	} from '$lib/utils/dealOnboardingFlow.js';
 	import {
 		computeDealCompleteness,
-		DEAL_CATALOG_STATE_LABELS,
-		DEAL_LIFECYCLE_LABELS,
-		resolveDealCatalogState,
-		resolveDealLifecycleStatus,
 		slugify
 	} from '$lib/utils/dealWorkflow.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
-
-	function formatDateTime(value) {
-		if (!value) return 'Not yet saved';
-		const date = new Date(value);
-		return Number.isNaN(date.getTime()) ? 'Not yet saved' : date.toLocaleString();
-	}
-
-	function lifecycleTone(status) {
-		if (status === 'published') return 'published';
-		if (status === 'do_not_publish') return 'do-not-publish';
-		return 'working';
-	}
 
 	function listFromValue(value) {
 		if (Array.isArray(value)) {
@@ -100,6 +86,7 @@
 	function getStageHref(stage, { extract = false, from = '' } = {}) {
 		const params = new URLSearchParams({ id: dealId });
 		params.set('stage', stage);
+		if (stage === 'intake') params.set('step', 'intake');
 		if (from) params.set('from', from);
 		if (extract) params.set('extract', '1');
 		return `/deal-review?${params.toString()}`;
@@ -178,8 +165,6 @@
 	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
 	const cameFromQueue = $derived($page.url.searchParams.get('from') === 'queue');
 	const completeness = $derived(computeDealCompleteness(buildDealReviewCompletenessModel(form, deal)));
-	const lifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
-	const catalogState = $derived(resolveDealCatalogState(deal || {}));
 	const canPublishFromQueue = $derived(!completeness.hasBlockingIssues);
 	const onboardingSource = $derived({
 		...(deal || {}),
@@ -191,9 +176,45 @@
 	});
 	const branchInfo = $derived(resolveDealOnboardingBranch(onboardingSource));
 	const onboardingStages = $derived(getDealOnboardingStages({ branch: branchInfo.branch, source: onboardingSource }));
+	const onboardingFlow = $derived(buildDealOnboardingFlow(onboardingSource, { branch: branchInfo.branch }));
+	const teamContactsValidation = $derived(validateTeamContacts(teamContacts));
+	const primaryTeamContact = $derived(pickPrimaryTeamContact(teamContacts));
+	const irTeamContact = $derived(pickInvestorRelationsContact(teamContacts));
+	const secStatus = $derived(secVerificationContext?.view?.currentStatus || 'pending');
+	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
+	const hasSourceDocuments = $derived(
+		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
+	);
+	const summaryPublishReady = $derived(onboardingFlow.isPublishReady && teamContactsValidation.valid && secGateResolved);
+	const furthestUnlockedStage = $derived.by(() => {
+		if (!deal) return reviewStep === 'intake' ? 'intake' : 'sec';
+		if (!hasSourceDocuments) return 'intake';
+		if (!secGateResolved) return 'sec';
+		if (!teamContactsValidation.valid) return 'team';
+
+		for (const stage of onboardingStages) {
+			if (['intake', 'sec', 'team', 'summary'].includes(stage.id)) continue;
+			if ((stage.rules || []).some((rule) => !rule.satisfied)) {
+				return stage.id;
+			}
+		}
+
+		return 'summary';
+	});
+	const unlockedStageIds = $derived.by(() => {
+		const unlockedIndex = onboardingStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
+		if (unlockedIndex < 0) return ['intake'];
+		return onboardingStages
+			.filter((stage, index) => index <= unlockedIndex)
+			.map((stage) => stage.id);
+	});
 	const activeStage = $derived.by(() => {
 		if (reviewStep === 'intake') return 'intake';
-		return isValidOnboardingStage(requestedStage) ? requestedStage : 'sec';
+		const unlockedIndex = onboardingStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
+		if (!isValidOnboardingStage(requestedStage)) return furthestUnlockedStage;
+
+		const requestedIndex = onboardingStages.findIndex((candidate) => candidate.id === requestedStage);
+		return requestedIndex >= 0 && requestedIndex <= unlockedIndex ? requestedStage : furthestUnlockedStage;
 	});
 	const activeStageConfig = $derived(getDealOnboardingStageById(activeStage, { branch: branchInfo.branch, source: onboardingSource }));
 	const previousStage = $derived(getPreviousOnboardingStage(activeStage, branchInfo.branch));
@@ -203,36 +224,75 @@
 			.filter((stage) => stage.index < onboardingStages.findIndex((candidate) => candidate.id === activeStage))
 			.map((stage) => stage.id)
 	);
-	const onboardingFlow = $derived(buildDealOnboardingFlow(onboardingSource, { branch: branchInfo.branch }));
-	const teamContactsValidation = $derived(validateTeamContacts(teamContacts));
-	const primaryTeamContact = $derived(pickPrimaryTeamContact(teamContacts));
-	const irTeamContact = $derived(pickInvestorRelationsContact(teamContacts));
-	const secStatus = $derived(secVerificationContext?.view?.currentStatus || 'pending');
-	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
-	const summaryPublishReady = $derived(onboardingFlow.isPublishReady && teamContactsValidation.valid && secGateResolved);
-	const reviewerSelfContact = $derived.by(() => {
-		const session = getStoredSessionUser() || {};
-		const realAdmin = currentAdminRealUser() || {};
-		const fullName = String(realAdmin.name || realAdmin.fullName || session.name || session.fullName || '').trim();
-		const [firstName = '', ...rest] = fullName.split(/\s+/).filter(Boolean);
-		return {
-			firstName,
-			lastName: rest.join(' '),
-			email: String(realAdmin.email || session.email || '').trim().toLowerCase(),
-			role: 'Investor Relations',
-			isPrimary: true,
-			isInvestorRelations: true
-		};
+	const sidebarCurrentStage = $derived(reviewStep === 'intake' ? 'intake' : activeStage);
+	const sidebarCompletedStages = $derived(reviewStep === 'intake' ? [] : completedStageIds);
+	const sidebarAccessibleStages = $derived(reviewStep === 'intake' ? ['intake'] : unlockedStageIds);
+	const reviewWorkspaceTitle = $derived.by(() => {
+		if (activeStage === 'sec') return 'Lock the compliance inputs before you match a filing';
+		return activeStageConfig?.title || 'Review extracted deal details';
 	});
+	const reviewWorkspaceSummary = $derived.by(() => {
+		if (extractionState === 'running') {
+			return 'We are still pulling details from the uploaded deck and PPM. Confirm the structure below while the extraction finishes.';
+		}
+		if (extractionState === 'error') {
+			return extractionError || 'The extraction hit a problem. You can keep reviewing manually or rerun it after fixing the source files.';
+		}
+		if (extractionSummary) {
+			return `We prefilled ${extractionSummary.fieldsApplied} fields from the uploaded sources. Tighten the structured inputs and confirm the issuer before you move on.`;
+		}
+		if (activeStage === 'sec') {
+			return 'Start with the structured offering fields, then confirm whether this issuer has a matching Form D filing or should be resolved manually.';
+		}
+		return 'Review the source-backed draft, fill the gaps, and only move forward once the record is trustworthy.';
+	});
+	const reviewWorkspaceTone = $derived.by(() => {
+		if (saveError || extractionState === 'error') return 'error';
+		if (extractionState === 'running') return 'working';
+		if (extractionSummary) return 'ready';
+		return 'neutral';
+	});
+	const reviewWorkspaceChips = $derived.by(() => {
+		if (!extractionSummary?.steps?.length) return [];
+		return extractionSummary.steps.map((step) => ({
+			label: step.step || 'step',
+			value: `${step.fields_found || 0} fields`
+		}));
+	});
+	const reviewAlertCards = $derived.by(() => {
+		const cards = [];
+		if (saveError) {
+			cards.push({
+				tone: 'error',
+				title: 'Could not save this stage',
+				body: saveError
+			});
+		}
+		if (saveMessage && !(extractionSummary && /prefilled/i.test(saveMessage))) {
+			cards.push({
+				tone: 'success',
+				title: 'Saved update',
+				body: saveMessage
+			});
+		}
+		if (schemaWarnings.length > 0) {
+			cards.push({
+				tone: 'warning',
+				title: 'Structured fields need review',
+				body: 'Some imported values do not match the canonical field options yet. Review the highlighted structured fields before publishing.'
+			});
+		}
+		return cards;
+	});
+	const showReviewWorkspace = $derived(
+		Boolean(cameFromIntake || cameFromQueue || extractionState !== 'idle' || extractionSummary || saveError || saveMessage)
+	);
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
 	const pageSubtitle = $derived(
-		reviewStep === 'intake'
+		activeStage === 'intake'
 			? 'Upload the source documents first, then review and clean up the extracted deal details.'
 			: activeStageConfig?.description || 'Fix missing fields, tighten source context, and move the deal toward publishing with confidence.'
-	);
-	const hasSourceDocuments = $derived(
-		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
 	);
 	const schemaWarnings = $derived(
 		Object.entries(fieldWarnings).filter(([, message]) => Boolean(message))
@@ -646,43 +706,107 @@
 	async function loadTeamContacts() {
 		teamContactsError = '';
 		const managementCompanyId = getManagementCompanyId();
-		if (!managementCompanyId) {
-			teamContacts = buildFallbackTeamContacts({
-				user: getStoredSessionUser() || {}
+		let savedContacts = [];
+		let suggestionWarnings = [];
+		let token = '';
+
+		try {
+			token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active session to load team contacts.');
+
+			if (managementCompanyId) {
+				const response = await fetch(`/api/management-companies/${encodeURIComponent(managementCompanyId)}/settings`, {
+					headers: {
+						Authorization: `Bearer ${token}`
+					}
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error || 'Could not load the management company contacts.');
+				}
+
+				savedContacts = normalizeTeamContacts(payload.teamContacts || payload.team_contacts || [], {
+					ensureOne: false,
+					preserveEmpty: true
+				});
+			}
+		} catch (error) {
+			console.error('[deal-review/team] load failed', {
+				dealId,
+				managementCompanyId,
+				message: error?.message || 'unknown_error'
 			});
+			teamContactsError = error?.message || 'Could not load the team contacts.';
+			teamContacts = normalizeTeamContacts(savedContacts, {
+				ensureOne: false,
+				preserveEmpty: true
+			});
+		}
+
+		teamContacts = normalizeTeamContacts(savedContacts, {
+			ensureOne: false,
+			preserveEmpty: true
+		});
+
+		if (!token) {
 			return;
 		}
 
 		try {
-			const token = await getFreshSessionToken();
-			if (!token) throw new Error('You need an active session to load sponsor contacts.');
-
-			const response = await fetch(`/api/management-companies/${encodeURIComponent(managementCompanyId)}/settings`, {
+			const suggestionResponse = await fetch('/api/deal-team-contacts', {
+				method: 'POST',
 				headers: {
+					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token}`
-				}
+				},
+				body: JSON.stringify({ dealId })
 			});
-			const payload = await response.json().catch(() => ({}));
-			if (!response.ok) {
-				throw new Error(payload?.error || 'Could not load the management company contacts.');
+			const suggestionPayload = await suggestionResponse.json().catch(() => ({}));
+			if (!suggestionResponse.ok) {
+				throw new Error(suggestionPayload?.error || 'Could not build team contact suggestions.');
 			}
 
-			teamContacts = normalizeTeamContacts(payload.teamContacts || payload.team_contacts || [], {
-				fallbackContact: buildFallbackTeamContacts({
-					user: getStoredSessionUser() || {}
-				})[0] || null,
-				ensureOne: true
+			suggestionWarnings = Array.isArray(suggestionPayload?.warnings) ? suggestionPayload.warnings : [];
+			const mergedState = mergeSuggestedTeamContacts(teamContacts, suggestionPayload?.contacts || []);
+			teamContacts = normalizeTeamContacts(mergedState.contacts, {
+				ensureOne: false,
+				preserveEmpty: true
 			});
+
+			console.info('[deal-review/team] extraction payload', {
+				dealId,
+				candidateCount: Array.isArray(suggestionPayload?.contacts) ? suggestionPayload.contacts.length : 0,
+				operatorLeadContactId: suggestionPayload?.operatorLeadContactId || '',
+				investorRelationsContactId: suggestionPayload?.investorRelationsContactId || '',
+				samePersonHandlesBothRoles: suggestionPayload?.samePersonHandlesBothRoles === true,
+				warnings: suggestionWarnings
+			});
+			if (mergedState.decisions.length > 0) {
+				console.info('[deal-review/team] mapping decisions', {
+					dealId,
+					decisions: mergedState.decisions
+				});
+			}
 		} catch (error) {
-			teamContactsError = error?.message || 'Could not load management company contacts.';
-			teamContacts = buildFallbackTeamContacts({
-				user: getStoredSessionUser() || {}
+			console.error('[deal-review/team] optional enrichment failed', {
+				dealId,
+				message: error?.message || 'unknown_error'
 			});
+			if (!teamContactsError) {
+				teamContactsError = 'We could not enrich team contacts from the source documents automatically. You can still review and edit the team manually.';
+			}
+			return;
+		}
+
+		if (suggestionWarnings.length > 0 && !teamContactsError) {
+			teamContactsError = 'Some source-document contact details could not be enriched automatically. You can still review and edit the team manually.';
 		}
 	}
 
-	async function saveTeamContacts() {
-		const validation = validateTeamContacts(teamContacts);
+	async function saveTeamContacts({ quiet = false, requireComplete = false } = {}) {
+		const validation = validateTeamContacts(teamContacts, {
+			mode: requireComplete ? 'continue' : 'save'
+		});
 		if (!validation.valid) {
 			teamContactsError = validation.formError || 'Fix the team contacts before continuing.';
 			return false;
@@ -701,6 +825,15 @@
 			const token = await getFreshSessionToken();
 			if (!token) throw new Error('You need an active session to save sponsor contacts.');
 
+			const payloadContacts = serializeTeamContactsForApi(validation.contacts);
+			console.info('[deal-review/team] save requested', {
+				dealId,
+				managementCompanyId,
+				mode: requireComplete ? 'continue' : 'save',
+				contactCount: payloadContacts.length,
+				assignments: deriveTeamRoleAssignments(payloadContacts)
+			});
+
 			const response = await fetch(`/api/management-companies/${encodeURIComponent(managementCompanyId)}/settings`, {
 				method: 'PATCH',
 				headers: {
@@ -708,7 +841,7 @@
 					Authorization: `Bearer ${token}`
 				},
 				body: JSON.stringify({
-					teamContacts: validation.contacts
+					teamContacts: payloadContacts
 				})
 			});
 			const payload = await response.json().catch(() => ({}));
@@ -717,11 +850,22 @@
 			}
 
 			teamContacts = normalizeTeamContacts(payload.teamContacts || payload.team_contacts || validation.contacts, {
-				ensureOne: true
+				ensureOne: false,
+				preserveEmpty: true
 			});
 			teamContactsSaveState = 'success';
+			dirty = false;
+			if (!quiet) {
+				saveMessage = 'Team contacts saved.';
+			}
 			return true;
 		} catch (error) {
+			console.error('[deal-review/team] save failed', {
+				dealId,
+				managementCompanyId,
+				mode: requireComplete ? 'continue' : 'save',
+				message: error?.message || 'unknown_error'
+			});
 			teamContactsSaveState = 'error';
 			teamContactsError = error?.message || 'Could not save the team contacts.';
 			return false;
@@ -946,7 +1090,7 @@
 			return true;
 		}
 		if (stage === 'team') {
-			return await saveTeamContacts();
+			return await saveTeamContacts({ quiet: true, requireComplete: true });
 		}
 		if (stage === 'sec') {
 			if (!secGateResolved) {
@@ -958,14 +1102,33 @@
 		return await saveDeal({ quiet: true });
 	}
 
-	async function navigateToStage(stage, { from = '' } = {}) {
+	async function saveActiveReviewStage() {
+		if (activeStage === 'intake') {
+			return await saveIntakeDetails();
+		}
+		if (activeStage === 'team') {
+			return await saveTeamContacts({ quiet: false, requireComplete: false });
+		}
+		return await saveDeal();
+	}
+
+	async function navigateToStage(stage, { from = '', allowAdvance = false } = {}) {
 		if (!dealId) return;
 		const targetStage = stage;
 		if (!targetStage || targetStage === activeStage) return;
 
 		const currentIndex = onboardingStages.findIndex((candidate) => candidate.id === activeStage);
 		const targetIndex = onboardingStages.findIndex((candidate) => candidate.id === targetStage);
+		const unlockedIndex = onboardingStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
 		const movingForward = targetIndex > currentIndex;
+		const isAdvancingIntoNextNewStage =
+			targetIndex > unlockedIndex
+			&& allowAdvance
+			&& currentIndex === unlockedIndex
+			&& targetIndex === unlockedIndex + 1;
+
+		if (targetIndex < 0) return;
+		if (targetIndex > unlockedIndex && !isAdvancingIntoNextNewStage) return;
 
 		if (movingForward) {
 			const ok = await saveCurrentStage(activeStage);
@@ -1009,6 +1172,21 @@
 		}
 		void runExtraction();
 	});
+
+	$effect(() => {
+		if (!browser || loading || !dealId || loadError) return;
+		const targetHref = getStageHref(activeStage, {
+			from: cameFromQueue ? 'queue' : cameFromIntake ? 'intake' : '',
+			extract: shouldAutoExtract && !autoExtractionHandled
+		});
+		const currentHref = `${$page.url.pathname}${$page.url.search}`;
+		if (targetHref === currentHref) return;
+		goto(targetHref, {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		}).catch(() => {});
+	});
 </script>
 
 <svelte:head>
@@ -1025,12 +1203,12 @@
 			<button type="button" class="ghost-btn" onclick={() => goto(backHref)}>
 				{backLabel}
 			</button>
-			{#if dealId && reviewStep === 'review'}
-				<a class="ghost-btn" href={`/deal/${dealId}`}>Open Deal</a>
-				<button type="button" class="primary-btn" onclick={saveDeal} disabled={loading || saving || !dirty}>
-					{saving ? 'Saving...' : dirty ? 'Save changes' : 'Saved'}
-				</button>
-			{/if}
+				{#if dealId && activeStage !== 'intake'}
+					<a class="ghost-btn" href={`/deal/${dealId}`} target="_blank" rel="noopener">Open Deal</a>
+					<button type="button" class="primary-btn" onclick={saveActiveReviewStage} disabled={loading || saving || teamContactsSaveState === 'running' || !dirty}>
+						{saving || teamContactsSaveState === 'running' ? 'Saving...' : dirty ? 'Save' : 'Saved'}
+					</button>
+				{/if}
 		</div>
 	</PageHeader>
 
@@ -1046,245 +1224,282 @@
 			</div>
 		</div>
 	{:else}
-		{#if reviewStep === 'intake'}
-			<div class="intake-layout">
-				<div class="intake-stack">
-					<DealOnboardingProgress
-						stages={onboardingStages}
-						currentStage="intake"
-						completedStages={[]}
-						onselect={() => {}}
-					/>
+		{#if activeStage === 'intake'}
+			<div class="review-layout review-layout--intake">
+				<div class="editor-stack editor-stack--intake">
+					<div class="review-stage-progress-mobile">
+						<DealOnboardingProgress
+							stages={onboardingStages}
+							currentStage="intake"
+							completedStages={[]}
+							accessibleStages={['intake']}
+							onselect={() => {}}
+							variant="inline"
+						/>
+					</div>
 
 					<section class="intake-screen">
 						<div class="intake-screen__header">
 							<div class="intake-screen__eyebrow">Step 1 of {onboardingStages.length}</div>
 							<h2>Set the deal up, then upload the source files</h2>
 							<p>
-								Capture the investment name, management company, sponsor website, and source documents first. Then move into SEC verification and review after we extract what we can.
+								Start with the few inputs the rest of the review depends on. Once the documents are attached, we can extract what’s useful and move into the structured review.
 							</p>
 						</div>
 
-						<div class="intake-basics-grid">
-						<label class="intake-field intake-field--span-2">
-							<span>Investment name</span>
-							<input
-								type="text"
-								value={form.investmentName}
-								placeholder="Sunrise Multifamily Fund II"
-								oninput={(event) => updateField('investmentName', event.currentTarget.value)}
-							>
-							<small>This should be the exact name you want to review and eventually publish.</small>
-						</label>
+						<section class="intake-section">
+							<div class="card-heading">
+								<div>
+									<h3>Deal basics</h3>
+									<p>Capture the exact investment name, the operator, and the website you trust most.</p>
+								</div>
+							</div>
 
-						<div class="intake-field intake-field--entity">
-							<span>Management company</span>
-							<div class="intake-entity-shell" onfocusin={cancelIntakeSponsorBlur} onfocusout={closeIntakeSponsorMenuSoon}>
-								<input
-									type="text"
-									value={form.sponsor?.name || ''}
-									placeholder="Blue Bay Capital"
-									autocomplete="off"
-									onfocus={() => {
-										intakeSponsorOpen = true;
-										queueIntakeSponsorSearch(form.sponsor?.name || '');
-									}}
-									oninput={(event) => updateIntakeSponsorName(event.currentTarget.value)}
-								>
-								{#if form.sponsor?.id}
-									<div class="intake-field-meta intake-field-meta--success">Linked to existing management company</div>
-								{:else if form.sponsor?.createIfMissing}
-									<div class="intake-field-meta intake-field-meta--info">Will create a new management company when you continue</div>
-								{/if}
+							<div class="intake-basics-grid">
+								<label class="intake-field intake-field--span-2">
+									<span>Investment name</span>
+									<input
+										type="text"
+										value={form.investmentName}
+										placeholder="Sunrise Multifamily Fund II"
+										oninput={(event) => updateField('investmentName', event.currentTarget.value)}
+									>
+									<small>This should be the exact name you want to review and eventually publish.</small>
+								</label>
 
-								{#if intakeSponsorOpen && (intakeSponsorLoading || intakeSponsorResults.length > 0 || String(form.sponsor?.name || '').trim().length >= 2)}
-									<div class="intake-entity-menu">
-										{#if intakeSponsorLoading}
-											<div class="intake-entity-empty">Searching management companies...</div>
-										{:else}
-											{#each intakeSponsorResults as result}
-												<button type="button" class="intake-entity-option" onclick={() => selectIntakeSponsor(result)}>
-													{intakeSponsorLabel(result)}
-												</button>
-											{/each}
-											{#if String(form.sponsor?.name || '').trim().length >= 2 && !intakeSponsorResults.some((result) => String(result?.operator_name || result?.name || '').trim().toLowerCase() === String(form.sponsor?.name || '').trim().toLowerCase())}
-												<button type="button" class="intake-entity-option intake-entity-option--create" onclick={createIntakeSponsor}>
-													Create new management company: {String(form.sponsor?.name || '').trim()}
-												</button>
-											{/if}
-											{#if intakeSponsorResults.length === 0}
-												<div class="intake-entity-empty">No existing management companies matched that search.</div>
-											{/if}
+								<div class="intake-field intake-field--entity">
+									<span>Management company</span>
+									<div class="intake-entity-shell" onfocusin={cancelIntakeSponsorBlur} onfocusout={closeIntakeSponsorMenuSoon}>
+										<input
+											type="text"
+											value={form.sponsor?.name || ''}
+											placeholder="Blue Bay Capital"
+											autocomplete="off"
+											onfocus={() => {
+												intakeSponsorOpen = true;
+												queueIntakeSponsorSearch(form.sponsor?.name || '');
+											}}
+											oninput={(event) => updateIntakeSponsorName(event.currentTarget.value)}
+										>
+										{#if form.sponsor?.id}
+											<div class="intake-field-meta intake-field-meta--success">Linked to existing management company</div>
+										{:else if form.sponsor?.createIfMissing}
+											<div class="intake-field-meta intake-field-meta--info">Will create a new management company when you continue</div>
+										{/if}
+
+										{#if intakeSponsorOpen && (intakeSponsorLoading || intakeSponsorResults.length > 0 || String(form.sponsor?.name || '').trim().length >= 2)}
+											<div class="intake-entity-menu">
+												{#if intakeSponsorLoading}
+													<div class="intake-entity-empty">Searching management companies...</div>
+												{:else}
+													{#each intakeSponsorResults as result}
+														<button type="button" class="intake-entity-option" onclick={() => selectIntakeSponsor(result)}>
+															{intakeSponsorLabel(result)}
+														</button>
+													{/each}
+													{#if String(form.sponsor?.name || '').trim().length >= 2 && !intakeSponsorResults.some((result) => String(result?.operator_name || result?.name || '').trim().toLowerCase() === String(form.sponsor?.name || '').trim().toLowerCase())}
+														<button type="button" class="intake-entity-option intake-entity-option--create" onclick={createIntakeSponsor}>
+															Create new management company: {String(form.sponsor?.name || '').trim()}
+														</button>
+													{/if}
+													{#if intakeSponsorResults.length === 0}
+														<div class="intake-entity-empty">No existing management companies matched that search.</div>
+													{/if}
+												{/if}
+											</div>
 										{/if}
 									</div>
-								{/if}
-							</div>
-							<small>Use the sponsor or operator name. We’ll link or create the company record from here.</small>
-						</div>
-
-						<label class="intake-field">
-							<span>Company website</span>
-							<input
-								type="url"
-								value={form.companyWebsite || ''}
-								placeholder="https://..."
-								oninput={(event) => updateField('companyWebsite', event.currentTarget.value)}
-							>
-							<small>Use the sponsor’s main website so the review step has a trustworthy reference point.</small>
-						</label>
-					</div>
-
-						<div class="intake-screen__status-grid">
-						<div class="doc-status-card">
-							<div class="doc-status-card__label">Investment Deck</div>
-							<div class="doc-status-card__value">
-								{#if deckFile}
-									{deckFile.name}
-								{:else if getDocumentUrl('deck')}
-									<a href={getDocumentUrl('deck')} target="_blank" rel="noopener"> {getDocumentName(getDocumentUrl('deck'), 'Investment Deck')} </a>
-								{:else}
-									Not uploaded
-								{/if}
-							</div>
-						</div>
-						<div class="doc-status-card">
-							<div class="doc-status-card__label">PPM</div>
-							<div class="doc-status-card__value">
-								{#if ppmFile}
-									{ppmFile.name}
-								{:else if getDocumentUrl('ppm')}
-									<a href={getDocumentUrl('ppm')} target="_blank" rel="noopener"> {getDocumentName(getDocumentUrl('ppm'), 'PPM')} </a>
-								{:else}
-									Not uploaded
-								{/if}
-							</div>
-						</div>
-					</div>
-
-						<div class="intake-upload-grid">
-						<div class="intake-upload-card">
-							<div class="intake-upload-card__title">Investment deck</div>
-							<div
-								class="add-deal-modal__dropzone"
-								class:is-active={Boolean(deckFile)}
-								role="button"
-								tabindex="0"
-								onclick={() => deckInputEl?.click()}
-								onkeydown={(event) => {
-									if (event.key === 'Enter' || event.key === ' ') {
-										event.preventDefault();
-										deckInputEl?.click();
-									}
-								}}
-								ondragover={(event) => event.preventDefault()}
-								ondrop={(event) => handleDrop(event, 'deck')}
-							>
-								<div class="add-deal-modal__drop-icon">
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-										<polyline points="17 8 12 3 7 8"></polyline>
-										<line x1="12" y1="3" x2="12" y2="15"></line>
-									</svg>
+									<small>Use the sponsor or operator name. We’ll link or create the company record from here.</small>
 								</div>
-								<div class="add-deal-modal__drop-copy">
-									{#if deckFile}
-										<strong>{deckFile.name}</strong> <span>({(deckFile.size / 1024 / 1024).toFixed(1)} MB)</span>
-									{:else if deal?.deckUrl || deal?.deck_url}
-										<strong>Deck already attached</strong> <span>Click to replace it</span>
-									{:else}
-										Drop a PDF here or click to upload
-									{/if}
+
+								<label class="intake-field">
+									<span>Company website</span>
+									<input
+										type="url"
+										value={form.companyWebsite || ''}
+										placeholder="https://..."
+										oninput={(event) => updateField('companyWebsite', event.currentTarget.value)}
+									>
+									<small>Use the sponsor’s main website so the review step has a trustworthy reference point.</small>
+								</label>
+							</div>
+						</section>
+
+						<section class="intake-section">
+							<div class="card-heading">
+								<div>
+									<h3>Source documents</h3>
+									<p>Attach the materials you want the review to trust first. You can replace them any time.</p>
 								</div>
 							</div>
-							<input
-								bind:this={deckInputEl}
-								type="file"
-								accept=".pdf,.doc,.docx,.pptx,.ppt,.xlsx"
-								class="add-deal-modal__file-input"
-								onchange={(event) => setUploadFile(event.currentTarget.files?.[0], 'deck')}
-							>
-						</div>
 
-						<div class="intake-upload-card">
-							<div class="intake-upload-card__title">PPM</div>
-							<div
-								class="add-deal-modal__dropzone"
-								class:is-active={Boolean(ppmFile)}
-								role="button"
-								tabindex="0"
-								onclick={() => ppmInputEl?.click()}
-								onkeydown={(event) => {
-									if (event.key === 'Enter' || event.key === ' ') {
-										event.preventDefault();
-										ppmInputEl?.click();
-									}
-								}}
-								ondragover={(event) => event.preventDefault()}
-								ondrop={(event) => handleDrop(event, 'ppm')}
-							>
-								<div class="add-deal-modal__drop-icon">
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-										<polyline points="17 8 12 3 7 8"></polyline>
-										<line x1="12" y1="3" x2="12" y2="15"></line>
-									</svg>
+							<div class="intake-document-strip">
+								<div class="intake-document-pill">
+									<span>Deck</span>
+									<strong>
+										{#if deckFile}
+											{deckFile.name}
+										{:else if getDocumentUrl('deck')}
+											{getDocumentName(getDocumentUrl('deck'), 'Investment Deck')}
+										{:else}
+											Not uploaded
+										{/if}
+									</strong>
 								</div>
-								<div class="add-deal-modal__drop-copy">
-									{#if ppmFile}
-										<strong>{ppmFile.name}</strong> <span>({(ppmFile.size / 1024 / 1024).toFixed(1)} MB)</span>
-									{:else if deal?.ppmUrl || deal?.ppm_url}
-										<strong>PPM already attached</strong> <span>Click to replace it</span>
-									{:else}
-										Drop a PDF here or click to upload
-									{/if}
+								<div class="intake-document-pill">
+									<span>PPM</span>
+									<strong>
+										{#if ppmFile}
+											{ppmFile.name}
+										{:else if getDocumentUrl('ppm')}
+											{getDocumentName(getDocumentUrl('ppm'), 'PPM')}
+										{:else}
+											Not uploaded
+										{/if}
+									</strong>
 								</div>
 							</div>
-							<input
-								bind:this={ppmInputEl}
-								type="file"
-								accept=".pdf,.doc,.docx"
-								class="add-deal-modal__file-input"
-								onchange={(event) => setUploadFile(event.currentTarget.files?.[0], 'ppm')}
-							>
-						</div>
-					</div>
+
+							<div class="intake-upload-grid">
+								<div class="intake-upload-card">
+									<div class="intake-upload-card__title">Investment deck</div>
+									<div
+										class="add-deal-modal__dropzone"
+										class:is-active={Boolean(deckFile)}
+										role="button"
+										tabindex="0"
+										onclick={() => deckInputEl?.click()}
+										onkeydown={(event) => {
+											if (event.key === 'Enter' || event.key === ' ') {
+												event.preventDefault();
+												deckInputEl?.click();
+											}
+										}}
+										ondragover={(event) => event.preventDefault()}
+										ondrop={(event) => handleDrop(event, 'deck')}
+									>
+										<div class="add-deal-modal__drop-icon">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+												<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+												<polyline points="17 8 12 3 7 8"></polyline>
+												<line x1="12" y1="3" x2="12" y2="15"></line>
+											</svg>
+										</div>
+										<div class="add-deal-modal__drop-copy">
+											{#if deckFile}
+												<strong>{deckFile.name}</strong> <span>({(deckFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+											{:else if deal?.deckUrl || deal?.deck_url}
+												<strong>Deck already attached</strong> <span>Click to replace it</span>
+											{:else}
+												Drop a PDF here or click to upload
+											{/if}
+										</div>
+									</div>
+									<input
+										bind:this={deckInputEl}
+										type="file"
+										accept=".pdf,.doc,.docx,.pptx,.ppt,.xlsx"
+										class="add-deal-modal__file-input"
+										onchange={(event) => setUploadFile(event.currentTarget.files?.[0], 'deck')}
+									>
+								</div>
+
+								<div class="intake-upload-card">
+									<div class="intake-upload-card__title">PPM</div>
+									<div
+										class="add-deal-modal__dropzone"
+										class:is-active={Boolean(ppmFile)}
+										role="button"
+										tabindex="0"
+										onclick={() => ppmInputEl?.click()}
+										onkeydown={(event) => {
+											if (event.key === 'Enter' || event.key === ' ') {
+												event.preventDefault();
+												ppmInputEl?.click();
+											}
+										}}
+										ondragover={(event) => event.preventDefault()}
+										ondrop={(event) => handleDrop(event, 'ppm')}
+									>
+										<div class="add-deal-modal__drop-icon">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+												<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+												<polyline points="17 8 12 3 7 8"></polyline>
+												<line x1="12" y1="3" x2="12" y2="15"></line>
+											</svg>
+										</div>
+										<div class="add-deal-modal__drop-copy">
+											{#if ppmFile}
+												<strong>{ppmFile.name}</strong> <span>({(ppmFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+											{:else if deal?.ppmUrl || deal?.ppm_url}
+												<strong>PPM already attached</strong> <span>Click to replace it</span>
+											{:else}
+												Drop a PDF here or click to upload
+											{/if}
+										</div>
+									</div>
+									<input
+										bind:this={ppmInputEl}
+										type="file"
+										accept=".pdf,.doc,.docx"
+										class="add-deal-modal__file-input"
+										onchange={(event) => setUploadFile(event.currentTarget.files?.[0], 'ppm')}
+									>
+								</div>
+							</div>
+						</section>
 
 						{#if uploadError}
 							<div class="message-banner message-banner--error">{uploadError}</div>
 						{/if}
 
 						<div class="intake-screen__actions">
-						<button
-							type="button"
-							class="ghost-btn"
-							onclick={() => continueFromIntake({ autoExtract: false })}
-							disabled={uploadState === 'running'}
-						>
-							{uploadState === 'running' ? 'Working...' : 'Review Manually'}
-						</button>
-						<button
-							type="button"
-							class="primary-btn"
-							onclick={() => continueFromIntake({ autoExtract: true })}
-							disabled={uploadState === 'running'}
-						>
-							{uploadState === 'running' ? 'Uploading...' : 'Upload & Extract'}
-						</button>
+							<button
+								type="button"
+								class="ghost-btn"
+								onclick={() => continueFromIntake({ autoExtract: false })}
+								disabled={uploadState === 'running'}
+							>
+								{uploadState === 'running' ? 'Working...' : 'Review Manually'}
+							</button>
+							<button
+								type="button"
+								class="primary-btn"
+								onclick={() => continueFromIntake({ autoExtract: true })}
+								disabled={uploadState === 'running'}
+							>
+								{uploadState === 'running' ? 'Uploading...' : 'Upload & Extract'}
+							</button>
 						</div>
 					</section>
 				</div>
+
+				<DealReviewSidebar
+					completeness={completeness}
+					canPublishFromQueue={canPublishFromQueue}
+					stages={onboardingStages}
+					currentStage={sidebarCurrentStage}
+					completedStages={sidebarCompletedStages}
+					accessibleStages={sidebarAccessibleStages}
+					onselect={() => {}}
+					deckUrl={getDocumentUrl('deck') || form.deckUrl}
+					ppmUrl={getDocumentUrl('ppm') || form.ppmUrl}
+					subAgreementUrl={deal?.subAgreementUrl || deal?.sub_agreement_url || ''}
+					extractionState={extractionState}
+				/>
 			</div>
 		{:else}
-			<div class="review-layout">
-				<form class="editor-stack" onsubmit={(event) => { event.preventDefault(); saveDeal(); }}>
-					{#if cameFromIntake || cameFromQueue || extractionState !== 'idle' || extractionSummary}
-						<div class={`intake-banner intake-banner--${extractionState === 'error' ? 'error' : extractionState === 'running' ? 'working' : 'ready'}`}>
-							<div class="intake-banner__header">
+			<div class={`review-layout ${activeStage === 'team' ? 'review-layout--wide' : ''}`}>
+				<form class="editor-stack" onsubmit={(event) => { event.preventDefault(); saveActiveReviewStage(); }}>
+					{#if showReviewWorkspace}
+						<section class={`review-workspace review-workspace--${reviewWorkspaceTone}`}>
+							<div class="review-workspace__header">
 								<div>
-									<div class="intake-banner__eyebrow">{activeStageConfig?.label || 'Review'}</div>
-									<h2>{activeStageConfig?.title || 'Review extracted deal details'}</h2>
+									<div class="review-workspace__eyebrow">{activeStageConfig?.label || 'Review'} Workspace</div>
+									<h2>{reviewWorkspaceTitle}</h2>
+									<p>{reviewWorkspaceSummary}</p>
 								</div>
-								<div class="intake-banner__actions">
+								<div class="review-workspace__actions">
 									{#if cameFromQueue}
 										<button
 											type="button"
@@ -1307,53 +1522,63 @@
 								</div>
 							</div>
 
-							{#if extractionState === 'running'}
-								<p>We’re extracting fields from the uploaded deck and PPM now. Stay on this page and review the details as they come in.</p>
-							{:else if extractionState === 'error'}
-								<p>{extractionError}</p>
-							{:else if extractionSummary}
-								<p>
-									We found {extractionSummary.fieldsFound} candidate fields and applied {extractionSummary.fieldsApplied}
-									to the draft. Review each section below before publishing.
-								</p>
-								{#if extractionSummary.steps.length > 0}
-									<div class="intake-step-list">
-										{#each extractionSummary.steps as step}
-											<div class="intake-step-chip">
-												<strong>{step.step || 'step'}</strong>
-												<span>{step.fields_found || 0} fields</span>
-											</div>
-										{/each}
-									</div>
-								{/if}
-							{:else}
-								<p>
-									Review the extracted details, fill any gaps, and publish only when you trust the record.
-								</p>
+							{#if reviewWorkspaceChips.length > 0}
+								<div class="review-workspace__chip-row">
+									{#each reviewWorkspaceChips as chip}
+										<div class="review-workspace__chip">
+											<strong>{chip.label}</strong>
+											<span>{chip.value}</span>
+										</div>
+									{/each}
+								</div>
 							{/if}
+						</section>
+					{/if}
+
+					{#if reviewAlertCards.length > 0}
+						<div class="review-alert-grid">
+							{#each reviewAlertCards as alert}
+								<div class={`review-alert review-alert--${alert.tone}`}>
+									<strong>{alert.title}</strong>
+									<p>{alert.body}</p>
+								</div>
+							{/each}
 						</div>
 					{/if}
 
-					{#if saveError}
-						<div class="message-banner message-banner--error">{saveError}</div>
-					{/if}
-					{#if saveMessage}
-						<div class="message-banner message-banner--success">{saveMessage}</div>
-					{/if}
-					{#if schemaWarnings.length > 0}
-						<div class="message-banner message-banner--warning">
-							Some imported values do not match the canonical field options yet. Review the highlighted structured fields before publishing.
-						</div>
-					{/if}
-
-					<DealOnboardingProgress
-						stages={onboardingStages}
-						currentStage={activeStage}
-						completedStages={completedStageIds}
-						onselect={(stageId) => navigateToStage(stageId)}
-					/>
+					<div class="review-stage-progress-mobile">
+						<DealOnboardingProgress
+							stages={onboardingStages}
+							currentStage={activeStage}
+							completedStages={completedStageIds}
+							accessibleStages={unlockedStageIds}
+							onselect={(stageId) => navigateToStage(stageId)}
+							variant="inline"
+						/>
+					</div>
 
 					{#if activeStage === 'sec'}
+						<section class="editor-card editor-card--structured">
+							<div class="card-heading">
+								<div>
+									<h2>Compliance structure</h2>
+									<p>Lock the structured offering fields first so the SEC match logic and manual resolution options are grounded in the right context.</p>
+								</div>
+							</div>
+							<div class="field-grid">
+								{#each getStageFieldGroups(activeStage) as group}
+									{#each group.fieldKeys as fieldKey}
+										<FieldRenderer
+											field={dealFieldConfig[fieldKey]}
+											value={form[fieldKey]}
+											error={fieldErrors[fieldKey] || ''}
+											warning={fieldWarnings[fieldKey] || ''}
+											onupdate={(nextValue) => updateField(fieldKey, nextValue)}
+										/>
+									{/each}
+								{/each}
+							</div>
+						</section>
 						<SecVerificationStage
 							dealId={dealId}
 							deal={deal}
@@ -1363,19 +1588,20 @@
 							}}
 						/>
 					{:else if activeStage === 'team'}
-						<TeamContactsStage
-							contacts={teamContacts}
-							error={teamContactsError}
-							selfContact={reviewerSelfContact}
-							onchange={(nextContacts) => {
-								teamContacts = nextContacts;
-								teamContactsError = '';
-								dirty = true;
-								saveMessage = '';
-							}}
-							onback={() => navigateToStage(previousStage)}
-							oncontinue={() => navigateToStage(nextStage)}
-						/>
+						{#key `${dealId}:${activeStage}`}
+							<TeamContactsStage
+								contacts={teamContacts}
+								error={teamContactsError}
+								onchange={(nextContacts) => {
+									teamContacts = nextContacts;
+									teamContactsError = '';
+									dirty = true;
+									saveMessage = '';
+								}}
+								onback={() => navigateToStage(previousStage)}
+								oncontinue={() => navigateToStage(nextStage, { allowAdvance: true })}
+							/>
+						{/key}
 					{:else if activeStage === 'details'}
 						<KeyDetailsStage
 							source={{ ...deal, branch: manualBranch || branchInfo.branch }}
@@ -1569,127 +1795,41 @@
 								{/if}
 							</div>
 							<div class="wizard-footer__right">
-								<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || saving}>
-									Reset unsaved changes
-								</button>
-								<button type="submit" class="ghost-btn" disabled={saving}>
-									{saving ? 'Saving...' : 'Save changes'}
-								</button>
-								{#if activeStage !== 'summary' && nextStage && nextStage !== activeStage}
-									<button type="button" class="primary-btn" disabled={saving} onclick={() => navigateToStage(nextStage)}>
-										Save & Continue
+									<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || saving}>
+										Reset unsaved changes
 									</button>
-								{/if}
+									<button type="submit" class="ghost-btn" disabled={saving}>
+										{saving ? 'Saving...' : 'Save changes'}
+									</button>
+									{#if activeStage !== 'summary' && nextStage && nextStage !== activeStage}
+										<button type="button" class="primary-btn" disabled={saving} onclick={() => navigateToStage(nextStage, { allowAdvance: true })}>
+											Save & Continue
+										</button>
+									{/if}
+								</div>
 							</div>
-						</div>
 					{/if}
 				</form>
 
-				<aside class="review-sidebar">
-					<DealSourceRail
-						deckUrl={getDocumentUrl('deck') || form.deckUrl}
-						ppmUrl={getDocumentUrl('ppm') || form.ppmUrl}
-						subAgreementUrl={deal?.subAgreementUrl || deal?.sub_agreement_url || ''}
-						extractionState={extractionState}
-					/>
-
-					<section class="sidebar-card sidebar-card--score">
-						<div class="sidebar-eyebrow">Completeness</div>
-						<div class="score-row">
-							<div class="score-value">{completeness.completenessScore}%</div>
-							<span class={`readiness-badge tone-${completeness.hasBlockingIssues ? 'blocked' : 'ready'}`}>
-								{completeness.hasBlockingIssues ? 'Blocked' : completeness.readinessLabel}
-							</span>
-						</div>
-						<div class="progress-shell" aria-hidden="true">
-							<div class="progress-fill" style={`width:${completeness.completenessScore}%`}></div>
-						</div>
-						<p class="sidebar-copy">{completeness.readinessLabel}</p>
-					</section>
-
-					<section class="sidebar-card">
-						<div class="sidebar-block">
-							<div class="sidebar-label">Lifecycle status</div>
-							<span class={`status-pill tone-${lifecycleTone(lifecycleStatus)}`}>
-								{DEAL_LIFECYCLE_LABELS[lifecycleStatus] || lifecycleStatus}
-							</span>
-						</div>
-						<div class="sidebar-block">
-							<div class="sidebar-label">Catalog state</div>
-							<div class="sidebar-value">{DEAL_CATALOG_STATE_LABELS[catalogState] || DEAL_CATALOG_STATE_LABELS.not_published}</div>
-						</div>
-						<div class="sidebar-block">
-							<div class="sidebar-label">Deal branch</div>
-							<div class="sidebar-value">{DEAL_ONBOARDING_BRANCH_LABELS[manualBranch || branchInfo.branch] || branchInfo.label}</div>
-						</div>
-						<div class="sidebar-block">
-							<div class="sidebar-label">Last updated</div>
-							<div class="sidebar-value">{formatDateTime(deal?.updatedAt || deal?.updated_at || deal?.createdAt || deal?.created_at)}</div>
-						</div>
-					</section>
-
-					<section class="sidebar-card">
-						<div class="sidebar-label">SEC verification</div>
-						<p class="sidebar-copy">
-							{SEC_VERIFICATION_LABELS[secStatus] || 'Pending'}
-						</p>
-					</section>
-
-					<section class="sidebar-card">
-						<div class="sidebar-label">Primary LP contact</div>
-						{#if primaryTeamContact}
-							<div class="sidebar-value">{[primaryTeamContact.firstName, primaryTeamContact.lastName].filter(Boolean).join(' ') || primaryTeamContact.email}</div>
-							<p class="sidebar-copy">{primaryTeamContact.email || 'No email yet'}</p>
-						{:else}
-							<p class="sidebar-copy">Add team contacts in the Team stage.</p>
-						{/if}
-					</section>
-
-					<section class="sidebar-card">
-						<div class="sidebar-label">Required gaps</div>
-						{#if completeness.missingRequiredFields.length > 0}
-							<ul class="checklist">
-								{#each completeness.missingRequiredFields as field}
-									<li>{field}</li>
-								{/each}
-							</ul>
-						{:else}
-							<p class="sidebar-copy">All required fields are present. This deal is ready to be published from the queue.</p>
-						{/if}
-					</section>
-
-					<section class="sidebar-card">
-						<div class="sidebar-label">Recommended improvements</div>
-						{#if completeness.missingRecommendedFields.length > 0}
-							<ul class="checklist checklist--muted">
-								{#each completeness.missingRecommendedFields as field}
-									<li>{field}</li>
-								{/each}
-							</ul>
-						{:else}
-							<p class="sidebar-copy">Recommended fields look complete.</p>
-						{/if}
-					</section>
-
-					<section class="sidebar-card sidebar-card--note">
-						<div class="sidebar-label">Publishing rule</div>
-						<p class="sidebar-copy">
-							{#if canPublishFromQueue}
-								This deal can be published from the queue once you are comfortable making it live.
-							{:else}
-								This deal should stay unpublished until every required field above is filled in.
-							{/if}
-						</p>
-					</section>
-				</aside>
+				<DealReviewSidebar
+					completeness={completeness}
+					canPublishFromQueue={canPublishFromQueue}
+					stages={onboardingStages}
+					currentStage={sidebarCurrentStage}
+					completedStages={sidebarCompletedStages}
+					accessibleStages={sidebarAccessibleStages}
+					onselect={(stageId) => navigateToStage(stageId)}
+					deckUrl={getDocumentUrl('deck') || form.deckUrl}
+					ppmUrl={getDocumentUrl('ppm') || form.ppmUrl}
+					subAgreementUrl={deal?.subAgreementUrl || deal?.sub_agreement_url || ''}
+					extractionState={extractionState}
+				/>
 			</div>
 		{/if}
 	{/if}
 </PageContainer>
 
 <style>
-	.deal-review-page { min-height: 100vh; }
-
 	.header-actions {
 		display: flex;
 		align-items: center;
@@ -1699,50 +1839,68 @@
 
 	.review-layout {
 		display: grid;
-		grid-template-columns: minmax(0, 1.45fr) minmax(300px, 360px);
-		gap: 20px;
+		grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+		gap: 26px;
 		align-items: start;
 	}
 
-	.intake-layout {
-		display: flex;
-		justify-content: center;
+	.review-layout--wide {
+		grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
 	}
 
-	.intake-stack {
-		width: min(100%, 980px);
-		display: grid;
+	.review-stage-progress-mobile {
+		display: none;
+	}
+
+	.editor-stack {
+		display: flex;
+		flex-direction: column;
 		gap: 18px;
+		min-width: 0;
 	}
 
 	.intake-screen {
 		width: 100%;
-		padding: 24px;
-		border-radius: 22px;
+		padding: 30px;
+		border-radius: 28px;
 		background:
-			linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 251, 0.98)),
-			radial-gradient(circle at top right, rgba(81, 190, 123, 0.12), transparent 40%);
-		border: 1px solid rgba(31, 81, 89, 0.1);
-		box-shadow: 0 16px 34px rgba(16, 37, 42, 0.05);
+			linear-gradient(180deg, rgba(252, 251, 247, 0.99), rgba(245, 246, 241, 0.98)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.1), transparent 42%);
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		box-shadow: 0 22px 48px rgba(16, 37, 42, 0.06);
 		display: flex;
 		flex-direction: column;
-		gap: 18px;
+		gap: 22px;
+	}
+
+	.intake-section,
+	.editor-card,
+	.state-card,
+	.review-workspace {
+		padding: 22px;
+		border-radius: 24px;
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(252, 251, 247, 0.72)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.06), transparent 44%);
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		box-shadow: 0 14px 32px rgba(16, 37, 42, 0.04);
 	}
 
 	.intake-screen__header h2 {
 		margin: 0;
 		font-family: var(--font-ui);
-		font-size: 28px;
+		font-size: clamp(2rem, 3vw, 2.4rem);
 		font-weight: 800;
 		color: var(--text-dark);
+		letter-spacing: -0.03em;
 	}
 
 	.intake-screen__header p {
-		margin: 10px 0 0;
-		font-size: 14px;
-		line-height: 1.6;
+		margin: 12px 0 0;
+		font-size: 15px;
+		line-height: 1.7;
 		color: var(--text-secondary);
-		max-width: 680px;
+		max-width: 62ch;
 	}
 
 	.intake-screen__eyebrow {
@@ -1751,11 +1909,10 @@
 		font-weight: 800;
 		letter-spacing: 0.8px;
 		text-transform: uppercase;
-		color: var(--text-muted);
+		color: #486f61;
 		margin-bottom: 10px;
 	}
 
-	.intake-screen__status-grid,
 	.intake-upload-grid {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1772,9 +1929,9 @@
 		display: grid;
 		gap: 8px;
 		padding: 16px;
-		border-radius: 18px;
+		border-radius: 20px;
 		border: 1px solid rgba(31, 81, 89, 0.08);
-		background: rgba(255, 255, 255, 0.82);
+		background: rgba(255, 255, 255, 0.58);
 	}
 
 	.intake-field--span-2 {
@@ -1793,10 +1950,10 @@
 	.intake-field input {
 		width: 100%;
 		box-sizing: border-box;
-		padding: 12px 14px;
-		border-radius: 14px;
-		border: 1px solid var(--border);
-		background: rgba(255, 255, 255, 0.96);
+		padding: 13px 14px;
+		border-radius: 16px;
+		border: 1px solid rgba(31, 81, 89, 0.12);
+		background: rgba(252, 251, 247, 0.92);
 		font-family: var(--font-body);
 		font-size: 15px;
 		color: var(--text-dark);
@@ -1831,15 +1988,26 @@
 		color: var(--text-secondary);
 	}
 
-	.doc-status-card,
-	.intake-upload-card {
-		padding: 16px;
-		border-radius: 18px;
-		border: 1px solid rgba(31, 81, 89, 0.08);
-		background: rgba(255, 255, 255, 0.82);
+	.intake-document-strip {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
 	}
 
-	.doc-status-card__label,
+	.intake-document-pill,
+	.intake-upload-card {
+		padding: 18px;
+		border-radius: 20px;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		background: rgba(255, 255, 255, 0.56);
+	}
+
+	.intake-document-pill {
+		display: grid;
+		gap: 6px;
+	}
+
+	.intake-document-pill span,
 	.intake-upload-card__title {
 		font-family: var(--font-ui);
 		font-size: 11px;
@@ -1847,24 +2015,17 @@
 		letter-spacing: 0.8px;
 		text-transform: uppercase;
 		color: var(--text-muted);
-		margin-bottom: 10px;
 	}
 
-	.doc-status-card__value {
-		font-size: 15px;
-		font-weight: 700;
-		color: var(--text-dark);
+	.intake-upload-card__title {
+		margin-bottom: 12px;
+	}
+
+	.intake-document-pill strong {
+		font-size: 14px;
 		line-height: 1.5;
-	}
-
-	.doc-status-card__value a {
-		color: var(--primary);
-		text-decoration: none;
+		color: var(--text-dark);
 		word-break: break-word;
-	}
-
-	.doc-status-card__value a:hover {
-		text-decoration: underline;
 	}
 
 	.intake-entity-menu {
@@ -1917,7 +2078,7 @@
 	}
 
 	.intake-screen__actions,
-	.intake-banner__actions {
+	.review-workspace__actions {
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
@@ -1925,42 +2086,34 @@
 		flex-wrap: wrap;
 	}
 
-	.editor-stack,
-	.review-sidebar {
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-		min-width: 0;
-	}
-
-	.editor-card,
-	.sidebar-card,
-	.state-card,
-	.intake-banner {
-		padding: 20px;
-		border-radius: 20px;
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 251, 0.98));
-		border: 1px solid rgba(31, 81, 89, 0.1);
-		box-shadow: 0 16px 34px rgba(16, 37, 42, 0.05);
-	}
-
-	.intake-banner {
+	.review-workspace {
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
 		background:
-			linear-gradient(180deg, rgba(18, 42, 48, 0.98), rgba(21, 58, 65, 0.94)),
-			radial-gradient(circle at top right, rgba(81, 190, 123, 0.14), transparent 40%);
-		color: #f7fafb;
+			linear-gradient(180deg, rgba(251, 250, 246, 0.96), rgba(244, 247, 243, 0.96)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 46%);
 	}
 
-	.intake-banner--error {
-		background: rgba(255, 244, 244, 0.92);
+	.review-workspace--ready {
+		border-color: rgba(22, 122, 82, 0.16);
+	}
+
+	.review-workspace--working {
+		border-color: rgba(199, 113, 0, 0.18);
+		background:
+			linear-gradient(180deg, rgba(253, 248, 241, 0.98), rgba(249, 244, 236, 0.96)),
+			radial-gradient(circle at top right, rgba(249, 115, 22, 0.1), transparent 42%);
+	}
+
+	.review-workspace--error {
 		border-color: rgba(194, 65, 68, 0.16);
-		color: #7a1d1d;
+		background:
+			linear-gradient(180deg, rgba(255, 246, 246, 0.98), rgba(255, 250, 250, 0.96)),
+			radial-gradient(circle at top right, rgba(194, 65, 68, 0.08), transparent 44%);
 	}
 
-	.intake-banner__header {
+	.review-workspace__header {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
@@ -1968,62 +2121,113 @@
 		flex-wrap: wrap;
 	}
 
-	.intake-banner__eyebrow {
+	.review-workspace__eyebrow {
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 800;
 		letter-spacing: 0.8px;
 		text-transform: uppercase;
-		color: rgba(247, 250, 251, 0.76);
+		color: var(--text-muted);
 		margin-bottom: 8px;
 	}
 
-	.intake-banner--error .intake-banner__eyebrow {
-		color: #b42328;
-	}
-
-	.intake-banner h2 {
+	.review-workspace h2 {
 		margin: 0;
 		font-family: var(--font-ui);
 		font-size: 20px;
 		font-weight: 800;
-		color: inherit;
+		color: var(--text-dark);
+		letter-spacing: -0.02em;
 	}
 
-	.intake-banner p {
+	.review-workspace p {
 		margin: 0;
-		font-size: 13px;
-		line-height: 1.6;
-		color: inherit;
-		opacity: 0.92;
+		font-size: 14px;
+		line-height: 1.65;
+		color: var(--text-secondary);
 	}
 
-	.intake-step-list {
+	.review-workspace__chip-row {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 10px;
 	}
 
-	.intake-step-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px 12px;
-		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.1);
+	.review-workspace__chip {
+		display: inline-grid;
+		gap: 4px;
+		padding: 10px 12px;
+		border-radius: 14px;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		background: rgba(255, 255, 255, 0.84);
 		font-size: 12px;
-		line-height: 1;
+		line-height: 1.2;
 	}
 
-	.sidebar-card--score {
+	.review-workspace__chip strong {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.7px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.review-workspace__chip span {
+		color: var(--text-dark);
+		font-weight: 700;
+	}
+
+	.review-alert-grid {
+		display: grid;
+		gap: 10px;
+	}
+
+	.review-alert {
+		padding: 14px 16px;
+		border-radius: 18px;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		background: rgba(255, 255, 255, 0.56);
+		display: grid;
+		gap: 6px;
+	}
+
+	.review-alert strong {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.7px;
+		text-transform: uppercase;
+	}
+
+	.review-alert p {
+		margin: 0;
+		font-size: 13px;
+		line-height: 1.55;
+	}
+
+	.review-alert--error {
+		border-color: rgba(194, 65, 68, 0.18);
+		background: rgba(255, 244, 244, 0.92);
+		color: #7a1d1d;
+	}
+
+	.review-alert--success {
+		border-color: rgba(22, 122, 82, 0.16);
+		background: rgba(240, 253, 245, 0.92);
+		color: #167a52;
+	}
+
+	.review-alert--warning {
+		border-color: rgba(217, 119, 6, 0.18);
+		background: rgba(255, 249, 237, 0.95);
+		color: #9a6700;
+	}
+
+	.editor-card--structured {
 		background:
-			linear-gradient(160deg, rgba(16, 37, 42, 0.98), rgba(31, 81, 89, 0.94)),
-			radial-gradient(circle at top right, rgba(81, 190, 123, 0.22), transparent 40%);
-		color: #f7fafb;
-	}
-
-	.sidebar-card--note {
-		background: rgba(81, 190, 123, 0.08);
+			linear-gradient(180deg, rgba(252, 251, 247, 0.96), rgba(246, 248, 243, 0.96)),
+			radial-gradient(circle at top right, rgba(31, 81, 89, 0.04), transparent 40%);
 	}
 
 	.state-card--error {
@@ -2032,28 +2236,22 @@
 	}
 
 	.state-card strong,
-	.card-heading h2 {
+	.card-heading h2,
+	.card-heading h3 {
 		display: block;
 		font-family: var(--font-ui);
 		font-size: 18px;
 		font-weight: 800;
 		color: var(--text-dark);
 		margin: 0 0 6px;
-	}
-
-	.sidebar-card--score .sidebar-copy,
-	.sidebar-card--score .sidebar-eyebrow,
-	.sidebar-card--score .sidebar-label,
-	.sidebar-card--score .sidebar-value {
-		color: rgba(247, 250, 251, 0.8);
+		letter-spacing: -0.02em;
 	}
 
 	.card-heading p,
-	.sidebar-copy,
 	.state-card p {
 		margin: 0;
 		font-size: 13px;
-		line-height: 1.55;
+		line-height: 1.6;
 		color: var(--text-muted);
 	}
 
@@ -2074,9 +2272,7 @@
 		grid-column: 1 / -1;
 	}
 
-	.field span,
-	.sidebar-label,
-	.sidebar-eyebrow {
+	.field span {
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 800;
@@ -2335,35 +2531,6 @@
 		border: 1px solid rgba(214, 140, 69, 0.18);
 	}
 
-	.score-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		margin: 10px 0 12px;
-	}
-
-	.score-value {
-		font-family: var(--font-ui);
-		font-size: 42px;
-		font-weight: 800;
-		line-height: 1;
-	}
-
-	.progress-shell {
-		height: 10px;
-		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.16);
-		overflow: hidden;
-	}
-
-	.progress-fill {
-		height: 100%;
-		border-radius: inherit;
-		background: linear-gradient(90deg, #51be7b, #9be4b5);
-	}
-
-	.status-pill,
 	.readiness-badge {
 		display: inline-flex;
 		align-items: center;
@@ -2386,73 +2553,17 @@
 		color: #b42328;
 	}
 
-	.sidebar-card--score .readiness-badge.tone-ready {
-		background: rgba(81, 190, 123, 0.16);
-		color: #f7fafb;
-	}
-
-	.sidebar-card--score .readiness-badge.tone-blocked {
-		background: rgba(255, 255, 255, 0.12);
-		color: #fff;
-	}
-
-	.status-pill.tone-published {
-		background: rgba(22, 122, 82, 0.12);
-		color: #167a52;
-	}
-
-	.status-pill.tone-working {
-		background: rgba(31, 81, 89, 0.1);
-		color: #1f5159;
-	}
-
-	.status-pill.tone-do-not-publish {
-		background: rgba(194, 65, 68, 0.14);
-		color: #b42328;
-	}
-
-	.status-pill.tone-archived {
-		background: rgba(107, 114, 128, 0.14);
-		color: #475467;
-	}
-
-	.sidebar-block + .sidebar-block {
-		margin-top: 14px;
-		padding-top: 14px;
-		border-top: 1px solid rgba(31, 81, 89, 0.08);
-	}
-
-	.sidebar-value {
-		margin-top: 4px;
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-		line-height: 1.45;
-	}
-
-	.checklist {
-		margin: 10px 0 0;
-		padding-left: 18px;
-		font-size: 13px;
-		line-height: 1.55;
-		color: var(--text-dark);
-	}
-
-	.checklist--muted {
-		color: var(--text-secondary);
-	}
-
 	@media (max-width: 980px) {
+		.review-stage-progress-mobile {
+			display: block;
+		}
+
 		.review-layout {
 			grid-template-columns: 1fr;
 		}
 
-		.review-sidebar {
-			order: -1;
-		}
-
 		.intake-basics-grid,
-		.intake-screen__status-grid,
+		.intake-document-strip,
 		.intake-upload-grid {
 			grid-template-columns: 1fr;
 		}
@@ -2470,7 +2581,12 @@
 		.header-actions,
 		.form-footer,
 		.intake-screen__actions,
-		.intake-banner__actions {
+		.review-workspace__actions {
+			align-items: stretch;
+		}
+
+		.review-workspace__header {
+			flex-direction: column;
 			align-items: stretch;
 		}
 

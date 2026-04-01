@@ -80,10 +80,12 @@
 	.stage-header {
 		display: grid;
 		gap: 10px;
-		padding: 22px;
-		border: 1px solid rgba(15, 23, 42, 0.08);
-		border-radius: 20px;
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+		padding: 24px;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		border-radius: 24px;
+		background:
+			linear-gradient(180deg, rgba(252, 251, 247, 0.98), rgba(245, 246, 241, 0.98)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 44%);
 	}
 
 	.stage-eyebrow {
@@ -91,19 +93,20 @@
 		font-weight: 700;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
-		color: #8a5a2b;
+		color: #486f61;
 	}
 
 	.stage-header h2,
 	.stage-group__header h3 {
 		margin: 0;
-		color: #111827;
+		color: var(--text-dark);
+		letter-spacing: -0.02em;
 	}
 
 	.stage-header p,
 	.stage-group__header p {
 		margin: 0;
-		color: #4b5563;
+		color: var(--text-secondary);
 		line-height: 1.55;
 	}
 
@@ -111,9 +114,9 @@
 		display: grid;
 		gap: 16px;
 		padding: 20px;
-		border: 1px solid rgba(15, 23, 42, 0.08);
-		border-radius: 20px;
-		background: #fff;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		border-radius: 22px;
+		background: rgba(255, 255, 255, 0.56);
 	}
 
 	.stage-group__header {
