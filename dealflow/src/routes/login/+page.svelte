@@ -145,6 +145,7 @@
 			share_dd: privacy.share_dd,
 			share_invested: privacy.share_invested,
 			allow_follows: privacy.allow_follows,
+			preferred_timezone: data?.preferred_timezone || data?.time_zone || '',
 			accredited_status: data?.accredited_status || '',
 			investable_capital: data?.investable_capital || '',
 			investment_experience: data?.investment_experience || '',

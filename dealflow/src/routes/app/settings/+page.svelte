@@ -234,6 +234,7 @@
 				share_dd: data.share_dd !== false,
 				share_invested: data.share_invested !== false,
 				allow_follows: data.allow_follows !== false,
+				preferred_timezone: data.preferred_timezone || data.time_zone || '',
 				accredited_status: data.accredited_status || '',
 				investable_capital: data.investable_capital || '',
 				investment_experience: data.investment_experience || '',

@@ -28,19 +28,29 @@
 
 	const replayLibraryUrl = '/app/resources?category=Office%20Hours';
 	const calendarDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const TIMEZONE_OPTIONS = [
+		{ value: 'America/Los_Angeles', label: 'Pacific' },
+		{ value: 'America/Denver', label: 'Mountain' },
+		{ value: 'America/Chicago', label: 'Central' },
+		{ value: 'America/New_York', label: 'Eastern' }
+	];
 	const DEFAULT_SESSION_INTRO = 'Open office hours for Cashflow Academy members.';
 	const DEFAULT_SESSION_TOPICS = [
-		'Deal questions',
-		'Portfolio decisions',
-		'Capital allocation tradeoffs',
-		"Anything you're stuck on"
+		"Bring deals you're interested in investing in for final review",
+		'Bring your portfolio and strategy questions',
+		'Bring questions about your next best move',
+		"Bring anything you're stuck on and want to talk through"
 	];
 	const DEFAULT_SESSION_NOTE = 'Drop in anytime during the window.';
 
 	const canAccess = $derived($isMember);
+	let selectedTimeZone = $state(ET_TIMEZONE);
+	let savedTimeZone = $state(ET_TIMEZONE);
+	let timeZoneSaving = $state(false);
+	let timeZoneSaved = $state(false);
 	const timezoneSummary = $derived.by(() => {
 		if (!localTimeZone) return 'Local timezone unavailable. Eastern Time is the canonical schedule reference.';
-		return `Showing your local time in ${localTimeZone}. Eastern Time remains the canonical schedule reference.`;
+		return `Showing your local time in ${timeZoneLabel(localTimeZone)}. Eastern Time remains the canonical schedule reference.`;
 	});
 	const calendarSummary = $derived.by(() => {
 		if (!localTimeZone) return 'Month view is using your browser date. Eastern Time remains the canonical schedule reference.';
@@ -105,13 +115,99 @@
 		if (activeMonthIndex < calendarMonths.length - 1) activeMonthIndex += 1;
 	}
 
+	function getStoredUser() {
+		if (!browser) return null;
+		try {
+			const raw = localStorage.getItem('gycUser');
+			return raw ? JSON.parse(raw) : null;
+		} catch {
+			return null;
+		}
+	}
+
+	function patchStoredUser(fields) {
+		if (!browser) return;
+		const current = getStoredUser() || {};
+		localStorage.setItem('gycUser', JSON.stringify({ ...current, ...fields }));
+	}
+
+	function getToken() {
+		return getStoredUser()?.token || $userToken || getStoredSessionToken() || '';
+	}
+
+	function isSupportedTimeZone(value) {
+		return TIMEZONE_OPTIONS.some((option) => option.value === value);
+	}
+
+	function resolvePreferredTimeZone() {
+		const storedUser = getStoredUser() || {};
+		const storedPreference = storedUser.preferred_timezone || storedUser.time_zone || '';
+		if (isSupportedTimeZone(storedPreference)) return storedPreference;
+		const browserZone = resolveBrowserTimeZone();
+		if (isSupportedTimeZone(browserZone)) return browserZone;
+		return ET_TIMEZONE;
+	}
+
+	function timeZoneLabel(value) {
+		return TIMEZONE_OPTIONS.find((option) => option.value === value)?.label || value;
+	}
+
+	function handleTimeZoneChange(event) {
+		selectedTimeZone = event.currentTarget.value;
+		localTimeZone = selectedTimeZone;
+		timeZoneSaved = false;
+	}
+
+	async function saveTimeZonePreference() {
+		timeZoneSaving = true;
+		timeZoneSaved = false;
+		localTimeZone = selectedTimeZone;
+		patchStoredUser({
+			preferred_timezone: selectedTimeZone,
+			time_zone: selectedTimeZone
+		});
+
+		try {
+			const token = getToken();
+			if (token) {
+				const response = await fetch('/api/userdata', {
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${token}`,
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						type: 'profile',
+						data: { preferred_timezone: selectedTimeZone }
+					})
+				});
+				if (!response.ok) {
+					throw new Error(`Profile sync returned ${response.status}`);
+				}
+			}
+
+			savedTimeZone = selectedTimeZone;
+			timeZoneSaved = true;
+			setTimeout(() => {
+				timeZoneSaved = false;
+			}, 2200);
+		} catch (saveError) {
+			console.warn('timezone preference save failed:', saveError);
+		} finally {
+			timeZoneSaving = false;
+		}
+	}
+
 	async function loadOfficeHours() {
 		if (!browser) return;
 
 		loading = true;
 		error = '';
 		forbidden = false;
-		localTimeZone = resolveBrowserTimeZone();
+		const preferredZone = resolvePreferredTimeZone();
+		localTimeZone = preferredZone;
+		selectedTimeZone = preferredZone;
+		savedTimeZone = preferredZone;
 
 		try {
 			const token = $userToken || getStoredSessionToken();
@@ -285,11 +381,9 @@
 			topicSource = topicSource.replace(noteMatch[0], ' ');
 		}
 
-		const topics = extractTopics(topicSource);
-
 		return {
 			intro,
-			topics: topics.length ? topics : fallback.topics,
+			topics: fallback.topics,
 			note: note || fallback.note
 		};
 	}
@@ -305,19 +399,6 @@
 		return /[.!?]$/.test(cleaned) ? cleaned : `${cleaned}.`;
 	}
 
-	function extractTopics(value) {
-		if (!value) return [];
-		return String(value)
-			.replace(/\r/g, ' ')
-			.replace(/\n+/g, ' ')
-			.replace(/[•·]/g, '|')
-			.replace(/\s*\|\s*/g, '|')
-			.replace(/\s{2,}/g, ' ')
-			.split('|')
-			.map((topic) => topic.replace(/\s+/g, ' ').trim())
-			.map((topic) => topic.replace(/^[,:-]\s*/, '').replace(/[.,;:]+$/g, '').trim())
-			.filter(Boolean);
-	}
 </script>
 
 <svelte:head>
@@ -400,11 +481,11 @@
 					<div class="session-brief">
 						<p class="session-description session-description-wide">{nextSessionBrief.intro}</p>
 						<div class="session-topics-label">Bring to the session</div>
-						<div class="session-topics">
+						<ul class="session-topics">
 							{#each nextSessionBrief.topics as topic}
-								<span class="session-topic-chip">{topic}</span>
+								<li class="session-topic-item">{topic}</li>
 							{/each}
-						</div>
+						</ul>
 						<p class="session-note">{nextSessionBrief.note}</p>
 					</div>
 
@@ -438,8 +519,37 @@
 			</section>
 
 			<section class="schedule-card rhythm-card ly-surface">
-				<div class="card-label">Session Rhythm</div>
-				<h2 class="rhythm-title">Keep the cadence in view.</h2>
+				<div class="rhythm-topline">
+					<div>
+						<div class="card-label">Session Rhythm</div>
+						<h2 class="rhythm-title">Keep the cadence in view.</h2>
+					</div>
+					<div class="timezone-settings">
+						<label class="timezone-settings-label" for="office-hours-timezone">Timezone</label>
+						<div class="timezone-settings-controls">
+							<select
+								id="office-hours-timezone"
+								class="timezone-select"
+								bind:value={selectedTimeZone}
+								onchange={handleTimeZoneChange}
+							>
+								{#each TIMEZONE_OPTIONS as option}
+									<option value={option.value}>{option.label}</option>
+								{/each}
+							</select>
+							<button
+								class="secondary-btn button-reset timezone-save-btn"
+								onclick={saveTimeZonePreference}
+								disabled={timeZoneSaving || selectedTimeZone === savedTimeZone}
+							>
+								{timeZoneSaving ? 'Saving...' : 'Save'}
+							</button>
+						</div>
+						{#if timeZoneSaved}
+							<div class="timezone-settings-status">Saved</div>
+						{/if}
+					</div>
+				</div>
 				<p class="card-copy">
 					This page no longer tries to be a full calendar app. The next few confirmed dates are enough for planning, and any moved session shows up here once it changes live.
 				</p>
@@ -739,22 +849,16 @@
 	}
 
 	.session-topics {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 10px;
+		margin: 0;
+		padding-left: 18px;
+		display: grid;
+		gap: 8px;
 	}
 
-	.session-topic-chip {
-		display: inline-flex;
-		align-items: center;
-		padding: 8px 12px;
-		border-radius: 999px;
-		background: var(--surface-2);
-		border: 1px solid var(--surface-border);
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 600;
-		line-height: 1;
+	.session-topic-item {
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.55;
 		color: var(--text-dark);
 	}
 
@@ -1218,6 +1322,66 @@
 		align-content: start;
 	}
 
+	.rhythm-topline {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 18px;
+	}
+
+	.timezone-settings {
+		display: grid;
+		gap: 6px;
+		justify-items: end;
+		flex-shrink: 0;
+	}
+
+	.timezone-settings-label {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.timezone-settings-controls {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.timezone-select {
+		min-width: 124px;
+		padding: 10px 12px;
+		border-radius: 999px;
+		border: 1px solid var(--surface-border);
+		background: var(--surface-2);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-dark);
+	}
+
+	.timezone-save-btn {
+		min-width: 78px;
+		padding-left: 14px;
+		padding-right: 14px;
+	}
+
+	.timezone-save-btn:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+		transform: none;
+	}
+
+	.timezone-settings-status {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+
 	.refined-stage {
 		margin-top: 10px;
 		margin-bottom: 16px;
@@ -1361,6 +1525,19 @@
 
 		.hero-actions {
 			align-items: flex-start;
+		}
+
+		.rhythm-topline {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.timezone-settings {
+			justify-items: start;
+		}
+
+		.timezone-settings-controls {
+			flex-wrap: wrap;
 		}
 	}
 
