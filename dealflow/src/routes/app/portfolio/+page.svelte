@@ -577,10 +577,28 @@
 </svelte:head>
 
 <PageContainer className="portfolio-shell ly-page-stack">
-	<PageHeader title="Portfolio" className="dashboard-page-header" />
+	<PageHeader
+		title="Portfolio"
+		subtitle="Track what you own, what it is producing, and how it supports your plan."
+		className="dashboard-page-header"
+	/>
 
 	<div class="content-area">
-		{#if pendingEntries.length > 0 && hasPortfolioEntries}
+	{#if portfolio.length === 0}
+		<div class="import-section">
+			<div class="import-card ly-surface ly-surface--strong">
+				<div class="empty-briefcase">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="42" height="42"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+				</div>
+				<h3>No invested deals yet</h3>
+				<p>Add an existing investment or move a deal to <strong>Invested</strong> in Deal Flow and it will appear here automatically.</p>
+				<div class="browse-link">
+					<button class="btn-add section-add-btn" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
+				</div>
+			</div>
+		</div>
+	{:else}
+		{#if pendingEntries.length > 0}
 			<div class="pending-banner">
 				<div class="pending-banner__title">Pending-review investments are visible now.</div>
 				<div class="pending-banner__copy">
@@ -590,23 +608,23 @@
 		{/if}
 
 		<div class="summary-grid">
-			<div class="stat-card">
+			<div class="stat-card ly-surface">
 				<div class="stat-label">Total Invested</div>
 				<div class="stat-value">{formatPortfolioMoney(totalInvested, '$0')}</div>
 			</div>
-			<div class="stat-card">
+			<div class="stat-card ly-surface">
 				<div class="stat-label">Year 1 Cash Flow</div>
 				<div class="stat-value">{formatPortfolioMoney(totalYear1CashFlow, '$0')}</div>
 			</div>
-			<div class="stat-card">
+			<div class="stat-card ly-surface">
 				<div class="stat-label">Year 1 Depreciation</div>
 				<div class="stat-value">{formatPortfolioMoney(totalYear1Depreciation, '$0')}</div>
 			</div>
-			<div class="stat-card">
+			<div class="stat-card ly-surface">
 				<div class="stat-label">Avg Target IRR</div>
 				<div class="stat-value">{avgIRR ? `${avgIRR.toFixed(1)}%` : '—'}</div>
 			</div>
-			<div class="stat-card">
+			<div class="stat-card ly-surface">
 				<div class="stat-label">Avg Hold Period</div>
 				<div class="stat-value">{avgHoldPeriodYears ? formatHoldPeriodValue(avgHoldPeriodYears) : '—'}</div>
 			</div>
@@ -653,49 +671,17 @@
 					</div>
 				</div>
 
-				{#if !hasPortfolioEntries}
-					<div class="holdings-empty-grid">
-						<div class="import-card">
-							<div class="empty-briefcase">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="42" height="42"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-							</div>
-							<h3>No invested deals yet</h3>
-							<p>Add an existing investment or move a deal to <strong>Invested</strong> in Deal Flow and it will appear here automatically.</p>
-							<div class="browse-link">
-								<button class="btn-add section-add-btn" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
-							</div>
-						</div>
-
-						{#if analysisAccessState === 'locked'}
-							<div class="analysis-locked-card">
-								<div class="analysis-locked-eyebrow">Members only</div>
-								<div class="analysis-locked-title">Unlock portfolio analysis.</div>
-								<p>Track your holdings here now. Upgrade when you want allocation, risk, and deployment analysis layered on top.</p>
-								<a href="/app/office-hours" class="analysis-locked-link">See Office Hours</a>
-							</div>
-						{:else}
-							<div class="analysis-locked-card analysis-locked-card--muted">
-								<div class="analysis-locked-eyebrow">Portfolio analysis</div>
-								<div class="analysis-locked-title">Add your first investment to unlock analysis.</div>
-								<p>Once you have at least one holding with invested data, this page will show allocation, concentration risk, and capital deployment analysis.</p>
-								<div class="analysis-locked-actions">
-									<button class="btn-primary" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
-								</div>
-							</div>
-						{/if}
+				<div class="holdings-table ly-surface">
+					<div class="holdings-table-head">
+						<div>Investment</div>
+						<div>Status</div>
+						<div>Invested</div>
+						<div>Year 1 Cash Flow</div>
+						<div>Year 1 Depreciation</div>
+						<div>Target IRR</div>
+						<div>Hold Period</div>
+						<div></div>
 					</div>
-				{:else}
-					<div class="holdings-table">
-						<div class="holdings-table-head">
-							<div>Investment</div>
-							<div>Status</div>
-							<div>Invested</div>
-							<div>Year 1 Cash Flow</div>
-							<div>Year 1 Depreciation</div>
-							<div>Target IRR</div>
-							<div>Hold Period</div>
-							<div></div>
-						</div>
 
 						{#each sorted as inv}
 							{@const sc = inv.isPendingReview ? '#f59e0b' : (statusColors[inv.status] || 'var(--text-muted)')}
@@ -884,7 +870,7 @@
 				</div>
 
 				<div class="charts-row">
-					<div class="chart-card">
+					<div class="chart-card ly-surface">
 						<div class="chart-card-title">Asset Class Allocation</div>
 						<div class="chartjs-donut-wrap">
 							{#if allocationSlices.length > 0}
@@ -921,7 +907,7 @@
 							<div class="alloc-stat"><div class="alloc-num">{sponsors.size}</div><div class="alloc-label">Sponsors</div></div>
 						</div>
 					</div>
-					<div class="chart-card">
+					<div class="chart-card ly-surface">
 						<div class="chart-card-title">Risk Analysis</div>
 						<div class="risk-badges">
 							{#each riskInsights as insight}
@@ -939,7 +925,7 @@
 				</div>
 
 				{#if timelineChart}
-					<div class="chart-card timeline-card">
+					<div class="chart-card timeline-card ly-surface">
 						<div class="timeline-card-header">
 							<div class="chart-card-title">Capital Deployed Over Time</div>
 							<div class="timeline-legend">
@@ -990,7 +976,7 @@
 						</div>
 					</div>
 				{:else}
-					<div class="chart-card analysis-empty-card">
+					<div class="chart-card analysis-empty-card ly-surface">
 						<div class="chart-card-title">Capital Deployed Over Time</div>
 						<div class="analysis-empty">Add invested amounts and dates to see your deployment path against the capital goal in your plan.</div>
 					</div>
@@ -1006,13 +992,14 @@
 				</div>
 			</div>
 		{:else}
-			<div class="analysis-locked-card">
+			<div class="analysis-locked-card ly-surface ly-surface--accent ly-surface--strong">
 				<div class="analysis-locked-eyebrow">Members only</div>
 				<div class="analysis-locked-title">Unlock portfolio analysis.</div>
 				<p>Free members can manage holdings today. Upgrade to see allocation, risk, and deployment analysis across your portfolio.</p>
 				<a href="/app/office-hours" class="analysis-locked-link">See Office Hours</a>
 			</div>
 		{/if}
+	{/if}
 	</div>
 </PageContainer>
 
@@ -1073,9 +1060,6 @@
 		margin-bottom: 18px;
 	}
 	.stat-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
 		padding: 18px 20px;
 	}
 	.stat-label {
@@ -1101,8 +1085,8 @@
 		gap: 8px;
 		margin-bottom: 18px;
 		padding: 6px;
-		background: color-mix(in srgb, var(--bg-card) 86%, var(--bg-cream));
-		border: 1px solid var(--border);
+		background: var(--surface-2);
+		border: 1px solid var(--surface-border);
 		border-radius: 999px;
 	}
 	.portfolio-tab {
@@ -1195,9 +1179,6 @@
 	}
 
 	.holdings-table {
-		border: 1px solid var(--border);
-		border-radius: 22px;
-		background: var(--bg-card);
 		overflow: hidden;
 	}
 	.holdings-table-head,
@@ -1426,9 +1407,6 @@
 		gap: 20px;
 	}
 	.chart-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
 		padding: 20px;
 		min-width: 0;
 	}
@@ -1589,9 +1567,6 @@
 		padding: 40px 24px 24px;
 	}
 	.import-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
 		padding: 28px 24px;
 		text-align: center;
 	}
@@ -1677,9 +1652,6 @@
 
 	.analysis-locked-card {
 		padding: 26px 24px;
-		border-radius: 22px;
-		border: 1px solid rgba(81, 190, 123, 0.16);
-		background: linear-gradient(135deg, rgba(81, 190, 123, 0.08), rgba(245, 158, 11, 0.06));
 	}
 	.analysis-locked-card--muted {
 		border-color: var(--border);
@@ -1716,8 +1688,8 @@
 		margin-top: 18px;
 		padding: 10px 16px;
 		border-radius: 999px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
+		background: var(--surface-1);
+		border: 1px solid var(--surface-border);
 		color: var(--text-dark);
 		font-family: var(--font-ui);
 		font-size: 13px;

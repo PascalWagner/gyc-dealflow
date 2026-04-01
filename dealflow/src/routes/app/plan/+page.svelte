@@ -1272,7 +1272,7 @@
 		</div>
 	{:else if showInlineWizard}
 		<div class="plan-setup-shell">
-			<section class="plan-card plan-setup-card">
+			<section class="plan-card plan-setup-card ly-surface ly-surface--strong">
 				<div class="plan-card-top">
 					<div class="section-eyebrow">Build Your Plan</div>
 					{#if hasPlan}
@@ -1297,7 +1297,7 @@
 		</div>
 	{:else if !canViewFullPlan}
 		<div class="plan-stack plan-stack--free">
-			<section class="plan-card plan-target-card profile-card">
+			<section class="plan-card plan-target-card profile-card ly-surface ly-surface--accent ly-surface--strong">
 				<div class="plan-card-top">
 					<span class="goal-pill goal-pill--profile">Investor Profile</span>
 					<div class="target-actions">
@@ -1335,7 +1335,7 @@
 				{/if}
 			</section>
 
-			<section class="plan-card locked-card">
+			<section class="plan-card locked-card ly-surface ly-surface--muted">
 				<div class="locked-title">
 					{nativeCompanionMode ? 'Full planning stays on the web for members' : 'Membership unlocks your full investment plan'}
 				</div>
@@ -1358,7 +1358,7 @@
 		</div>
 	{:else}
 		<div class="plan-stack">
-			<section class="plan-card plan-target-card">
+			<section class="plan-card plan-target-card ly-surface ly-surface--accent ly-surface--strong">
 				<div class="plan-card-top">
 					<span class="goal-pill">{targetBadge}</span>
 					<div class="target-actions">
@@ -1400,7 +1400,7 @@
 				</div>
 			</section>
 
-			<section class="plan-card roadmap-card">
+			<section class="plan-card roadmap-card ly-surface">
 				<div class="roadmap-topline">
 					<div>
 						<div class="section-eyebrow">Your Roadmap</div>
@@ -1480,7 +1480,7 @@
 			</section>
 
 			{#if nextBestMove}
-				<section class="plan-card next-move-card">
+				<section class="plan-card next-move-card ly-surface ly-surface--strong">
 					<div class="next-move-kicker">Your Next Best Move</div>
 					<h2 class="next-move-title">Add a {currency(nextBestMove.checkSize)} {nextBestMove.assetClass} allocation.</h2>
 					<p class="next-move-copy">
@@ -1726,11 +1726,7 @@
 		gap: 16px;
 	}
 	.plan-card {
-		background: var(--bg-card);
-		border: 1px solid #d7e2e7;
-		border-radius: 16px;
 		padding: 24px;
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 	}
 	.plan-target-card {
 		padding: 32px 34px 34px;
@@ -1747,7 +1743,7 @@
 		margin-top: 0;
 	}
 	.profile-card {
-		background: linear-gradient(135deg, rgba(81, 190, 123, 0.08), rgba(255, 255, 255, 0.96));
+		position: relative;
 	}
 	.plan-card-top,
 	.schedule-topline,
@@ -1885,8 +1881,8 @@
 		gap: 6px;
 		padding: 4px;
 		border-radius: 999px;
-		background: rgba(15, 23, 42, 0.05);
-		border: 1px solid rgba(148, 163, 184, 0.2);
+		background: var(--surface-2);
+		border: 1px solid var(--surface-border);
 	}
 	.roadmap-toggle-btn {
 		border: none;
@@ -1900,9 +1896,9 @@
 		cursor: pointer;
 	}
 	.roadmap-toggle-btn.active {
-		background: #fff;
+		background: var(--surface-1);
 		color: var(--text-dark);
-		box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+		box-shadow: var(--shadow-sm);
 	}
 	.roadmap-summary-grid {
 		display: grid;
