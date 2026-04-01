@@ -409,7 +409,7 @@
 <PageContainer className="office-hours-shell ly-page-stack">
 	<PageHeader
 		title="Office Hours"
-		subtitle="Your private concierge window with Pascal. Bring live deals, capital allocation decisions, and anything blocking your next move."
+		subtitle="Bring deals, portfolio questions, and strategy blockers to your live coaching session."
 		className="office-hours-page-header"
 	>
 		<div slot="actions" class="office-hours-header-actions">

@@ -177,7 +177,7 @@
 <PageContainer className="resources-shell ly-page-stack">
 	<PageHeader
 		title="Resources"
-		subtitle="Structured video courses covering strategy, deal sourcing, and execution — everything you need to invest in commercial real estate with confidence."
+		subtitle="Courses and playbooks to help you source, evaluate, and execute."
 	/>
 
 	<div class="resources-page">

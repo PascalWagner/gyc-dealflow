@@ -40,10 +40,13 @@
 	});
 </script>
 
-<svelte:head><title>Find a GP | GYC</title></svelte:head>
+<svelte:head><title>GP Dashboard | GYC</title></svelte:head>
 
 <PageContainer className="find-gp-page">
-<PageHeader title="Find a GP">
+<PageHeader
+	title="GP Dashboard"
+	subtitle="Browse sponsors, compare track records, and review the operators behind the deals in your flow."
+>
 	<input
 		slot="actions"
 		type="text"

@@ -924,8 +924,8 @@
 	});
 	const planPageSubtitle = $derived.by(() =>
 		canViewFullPlan
-			? 'This page turns your goal into a thesis, a roadmap, and your next best move.'
-			: 'This page keeps your investor profile, deal-fit context, and upgrade path in one place.'
+			? 'Turn your goal into a thesis, roadmap, and next best move.'
+			: 'Keep your investor profile, deal-fit context, and upgrade path in one place.'
 	);
 	const freeProfileGoalLabel = $derived.by(() => goalLabels[wizardData._branch || wizardData.goal] || 'Define your investing goal');
 	const freeProfileExperience = $derived.by(() => {

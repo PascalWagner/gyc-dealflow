@@ -952,8 +952,6 @@
 							ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
 						/>
 					</div>
-
-					<div class="mobile-stage-helper">{currentStageContent.text}</div>
 				</div>
 			{:else}
 				<div class="desktop-toolbar">
@@ -991,6 +989,8 @@
 					</div>
 				</div>
 			{/if}
+
+			<div class="deals-stage-helper">{currentStageContent.text}</div>
 		</div>
 
 		{#if pageNoticeVisible}
@@ -1339,7 +1339,7 @@
 		flex: 0 1 auto;
 	}
 
-	.mobile-stage-helper {
+	.deals-stage-helper {
 		font-family: var(--font-body);
 		font-size: 13px;
 		line-height: 1.45;
@@ -1642,7 +1642,7 @@
 			font-size: 17px;
 		}
 
-		.mobile-stage-helper {
+		.deals-stage-helper {
 			font-size: 12px;
 			line-height: 1.4;
 		}
