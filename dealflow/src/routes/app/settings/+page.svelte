@@ -439,7 +439,9 @@
 	onMount(() => {
 		const params = new URLSearchParams(window.location.search);
 		const tab = params.get('tab');
-		if (['profile', 'plan', 'investor', 'privacy', 'notifications'].includes(tab)) {
+		if (tab === 'investor') {
+			activeTab = 'profile';
+		} else if (['profile', 'plan', 'privacy', 'notifications'].includes(tab)) {
 			activeTab = tab;
 		}
 		if (params.get('unsubscribed') === 'true') {
@@ -457,7 +459,6 @@
 		<div slot="secondaryRow" class="settings-tabs">
 			<button class="settings-tab" class:active={activeTab === 'profile'} onclick={() => activeTab = 'profile'}>Profile</button>
 			<button class="settings-tab" class:active={activeTab === 'plan'} onclick={() => activeTab = 'plan'}>My Plan</button>
-			<button class="settings-tab" class:active={activeTab === 'investor'} onclick={() => activeTab = 'investor'}>Investor</button>
 			<button class="settings-tab" class:active={activeTab === 'privacy'} onclick={() => activeTab = 'privacy'}>Privacy</button>
 			<button class="settings-tab" class:active={activeTab === 'notifications'} onclick={() => activeTab = 'notifications'}>Notifications</button>
 		</div>
@@ -511,6 +512,40 @@
 						<div class="profile-label">Location</div>
 						<input type="text" class="profile-input" bind:value={location} placeholder="City, State" />
 					</div>
+				</div>
+			</div>
+
+			<div class="settings-card">
+				<div class="settings-card-title">Investment Background</div>
+				<div class="settings-card-desc">Help GPs understand your background and investment capacity when you request introductions.</div>
+				<div class="profile-row">
+					<div class="profile-field">
+						<div class="profile-label">Accreditation Status</div>
+						<select class="profile-input" bind:value={accreditedStatus}>
+							<option value="">Select status</option>
+							<option value="Accredited Investor">Accredited Investor</option>
+							<option value="Qualified Purchaser">Qualified Purchaser</option>
+							<option value="Non-Accredited">Non-Accredited</option>
+						</select>
+					</div>
+					<div class="profile-field">
+						<div class="profile-label">Investable Capital</div>
+						<select class="profile-input" bind:value={investableCapital}>
+							<option>$50K - $250K</option>
+							<option>$250K - $1M</option>
+							<option>$1M - $5M</option>
+							<option>$5M+</option>
+						</select>
+					</div>
+				</div>
+				<div class="profile-field">
+					<div class="profile-label">Investment Experience</div>
+					<select class="profile-input" bind:value={investmentExperience}>
+						<option>New to LP investing</option>
+						<option>1-3 LP investments</option>
+						<option>4-10 LP investments</option>
+						<option>10+ LP investments</option>
+					</select>
 				</div>
 			</div>
 
@@ -624,56 +659,6 @@
 					</div>
 				</div>
 			{/if}
-		</div>
-	{/if}
-
-	{#if activeTab === 'investor'}
-		<div class="settings-panel">
-			<div class="settings-page-title">Investor Profile</div>
-			<div class="settings-page-desc">Help GPs understand your background and investment capacity when you request introductions.</div>
-
-			<div class="settings-card">
-				<div class="settings-card-title">Investment Background</div>
-				<div class="settings-card-desc">This helps sponsors understand how you evaluate opportunities.</div>
-				<div class="profile-row">
-					<div class="profile-field">
-						<div class="profile-label">Accreditation Status</div>
-						<select class="profile-input" bind:value={accreditedStatus}>
-							<option value="">Select status</option>
-							<option value="Accredited Investor">Accredited Investor</option>
-							<option value="Qualified Purchaser">Qualified Purchaser</option>
-							<option value="Non-Accredited">Non-Accredited</option>
-						</select>
-					</div>
-					<div class="profile-field">
-						<div class="profile-label">Investable Capital</div>
-						<select class="profile-input" bind:value={investableCapital}>
-							<option>$50K - $250K</option>
-							<option>$250K - $1M</option>
-							<option>$1M - $5M</option>
-							<option>$5M+</option>
-						</select>
-					</div>
-				</div>
-				<div class="profile-field">
-					<div class="profile-label">Investment Experience</div>
-					<select class="profile-input" bind:value={investmentExperience}>
-						<option>New to LP investing</option>
-						<option>1-3 LP investments</option>
-						<option>4-10 LP investments</option>
-						<option>10+ LP investments</option>
-					</select>
-				</div>
-			</div>
-
-			<div class="settings-save-bar">
-				{#if profileSaved}
-					<div class="save-msg">Investor profile saved</div>
-				{/if}
-				<button class="btn-cta-primary" onclick={saveProfile} disabled={profileSaving}>
-					{profileSaving ? 'Saving...' : 'Save Investor Profile'}
-				</button>
-			</div>
 		</div>
 	{/if}
 

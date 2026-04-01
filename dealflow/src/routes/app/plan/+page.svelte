@@ -303,6 +303,59 @@
 		return Math.round(amount * ((profile.cashYield || 0) / 100));
 	}
 
+	function getInvestmentYear(investment, fallbackYear = currentYearNumber()) {
+		if (!investment?.dateInvested) return fallbackYear;
+		const date = new Date(investment.dateInvested);
+		return Number.isNaN(date.getTime()) ? fallbackYear : date.getFullYear();
+	}
+
+	function investmentTaxOffsetEstimate(investment) {
+		const directEstimate = Number(
+			investment?.actualYear1Depreciation ??
+			investment?.displayYear1Depreciation ??
+			investment?.projectedYear1DepreciationValue ??
+			0
+		);
+		if (Number.isFinite(directEstimate) && directEstimate > 0) return Math.round(directEstimate);
+		const amount = Number(investment?.amountInvested || 0);
+		return amount > 0 ? Math.round(amount * 0.18) : 0;
+	}
+
+	function metricGrowthRatePct(assetClass, targetIRR) {
+		const target = percentNumber(targetIRR);
+		if (target > 0) return target;
+		const profile = getAssetProfile(assetClass || 'Other');
+		return (profile.irrMin + profile.irrMax) / 2 || 12;
+	}
+
+	function investmentGrowthValueEstimate(investment, year) {
+		const amount = Number(investment?.amountInvested || 0);
+		if (!amount) return 0;
+		const investYear = getInvestmentYear(investment, year);
+		const yearsHeld = Math.max(0, year - investYear);
+		const annualRate = metricGrowthRatePct(investment?.assetClass, investment?.targetIRR) / 100;
+		return Math.round(amount * Math.pow(1 + annualRate, yearsHeld));
+	}
+
+	function modeledSlotGrowthValueEstimate(slot, year) {
+		const amount = Number(slot?.checkSize || 0);
+		if (!amount) return 0;
+		const yearsHeld = Math.max(0, year - Number(slot?.year || year));
+		const annualRate = metricGrowthRatePct(slot?.assetClass, slot?.irrPct) / 100;
+		return Math.round(amount * Math.pow(1 + annualRate, yearsHeld));
+	}
+
+	function buildAllocationSegments(allocations = {}) {
+		return Object.entries(allocations)
+			.filter(([, amount]) => Number(amount) > 0)
+			.map(([label, amount]) => ({
+				label,
+				amount,
+				color: getAssetProfile(label).color
+			}))
+			.sort((left, right) => right.amount - left.amount);
+	}
+
 	function currentYearNumber() {
 		return new Date().getFullYear();
 	}
@@ -731,21 +784,6 @@
 		};
 	});
 
-	const legendItems = $derived.by(() => {
-		const labels = new Set();
-		projection.bars.forEach((bar) => {
-			bar.segments.forEach((segment) => labels.add(segment.label));
-		});
-		return [...labels].map((label) => ({
-			label,
-			color: getAssetProfile(label).color
-		}));
-	});
-
-	const concentrationAlert = $derived.by(() => {
-		if (!projection.finalShare || projection.finalShare.share < 45) return null;
-		return `${Math.round(projection.finalShare.share)}% in ${projection.finalShare.label} plan targets 45% or less. Consider diversifying.`;
-	});
 	const printAssetClasses = $derived.by(() => titleCaseList(reportRelevantAssets.map((asset) => getAssetProfile(asset).label)));
 	const printStrategies = $derived.by(() =>
 		titleCaseList((selectedStrategies.length ? selectedStrategies : ['Lending / Credit', 'Buy & Hold', 'Distressed']).slice(0, 5))
@@ -981,6 +1019,139 @@
 			affordableCount
 		};
 	});
+	const roadmapChart = $derived.by(() => {
+		const currentYear = currentYearNumber();
+		const historicalYears = Array.from({ length: 5 }, (_, index) => currentYear - 5 + index);
+		const activeEntries = [...portfolio].filter(
+			(investment) => !['exited', 'sold'].includes(String(investment?.status || '').toLowerCase())
+		);
+		const currentAllocations = {};
+		activeEntries.forEach((investment) => {
+			const amount = Number(investment?.amountInvested || 0);
+			if (!amount) return;
+			const label = getAssetProfile(investment?.assetClass || 'Other').label;
+			currentAllocations[label] = (currentAllocations[label] || 0) + amount;
+		});
+
+		const metricValueForInvestments = (entries, year) => {
+			if (goalKey === 'growth') {
+				return entries.reduce((sum, investment) => sum + investmentGrowthValueEstimate(investment, year), 0);
+			}
+			if (goalKey === 'tax') {
+				return entries.reduce((sum, investment) => sum + investmentTaxOffsetEstimate(investment), 0);
+			}
+			return entries.reduce((sum, investment) => sum + investmentAnnualIncomeEstimate(investment), 0);
+		};
+
+		const metricValueForSlots = (slots, year) => {
+			if (goalKey === 'growth') {
+				return slots.reduce((sum, slot) => sum + modeledSlotGrowthValueEstimate(slot, year), 0);
+			}
+			if (goalKey === 'tax') {
+				return slots.reduce((sum, slot) => sum + Math.round(Number(slot.checkSize || 0) * 0.18), 0);
+			}
+			return slots.reduce((sum, slot) => sum + Number(slot.estIncome || 0), 0);
+		};
+
+		const actualPoints = historicalYears.map((year) => {
+			const entries = activeEntries.filter((investment) => getInvestmentYear(investment, currentYear) <= year);
+			const allocations = {};
+			entries.forEach((investment) => {
+				const amount = Number(investment?.amountInvested || 0);
+				if (!amount) return;
+				const label = getAssetProfile(investment?.assetClass || 'Other').label;
+				allocations[label] = (allocations[label] || 0) + amount;
+			});
+			const capitalTotal = Object.values(allocations).reduce((sum, amount) => sum + Number(amount || 0), 0);
+			return {
+				key: `actual-${year}`,
+				year,
+				period: 'actual',
+				capitalTotal,
+				metricValue: metricValueForInvestments(entries, year),
+				segments: buildAllocationSegments(allocations)
+			};
+		});
+
+		const modeledSlots = projection.years.slice(0, 5).map((item) => ({
+			year: item.year,
+			assetClass: item.profile.label,
+			checkSize: item.checkSize,
+			estIncome: item.income,
+			irrPct: (item.profile.irrMin + item.profile.irrMax) / 2
+		}));
+
+		const futurePoints = modeledSlots.map((slot) => {
+			const activeSlots = modeledSlots.filter((candidate) => candidate.year <= slot.year);
+			const allocations = { ...currentAllocations };
+			activeSlots.forEach((candidate) => {
+				allocations[candidate.assetClass] = (allocations[candidate.assetClass] || 0) + candidate.checkSize;
+			});
+			const capitalTotal = Object.values(allocations).reduce((sum, amount) => sum + Number(amount || 0), 0);
+			return {
+				key: `modeled-${slot.year}`,
+				year: slot.year,
+				period: 'modeled',
+				capitalTotal,
+				metricValue:
+					metricValueForInvestments(activeEntries, slot.year) + metricValueForSlots(activeSlots, slot.year),
+				segments: buildAllocationSegments(allocations)
+			};
+		});
+
+		const points = [...actualPoints, ...futurePoints];
+		const maxCapital = Math.max(...points.map((point) => point.capitalTotal), 1);
+		const maxMetric = Math.max(annualTargetAmount, ...points.map((point) => point.metricValue), 1);
+		const chartPoints = points.map((point, index, allPoints) => ({
+			...point,
+			capitalPct: point.capitalTotal > 0 ? (point.capitalTotal / maxCapital) * 100 : 0,
+			metricPct: point.metricValue > 0 ? (point.metricValue / maxMetric) * 100 : 0,
+			plotX: allPoints.length > 1 ? (index / (allPoints.length - 1)) * 100 : 50,
+			plotY: 100 - (point.metricValue > 0 ? (point.metricValue / maxMetric) * 100 : 0)
+		}));
+		const finalPoint = chartPoints[chartPoints.length - 1];
+		const finalShare =
+			finalPoint?.capitalTotal > 0
+				? [...finalPoint.segments]
+						.map((segment) => ({
+							...segment,
+							share: (segment.amount / finalPoint.capitalTotal) * 100
+						}))
+						.sort((left, right) => right.share - left.share)[0]
+				: null;
+
+		return {
+			points: chartPoints,
+			maxCapital,
+			maxMetric,
+			polylinePoints: chartPoints.map((point) => `${point.plotX},${point.plotY}`).join(' '),
+			targetY: 100 - ((annualTargetAmount / maxMetric) * 100),
+			finalShare,
+			actualRangeLabel: `${historicalYears[0]}-${historicalYears[historicalYears.length - 1]}`,
+			modeledRangeLabel: futurePoints.length
+				? `${futurePoints[0].year}-${futurePoints[futurePoints.length - 1].year}`
+				: `${currentYear}-${currentYear + 4}`
+		};
+	});
+	const roadmapChartSummary = $derived.by(() => {
+		const finalPoint = roadmapChart.points[roadmapChart.points.length - 1];
+		if (!finalPoint) return '';
+		return `The left side shows the last 5 completed years of portfolio history. The right side shows the next 5 years modeled from today. By ${finalPoint.year}, this roadmap reaches ${roadmapMetricConfig.describe(finalPoint.metricValue)} on ${currency(finalPoint.capitalTotal)} deployed.`;
+	});
+	const legendItems = $derived.by(() => {
+		const labels = new Set();
+		roadmapChart.points.forEach((point) => {
+			point.segments.forEach((segment) => labels.add(segment.label));
+		});
+		return [...labels].map((label) => ({
+			label,
+			color: getAssetProfile(label).color
+		}));
+	});
+	const concentrationAlert = $derived.by(() => {
+		if (!roadmapChart.finalShare || roadmapChart.finalShare.share < 45) return null;
+		return `${Math.round(roadmapChart.finalShare.share)}% of the deployed capital in this 5-year forward plan lands in ${roadmapChart.finalShare.label}. Consider diversifying.`;
+	});
 
 	onMount(() => {
 		if (!browser) return;
@@ -1214,11 +1385,11 @@
 					<div class="roadmap-summary-grid">
 						<div class="plan-snapshot-item">
 							<div class="plan-snapshot-label">{roadmapMetricConfig.label}</div>
-							<div class="plan-snapshot-value">{roadmapMetricConfig.describe(roadmapYears[roadmapYears.length - 1]?.metricValue || 0)}</div>
+							<div class="plan-snapshot-value">{roadmapMetricConfig.describe(roadmapChart.points[roadmapChart.points.length - 1]?.metricValue || 0)}</div>
 						</div>
 						<div class="plan-snapshot-item">
-							<div class="plan-snapshot-label">Modeled Capital Deployed</div>
-							<div class="plan-snapshot-value">{currency(projection.finalBar?.total || 0)}</div>
+							<div class="plan-snapshot-label">Projected Capital In 5 Years</div>
+							<div class="plan-snapshot-value">{currency(roadmapChart.points[roadmapChart.points.length - 1]?.capitalTotal || currentInvestedTotal)}</div>
 						</div>
 						<div class="plan-snapshot-item">
 							<div class="plan-snapshot-label">Current Holdings</div>
@@ -1229,38 +1400,65 @@
 							<div class="plan-snapshot-value">{currency(projection.checkSize)}</div>
 						</div>
 					</div>
-					<div class="roadmap-summary-note">{roadmapSummary}</div>
-					<div class="roadmap-progress-list">
-						{#each roadmapYears as item}
-							<div class="roadmap-progress-row">
-								<div class="roadmap-progress-copy">
-									<div class="roadmap-progress-year">Year {item.index} <span>({item.year})</span></div>
-									<div class="roadmap-progress-meta">{item.profile.label} · {currency(item.checkSize)} deployment · {item.progressPct}% of target</div>
-								</div>
-								<div class="roadmap-progress-value">{roadmapMetricConfig.describe(item.metricValue)}</div>
-							</div>
-						{/each}
-					</div>
+					<div class="roadmap-summary-note">{roadmapChartSummary}</div>
 					<div class="growth-topline growth-topline--embedded">
-						<div class="section-eyebrow">Capital Mix By Asset Class</div>
-						<div class="growth-target">{compactCurrency(projection.finalBar?.total || 0)} deployed</div>
+						<div>
+							<div class="section-eyebrow">Historical + Forward Roadmap</div>
+							<div class="roadmap-chart-copy">Last 5 completed years actual. Next 5 years modeled from today.</div>
+						</div>
+						<div class="growth-target">{roadmapMetricConfig.label}</div>
 					</div>
-					<div class="growth-chart">
-						{#each projection.bars as bar}
-							<div class="growth-column">
-								<div class="growth-value">{compactCurrency(bar.total)}</div>
-								<div class="growth-bar-shell">
-									<div class="growth-bar" style={`height:${Math.max(10, (bar.total / projection.maxTotal) * 100)}%`}>
-										{#each bar.segments as segment}
-											<span class="growth-segment" style={`height:${bar.total > 0 ? (segment.amount / bar.total) * 100 : 0}%; background:${segment.color}`}></span>
-										{/each}
-									</div>
-								</div>
-								<div class="growth-label">{bar.label}</div>
+					<div class="roadmap-chart-scroll">
+						<div class="roadmap-chart-frame">
+							<div class="roadmap-chart-periods">
+								<div class="roadmap-chart-period roadmap-chart-period--actual">Historical · {roadmapChart.actualRangeLabel}</div>
+								<div class="roadmap-chart-period roadmap-chart-period--modeled">Forward · {roadmapChart.modeledRangeLabel}</div>
 							</div>
-						{/each}
+							<div class="roadmap-chart-values">
+								{#each roadmapChart.points as point}
+									<div class="roadmap-chart-capital">{compactCurrency(point.capitalTotal)}</div>
+								{/each}
+							</div>
+							<div class="roadmap-chart-canvas">
+								<div class="roadmap-chart-divider"></div>
+								<svg class="roadmap-line-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+									<line x1="0" y1={roadmapChart.targetY} x2="100" y2={roadmapChart.targetY} class="roadmap-target-line"></line>
+									<polyline points={roadmapChart.polylinePoints} class="roadmap-metric-line"></polyline>
+									{#each roadmapChart.points as point}
+										<circle cx={point.plotX} cy={point.plotY} r="1.8" class="roadmap-metric-dot"></circle>
+									{/each}
+								</svg>
+								<div class="roadmap-chart-grid">
+									{#each roadmapChart.points as point}
+										<div class="roadmap-chart-bar-shell">
+											<div class="roadmap-chart-bar" style={`height:${point.capitalTotal > 0 ? Math.max(8, point.capitalPct) : 0}%`}>
+												{#each point.segments as segment}
+													<span class="roadmap-chart-segment" style={`height:${point.capitalTotal > 0 ? (segment.amount / point.capitalTotal) * 100 : 0}%; background:${segment.color}`}></span>
+												{/each}
+											</div>
+										</div>
+									{/each}
+								</div>
+							</div>
+							<div class="roadmap-chart-labels">
+								{#each roadmapChart.points as point}
+									<div class="roadmap-chart-label-group">
+										<div class="roadmap-chart-year">{point.year}</div>
+										<div class="roadmap-chart-period-tag">{point.period === 'actual' ? 'Actual' : 'Modeled'}</div>
+									</div>
+								{/each}
+							</div>
+						</div>
 					</div>
-					<div class="growth-legend">
+					<div class="roadmap-chart-legend">
+						<div class="legend-item">
+							<span class="legend-line legend-line--metric"></span>
+							<span>{roadmapMetricConfig.label}</span>
+						</div>
+						<div class="legend-item">
+							<span class="legend-line legend-line--target"></span>
+							<span>Target</span>
+						</div>
 						{#each legendItems as item}
 							<div class="legend-item">
 								<span class="legend-swatch" style={`background:${item.color}`}></span>
@@ -1781,6 +1979,161 @@
 	}
 	.growth-topline--embedded {
 		margin-top: 24px;
+	}
+	.roadmap-chart-copy {
+		margin-top: 6px;
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+	.roadmap-chart-scroll {
+		margin-top: 18px;
+		overflow-x: auto;
+		padding-bottom: 8px;
+	}
+	.roadmap-chart-frame {
+		min-width: 920px;
+	}
+	.roadmap-chart-periods,
+	.roadmap-chart-values,
+	.roadmap-chart-grid,
+	.roadmap-chart-labels {
+		display: grid;
+		grid-template-columns: repeat(10, minmax(0, 1fr));
+		gap: 0;
+	}
+	.roadmap-chart-periods {
+		margin-bottom: 14px;
+	}
+	.roadmap-chart-period {
+		grid-column: span 5;
+		padding: 10px 12px;
+		border-radius: 12px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	.roadmap-chart-period--actual {
+		background: rgba(15, 23, 42, 0.05);
+		color: var(--text-muted);
+	}
+	.roadmap-chart-period--modeled {
+		background: rgba(81, 190, 123, 0.08);
+		color: var(--primary);
+	}
+	.roadmap-chart-values {
+		margin-bottom: 10px;
+	}
+	.roadmap-chart-capital {
+		text-align: center;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.roadmap-chart-canvas {
+		position: relative;
+		height: 280px;
+	}
+	.roadmap-chart-divider {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 50%;
+		width: 1px;
+		background: rgba(148, 163, 184, 0.35);
+		z-index: 1;
+	}
+	.roadmap-line-layer {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 3;
+		pointer-events: none;
+	}
+	.roadmap-target-line {
+		stroke: rgba(100, 116, 139, 0.8);
+		stroke-width: 1.5;
+		stroke-dasharray: 4 4;
+	}
+	.roadmap-metric-line {
+		fill: none;
+		stroke: var(--primary);
+		stroke-width: 2.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+	.roadmap-metric-dot {
+		fill: #fff;
+		stroke: var(--primary);
+		stroke-width: 1.5;
+	}
+	.roadmap-chart-grid {
+		position: relative;
+		z-index: 2;
+		height: 100%;
+		align-items: end;
+	}
+	.roadmap-chart-bar-shell {
+		height: 100%;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		padding: 0 10px;
+	}
+	.roadmap-chart-bar {
+		width: 100%;
+		max-width: 52px;
+		display: flex;
+		flex-direction: column-reverse;
+		border-radius: 12px 12px 0 0;
+		overflow: hidden;
+		background: rgba(81, 190, 123, 0.08);
+	}
+	.roadmap-chart-segment {
+		display: block;
+		width: 100%;
+	}
+	.roadmap-chart-labels {
+		margin-top: 12px;
+	}
+	.roadmap-chart-label-group {
+		text-align: center;
+	}
+	.roadmap-chart-year {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.roadmap-chart-period-tag {
+		margin-top: 4px;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+	.roadmap-chart-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px 16px;
+		margin-top: 16px;
+	}
+	.legend-line {
+		display: inline-block;
+		width: 18px;
+		height: 0;
+		border-top: 2px solid var(--primary);
+	}
+	.legend-line--target {
+		border-top-style: dashed;
+		border-top-color: rgba(100, 116, 139, 0.85);
 	}
 	.schedule-card--embedded {
 		margin-top: 18px;
