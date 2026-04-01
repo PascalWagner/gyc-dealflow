@@ -42,8 +42,9 @@
 		{ id: 'summary', label: 'Summary', title: 'Publish QA' }
 	];
 
-	const extractedRows = [
+	const extractedRowSeeds = [
 		{
+			id: 'key_person_concentration',
 			tag: 'Sponsor / execution',
 			title: 'Key-person concentration',
 			quote: 'The manager is highly dependent on Michael Anderson and a small senior team for sourcing and execution.',
@@ -51,6 +52,7 @@
 			state: 'Accepted'
 		},
 		{
+			id: 'refinance_timing_risk',
 			tag: 'Leverage / refinance',
 			title: 'Refinance timing risk',
 			quote: 'Projected returns assume refinance proceeds in year two and may be lower if rates stay elevated.',
@@ -58,20 +60,13 @@
 			state: 'Needs edit'
 		},
 		{
+			id: 'phoenix_demand_sensitivity',
 			tag: 'Market / demand',
 			title: 'Phoenix demand sensitivity',
 			quote: 'The business plan depends on continued rent growth and demand resilience in the Phoenix submarket.',
 			source: 'Deck page 7',
 			state: 'Accepted'
 		}
-	];
-
-	const acceptedRiskTags = [
-		'Sponsor / execution',
-		'Leverage / refinance',
-		'Market / demand',
-		'Liquidity',
-		'Asset-specific downside'
 	];
 
 	const customRiskTags = ['Rate sensitivity'];
@@ -117,6 +112,15 @@
 		ppm: 'https://example.com/Capital-Fund-2-PPM-CF2-Company-Documents.pdf'
 	};
 
+	let extractedRows = $state(
+		extractedRowSeeds.map((row) => ({
+			...row,
+			isEditing: false,
+			draftTitle: row.title,
+			draftQuote: row.quote
+		}))
+	);
+
 	const dealId = $derived($page.url.searchParams.get('id') || DEFAULT_DEAL_ID);
 	const from = $derived($page.url.searchParams.get('from') || 'queue');
 	const viewId = $derived.by(() => {
@@ -127,6 +131,12 @@
 	const activeViewIndex = $derived(mockViews.findIndex((view) => view.id === viewId));
 	const previousView = $derived(activeViewIndex > 0 ? mockViews[activeViewIndex - 1] : null);
 	const nextView = $derived(activeViewIndex < mockViews.length - 1 ? mockViews[activeViewIndex + 1] : null);
+	const acceptedRiskTags = $derived.by(() => {
+		const acceptedTags = extractedRows
+			.filter((row) => row.state === 'Accepted')
+			.map((row) => row.tag);
+		return Array.from(new Set([...acceptedTags, 'Liquidity', 'Asset-specific downside']));
+	});
 
 	function buildViewHref(nextViewId) {
 		const params = new URLSearchParams($page.url.searchParams);
@@ -159,10 +169,68 @@
 	}
 
 	function tone(value) {
+		if (/rejected/i.test(value)) return 'neutral';
 		if (/accepted|ready|quoted/i.test(value)) return 'good';
 		if (/edit|partial|implied/i.test(value)) return 'warn';
 		if (/missing|needs/i.test(value)) return 'bad';
 		return 'neutral';
+	}
+
+	function updateExtractedRows(updater) {
+		extractedRows = extractedRows.map((row) => updater(row));
+	}
+
+	function setFindingState(rowId, nextState) {
+		updateExtractedRows((row) => row.id === rowId
+			? {
+				...row,
+				state: nextState,
+				isEditing: false
+			}
+			: row);
+	}
+
+	function startEditingFinding(rowId) {
+		updateExtractedRows((row) => row.id === rowId
+			? {
+				...row,
+				isEditing: true,
+				state: 'Needs edit'
+			}
+			: row);
+	}
+
+	function updateFindingDraft(rowId, fieldKey, nextValue) {
+		updateExtractedRows((row) => row.id === rowId
+			? {
+				...row,
+				[fieldKey]: nextValue
+			}
+			: row);
+	}
+
+	function saveFindingEdits(rowId) {
+		updateExtractedRows((row) => {
+			if (row.id !== rowId) return row;
+			return {
+				...row,
+				title: String(row.draftTitle || '').trim() || row.title,
+				quote: String(row.draftQuote || '').trim() || row.quote,
+				state: 'Needs edit',
+				isEditing: false
+			};
+		});
+	}
+
+	function cancelFindingEdits(rowId) {
+		updateExtractedRows((row) => row.id === rowId
+			? {
+				...row,
+				draftTitle: row.title,
+				draftQuote: row.quote,
+				isEditing: false
+			}
+			: row);
 	}
 </script>
 
@@ -212,13 +280,57 @@
 									<span class="row-tag">{row.tag}</span>
 									<span class={`pill pill--${tone(row.state)}`}>{row.state}</span>
 								</div>
-								<h4>{row.title}</h4>
-								<p class="row-quote">{row.quote}</p>
+								{#if row.isEditing}
+									<div class="edit-stack">
+										<label class="edit-field">
+											<span>Finding title</span>
+											<input
+												type="text"
+												value={row.draftTitle}
+												oninput={(event) => updateFindingDraft(row.id, 'draftTitle', event.currentTarget.value)}
+											>
+										</label>
+										<label class="edit-field">
+											<span>Evidence summary</span>
+											<textarea
+												rows="3"
+												value={row.draftQuote}
+												oninput={(event) => updateFindingDraft(row.id, 'draftQuote', event.currentTarget.value)}
+											></textarea>
+										</label>
+									</div>
+								{:else}
+									<h4>{row.title}</h4>
+									<p class="row-quote">{row.quote}</p>
+								{/if}
 								<div class="row-source">{row.source}</div>
 								<div class="row-actions">
-									<button type="button" class="chip chip--active">Accept</button>
-									<button type="button" class="chip">Edit</button>
-									<button type="button" class="chip">Reject</button>
+									{#if row.isEditing}
+										<button type="button" class="chip chip--active" onclick={() => saveFindingEdits(row.id)}>Save edit</button>
+										<button type="button" class="chip" onclick={() => cancelFindingEdits(row.id)}>Cancel</button>
+									{:else}
+										<button
+											type="button"
+											class={`chip ${row.state === 'Accepted' ? 'chip--active' : ''}`}
+											onclick={() => setFindingState(row.id, 'Accepted')}
+										>
+											Accept
+										</button>
+										<button
+											type="button"
+											class={`chip ${row.state === 'Needs edit' ? 'chip--active chip--warn' : ''}`}
+											onclick={() => startEditingFinding(row.id)}
+										>
+											Edit
+										</button>
+										<button
+											type="button"
+											class={`chip ${row.state === 'Rejected' ? 'chip--active chip--neutral' : ''}`}
+											onclick={() => setFindingState(row.id, 'Rejected')}
+										>
+											Reject
+										</button>
+									{/if}
 								</div>
 							</article>
 						{/each}
@@ -474,6 +586,41 @@
 		color: var(--text-dark);
 	}
 
+	.edit-stack {
+		display: grid;
+		gap: 10px;
+	}
+
+	.edit-field {
+		display: grid;
+		gap: 6px;
+	}
+
+	.edit-field span {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.edit-field input,
+	.edit-field textarea {
+		width: 100%;
+		padding: 11px 13px;
+		border-radius: 14px;
+		border: 1px solid rgba(31, 81, 89, 0.12);
+		background: rgba(250, 252, 252, 0.96);
+		font: inherit;
+		color: var(--text-dark);
+	}
+
+	.edit-field textarea {
+		resize: vertical;
+		min-height: 94px;
+	}
+
 	.pill,
 	.token,
 	.chip {
@@ -488,6 +635,10 @@
 		border: 1px solid rgba(31, 81, 89, 0.1);
 		background: rgba(255, 255, 255, 0.82);
 		color: var(--text-dark);
+	}
+
+	.chip {
+		cursor: pointer;
 	}
 
 	.pill--good,
@@ -508,6 +659,19 @@
 		background: rgba(180, 35, 40, 0.08);
 		color: #912429;
 		border-color: rgba(180, 35, 40, 0.14);
+	}
+
+	.pill--neutral,
+	.chip--neutral {
+		background: rgba(31, 81, 89, 0.08);
+		color: var(--text-dark);
+		border-color: rgba(31, 81, 89, 0.14);
+	}
+
+	.chip--warn {
+		background: rgba(241, 177, 78, 0.16);
+		color: #9a5d10;
+		border-color: rgba(241, 177, 78, 0.24);
 	}
 
 	.token-group {
