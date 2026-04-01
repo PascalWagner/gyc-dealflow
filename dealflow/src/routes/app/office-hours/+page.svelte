@@ -740,6 +740,7 @@
 	.featured-stage {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) 112px;
+		align-items: center;
 		gap: 18px;
 		padding: 20px;
 		border-radius: 24px;
@@ -749,8 +750,9 @@
 	}
 
 	.featured-time-panel {
-		display: grid;
-		gap: 8px;
+		display: flex;
+		align-items: center;
+		min-height: 100%;
 	}
 
 	.time-local {
