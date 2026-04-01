@@ -94,6 +94,10 @@
 		return formatEventDatePart(event.startDateTime, { weekday: 'short' });
 	}
 
+	function weekdayShortLocal(event) {
+		return formatEventDatePart(event.startDateTime, { weekday: 'short' }, localTimeZone || ET_TIMEZONE);
+	}
+
 	function monthShort(event) {
 		return formatEventDatePart(event.startDateTime, { month: 'short' });
 	}
@@ -104,6 +108,14 @@
 
 	function monthDay(event) {
 		return formatEventDatePart(event.startDateTime, { month: 'short', day: 'numeric' });
+	}
+
+	function monthDayLocal(event) {
+		return formatEventDatePart(
+			event.startDateTime,
+			{ month: 'short', day: 'numeric' },
+			localTimeZone || ET_TIMEZONE
+		);
 	}
 
 	function previousMonth() {
@@ -412,7 +424,6 @@
 	>
 		<div slot="actions" class="office-hours-header-actions">
 			<div class="hero-badge">Members only</div>
-			<a class="header-link" href={replayLibraryUrl}>Replay Library</a>
 		</div>
 	</PageHeader>
 
@@ -560,7 +571,7 @@
 						{#each visibleUpcomingSessions.slice(0, 5) as event}
 							<article class="rhythm-row" class:rhythm-row-active={event.id === nextSession?.id}>
 								<div class="rhythm-copy">
-									<div class="rhythm-date-line">{monthDay(event)} • {weekdayShort(event)}</div>
+									<div class="rhythm-date-line">{monthDayLocal(event)} • {weekdayShortLocal(event)}</div>
 									<div class="rhythm-local-line">{rhythmZoneLabel()}</div>
 								</div>
 								<div class="rhythm-time-line">{rhythmTime(event)}</div>
@@ -568,8 +579,6 @@
 						{/each}
 					</div>
 				{/if}
-
-					<a class="header-link replay-link" href={replayLibraryUrl}>Browse replay library</a>
 				</section>
 			</div>
 		{/if}
@@ -1496,11 +1505,6 @@
 		color: var(--primary);
 		text-align: right;
 		white-space: nowrap;
-	}
-
-	.replay-link {
-		font-size: 14px;
-		font-weight: 700;
 	}
 
 	@keyframes shimmer {
