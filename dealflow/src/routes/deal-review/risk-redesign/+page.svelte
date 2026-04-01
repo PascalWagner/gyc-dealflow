@@ -112,15 +112,6 @@
 		ppm: 'https://example.com/Capital-Fund-2-PPM-CF2-Company-Documents.pdf'
 	};
 
-	let extractedRows = $state(
-		extractedRowSeeds.map((row) => ({
-			...row,
-			isEditing: false,
-			draftTitle: row.title,
-			draftQuote: row.quote
-		}))
-	);
-
 	const dealId = $derived($page.url.searchParams.get('id') || DEFAULT_DEAL_ID);
 	const from = $derived($page.url.searchParams.get('from') || 'queue');
 	const viewId = $derived.by(() => {
@@ -131,6 +122,7 @@
 	const activeViewIndex = $derived(mockViews.findIndex((view) => view.id === viewId));
 	const previousView = $derived(activeViewIndex > 0 ? mockViews[activeViewIndex - 1] : null);
 	const nextView = $derived(activeViewIndex < mockViews.length - 1 ? mockViews[activeViewIndex + 1] : null);
+	const extractedRows = $derived.by(() => buildExtractedRows($page.url.searchParams));
 	const acceptedRiskTags = $derived.by(() => {
 		const acceptedTags = extractedRows
 			.filter((row) => row.state === 'Accepted')
@@ -138,11 +130,55 @@
 		return Array.from(new Set([...acceptedTags, 'Liquidity', 'Asset-specific downside']));
 	});
 
+	function findingStateParamKey(rowId) {
+		return `finding_${rowId}`;
+	}
+
+	function buildExtractedRows(searchParams) {
+		const editingRowId = String(searchParams.get('editing') || '').trim();
+		const saveEditRowId = String(searchParams.get('saveEdit') || '').trim();
+		const draftTitle = String(searchParams.get('draftTitle') || '').trim();
+		const draftQuote = String(searchParams.get('draftQuote') || '').trim();
+
+		return extractedRowSeeds.map((seed) => {
+			const savedState = String(searchParams.get(findingStateParamKey(seed.id)) || seed.state).trim() || seed.state;
+			const nextRow = {
+				...seed,
+				state: savedState,
+				isEditing: false,
+				draftTitle: seed.title,
+				draftQuote: seed.quote
+			};
+
+			if (saveEditRowId === seed.id) {
+				nextRow.title = draftTitle || nextRow.title;
+				nextRow.quote = draftQuote || nextRow.quote;
+				nextRow.state = 'Needs edit';
+			}
+
+			if (editingRowId === seed.id) {
+				nextRow.isEditing = true;
+				nextRow.state = 'Needs edit';
+				nextRow.draftTitle = draftTitle || nextRow.title;
+				nextRow.draftQuote = draftQuote || nextRow.quote;
+			} else {
+				nextRow.draftTitle = nextRow.title;
+				nextRow.draftQuote = nextRow.quote;
+			}
+
+			return nextRow;
+		});
+	}
+
 	function buildViewHref(nextViewId) {
 		const params = new URLSearchParams($page.url.searchParams);
 		params.set('view', nextViewId);
 		params.set('from', from);
 		if (dealId) params.set('id', dealId);
+		params.delete('editing');
+		params.delete('saveEdit');
+		params.delete('draftTitle');
+		params.delete('draftQuote');
 		return `/deal-review/risk-redesign?${params.toString()}`;
 	}
 
@@ -157,6 +193,25 @@
 		if (stageId === 'summary') params.set('allowSummary', '1');
 		params.set('from', from);
 		return `/deal-review?${params.toString()}`;
+	}
+
+	function buildFindingHref(rowId, { nextState = null, editing = '' } = {}) {
+		const params = new URLSearchParams($page.url.searchParams);
+		params.set('view', viewId);
+		params.set('from', from);
+		if (dealId) params.set('id', dealId);
+		params.delete('saveEdit');
+		params.delete('draftTitle');
+		params.delete('draftQuote');
+		if (nextState) {
+			params.set(findingStateParamKey(rowId), nextState);
+		}
+		if (editing) {
+			params.set('editing', editing);
+		} else {
+			params.delete('editing');
+		}
+		return `/deal-review/risk-redesign?${params.toString()}`;
 	}
 
 	function openStage(stageId) {
@@ -174,63 +229,6 @@
 		if (/edit|partial|implied/i.test(value)) return 'warn';
 		if (/missing|needs/i.test(value)) return 'bad';
 		return 'neutral';
-	}
-
-	function updateExtractedRows(updater) {
-		extractedRows = extractedRows.map((row) => updater(row));
-	}
-
-	function setFindingState(rowId, nextState) {
-		updateExtractedRows((row) => row.id === rowId
-			? {
-				...row,
-				state: nextState,
-				isEditing: false
-			}
-			: row);
-	}
-
-	function startEditingFinding(rowId) {
-		updateExtractedRows((row) => row.id === rowId
-			? {
-				...row,
-				isEditing: true,
-				state: 'Needs edit'
-			}
-			: row);
-	}
-
-	function updateFindingDraft(rowId, fieldKey, nextValue) {
-		updateExtractedRows((row) => row.id === rowId
-			? {
-				...row,
-				[fieldKey]: nextValue
-			}
-			: row);
-	}
-
-	function saveFindingEdits(rowId) {
-		updateExtractedRows((row) => {
-			if (row.id !== rowId) return row;
-			return {
-				...row,
-				title: String(row.draftTitle || '').trim() || row.title,
-				quote: String(row.draftQuote || '').trim() || row.quote,
-				state: 'Needs edit',
-				isEditing: false
-			};
-		});
-	}
-
-	function cancelFindingEdits(rowId) {
-		updateExtractedRows((row) => row.id === rowId
-			? {
-				...row,
-				draftTitle: row.title,
-				draftQuote: row.quote,
-				isEditing: false
-			}
-			: row);
 	}
 </script>
 
@@ -281,24 +279,39 @@
 									<span class={`pill pill--${tone(row.state)}`}>{row.state}</span>
 								</div>
 								{#if row.isEditing}
-									<div class="edit-stack">
+									<form
+										id={`finding-edit-${row.id}`}
+										class="edit-stack"
+										method="GET"
+										action="/deal-review/risk-redesign"
+									>
+										<input type="hidden" name="id" value={dealId}>
+										<input type="hidden" name="from" value={from}>
+										<input type="hidden" name="view" value={viewId}>
+										<input type="hidden" name="saveEdit" value={row.id}>
+										{#each extractedRows as currentRow}
+											<input
+												type="hidden"
+												name={findingStateParamKey(currentRow.id)}
+												value={currentRow.id === row.id ? 'Needs edit' : currentRow.state}
+											>
+										{/each}
 										<label class="edit-field">
 											<span>Finding title</span>
 											<input
 												type="text"
+												name="draftTitle"
 												value={row.draftTitle}
-												oninput={(event) => updateFindingDraft(row.id, 'draftTitle', event.currentTarget.value)}
 											>
 										</label>
 										<label class="edit-field">
 											<span>Evidence summary</span>
 											<textarea
 												rows="3"
-												value={row.draftQuote}
-												oninput={(event) => updateFindingDraft(row.id, 'draftQuote', event.currentTarget.value)}
-											></textarea>
+												name="draftQuote"
+											>{row.draftQuote}</textarea>
 										</label>
-									</div>
+									</form>
 								{:else}
 									<h4>{row.title}</h4>
 									<p class="row-quote">{row.quote}</p>
@@ -306,30 +319,35 @@
 								<div class="row-source">{row.source}</div>
 								<div class="row-actions">
 									{#if row.isEditing}
-										<button type="button" class="chip chip--active" onclick={() => saveFindingEdits(row.id)}>Save edit</button>
-										<button type="button" class="chip" onclick={() => cancelFindingEdits(row.id)}>Cancel</button>
-									{:else}
 										<button
-											type="button"
+											type="submit"
+											form={`finding-edit-${row.id}`}
+											class="chip chip--active"
+										>
+											Save edit
+										</button>
+										<a class="chip" href={buildFindingHref(row.id)}>
+											Cancel
+										</a>
+									{:else}
+										<a
 											class={`chip ${row.state === 'Accepted' ? 'chip--active' : ''}`}
-											onclick={() => setFindingState(row.id, 'Accepted')}
+											href={buildFindingHref(row.id, { nextState: 'Accepted' })}
 										>
 											Accept
-										</button>
-										<button
-											type="button"
+										</a>
+										<a
 											class={`chip ${row.state === 'Needs edit' ? 'chip--active chip--warn' : ''}`}
-											onclick={() => startEditingFinding(row.id)}
+											href={buildFindingHref(row.id, { nextState: 'Needs edit', editing: row.id })}
 										>
 											Edit
-										</button>
-										<button
-											type="button"
+										</a>
+										<a
 											class={`chip ${row.state === 'Rejected' ? 'chip--active chip--neutral' : ''}`}
-											onclick={() => setFindingState(row.id, 'Rejected')}
+											href={buildFindingHref(row.id, { nextState: 'Rejected' })}
 										>
 											Reject
-										</button>
+										</a>
 									{/if}
 								</div>
 							</article>
@@ -426,7 +444,7 @@
 				{#if nextView}
 					<a class="primary-btn" href={buildViewHref(nextView.id)}>Next</a>
 				{:else}
-					<button type="button" class="primary-btn" onclick={() => openStage('summary')}>Continue to summary</button>
+					<a class="primary-btn" href={buildStageHref('summary')}>Continue to summary</a>
 				{/if}
 			</div>
 		</div>
@@ -638,6 +656,7 @@
 	}
 
 	.chip {
+		text-decoration: none;
 		cursor: pointer;
 	}
 
