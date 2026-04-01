@@ -223,10 +223,7 @@
 	const sidebarCurrentStage = $derived(reviewStep === 'intake' ? 'intake' : activeStage);
 	const sidebarCompletedStages = $derived(reviewStep === 'intake' ? [] : completedStageIds);
 	const sidebarAccessibleStages = $derived(reviewStep === 'intake' ? ['intake'] : unlockedStageIds);
-	const reviewWorkspaceTitle = $derived.by(() => {
-		if (activeStage === 'sec') return 'Lock the compliance inputs before you match a filing';
-		return activeStageConfig?.title || 'Review extracted deal details';
-	});
+	const reviewWorkspaceTitle = $derived(activeStageConfig?.title || 'Review extracted deal details');
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
 	const pageSubtitle = $derived(
@@ -1457,27 +1454,6 @@
 								<div class="review-stage-controls__eyebrow">{activeStageConfig?.label || 'Review'} Step</div>
 								<h2>{reviewWorkspaceTitle}</h2>
 							</div>
-							<div class="review-stage-controls__actions">
-								{#if cameFromQueue}
-									<button
-										type="button"
-										class="ghost-btn"
-										onclick={() => goto(buildReviewHref({ stage: 'intake', from: 'queue' }), { replaceState: true, noScroll: true, keepFocus: true })}
-									>
-										Back to Uploads
-									</button>
-								{/if}
-								{#if hasSourceDocuments}
-									<button
-										type="button"
-										class="ghost-btn"
-										onclick={runExtraction}
-										disabled={extractionState === 'running' || saving}
-									>
-										{extractionState === 'running' ? 'Extracting...' : 'Run extraction again'}
-									</button>
-								{/if}
-							</div>
 						</div>
 					{/if}
 
@@ -1507,27 +1483,6 @@
 					</div>
 
 					{#if activeStage === 'sec'}
-						<section class="editor-card editor-card--structured editor-card--compressed">
-							<div class="card-heading">
-								<div>
-									<h2>Match context</h2>
-									<p>Only lock the structured inputs that change how this filing should be matched.</p>
-								</div>
-							</div>
-							<div class="field-grid">
-								{#each getStageFieldGroups(activeStage) as group}
-									{#each group.fieldKeys as fieldKey}
-										<FieldRenderer
-											field={dealFieldConfig[fieldKey]}
-											value={form[fieldKey]}
-											error={fieldErrors[fieldKey] || ''}
-											warning={fieldWarnings[fieldKey] || ''}
-											onupdate={(nextValue) => updateField(fieldKey, nextValue)}
-										/>
-									{/each}
-								{/each}
-							</div>
-						</section>
 						<SecVerificationStage
 							dealId={dealId}
 							deal={deal}

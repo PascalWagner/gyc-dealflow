@@ -3,7 +3,6 @@
 		TEAM_CONTACT_ROLE_OPTIONS,
 		createEmptyTeamContact,
 		deriveTeamRoleAssignments,
-		hasMeaningfulContactValues,
 		normalizeTeamContacts,
 		teamContactFullName,
 		validateTeamContacts
@@ -23,7 +22,6 @@
 	let editingContactId = $state('');
 	let submitAttempted = $state(false);
 	let touchedFields = $state({});
-	let samePersonPreference = $state(false);
 
 	function getContacts() {
 		return normalizeTeamContacts(contacts, {
@@ -115,22 +113,18 @@
 	}
 
 	function assignRole(role, contactId, sourceContacts = currentContacts) {
-		const useSamePerson = samePersonHandlesBothRoles;
 		let operatorLeadContactId = roleAssignments.operatorLead?.id || '';
 		let investorRelationsContactId = roleAssignments.investorRelations?.id || '';
 
 		if (role === 'operator') {
 			operatorLeadContactId = contactId;
-			if (useSamePerson) investorRelationsContactId = contactId;
 		} else {
 			investorRelationsContactId = contactId;
-			if (useSamePerson) operatorLeadContactId = contactId;
 		}
 
 		console.info('[team-stage] role assignment', {
 			role,
-			contactId,
-			samePersonHandlesBothRoles: useSamePerson
+			contactId
 		});
 
 		commit(
@@ -141,41 +135,6 @@
 			'assign-role'
 		);
 		pickerRole = '';
-	}
-
-	function toggleSamePerson(nextValue) {
-		samePersonPreference = nextValue;
-		let operatorLeadContactId = roleAssignments.operatorLead?.id || '';
-		let investorRelationsContactId = roleAssignments.investorRelations?.id || '';
-
-		if (nextValue) {
-			const sharedContactId =
-				operatorLeadContactId ||
-				investorRelationsContactId ||
-				currentContacts.find((contact) => hasMeaningfulContactValues(contact))?.id ||
-				currentContacts[0]?.id ||
-				'';
-
-			operatorLeadContactId = sharedContactId;
-			investorRelationsContactId = sharedContactId;
-		} else if (operatorLeadContactId && investorRelationsContactId && operatorLeadContactId === investorRelationsContactId) {
-			const alternateContact = currentContacts.find((contact) => contact.id !== operatorLeadContactId);
-			investorRelationsContactId = alternateContact?.id || investorRelationsContactId;
-		}
-
-		console.info('[team-stage] same-person-toggle', {
-			value: nextValue,
-			operatorLeadContactId,
-			investorRelationsContactId
-		});
-
-		commit(
-			applyAssignments(currentContacts, {
-				operatorLeadContactId,
-				investorRelationsContactId
-			}),
-			'toggle-same-person'
-		);
 	}
 
 	function openEditor(contactId, preferredRole = '') {
@@ -241,10 +200,6 @@
 	const currentContacts = $derived(getContacts());
 	const strictValidation = $derived(validateTeamContacts(currentContacts, { mode: 'continue' }));
 	const roleAssignments = $derived(deriveTeamRoleAssignments(currentContacts));
-	const samePersonHandlesBothRoles = $derived(
-		samePersonPreference || roleAssignments.samePersonHandlesBothRoles
-	);
-	const stageStatus = $derived(strictValidation.valid ? 'Ready' : 'Needs attention');
 	const operatorLeadContact = $derived(roleAssignments.operatorLead);
 	const investorRelationsContact = $derived(roleAssignments.investorRelations);
 	const additionalContacts = $derived(roleAssignments.additionalContacts || []);
@@ -265,10 +220,10 @@
 	const editingContact = $derived(
 		currentContacts.find((contact) => contact.id === editingContactId) || null
 	);
-	const displayError = $derived(error || (submitAttempted ? strictValidation.formError : '') || '');
-	const errorTone = $derived(
-		/enrich/i.test(String(displayError || '')) ? 'note' : 'error'
-	);
+	const displayError = $derived.by(() => {
+		const nextError = error || (submitAttempted ? strictValidation.formError : '') || '';
+		return /enrich/i.test(String(nextError || '')) ? '' : nextError;
+	});
 	const stageSummary = $derived(
 		strictValidation.valid
 			? 'Both LP-facing roles have usable contact details.'
@@ -282,19 +237,6 @@
 			<div class="team-stage__eyebrow">Team Contacts</div>
 			<h2>Add the two contacts an LP will actually use.</h2>
 			<p>{stageSummary}</p>
-		</div>
-		<div class="team-stage__intro-meta">
-			<span class={`team-stage__status team-stage__status--${stageStatus === 'Ready' ? 'ready' : 'attention'}`}>
-				{stageStatus}
-			</span>
-			<label class="same-person-toggle">
-				<input
-					type="checkbox"
-					checked={samePersonHandlesBothRoles}
-					onchange={(event) => toggleSamePerson(event.currentTarget.checked)}
-				>
-				<span>Same person handles both roles</span>
-			</label>
 		</div>
 	</div>
 
@@ -375,9 +317,9 @@
 	{/if}
 
 	<section class="team-support">
-		<div>
+		<div class="team-support__copy">
 			<div class="team-section__eyebrow">Supporting contacts</div>
-			<h3>Only add extras if they help the LP experience.</h3>
+			<h3 class="team-support__title">Supporting contacts</h3>
 			<p>
 				{#if additionalContacts.length > 0}
 					{additionalContacts.length} supporting contact{additionalContacts.length === 1 ? '' : 's'} saved.
@@ -539,7 +481,7 @@
 	{/if}
 
 	{#if displayError}
-		<div class={`team-message team-message--${errorTone}`}>{displayError}</div>
+		<div class="team-message team-message--error">{displayError}</div>
 	{/if}
 
 	<div class="team-stage__footer">
@@ -562,17 +504,14 @@
 	}
 
 	.team-stage__intro {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 18px;
-		flex-wrap: wrap;
+		display: grid;
+		gap: 10px;
 	}
 
 	.team-stage__intro-copy {
 		display: grid;
 		gap: 8px;
-		max-width: 58ch;
+		max-width: 62ch;
 	}
 
 	.team-stage__intro-copy p,
@@ -589,17 +528,25 @@
 		color: var(--text-secondary);
 	}
 
-	.team-stage__intro-copy h2,
-	.team-support h3,
-	.team-section__header h3,
-	.team-panel__header h3 {
+	.team-stage__intro-copy h2 {
 		margin: 0;
 		font-family: var(--font-ui);
-		font-size: clamp(1.7rem, 2.6vw, 2.2rem);
+		font-size: clamp(1.9rem, 3vw, 2.45rem);
 		font-weight: 800;
-		line-height: 1.06;
+		line-height: 1.02;
 		color: var(--text-dark);
 		letter-spacing: -0.03em;
+	}
+
+	.team-panel__header h3,
+	.team-section__header h3 {
+		margin: 0;
+		font-family: var(--font-ui);
+		font-size: clamp(1.2rem, 1.8vw, 1.45rem);
+		font-weight: 750;
+		line-height: 1.12;
+		color: var(--text-dark);
+		letter-spacing: -0.02em;
 	}
 
 	.team-stage__eyebrow,
@@ -612,30 +559,6 @@
 		letter-spacing: 0.8px;
 		text-transform: uppercase;
 		color: var(--text-muted);
-	}
-
-	.team-stage__intro-meta {
-		display: grid;
-		gap: 10px;
-		justify-items: start;
-	}
-
-	.team-stage__status {
-		padding: 8px 13px;
-		border-radius: 999px;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 800;
-	}
-
-	.team-stage__status--attention {
-		background: rgba(180, 122, 22, 0.1);
-		color: #9a5e11;
-	}
-
-	.team-stage__status--ready {
-		background: rgba(81, 190, 123, 0.14);
-		color: #165c47;
 	}
 
 	.team-role-grid {
@@ -680,11 +603,11 @@
 	}
 
 	.role-card__header h3 {
-		margin: 6px 0 0;
+		margin: 4px 0 0;
 		font-family: var(--font-ui);
-		font-size: clamp(1.55rem, 2vw, 1.95rem);
-		font-weight: 800;
-		line-height: 1.08;
+		font-size: clamp(1.35rem, 1.9vw, 1.72rem);
+		font-weight: 780;
+		line-height: 1.06;
 		color: var(--text-dark);
 		letter-spacing: -0.02em;
 	}
@@ -832,29 +755,30 @@
 		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12);
 	}
 
-	.same-person-toggle {
-		display: inline-flex;
-		align-items: center;
-		gap: 10px;
-		padding: 8px 12px;
-		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.82);
-		border: 1px solid rgba(31, 81, 89, 0.08);
-		font-size: 13px;
-		color: var(--text-dark);
-	}
-
-	.same-person-toggle input {
-		width: 18px;
-		height: 18px;
-	}
-
 	.team-support {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 16px;
 		flex-wrap: wrap;
+		background: rgba(255, 255, 255, 0.42);
+		border-color: rgba(31, 81, 89, 0.06);
+	}
+
+	.team-support__copy {
+		display: grid;
+		gap: 6px;
+		max-width: 54ch;
+	}
+
+	.team-support__title {
+		margin: 0;
+		font-family: var(--font-ui);
+		font-size: clamp(1.08rem, 1.55vw, 1.3rem);
+		font-weight: 720;
+		line-height: 1.18;
+		letter-spacing: -0.01em;
+		color: var(--text-dark);
 	}
 
 	.team-section {
@@ -948,11 +872,6 @@
 	.team-message--error {
 		background: rgba(180, 35, 40, 0.08);
 		color: #8c2328;
-	}
-
-	.team-message--note {
-		background: rgba(31, 81, 89, 0.08);
-		color: var(--text-secondary);
 	}
 
 	.field-error {

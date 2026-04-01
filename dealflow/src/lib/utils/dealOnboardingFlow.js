@@ -74,9 +74,9 @@ const COMMON_STAGE_CONFIG = {
 	sec: {
 		id: 'sec',
 		label: 'SEC',
-		title: 'Verify the issuer and compliance structure',
-		description: 'Match the deal to the right security structure before you trust the record.',
-		fieldGroupIds: ['sec_structure'],
+		title: 'Verify the issuer filing before you trust the record',
+		description: 'Confirm the issuer match, filing evidence, and reviewer notes before you move on.',
+		fieldGroupIds: [],
 		requiredRuleIds: ['sec_structure']
 	},
 	team: {
@@ -148,7 +148,7 @@ const FIELD_GROUPS = {
 		stageId: 'overview',
 		label: 'Classification',
 		description: 'Lock in the structured identity of the deal before you refine the narrative.',
-		fieldKeys: ['assetClass', 'dealType', 'offeringStatus', 'availableTo', 'investmentMinimum', 'investingGeography']
+		fieldKeys: ['assetClass', 'dealType', 'offeringType', 'offeringStatus', 'availableTo', 'investmentMinimum', 'investingGeography']
 	},
 	overview_story: {
 		id: 'overview_story',
