@@ -787,7 +787,7 @@
 	/* ── Mobile Responsive ── */
 		@media (max-width: 768px) {
 			.content-area {
-				padding-bottom: calc(var(--ly-mobile-tab-bar-offset, 72px) + 10px);
+				padding-bottom: 0;
 			}
 
 			.coach-card {
