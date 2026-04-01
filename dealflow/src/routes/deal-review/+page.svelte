@@ -231,62 +231,6 @@
 		if (activeStage === 'sec') return 'Lock the compliance inputs before you match a filing';
 		return activeStageConfig?.title || 'Review extracted deal details';
 	});
-	const reviewWorkspaceSummary = $derived.by(() => {
-		if (extractionState === 'running') {
-			return 'We are still pulling details from the uploaded deck and PPM. Confirm the structure below while the extraction finishes.';
-		}
-		if (extractionState === 'error') {
-			return extractionError || 'The extraction hit a problem. You can keep reviewing manually or rerun it after fixing the source files.';
-		}
-		if (extractionSummary) {
-			return `We prefilled ${extractionSummary.fieldsApplied} fields from the uploaded sources. Tighten the structured inputs and confirm the issuer before you move on.`;
-		}
-		if (activeStage === 'sec') {
-			return 'Start with the structured offering fields, then confirm whether this issuer has a matching Form D filing or should be resolved manually.';
-		}
-		return 'Review the source-backed draft, fill the gaps, and only move forward once the record is trustworthy.';
-	});
-	const reviewWorkspaceTone = $derived.by(() => {
-		if (saveError || extractionState === 'error') return 'error';
-		if (extractionState === 'running') return 'working';
-		if (extractionSummary) return 'ready';
-		return 'neutral';
-	});
-	const reviewWorkspaceChips = $derived.by(() => {
-		if (!extractionSummary?.steps?.length) return [];
-		return extractionSummary.steps.map((step) => ({
-			label: step.step || 'step',
-			value: `${step.fields_found || 0} fields`
-		}));
-	});
-	const reviewAlertCards = $derived.by(() => {
-		const cards = [];
-		if (saveError) {
-			cards.push({
-				tone: 'error',
-				title: 'Could not save this stage',
-				body: saveError
-			});
-		}
-		if (saveMessage && !(extractionSummary && /prefilled/i.test(saveMessage))) {
-			cards.push({
-				tone: 'success',
-				title: 'Saved update',
-				body: saveMessage
-			});
-		}
-		if (schemaWarnings.length > 0) {
-			cards.push({
-				tone: 'warning',
-				title: 'Structured fields need review',
-				body: 'Some imported values do not match the canonical field options yet. Review the highlighted structured fields before publishing.'
-			});
-		}
-		return cards;
-	});
-	const showReviewWorkspace = $derived(
-		Boolean(cameFromIntake || cameFromQueue || extractionState !== 'idle' || extractionSummary || saveError || saveMessage)
-	);
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
 	const pageSubtitle = $derived(
@@ -1491,58 +1435,47 @@
 		{:else}
 			<div class={`review-layout ${activeStage === 'team' ? 'review-layout--wide' : ''}`}>
 				<form class="editor-stack" onsubmit={(event) => { event.preventDefault(); saveActiveReviewStage(); }}>
-					{#if showReviewWorkspace}
-						<section class={`review-workspace review-workspace--${reviewWorkspaceTone}`}>
-							<div class="review-workspace__header">
-								<div>
-									<div class="review-workspace__eyebrow">{activeStageConfig?.label || 'Review'} Workspace</div>
-									<h2>{reviewWorkspaceTitle}</h2>
-									<p>{reviewWorkspaceSummary}</p>
-								</div>
-								<div class="review-workspace__actions">
-									{#if cameFromQueue}
-										<button
-											type="button"
-											class="ghost-btn"
-											onclick={() => goto(buildReviewHref({ stage: 'intake', from: 'queue' }), { replaceState: true, noScroll: true, keepFocus: true })}
-										>
-											Back to Uploads
-										</button>
-									{/if}
-									{#if hasSourceDocuments}
-										<button
-											type="button"
-											class="ghost-btn"
-											onclick={runExtraction}
-											disabled={extractionState === 'running' || saving}
-										>
-											{extractionState === 'running' ? 'Extracting...' : 'Run extraction again'}
-										</button>
-									{/if}
-								</div>
+					{#if cameFromQueue || hasSourceDocuments}
+						<div class="review-stage-controls">
+							<div class="review-stage-controls__copy">
+								<div class="review-stage-controls__eyebrow">{activeStageConfig?.label || 'Review'} Step</div>
+								<h2>{reviewWorkspaceTitle}</h2>
 							</div>
-
-							{#if reviewWorkspaceChips.length > 0}
-								<div class="review-workspace__chip-row">
-									{#each reviewWorkspaceChips as chip}
-										<div class="review-workspace__chip">
-											<strong>{chip.label}</strong>
-											<span>{chip.value}</span>
-										</div>
-									{/each}
-								</div>
-							{/if}
-						</section>
+							<div class="review-stage-controls__actions">
+								{#if cameFromQueue}
+									<button
+										type="button"
+										class="ghost-btn"
+										onclick={() => goto(buildReviewHref({ stage: 'intake', from: 'queue' }), { replaceState: true, noScroll: true, keepFocus: true })}
+									>
+										Back to Uploads
+									</button>
+								{/if}
+								{#if hasSourceDocuments}
+									<button
+										type="button"
+										class="ghost-btn"
+										onclick={runExtraction}
+										disabled={extractionState === 'running' || saving}
+									>
+										{extractionState === 'running' ? 'Extracting...' : 'Run extraction again'}
+									</button>
+								{/if}
+							</div>
+						</div>
 					{/if}
 
-					{#if reviewAlertCards.length > 0}
-						<div class="review-alert-grid">
-							{#each reviewAlertCards as alert}
-								<div class={`review-alert review-alert--${alert.tone}`}>
-									<strong>{alert.title}</strong>
-									<p>{alert.body}</p>
-								</div>
-							{/each}
+					{#if saveError}
+						<div class="message-banner message-banner--error">{saveError}</div>
+					{/if}
+
+					{#if saveMessage && !(extractionSummary && /prefilled/i.test(saveMessage))}
+						<div class="message-banner message-banner--success">{saveMessage}</div>
+					{/if}
+
+					{#if schemaWarnings.length > 0}
+						<div class="message-banner message-banner--warning">
+							Some imported values do not match the canonical field options yet. Review the highlighted structured fields before publishing.
 						</div>
 					{/if}
 
@@ -1558,11 +1491,11 @@
 					</div>
 
 					{#if activeStage === 'sec'}
-						<section class="editor-card editor-card--structured">
+						<section class="editor-card editor-card--structured editor-card--compressed">
 							<div class="card-heading">
 								<div>
-									<h2>Compliance structure</h2>
-									<p>Lock the structured offering fields first so the SEC match logic and manual resolution options are grounded in the right context.</p>
+									<h2>Match context</h2>
+									<p>Only lock the structured inputs that change how this filing should be matched.</p>
 								</div>
 							</div>
 							<div class="field-grid">
@@ -1875,8 +1808,7 @@
 
 	.intake-section,
 	.editor-card,
-	.state-card,
-	.review-workspace {
+	.state-card {
 		padding: 22px;
 		border-radius: 24px;
 		background:
@@ -2086,42 +2018,21 @@
 		flex-wrap: wrap;
 	}
 
-	.review-workspace {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		background:
-			linear-gradient(180deg, rgba(251, 250, 246, 0.96), rgba(244, 247, 243, 0.96)),
-			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 46%);
-	}
-
-	.review-workspace--ready {
-		border-color: rgba(22, 122, 82, 0.16);
-	}
-
-	.review-workspace--working {
-		border-color: rgba(199, 113, 0, 0.18);
-		background:
-			linear-gradient(180deg, rgba(253, 248, 241, 0.98), rgba(249, 244, 236, 0.96)),
-			radial-gradient(circle at top right, rgba(249, 115, 22, 0.1), transparent 42%);
-	}
-
-	.review-workspace--error {
-		border-color: rgba(194, 65, 68, 0.16);
-		background:
-			linear-gradient(180deg, rgba(255, 246, 246, 0.98), rgba(255, 250, 250, 0.96)),
-			radial-gradient(circle at top right, rgba(194, 65, 68, 0.08), transparent 44%);
-	}
-
-	.review-workspace__header {
+	.review-stage-controls {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 16px;
 		flex-wrap: wrap;
+		padding: 2px 2px 0;
 	}
 
-	.review-workspace__eyebrow {
+	.review-stage-controls__copy {
+		display: grid;
+		gap: 6px;
+	}
+
+	.review-stage-controls__eyebrow {
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 800;
@@ -2131,103 +2042,31 @@
 		margin-bottom: 8px;
 	}
 
-	.review-workspace h2 {
+	.review-stage-controls h2 {
 		margin: 0;
 		font-family: var(--font-ui);
-		font-size: 20px;
+		font-size: clamp(1.15rem, 1.8vw, 1.45rem);
 		font-weight: 800;
 		color: var(--text-dark);
-		letter-spacing: -0.02em;
+		letter-spacing: -0.03em;
 	}
 
-	.review-workspace p {
-		margin: 0;
-		font-size: 14px;
-		line-height: 1.65;
-		color: var(--text-secondary);
-	}
-
-	.review-workspace__chip-row {
+	.review-stage-controls__actions {
 		display: flex;
+		align-items: center;
+		gap: 12px;
 		flex-wrap: wrap;
-		gap: 10px;
-	}
-
-	.review-workspace__chip {
-		display: inline-grid;
-		gap: 4px;
-		padding: 10px 12px;
-		border-radius: 14px;
-		border: 1px solid rgba(31, 81, 89, 0.08);
-		background: rgba(255, 255, 255, 0.84);
-		font-size: 12px;
-		line-height: 1.2;
-	}
-
-	.review-workspace__chip strong {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 800;
-		letter-spacing: 0.7px;
-		text-transform: uppercase;
-		color: var(--text-muted);
-	}
-
-	.review-workspace__chip span {
-		color: var(--text-dark);
-		font-weight: 700;
-	}
-
-	.review-alert-grid {
-		display: grid;
-		gap: 10px;
-	}
-
-	.review-alert {
-		padding: 14px 16px;
-		border-radius: 18px;
-		border: 1px solid rgba(31, 81, 89, 0.08);
-		background: rgba(255, 255, 255, 0.56);
-		display: grid;
-		gap: 6px;
-	}
-
-	.review-alert strong {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 800;
-		letter-spacing: 0.7px;
-		text-transform: uppercase;
-	}
-
-	.review-alert p {
-		margin: 0;
-		font-size: 13px;
-		line-height: 1.55;
-	}
-
-	.review-alert--error {
-		border-color: rgba(194, 65, 68, 0.18);
-		background: rgba(255, 244, 244, 0.92);
-		color: #7a1d1d;
-	}
-
-	.review-alert--success {
-		border-color: rgba(22, 122, 82, 0.16);
-		background: rgba(240, 253, 245, 0.92);
-		color: #167a52;
-	}
-
-	.review-alert--warning {
-		border-color: rgba(217, 119, 6, 0.18);
-		background: rgba(255, 249, 237, 0.95);
-		color: #9a6700;
 	}
 
 	.editor-card--structured {
 		background:
 			linear-gradient(180deg, rgba(252, 251, 247, 0.96), rgba(246, 248, 243, 0.96)),
 			radial-gradient(circle at top right, rgba(31, 81, 89, 0.04), transparent 40%);
+	}
+
+	.editor-card--compressed {
+		padding: 18px 20px;
+		box-shadow: 0 10px 20px rgba(16, 37, 42, 0.03);
 	}
 
 	.state-card--error {
@@ -2581,11 +2420,11 @@
 		.header-actions,
 		.form-footer,
 		.intake-screen__actions,
-		.review-workspace__actions {
+		.review-stage-controls__actions {
 			align-items: stretch;
 		}
 
-		.review-workspace__header {
+		.review-stage-controls {
 			flex-direction: column;
 			align-items: stretch;
 		}

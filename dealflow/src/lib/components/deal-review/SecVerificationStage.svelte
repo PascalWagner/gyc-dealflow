@@ -50,7 +50,7 @@
 	});
 	const decisionSummary = $derived.by(() => {
 		if (view?.currentStatus === 'verified') {
-			return 'This deal is linked to a filing. Double-check the discrepancies below before you move on.';
+			return 'This deal is linked to a filing. Double-check the differences below before you move on.';
 		}
 		if (view?.currentStatus === 'have_not_filed_yet') {
 			return 'Keep a reviewer note explaining why the issuer has not filed yet so the resolution is easy to trust later.';
@@ -59,13 +59,20 @@
 			return 'Document why this deal should bypass Form D review so the next reviewer does not have to guess.';
 		}
 		if (candidateCount > 0) {
-			return 'Pick the right filing if one matches. Otherwise use a manual resolution and explain why.';
+			return 'Pick the right filing if one matches. Otherwise resolve it manually and explain why.';
 		}
 		if (cachedFiling) {
 			return 'You can confirm the cached filing, run a fresh search, or choose a manual resolution if this issuer is still pre-file.';
 		}
 		return 'Search for a filing first. If the issuer has not filed yet or Form D does not apply, resolve it manually with a note.';
 	});
+	const contextFacts = $derived.by(() => [
+		{ label: 'Deal', value: searchContext.dealName || '—' },
+		{ label: 'Sponsor', value: searchContext.sponsorName || '—' },
+		{ label: 'Issuer', value: searchContext.legalEntities?.issuerEntity || '—' },
+		{ label: 'Applicability', value: applicabilityLabel },
+		{ label: 'Search mode', value: searchModeLabel }
+	]);
 
 	function formatMoney(value) {
 		if (value === null || value === undefined || value === '') return '—';
@@ -87,6 +94,17 @@
 
 	function formatPeople(values = []) {
 		return Array.isArray(values) ? values.filter(Boolean).join(' • ') : '';
+	}
+
+	function evidenceSnapshot(source = {}) {
+		return [
+			{ label: 'Filed', value: source.filingDate || source.fileDate || '—' },
+			{ label: 'Form', value: source.filingType || source.form || '—' },
+			{ label: 'CIK', value: source.cik || '—' },
+			{ label: 'Investors', value: source.totalInvestors ?? '—' },
+			{ label: 'Minimum', value: formatMoney(source.minimumInvestment) },
+			{ label: 'Amount sold', value: formatMoney(source.totalAmountSold) }
+		];
 	}
 
 	function emitChange(nextPayload) {
@@ -129,9 +147,7 @@
 
 	async function load({ background = false } = {}) {
 		if (!dealId) return;
-		if (!background) {
-			loading = true;
-		}
+		if (!background) loading = true;
 		error = '';
 
 		try {
@@ -141,9 +157,7 @@
 		} catch (err) {
 			error = err?.message || 'Could not load SEC verification.';
 		} finally {
-			if (!background) {
-				loading = false;
-			}
+			if (!background) loading = false;
 		}
 	}
 
@@ -258,39 +272,6 @@
 </script>
 
 <section class="sec-stage">
-	<div class={`sec-stage__hero sec-stage__hero--${tone}`}>
-		<div class="sec-stage__hero-copy">
-			<div class="sec-stage__eyebrow">Issuer verification</div>
-			<h3>{workspaceHeading}</h3>
-			<p>{view?.description || fallbackApplicability.reason}</p>
-		</div>
-		<div class="sec-stage__hero-side">
-			<div class={`sec-stage__pill sec-stage__pill--${tone}`}>
-				{view?.currentLabel || SEC_VERIFICATION_LABELS.pending}
-			</div>
-			<div class="sec-stage__hero-metrics">
-				<div class="sec-stage__metric">
-					<span>Applicability</span>
-					<strong>{applicabilityLabel}</strong>
-				</div>
-				<div class="sec-stage__metric">
-					<span>Search mode</span>
-					<strong>{searchModeLabel}</strong>
-				</div>
-				<div class="sec-stage__metric">
-					<span>Last checked</span>
-					<strong>{checkedAtLabel}</strong>
-				</div>
-				{#if view?.suggestedLabel && gate.blocksPublish}
-					<div class="sec-stage__metric">
-						<span>Suggested</span>
-						<strong>{view.suggestedLabel}</strong>
-					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
-
 	{#if gate.blocksPublish}
 		<div class="sec-stage__banner sec-stage__banner--blocked">{gate.reason}</div>
 	{/if}
@@ -308,94 +289,73 @@
 		<div class="sec-stage__banner sec-stage__banner--error">{error}</div>
 	{/if}
 
-	<div class="sec-stage__workspace">
-		<section class="sec-stage__card sec-stage__card--decision">
-			<div class="sec-stage__card-head">
-				<div>
-					<div class="sec-stage__card-kicker">Decision</div>
-					<strong>How this stage resolves</strong>
-				</div>
+	<section class="sec-stage__decision">
+		<div class="sec-stage__decision-header">
+			<div class="sec-stage__decision-copy">
+				<div class="sec-stage__eyebrow">SEC Review</div>
+				<h3>{workspaceHeading}</h3>
+				<p>{decisionSummary}</p>
 			</div>
-			<p class="sec-stage__card-copy">{decisionSummary}</p>
-			<div class="sec-stage__actions">
-				<button type="button" class="sec-stage__button sec-stage__button--primary" disabled={loading || submitting || !dealId} onclick={refreshMatch}>
-					{search.hasRun ? 'Refresh Form D Search' : 'Search Form D Filings'}
-				</button>
-				<button
-					type="button"
-					class="sec-stage__button"
-					disabled={loading || submitting || !dealId || disableManualResolution}
-					onclick={() => setManualStatus('have_not_filed_yet')}
-				>
-					Mark Haven't Filed Yet
-				</button>
-				<button
-					type="button"
-					class="sec-stage__button"
-					disabled={loading || submitting || !dealId || disableManualResolution}
-					onclick={() => setManualStatus('not_applicable')}
-				>
-					Mark Not Applicable
-				</button>
-			</div>
-			<label class="sec-stage__note">
-				<span>Reviewer note</span>
-				<textarea
-					rows="3"
-					placeholder="Explain why the issuer is verified, still pre-file, or should be treated as not applicable."
-					value={noteDraft}
-					oninput={(event) => {
-						noteDraft = event.currentTarget.value;
-					}}
-				></textarea>
-			</label>
-		</section>
-
-		<section class="sec-stage__card">
-			<div class="sec-stage__card-head">
-				<div>
-					<div class="sec-stage__card-kicker">Search context</div>
-					<strong>What we are matching against</strong>
+			<div class="sec-stage__decision-meta">
+				<div class={`sec-stage__pill sec-stage__pill--${tone}`}>
+					{view?.currentLabel || SEC_VERIFICATION_LABELS.pending}
 				</div>
-				{#if search.hasRun && queryCount > 0}
-					<span class="sec-stage__card-badge">{queryCount} queries run</span>
+				<div class="sec-stage__microfact">
+					<span>Last checked</span>
+					<strong>{checkedAtLabel}</strong>
+				</div>
+				{#if view?.suggestedLabel && gate.blocksPublish}
+					<div class="sec-stage__microfact">
+						<span>Suggested</span>
+						<strong>{view.suggestedLabel}</strong>
+					</div>
 				{/if}
 			</div>
-			<div class="sec-stage__context-grid">
-				<div>
-					<span>Deal name</span>
-					<strong>{searchContext.dealName || '—'}</strong>
+		</div>
+
+		<div class="sec-stage__context-strip">
+			{#each contextFacts as fact}
+				<div class="sec-stage__context-chip">
+					<span>{fact.label}</span>
+					<strong>{fact.value}</strong>
 				</div>
-				<div>
-					<span>Sponsor</span>
-					<strong>{searchContext.sponsorName || '—'}</strong>
-				</div>
-				<div>
-					<span>Issuer entity</span>
-					<strong>{searchContext.legalEntities?.issuerEntity || '—'}</strong>
-				</div>
-				<div>
-					<span>GP entity</span>
-					<strong>{searchContext.legalEntities?.gpEntity || '—'}</strong>
-				</div>
-				<div>
-					<span>Sponsor entity</span>
-					<strong>{searchContext.legalEntities?.sponsorEntity || '—'}</strong>
-				</div>
-				<div>
-					<span>Operator legal entity</span>
-					<strong>{searchContext.legalEntities?.operatorLegalEntity || '—'}</strong>
-				</div>
-			</div>
-			{#if search.hasRun && queryCount > 0}
-				<div class="sec-stage__chip-list">
-					{#each search.queries as query}
-						<span class="sec-stage__chip">{query}</span>
-					{/each}
-				</div>
-			{/if}
-		</section>
-	</div>
+			{/each}
+		</div>
+
+		<div class="sec-stage__actions">
+			<button type="button" class="sec-stage__button sec-stage__button--primary" disabled={loading || submitting || !dealId} onclick={refreshMatch}>
+				{search.hasRun ? 'Refresh Form D Search' : 'Search Form D Filings'}
+			</button>
+			<button
+				type="button"
+				class="sec-stage__button"
+				disabled={loading || submitting || !dealId || disableManualResolution}
+				onclick={() => setManualStatus('have_not_filed_yet')}
+			>
+				Mark Haven't Filed Yet
+			</button>
+			<button
+				type="button"
+				class="sec-stage__button"
+				disabled={loading || submitting || !dealId || disableManualResolution}
+				onclick={() => setManualStatus('not_applicable')}
+			>
+				Mark Not Applicable
+			</button>
+		</div>
+
+		<label class="sec-stage__note">
+			<span>Reviewer note</span>
+			<textarea
+				rows="3"
+				placeholder="Explain why the issuer is verified, still pre-file, or should be treated as not applicable."
+				value={noteDraft}
+				oninput={(event) => {
+					noteDraft = event.currentTarget.value;
+				}}
+			></textarea>
+		</label>
+	</section>
 
 	{#if filing}
 		<section class="sec-stage__evidence sec-stage__evidence--verified">
@@ -403,28 +363,22 @@
 				<div>
 					<div class="sec-stage__card-kicker">Matched filing</div>
 					<strong>{filing.entityName || 'SEC filing linked'}</strong>
+					<p class="sec-stage__evidence-copy">The issuer is linked. Scan the differences below, then move on once the record feels trustworthy.</p>
 				</div>
 				{#if filing.edgarUrl}
 					<a href={filing.edgarUrl} target="_blank" rel="noreferrer">Open on EDGAR</a>
 				{/if}
 			</div>
-			<div class="sec-stage__details">
-				<div><span>CIK</span><strong>{filing.cik || '—'}</strong></div>
-				<div><span>Accession</span><strong>{filing.accessionNumber || '—'}</strong></div>
-				<div><span>Filed</span><strong>{filing.filingDate || '—'}</strong></div>
-				<div><span>First sale</span><strong>{filing.dateOfFirstSale || '—'}</strong></div>
-				<div><span>Form</span><strong>{filing.filingType || '—'}</strong></div>
-				<div><span>Exemptions</span><strong>{formatExemptions(filing.federalExemptions)}</strong></div>
-				<div><span>Minimum</span><strong>{formatMoney(filing.minimumInvestment)}</strong></div>
-				<div><span>Amount sold</span><strong>{formatMoney(filing.totalAmountSold)}</strong></div>
-				<div><span>Investors</span><strong>{filing.totalInvestors ?? '—'}</strong></div>
+
+			<div class="sec-stage__snapshot-grid">
+				{#each evidenceSnapshot(filing) as fact}
+					<div class="sec-stage__snapshot-card">
+						<span>{fact.label}</span>
+						<strong>{fact.value}</strong>
+					</div>
+				{/each}
 			</div>
-			{#if formatPeople(filing.relatedPeople)}
-				<div class="sec-stage__inline-list">
-					<span>Related people</span>
-					<strong>{formatPeople(filing.relatedPeople)}</strong>
-				</div>
-			{/if}
+
 			{#if filing.discrepancies?.length > 0}
 				<div class="sec-stage__warnings">
 					<strong>Review these differences</strong>
@@ -436,15 +390,29 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
-	{/if}
 
-	{#if !filing && cachedFiling}
+			<details class="sec-stage__detail-panel">
+				<summary>See full filing detail</summary>
+				<div class="sec-stage__details">
+					<div><span>Accession</span><strong>{filing.accessionNumber || '—'}</strong></div>
+					<div><span>First sale</span><strong>{filing.dateOfFirstSale || '—'}</strong></div>
+					<div><span>Exemptions</span><strong>{formatExemptions(filing.federalExemptions)}</strong></div>
+				</div>
+				{#if formatPeople(filing.relatedPeople)}
+					<div class="sec-stage__inline-list">
+						<span>Related people</span>
+						<strong>{formatPeople(filing.relatedPeople)}</strong>
+					</div>
+				{/if}
+			</details>
+		</section>
+	{:else if cachedFiling}
 		<section class="sec-stage__evidence">
 			<div class="sec-stage__evidence-head">
 				<div>
 					<div class="sec-stage__card-kicker">Cached filing</div>
 					<strong>{cachedFiling.entityName || 'Cached SEC filing found'}</strong>
+					<p class="sec-stage__evidence-copy">A plausible filing is already on hand. Use it, open it, or keep searching if the issuer still looks off.</p>
 				</div>
 				<div class="sec-stage__evidence-actions">
 					{#if cachedFiling.edgarUrl}
@@ -460,23 +428,16 @@
 					</button>
 				</div>
 			</div>
-			<div class="sec-stage__details">
-				<div><span>CIK</span><strong>{cachedFiling.cik || '—'}</strong></div>
-				<div><span>Accession</span><strong>{cachedFiling.accessionNumber || '—'}</strong></div>
-				<div><span>Filed</span><strong>{cachedFiling.filingDate || '—'}</strong></div>
-				<div><span>First sale</span><strong>{cachedFiling.dateOfFirstSale || '—'}</strong></div>
-				<div><span>Form</span><strong>{cachedFiling.filingType || '—'}</strong></div>
-				<div><span>Exemptions</span><strong>{formatExemptions(cachedFiling.federalExemptions)}</strong></div>
-				<div><span>Minimum</span><strong>{formatMoney(cachedFiling.minimumInvestment)}</strong></div>
-				<div><span>Amount sold</span><strong>{formatMoney(cachedFiling.totalAmountSold)}</strong></div>
-				<div><span>Investors</span><strong>{cachedFiling.totalInvestors ?? '—'}</strong></div>
+
+			<div class="sec-stage__snapshot-grid">
+				{#each evidenceSnapshot(cachedFiling) as fact}
+					<div class="sec-stage__snapshot-card">
+						<span>{fact.label}</span>
+						<strong>{fact.value}</strong>
+					</div>
+				{/each}
 			</div>
-			{#if formatPeople(cachedFiling.relatedPeople)}
-				<div class="sec-stage__inline-list">
-					<span>Related people</span>
-					<strong>{formatPeople(cachedFiling.relatedPeople)}</strong>
-				</div>
-			{/if}
+
 			{#if cachedFiling.discrepancies?.length > 0}
 				<div class="sec-stage__warnings">
 					<strong>Review these differences</strong>
@@ -488,81 +449,117 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
-	{/if}
 
-	{#if !filing && search.hasRun && candidateCount > 0}
+			<details class="sec-stage__detail-panel">
+				<summary>See full filing detail</summary>
+				<div class="sec-stage__details">
+					<div><span>Accession</span><strong>{cachedFiling.accessionNumber || '—'}</strong></div>
+					<div><span>First sale</span><strong>{cachedFiling.dateOfFirstSale || '—'}</strong></div>
+					<div><span>Exemptions</span><strong>{formatExemptions(cachedFiling.federalExemptions)}</strong></div>
+				</div>
+				{#if formatPeople(cachedFiling.relatedPeople)}
+					<div class="sec-stage__inline-list">
+						<span>Related people</span>
+						<strong>{formatPeople(cachedFiling.relatedPeople)}</strong>
+					</div>
+				{/if}
+			</details>
+		</section>
+	{:else if search.hasRun && candidateCount > 0}
 		<section class="sec-stage__matches">
 			<div class="sec-stage__matches-head">
 				<div>
 					<div class="sec-stage__card-kicker">Candidate filings</div>
 					<strong>{candidateCount} possible match{candidateCount === 1 ? '' : 'es'}</strong>
+					<p class="sec-stage__matches-copy">Choose the best match if you see one. Otherwise use a manual resolution and explain why.</p>
 				</div>
+				{#if queryCount > 0}
+					<span class="sec-stage__card-badge">{queryCount} queries run</span>
+				{/if}
 			</div>
+
 			{#each search.candidates as candidate}
 				<div class="sec-stage__candidate">
-					<div class="sec-stage__candidate-copy">
-						<div class="sec-stage__candidate-name">{candidate.entityName || 'Unnamed SEC issuer'}</div>
-						<div class="sec-stage__candidate-meta">
-							<span>{candidate.form || 'D'}</span>
-							<span>{candidate.fileDate || 'Unknown filing date'}</span>
-							<span>CIK {candidate.cik || '—'}</span>
-							<span>{formatSecVerificationConfidence(candidate.matchScore) || 'No confidence score'}</span>
+					<div class="sec-stage__candidate-head">
+						<div>
+							<div class="sec-stage__candidate-name">{candidate.entityName || 'Unnamed SEC issuer'}</div>
+							<div class="sec-stage__candidate-meta">
+								<span>{candidate.form || 'D'}</span>
+								<span>{candidate.fileDate || 'Unknown filing date'}</span>
+								<span>CIK {candidate.cik || '—'}</span>
+								<span>{formatSecVerificationConfidence(candidate.matchScore) || 'No confidence score'}</span>
+							</div>
 						</div>
-						<div class="sec-stage__details">
-							<div><span>Issuer type</span><strong>{candidate.entityType || '—'}</strong></div>
-							<div><span>Jurisdiction</span><strong>{candidate.jurisdiction || candidate.issuerState || '—'}</strong></div>
-							<div><span>Minimum</span><strong>{formatMoney(candidate.minimumInvestment)}</strong></div>
-							<div><span>Amount sold</span><strong>{formatMoney(candidate.totalAmountSold)}</strong></div>
-							<div><span>Investors</span><strong>{candidate.totalInvestors ?? '—'}</strong></div>
-							<div><span>Exemptions</span><strong>{formatExemptions(candidate.federalExemptions)}</strong></div>
+						<div class="sec-stage__candidate-actions">
+							{#if candidate.edgarUrl}
+								<a class="sec-stage__button sec-stage__button--small" href={candidate.edgarUrl} target="_blank" rel="noreferrer">
+									Open Filing
+								</a>
+							{/if}
+							<button
+								type="button"
+								class="sec-stage__button sec-stage__button--small"
+								disabled={submitting}
+								onclick={() => confirmMatch(candidate)}
+							>
+								Use This Filing
+							</button>
 						</div>
-						{#if candidate.reasons?.length > 0}
-							<div class="sec-stage__chip-list">
-								{#each candidate.reasons as reason}
-									<span class="sec-stage__chip">{reason}</span>
-								{/each}
-							</div>
-						{/if}
-						{#if formatPeople(candidate.relatedPeople)}
-							<div class="sec-stage__inline-list">
-								<span>Related people</span>
-								<strong>{formatPeople(candidate.relatedPeople)}</strong>
-							</div>
-						{/if}
-						{#if candidate.discrepancies?.length > 0}
-							<div class="sec-stage__warnings">
-								<strong>Review these differences</strong>
-								{#each candidate.discrepancies as discrepancy}
-									<div class="sec-stage__warning-item">
-										<span>{discrepancy.label}</span>
-										<strong>{discrepancy.detail}</strong>
-									</div>
-								{/each}
-							</div>
-						{/if}
 					</div>
-					<div class="sec-stage__candidate-actions">
-						{#if candidate.edgarUrl}
-							<a class="sec-stage__button sec-stage__button--small" href={candidate.edgarUrl} target="_blank" rel="noreferrer">
-								Open Filing
-							</a>
-						{/if}
-						<button
-							type="button"
-							class="sec-stage__button sec-stage__button--small"
-							disabled={submitting}
-							onclick={() => confirmMatch(candidate)}
-						>
-							Use This Filing
-						</button>
+
+					<div class="sec-stage__snapshot-grid">
+						{#each [
+							{ label: 'Filed', value: candidate.fileDate || '—' },
+							{ label: 'Jurisdiction', value: candidate.jurisdiction || candidate.issuerState || '—' },
+							{ label: 'Minimum', value: formatMoney(candidate.minimumInvestment) },
+							{ label: 'Amount sold', value: formatMoney(candidate.totalAmountSold) }
+						] as fact}
+							<div class="sec-stage__snapshot-card">
+								<span>{fact.label}</span>
+								<strong>{fact.value}</strong>
+							</div>
+						{/each}
 					</div>
+
+					{#if candidate.reasons?.length > 0 || candidate.discrepancies?.length > 0 || formatPeople(candidate.relatedPeople)}
+						<details class="sec-stage__detail-panel">
+							<summary>Why this matched</summary>
+							{#if candidate.reasons?.length > 0}
+								<div class="sec-stage__chip-list">
+									{#each candidate.reasons as reason}
+										<span class="sec-stage__chip">{reason}</span>
+									{/each}
+								</div>
+							{/if}
+							{#if formatPeople(candidate.relatedPeople)}
+								<div class="sec-stage__inline-list">
+									<span>Related people</span>
+									<strong>{formatPeople(candidate.relatedPeople)}</strong>
+								</div>
+							{/if}
+							{#if candidate.discrepancies?.length > 0}
+								<div class="sec-stage__warnings">
+									<strong>Review these differences</strong>
+									{#each candidate.discrepancies as discrepancy}
+										<div class="sec-stage__warning-item">
+											<span>{discrepancy.label}</span>
+											<strong>{discrepancy.detail}</strong>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</details>
+					{/if}
 				</div>
 			{/each}
 		</section>
-	{:else if !filing && search.hasRun}
+	{:else if search.hasRun}
 		<div class="sec-stage__empty">
-			No SEC matches were found from the current search context. Review the structured fields above, then run the search again or choose a manual resolution if the issuer has not filed yet.
+			No SEC matches were found from the current search context. Review the structured inputs above, run a fresh search, or resolve this manually if the issuer has not filed yet.
+		</div>
+	{:else}
+		<div class="sec-stage__empty">
+			Run a filing search once the structured inputs look right. If Form D does not apply, resolve it manually with a short note.
 		</div>
 	{/if}
 </section>
@@ -579,32 +576,50 @@
 			radial-gradient(circle at top right, rgba(31, 81, 89, 0.04), transparent 44%);
 	}
 
-	.sec-stage__hero {
+	.sec-stage__decision,
+	.sec-stage__evidence,
+	.sec-stage__candidate {
 		display: grid;
-		grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
-		gap: 16px;
+		gap: 14px;
 		padding: 18px;
 		border-radius: 22px;
 		border: 1px solid rgba(31, 81, 89, 0.08);
-		background: rgba(255, 255, 255, 0.56);
+		background: rgba(255, 255, 255, 0.58);
 	}
 
-	.sec-stage__hero--verified {
+	.sec-stage__decision {
 		background:
-			linear-gradient(180deg, rgba(239, 253, 244, 0.96), rgba(247, 251, 248, 0.94)),
-			radial-gradient(circle at top right, rgba(22, 122, 82, 0.14), transparent 46%);
+			linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 248, 0.88)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 42%);
 	}
 
-	.sec-stage__hero--review,
-	.sec-stage__hero--waiting {
+	.sec-stage__evidence--verified {
 		background:
-			linear-gradient(180deg, rgba(255, 249, 239, 0.96), rgba(251, 248, 243, 0.94)),
-			radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 46%);
+			linear-gradient(180deg, rgba(237, 253, 243, 0.96), rgba(246, 251, 247, 0.94)),
+			radial-gradient(circle at top right, rgba(22, 122, 82, 0.12), transparent 46%);
 	}
 
-	.sec-stage__hero-copy {
+	.sec-stage__decision-header,
+	.sec-stage__evidence-head,
+	.sec-stage__matches-head,
+	.sec-stage__candidate-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
+	}
+
+	.sec-stage__decision-copy {
 		display: grid;
 		gap: 8px;
+		max-width: 56ch;
+	}
+
+	.sec-stage__decision-meta {
+		display: grid;
+		gap: 10px;
+		justify-items: start;
 	}
 
 	.sec-stage__eyebrow,
@@ -618,23 +633,19 @@
 
 	h3 {
 		margin: 0;
-		font-size: 24px;
-		line-height: 1.1;
+		font-size: clamp(1.7rem, 2.4vw, 2.1rem);
+		line-height: 1.06;
+		letter-spacing: -0.03em;
 		color: var(--text, #111827);
 	}
 
-	.sec-stage__hero-copy p,
-	.sec-stage__card-copy {
+	.sec-stage__decision-copy p,
+	.sec-stage__evidence-copy,
+	.sec-stage__matches-copy {
 		margin: 0;
 		font-size: 14px;
 		line-height: 1.6;
 		color: var(--text-muted, #5f6c7b);
-	}
-
-	.sec-stage__hero-side {
-		display: grid;
-		align-content: start;
-		gap: 12px;
 	}
 
 	.sec-stage__pill {
@@ -645,7 +656,6 @@
 		border-radius: 999px;
 		font-size: 12px;
 		font-weight: 700;
-		justify-self: start;
 	}
 
 	.sec-stage__pill--pending {
@@ -673,38 +683,32 @@
 		color: #475467;
 	}
 
-	.sec-stage__hero-metrics,
-	.sec-stage__details,
-	.sec-stage__context-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-		gap: 10px;
-	}
-
-	.sec-stage__metric,
-	.sec-stage__details div,
-	.sec-stage__context-grid div {
+	.sec-stage__microfact,
+	.sec-stage__context-chip,
+	.sec-stage__snapshot-card,
+	.sec-stage__details div {
 		display: grid;
 		gap: 4px;
 		padding: 12px;
 		border-radius: 14px;
-		background: rgba(255, 255, 255, 0.58);
+		background: rgba(247, 249, 247, 0.92);
 		font-size: 13px;
 	}
 
-	.sec-stage__metric span,
+	.sec-stage__microfact span,
+	.sec-stage__context-chip span,
+	.sec-stage__snapshot-card span,
 	.sec-stage__details span,
-	.sec-stage__context-grid span,
 	.sec-stage__inline-list span,
 	.sec-stage__warning-item span {
 		color: var(--text-muted, #68707a);
 	}
 
-	.sec-stage__metric strong,
+	.sec-stage__microfact strong,
+	.sec-stage__context-chip strong,
+	.sec-stage__snapshot-card strong,
 	.sec-stage__details strong,
-	.sec-stage__context-grid strong,
 	.sec-stage__inline-list strong,
-	.sec-stage__card-head strong,
 	.sec-stage__candidate-name,
 	.sec-stage__matches-head strong,
 	.sec-stage__evidence-head strong {
@@ -734,63 +738,18 @@
 		color: #9a6700;
 	}
 
-	.sec-stage__workspace {
+	.sec-stage__context-strip,
+	.sec-stage__snapshot-grid,
+	.sec-stage__details {
 		display: grid;
-		grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-		gap: 14px;
-	}
-
-	.sec-stage__card,
-	.sec-stage__evidence,
-	.sec-stage__candidate {
-		padding: 16px;
-		border-radius: 18px;
-		border: 1px solid color-mix(in srgb, var(--border-color, #d7dadd) 84%, white);
-		background: rgba(255, 255, 255, 0.58);
-	}
-
-	.sec-stage__card--decision {
-		background:
-			linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 251, 0.96)),
-			radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 42%);
-	}
-
-	.sec-stage__evidence--verified {
-		background:
-			linear-gradient(180deg, rgba(237, 253, 243, 0.96), rgba(246, 251, 247, 0.94)),
-			radial-gradient(circle at top right, rgba(22, 122, 82, 0.12), transparent 46%);
-	}
-
-	.sec-stage__card-head,
-	.sec-stage__evidence-head,
-	.sec-stage__matches-head {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 12px;
-		margin-bottom: 12px;
-	}
-
-	.sec-stage__card-copy {
-		margin-bottom: 14px;
-	}
-
-	.sec-stage__card-badge {
-		display: inline-flex;
-		align-items: center;
-		padding: 7px 10px;
-		border-radius: 999px;
-		background: #f5f7fa;
-		color: var(--text, #111827);
-		font-size: 12px;
-		font-weight: 700;
+		grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+		gap: 10px;
 	}
 
 	.sec-stage__actions {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 10px;
-		margin-bottom: 14px;
 	}
 
 	.sec-stage__button {
@@ -811,8 +770,8 @@
 	}
 
 	.sec-stage__button--primary {
-		background: var(--orange, #f97316);
-		border-color: var(--orange, #f97316);
+		background: linear-gradient(135deg, #1f5159, #10252a);
+		border-color: rgba(31, 81, 89, 0.18);
 		color: white;
 	}
 
@@ -830,7 +789,7 @@
 
 	.sec-stage__note textarea {
 		width: 100%;
-		min-height: 110px;
+		min-height: 96px;
 		padding: 12px 14px;
 		border-radius: 14px;
 		border: 1px solid color-mix(in srgb, var(--border-color, #d7dadd) 88%, white);
@@ -840,11 +799,33 @@
 		resize: vertical;
 	}
 
+	.sec-stage__card-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 7px 10px;
+		border-radius: 999px;
+		background: #f5f7fa;
+		color: var(--text, #111827);
+		font-size: 12px;
+		font-weight: 700;
+	}
+
+	.sec-stage__detail-panel {
+		display: grid;
+		gap: 12px;
+	}
+
+	.sec-stage__detail-panel summary {
+		cursor: pointer;
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text, #111827);
+	}
+
 	.sec-stage__chip-list {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
-		margin-top: 12px;
 	}
 
 	.sec-stage__chip {
@@ -862,7 +843,6 @@
 	.sec-stage__inline-list {
 		display: grid;
 		gap: 4px;
-		margin-top: 12px;
 	}
 
 	.sec-stage__warnings {
@@ -872,7 +852,6 @@
 		border-radius: 14px;
 		background: #fff5f3;
 		color: #7a271a;
-		margin-top: 12px;
 	}
 
 	.sec-stage__warning-item {
@@ -885,32 +864,26 @@
 		gap: 12px;
 	}
 
-	.sec-stage__candidate {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 14px;
-	}
-
-	.sec-stage__candidate-copy {
-		display: grid;
-		gap: 10px;
-		flex: 1;
+	.sec-stage__candidate-name {
+		font-weight: 800;
+		font-size: 1.05rem;
 	}
 
 	.sec-stage__candidate-meta {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
+		margin-top: 8px;
 		font-size: 13px;
 		color: var(--text-muted, #5f6c7b);
 	}
 
 	.sec-stage__candidate-actions,
 	.sec-stage__evidence-actions {
-		display: grid;
+		display: flex;
+		flex-wrap: wrap;
 		gap: 8px;
-		justify-items: end;
+		align-items: center;
 	}
 
 	.sec-stage__evidence-head a {
@@ -921,17 +894,14 @@
 	}
 
 	@media (max-width: 900px) {
-		.sec-stage__hero,
-		.sec-stage__workspace,
-		.sec-stage__candidate {
-			grid-template-columns: 1fr;
-			flex-direction: column;
-		}
-
+		.sec-stage__decision-header,
+		.sec-stage__evidence-head,
+		.sec-stage__matches-head,
+		.sec-stage__candidate-head,
 		.sec-stage__candidate-actions,
 		.sec-stage__evidence-actions {
-			width: 100%;
-			justify-items: stretch;
+			flex-direction: column;
+			align-items: stretch;
 		}
 	}
 

@@ -57,14 +57,14 @@
 <style>
 	.source-rail {
 		display: grid;
-		gap: 12px;
+		gap: 10px;
 		padding: 18px;
 		border-radius: 24px;
 		background:
 			linear-gradient(180deg, rgba(252, 251, 247, 0.98), rgba(245, 246, 241, 0.98)),
 			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 44%);
 		border: 1px solid rgba(31, 81, 89, 0.09);
-		box-shadow: 0 18px 40px rgba(16, 37, 42, 0.05);
+		box-shadow: 0 14px 30px rgba(16, 37, 42, 0.04);
 	}
 
 	.source-rail__eyebrow {
@@ -78,15 +78,15 @@
 
 	.source-rail__list {
 		display: grid;
-		gap: 10px;
+		gap: 8px;
 	}
 
 	.source-link {
 		display: grid;
 		gap: 4px;
-		padding: 12px;
-		border-radius: 16px;
-		background: rgba(255, 255, 255, 0.52);
+		padding: 11px 12px;
+		border-radius: 14px;
+		background: rgba(255, 255, 255, 0.46);
 		border: 1px solid rgba(31, 81, 89, 0.07);
 		text-decoration: none;
 		color: inherit;
@@ -109,7 +109,7 @@
 	}
 
 	.source-link strong {
-		font-size: 13px;
+		font-size: 12px;
 		line-height: 1.45;
 		color: var(--primary);
 		word-break: break-word;
@@ -125,8 +125,8 @@
 
 	.source-rail__status {
 		padding: 12px;
-		border-radius: 16px;
-		background: rgba(81, 190, 123, 0.1);
+		border-radius: 14px;
+		background: rgba(81, 190, 123, 0.08);
 		color: #165c47;
 	}
 

@@ -227,6 +227,17 @@
 		return [String(contact.email || '').trim(), String(contact.phone || '').trim()].filter(Boolean).join(' • ');
 	}
 
+	function roleCardStatus(contact = {}) {
+		if (!contact) return 'Needs contact';
+		if (!EMAIL_PATTERN.test(String(contact.email || '').trim().toLowerCase())) return 'Needs email';
+		return 'Ready';
+	}
+
+	function roleCardTone(contact = {}) {
+		if (!contact) return 'empty';
+		return EMAIL_PATTERN.test(String(contact.email || '').trim().toLowerCase()) ? 'ready' : 'attention';
+	}
+
 	const currentContacts = $derived(getContacts());
 	const strictValidation = $derived(validateTeamContacts(currentContacts, { mode: 'continue' }));
 	const roleAssignments = $derived(deriveTeamRoleAssignments(currentContacts));
@@ -238,8 +249,18 @@
 	const investorRelationsContact = $derived(roleAssignments.investorRelations);
 	const additionalContacts = $derived(roleAssignments.additionalContacts || []);
 	const roleCards = $derived([
-		{ key: 'operator', label: 'CEO / Operator lead', contact: operatorLeadContact },
-		{ key: 'ir', label: 'Investor relations', contact: investorRelationsContact }
+		{
+			key: 'operator',
+			label: 'Operator lead',
+			help: 'The person who can confirm the sponsor, deal details, and factual accuracy.',
+			contact: operatorLeadContact
+		},
+		{
+			key: 'ir',
+			label: 'Investor relations',
+			help: 'The person an LP should reach when they need follow-up or updates.',
+			contact: investorRelationsContact
+		}
 	]);
 	const editingContact = $derived(
 		currentContacts.find((contact) => contact.id === editingContactId) || null
@@ -248,30 +269,55 @@
 	const errorTone = $derived(
 		/enrich/i.test(String(displayError || '')) ? 'note' : 'error'
 	);
+	const stageSummary = $derived(
+		strictValidation.valid
+			? 'Both LP-facing roles have usable contact details.'
+			: 'Keep this step focused. You only need an operator lead and an investor relations contact with valid emails.'
+	);
 </script>
 
 <section class="team-stage">
 	<div class="team-stage__intro">
-		<p class="team-stage__lede">Confirm who leads the operator and who handles investor conversations.</p>
-		<div class="team-stage__heading">
-			<div>
-				<div class="team-stage__eyebrow">Team Contacts</div>
-				<h2>Add the two people an LP needs to understand and reach.</h2>
-			</div>
+		<div class="team-stage__intro-copy">
+			<div class="team-stage__eyebrow">Team Contacts</div>
+			<h2>Add the two contacts an LP will actually use.</h2>
+			<p>{stageSummary}</p>
+		</div>
+		<div class="team-stage__intro-meta">
 			<span class={`team-stage__status team-stage__status--${stageStatus === 'Ready' ? 'ready' : 'attention'}`}>
 				{stageStatus}
 			</span>
+			<label class="same-person-toggle">
+				<input
+					type="checkbox"
+					checked={samePersonHandlesBothRoles}
+					onchange={(event) => toggleSamePerson(event.currentTarget.checked)}
+				>
+				<span>Same person handles both roles</span>
+			</label>
 		</div>
 	</div>
 
 	<div class="team-role-grid">
 		{#each roleCards as roleCard}
-			<article class="role-card">
-				<div class="role-card__label">{roleCard.label}</div>
-				<div class="role-card__name">
-					{roleCard.contact ? teamContactFullName(roleCard.contact) || 'Untitled contact' : 'No contact assigned yet'}
+			<article class={`role-card role-card--${roleCardTone(roleCard.contact)}`}>
+				<div class="role-card__header">
+					<div>
+						<div class="role-card__label">{roleCard.label}</div>
+						<h3>
+							{roleCard.contact
+								? teamContactFullName(roleCard.contact) || 'Untitled contact'
+								: 'No contact assigned yet'}
+						</h3>
+						<p class="role-card__subcopy">
+							{roleCard.contact ? contactTitleLine(roleCard.contact) : roleCard.help}
+						</p>
+					</div>
+					<span class={`role-card__flag role-card__flag--${roleCardTone(roleCard.contact)}`}>
+						{roleCardStatus(roleCard.contact)}
+					</span>
 				</div>
-				<div class="role-card__line">{roleCard.contact ? contactTitleLine(roleCard.contact) : 'Choose an existing contact or add a new one.'}</div>
+
 				<div class="role-card__details">
 					<div class="role-detail">
 						<span>Email</span>
@@ -286,6 +332,7 @@
 						<strong>{roleCard.contact ? calendarDisplay(roleCard.contact) : 'no calendar link'}</strong>
 					</div>
 				</div>
+
 				<div class="role-card__actions">
 					<button type="button" class="ghost-btn" onclick={() => pickerRole = roleCard.key}>
 						Select contact
@@ -297,15 +344,6 @@
 			</article>
 		{/each}
 	</div>
-
-	<label class="same-person-toggle">
-		<input
-			type="checkbox"
-			checked={samePersonHandlesBothRoles}
-			onchange={(event) => toggleSamePerson(event.currentTarget.checked)}
-		>
-		<span>Same person handles both roles</span>
-	</label>
 
 	{#if pickerRole}
 		<section class="team-panel">
@@ -336,37 +374,40 @@
 		</section>
 	{/if}
 
-	<section class="team-section">
-		<div class="team-section__header">
-			<div>
-				<div class="team-section__eyebrow">Additional team members</div>
-				<h3>Supporting contacts</h3>
-			</div>
-			<button type="button" class="ghost-btn" onclick={addContact}>Add team member</button>
+	<section class="team-support">
+		<div>
+			<div class="team-section__eyebrow">Supporting contacts</div>
+			<h3>Only add extras if they help the LP experience.</h3>
+			<p>
+				{#if additionalContacts.length > 0}
+					{additionalContacts.length} supporting contact{additionalContacts.length === 1 ? '' : 's'} saved.
+				{:else}
+					This is optional. Keep the page lean unless another person materially helps with diligence or follow-up.
+				{/if}
+			</p>
 		</div>
-
-		{#if additionalContacts.length > 0}
-			<div class="additional-contact-list">
-				{#each additionalContacts as contact}
-					<div class="additional-contact-card">
-						<div>
-							<strong>{teamContactFullName(contact) || 'Untitled contact'}</strong>
-							<span>{contactTitleLine(contact)}</span>
-							<small>{additionalContactSummary(contact) || 'No direct contact details yet'}</small>
-						</div>
-						<div class="additional-contact-card__actions">
-							<button type="button" class="ghost-btn" onclick={() => openEditor(contact.id)}>Edit</button>
-							<button type="button" class="ghost-btn ghost-btn--danger" onclick={() => removeContact(contact.id)}>
-								Remove
-							</button>
-						</div>
-					</div>
-				{/each}
-			</div>
-		{:else}
-			<p class="team-empty">No additional team members yet.</p>
-		{/if}
+		<button type="button" class="ghost-btn" onclick={addContact}>Add supporting contact</button>
 	</section>
+
+	{#if additionalContacts.length > 0}
+		<div class="additional-contact-list">
+			{#each additionalContacts as contact}
+				<div class="additional-contact-card">
+					<div>
+						<strong>{teamContactFullName(contact) || 'Untitled contact'}</strong>
+						<span>{contactTitleLine(contact)}</span>
+						<small>{additionalContactSummary(contact) || 'No direct contact details yet'}</small>
+					</div>
+					<div class="additional-contact-card__actions">
+						<button type="button" class="ghost-btn" onclick={() => openEditor(contact.id)}>Edit</button>
+						<button type="button" class="ghost-btn ghost-btn--danger" onclick={() => removeContact(contact.id)}>
+							Remove
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
 
 	{#if editingContact}
 		<section class="team-panel">
@@ -514,39 +555,49 @@
 		padding: 28px;
 		border-radius: 28px;
 		background:
-			linear-gradient(180deg, rgba(252, 251, 247, 0.98), rgba(245, 246, 241, 0.98)),
-			radial-gradient(circle at top right, rgba(31, 81, 89, 0.06), transparent 40%);
+			linear-gradient(180deg, rgba(252, 251, 247, 0.98), rgba(246, 247, 242, 0.98)),
+			radial-gradient(circle at top right, rgba(31, 81, 89, 0.05), transparent 42%);
 		border: 1px solid rgba(31, 81, 89, 0.08);
-		box-shadow: 0 20px 44px rgba(16, 37, 42, 0.05);
+		box-shadow: 0 18px 38px rgba(16, 37, 42, 0.04);
 	}
 
 	.team-stage__intro {
-		display: grid;
-		gap: 12px;
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 18px;
+		flex-wrap: wrap;
 	}
 
-	.team-stage__lede {
+	.team-stage__intro-copy {
+		display: grid;
+		gap: 8px;
+		max-width: 58ch;
+	}
+
+	.team-stage__intro-copy p,
+	.team-support p,
+	.team-empty,
+	.team-message,
+	.additional-contact-card span,
+	.additional-contact-card small,
+	.contact-picker-card span,
+	.contact-picker-card small {
 		margin: 0;
 		font-size: 14px;
 		line-height: 1.6;
 		color: var(--text-secondary);
 	}
 
-	.team-stage__heading {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 16px;
-	}
-
-	.team-stage__heading h2,
+	.team-stage__intro-copy h2,
+	.team-support h3,
 	.team-section__header h3,
 	.team-panel__header h3 {
-		margin: 6px 0 0;
+		margin: 0;
 		font-family: var(--font-ui);
-		font-size: clamp(1.8rem, 2.8vw, 2.3rem);
+		font-size: clamp(1.7rem, 2.6vw, 2.2rem);
 		font-weight: 800;
-		line-height: 1.1;
+		line-height: 1.06;
 		color: var(--text-dark);
 		letter-spacing: -0.03em;
 	}
@@ -563,8 +614,14 @@
 		color: var(--text-muted);
 	}
 
+	.team-stage__intro-meta {
+		display: grid;
+		gap: 10px;
+		justify-items: start;
+	}
+
 	.team-stage__status {
-		padding: 9px 14px;
+		padding: 8px 13px;
 		border-radius: 999px;
 		font-family: var(--font-ui);
 		font-size: 12px;
@@ -584,57 +641,101 @@
 	.team-role-grid {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 16px;
+		gap: 14px;
 	}
 
 	.role-card,
+	.team-support,
 	.team-panel,
 	.additional-contact-card {
 		padding: 18px;
 		border-radius: 22px;
 		border: 1px solid rgba(31, 81, 89, 0.08);
-		background: rgba(255, 255, 255, 0.58);
+		background: rgba(255, 255, 255, 0.56);
 	}
 
 	.role-card {
 		display: grid;
-		gap: 12px;
+		gap: 16px;
 	}
 
-	.role-card__name {
+	.role-card--attention {
+		border-color: rgba(214, 140, 69, 0.18);
+		background:
+			linear-gradient(180deg, rgba(255, 251, 244, 0.96), rgba(255, 255, 255, 0.8)),
+			radial-gradient(circle at top right, rgba(214, 140, 69, 0.08), transparent 40%);
+	}
+
+	.role-card--ready {
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 251, 248, 0.84)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 40%);
+	}
+
+	.role-card__header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 14px;
+	}
+
+	.role-card__header h3 {
+		margin: 6px 0 0;
 		font-family: var(--font-ui);
-		font-size: 1.8rem;
+		font-size: clamp(1.55rem, 2vw, 1.95rem);
 		font-weight: 800;
-		line-height: 1.15;
+		line-height: 1.08;
 		color: var(--text-dark);
 		letter-spacing: -0.02em;
 	}
 
-	.role-card__line,
-	.team-empty,
-	.team-message,
-	.additional-contact-card span,
-	.additional-contact-card small,
-	.contact-picker-card span,
-	.contact-picker-card small {
+	.role-card__subcopy {
+		margin: 8px 0 0;
 		font-size: 14px;
 		line-height: 1.55;
 		color: var(--text-secondary);
 	}
 
+	.role-card__flag {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 7px 11px;
+		border-radius: 999px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		white-space: nowrap;
+	}
+
+	.role-card__flag--ready {
+		background: rgba(81, 190, 123, 0.14);
+		color: #165c47;
+	}
+
+	.role-card__flag--attention,
+	.role-card__flag--empty {
+		background: rgba(214, 140, 69, 0.12);
+		color: #8c581f;
+	}
+
 	.role-card__details {
 		display: grid;
-		gap: 10px;
+		gap: 0;
 	}
 
 	.role-detail {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
+		display: grid;
+		grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
 		gap: 12px;
-		padding: 10px 12px;
-		border-radius: 14px;
-		background: rgba(250, 248, 242, 0.88);
+		padding: 12px 0;
+		border-top: 1px solid rgba(31, 81, 89, 0.08);
+	}
+
+	.role-detail:first-child {
+		padding-top: 0;
+		border-top: 0;
 	}
 
 	.role-detail span {
@@ -651,6 +752,7 @@
 		font-size: 14px;
 		line-height: 1.45;
 		color: var(--text-dark);
+		word-break: break-word;
 	}
 
 	.role-card__actions,
@@ -668,13 +770,25 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 10px;
-		font-size: 14px;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.82);
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		font-size: 13px;
 		color: var(--text-dark);
 	}
 
 	.same-person-toggle input {
 		width: 18px;
 		height: 18px;
+	}
+
+	.team-support {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
 	}
 
 	.team-section {
@@ -712,7 +826,7 @@
 		padding: 16px 18px;
 		border-radius: 16px;
 		border: 1px solid rgba(31, 81, 89, 0.08);
-		background: rgba(255, 255, 255, 0.56);
+		background: rgba(255, 255, 255, 0.62);
 		text-align: left;
 		cursor: pointer;
 	}
@@ -793,6 +907,8 @@
 			grid-template-columns: 1fr;
 		}
 
+		.team-stage__intro,
+		.team-support,
 		.additional-contact-card,
 		.contact-picker-card {
 			flex-direction: column;
@@ -805,7 +921,7 @@
 			padding: 20px;
 		}
 
-		.team-stage__heading,
+		.team-stage__intro,
 		.team-section__header,
 		.team-panel__header {
 			flex-direction: column;

@@ -30,6 +30,18 @@
 	const extraRecommendedCount = $derived(
 		Math.max(0, (completeness?.missingRecommendedFields || []).length - recommendedPreview.length)
 	);
+	const focusLine = $derived.by(() => {
+		if (requiredPreview.length === 0) return 'No blocking gaps remain.';
+		const items = [...requiredPreview];
+		if (extraRequiredCount > 0) items.push(`+${extraRequiredCount} more`);
+		return items.join(', ');
+	});
+	const polishLine = $derived.by(() => {
+		if (recommendedPreview.length === 0) return '';
+		const items = [...recommendedPreview];
+		if (extraRecommendedCount > 0) items.push(`+${extraRecommendedCount} more`);
+		return items.join(', ');
+	});
 </script>
 
 <aside class="deal-review-sidebar">
@@ -44,48 +56,35 @@
 			</span>
 		</div>
 
+		<div class="sidebar-card__score-row">
+			<div class="sidebar-card__score">{completeness.completenessScore}%</div>
+			<p class="sidebar-card__summary">{completeness.readinessLabel}</p>
+		</div>
+
 		<div class="sidebar-card__progress" aria-hidden="true">
 			<div class="sidebar-card__progress-fill" style={`width:${completeness.completenessScore}%`}></div>
 		</div>
 
-		<p class="sidebar-card__summary">{completeness.readinessLabel}</p>
-
 		<div class="sidebar-card__meta-grid">
 			<div class="sidebar-card__meta">
-				<span>Required gaps</span>
-				<strong>{completeness.missingRequiredFields.length}</strong>
+				<span>Required</span>
+				<strong>{completeness.missingRequiredFields.length} gap{completeness.missingRequiredFields.length === 1 ? '' : 's'}</strong>
 			</div>
 			<div class="sidebar-card__meta">
 				<span>Recommended</span>
-				<strong>{completeness.missingRecommendedFields.length}</strong>
+				<strong>{completeness.missingRecommendedFields.length} item{completeness.missingRecommendedFields.length === 1 ? '' : 's'}</strong>
 			</div>
 		</div>
 
-		{#if requiredPreview.length > 0}
-			<div class="sidebar-card__group">
-				<div class="sidebar-card__group-label">Still blocking</div>
-				<ul class="sidebar-card__list">
-					{#each requiredPreview as field}
-						<li>{field}</li>
-					{/each}
-					{#if extraRequiredCount > 0}
-						<li class="is-muted">+{extraRequiredCount} more</li>
-					{/if}
-				</ul>
-			</div>
-		{/if}
+		<div class="sidebar-card__group">
+			<div class="sidebar-card__group-label">Focus now</div>
+			<p class="sidebar-card__focus-line">{focusLine}</p>
+		</div>
 
-		{#if recommendedPreview.length > 0}
+		{#if polishLine}
 			<div class="sidebar-card__group">
-				<div class="sidebar-card__group-label">Worth tightening</div>
-				<ul class="sidebar-card__list sidebar-card__list--muted">
-					{#each recommendedPreview as field}
-						<li>{field}</li>
-					{/each}
-					{#if extraRecommendedCount > 0}
-						<li class="is-muted">+{extraRecommendedCount} more</li>
-					{/if}
-				</ul>
+				<div class="sidebar-card__group-label">Tighten later</div>
+				<p class="sidebar-card__focus-line sidebar-card__focus-line--muted">{polishLine}</p>
 			</div>
 		{/if}
 
@@ -149,6 +148,12 @@
 		gap: 14px;
 	}
 
+	.sidebar-card__score-row {
+		display: grid;
+		gap: 8px;
+		margin-top: 16px;
+	}
+
 	.sidebar-card__eyebrow,
 	.sidebar-card__group-label,
 	.sidebar-card__meta span {
@@ -165,9 +170,8 @@
 	}
 
 	.sidebar-card__score {
-		margin-top: 8px;
 		font-family: var(--font-ui);
-		font-size: clamp(2.4rem, 3vw, 3rem);
+		font-size: clamp(2.2rem, 2.8vw, 2.8rem);
 		font-weight: 800;
 		line-height: 0.96;
 		color: #ffffff;
@@ -197,8 +201,8 @@
 	}
 
 	.sidebar-card__progress {
-		margin-top: 18px;
-		height: 10px;
+		margin-top: 2px;
+		height: 8px;
 		border-radius: 999px;
 		background: rgba(255, 255, 255, 0.12);
 		overflow: hidden;
@@ -212,7 +216,6 @@
 
 	.sidebar-card__summary,
 	.sidebar-card__footnote {
-		margin: 12px 0 0;
 		font-size: 13px;
 		line-height: 1.55;
 		color: rgba(246, 251, 248, 0.78);
@@ -220,69 +223,48 @@
 
 	.sidebar-card__meta-grid {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-columns: 1fr;
 		gap: 10px;
 		margin-top: 16px;
 	}
 
 	.sidebar-card__meta {
-		padding: 12px;
+		padding: 12px 14px;
 		border-radius: 16px;
-		background: rgba(255, 255, 255, 0.08);
-		display: grid;
-		gap: 5px;
+		background: rgba(255, 255, 255, 0.07);
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 10px;
 	}
 
 	.sidebar-card__meta strong {
 		font-family: var(--font-ui);
-		font-size: 1.2rem;
+		font-size: 0.95rem;
 		font-weight: 800;
 		color: #ffffff;
+		text-align: right;
 	}
 
 	.sidebar-card__group {
-		margin-top: 16px;
+		margin-top: 14px;
 		display: grid;
-		gap: 8px;
+		gap: 6px;
 	}
 
-	.sidebar-card__list {
+	.sidebar-card__focus-line {
 		margin: 0;
-		padding: 0;
-		list-style: none;
-		display: grid;
-		gap: 7px;
 		font-size: 13px;
-		line-height: 1.45;
+		line-height: 1.55;
 		color: #ffffff;
 	}
 
-	.sidebar-card__list li {
-		position: relative;
-		padding-left: 14px;
+	.sidebar-card__focus-line--muted {
+		color: rgba(246, 251, 248, 0.76);
 	}
 
-	.sidebar-card__list li::before {
-		content: '';
-		position: absolute;
-		left: 0;
-		top: 0.55em;
-		width: 5px;
-		height: 5px;
-		border-radius: 999px;
-		background: rgba(81, 190, 123, 0.92);
-	}
-
-	.sidebar-card__list--muted {
-		color: rgba(246, 251, 248, 0.8);
-	}
-
-	.sidebar-card__list .is-muted {
-		color: rgba(246, 251, 248, 0.62);
-	}
-
-	.sidebar-card__list .is-muted::before {
-		background: rgba(246, 251, 248, 0.28);
+	.sidebar-card__footnote {
+		margin: 16px 0 0;
 	}
 
 	@media (max-width: 980px) {

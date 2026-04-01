@@ -88,14 +88,14 @@
 <style>
 	.sidebar-progress {
 		display: grid;
-		gap: 14px;
-		padding: 20px;
-		border-radius: 24px;
+		gap: 12px;
+		padding: 18px;
+		border-radius: 22px;
 		background:
 			linear-gradient(180deg, rgba(252, 251, 247, 0.98), rgba(245, 246, 241, 0.98)),
 			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 44%);
 		border: 1px solid rgba(31, 81, 89, 0.09);
-		box-shadow: 0 18px 40px rgba(16, 37, 42, 0.05);
+		box-shadow: 0 14px 30px rgba(16, 37, 42, 0.04);
 	}
 
 	.sidebar-progress__header {
@@ -117,18 +117,18 @@
 
 	.sidebar-progress__nav {
 		display: grid;
-		gap: 10px;
+		gap: 8px;
 	}
 
 	.sidebar-progress__step {
 		display: grid;
 		grid-template-columns: auto minmax(0, 1fr);
 		align-items: start;
-		gap: 12px;
-		padding: 13px 14px;
+		gap: 10px;
+		padding: 11px 12px;
 		border: 1px solid rgba(31, 81, 89, 0.07);
-		border-radius: 18px;
-		background: rgba(255, 255, 255, 0.5);
+		border-radius: 16px;
+		background: rgba(255, 255, 255, 0.46);
 		cursor: pointer;
 		text-align: left;
 		transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
@@ -148,8 +148,8 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 30px;
-		height: 30px;
+		width: 28px;
+		height: 28px;
 		border-radius: 999px;
 		background: rgba(31, 81, 89, 0.08);
 		color: var(--text-dark);
@@ -175,17 +175,17 @@
 	}
 
 	.sidebar-progress__meta small {
-		font-size: 12px;
-		line-height: 1.45;
+		font-size: 11px;
+		line-height: 1.4;
 		color: var(--text-secondary);
 	}
 
 	.sidebar-progress__step.is-active {
 		border-color: rgba(81, 190, 123, 0.34);
 		background:
-			linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(250, 252, 248, 0.88)),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(250, 252, 248, 0.84)),
 			radial-gradient(circle at right top, rgba(81, 190, 123, 0.12), transparent 50%);
-		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.08);
+		box-shadow: 0 0 0 2px rgba(81, 190, 123, 0.08);
 	}
 
 	.sidebar-progress__step.is-locked {
