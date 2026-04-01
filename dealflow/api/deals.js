@@ -13,7 +13,8 @@ import {
   applyPublishedCatalogQuery,
   canViewerAccessDeal,
   canViewerAccessRestricted506bDeal,
-  resolveDealViewerContext
+  resolveDealViewerContext,
+  supportsOpportunitySubmittedByEmail
 } from './_deal-access.js';
 import { transformDeals } from './member/deals/transform.js';
 
@@ -35,6 +36,9 @@ export default async function handler(req, res) {
     const supabase = getAdminClient();
     const viewerContext = await resolveDealViewerContext(req, { supabase });
     const include506b = req.query?.include506b === 'true';
+    const supportsSubmittedByEmail = viewerContext.email
+      ? await supportsOpportunitySubmittedByEmail(supabase)
+      : true;
 
     // Single-deal fetch shortcut: /api/deals?id=UUID
     if (singleId && /^[0-9a-f-]{36}$/i.test(singleId)) {
@@ -101,7 +105,7 @@ export default async function handler(req, res) {
         .is('parent_deal_id', null)
         .not('investment_name', 'eq', '')
         .order('added_date', { ascending: false })
-    );
+    , viewerContext, { supportsSubmittedByEmail });
 
     const { data: parentDeals, error: parentError } = await parentQuery;
     if (parentError) throw parentError;
@@ -122,7 +126,7 @@ export default async function handler(req, res) {
               `)
               .in('parent_deal_id', parentIds)
               .order('created_at', { ascending: true })
-          ),
+          , viewerContext, { supportsSubmittedByEmail }),
           supabase
             .from('deal_sponsors')
             .select(`

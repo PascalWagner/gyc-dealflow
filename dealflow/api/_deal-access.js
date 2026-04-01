@@ -1,5 +1,8 @@
 import { ADMIN_EMAILS, getAdminClient } from './_supabase.js';
 
+let submittedByEmailSupport = null;
+let submittedByEmailSupportProbe = null;
+
 export function getBearerToken(req) {
 	const authHeader = req?.headers?.authorization || '';
 	return authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
@@ -126,15 +129,63 @@ function readRequestedImpersonationEmail(req) {
 	return headerEmail || '';
 }
 
-export function applyPublishedCatalogQuery(query, viewerContext = {}) {
+function escapePostgrestLogicValue(value) {
+	return `"${String(value || '')
+		.trim()
+		.replace(/\\/g, '\\\\')
+		.replace(/"/g, '\\"')}"`;
+}
+
+export async function supportsOpportunitySubmittedByEmail(supabase = getAdminClient()) {
+	if (typeof submittedByEmailSupport === 'boolean') {
+		return submittedByEmailSupport;
+	}
+
+	if (!submittedByEmailSupportProbe) {
+		submittedByEmailSupportProbe = (async () => {
+			try {
+				const { error } = await supabase.from('opportunities').select('submitted_by_email').limit(1);
+				if (error && /submitted_by_email|does not exist/i.test(error.message || '')) {
+					submittedByEmailSupport = false;
+					return false;
+				}
+				if (error) {
+					console.warn(
+						'Unable to verify opportunities.submitted_by_email support; disabling viewer-email visibility fallback.',
+						error.message
+					);
+					submittedByEmailSupport = false;
+					return false;
+				}
+				submittedByEmailSupport = true;
+				return true;
+			} catch (error) {
+				console.warn(
+					'Unable to verify opportunities.submitted_by_email support; disabling viewer-email visibility fallback.',
+					error?.message || error
+				);
+				submittedByEmailSupport = false;
+				return false;
+			} finally {
+				submittedByEmailSupportProbe = null;
+			}
+		})();
+	}
+
+	return submittedByEmailSupportProbe;
+}
+
+export function applyPublishedCatalogQuery(query, viewerContext = {}, { supportsSubmittedByEmail = true } = {}) {
 	if (viewerContext.isAdmin) return query;
 
 	const conditions = ['and(lifecycle_status.in.(published,archived),is_visible_to_users.eq.true)'];
 	if (viewerContext.viewerManagementCompanyId) {
-		conditions.push(`management_company_id.eq.${viewerContext.viewerManagementCompanyId}`);
+		conditions.push(
+			`management_company_id.eq.${escapePostgrestLogicValue(viewerContext.viewerManagementCompanyId)}`
+		);
 	}
-	if (viewerContext.email) {
-		conditions.push(`submitted_by_email.eq.${viewerContext.email}`);
+	if (viewerContext.email && supportsSubmittedByEmail) {
+		conditions.push(`submitted_by_email.eq.${escapePostgrestLogicValue(viewerContext.email)}`);
 	}
 
 	return query.or(conditions.join(','));
@@ -144,7 +195,7 @@ export function applyDealVisibilityQuery(query, viewerContext = {}) {
 	if (viewerContext.isAdmin) return query;
 	if (viewerContext.viewerManagementCompanyId) {
 		return query.or(
-			`is_visible_to_users.eq.true,management_company_id.eq.${viewerContext.viewerManagementCompanyId}`
+			`is_visible_to_users.eq.true,management_company_id.eq.${escapePostgrestLogicValue(viewerContext.viewerManagementCompanyId)}`
 		);
 	}
 	return query.eq('is_visible_to_users', true);

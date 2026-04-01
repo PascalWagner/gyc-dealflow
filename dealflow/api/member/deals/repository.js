@@ -1,5 +1,5 @@
 import { CHILD_SHARE_CLASS_SELECT, DEAL_SELECT, SPONSOR_SELECT } from './constants.js';
-import { applyDealVisibilityQuery } from '../../_deal-access.js';
+import { applyDealVisibilityQuery, supportsOpportunitySubmittedByEmail } from '../../_deal-access.js';
 
 const DEAL_RELATION_BATCH_SIZE = 75;
 
@@ -113,7 +113,7 @@ function applyDbSort(query, normalizedQuery) {
 async function fetchPublishedScopedRows(
 	buildBaseQuery,
 	normalizedQuery,
-	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '' } = {}
+	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '', supportsSubmittedByEmail = true } = {}
 ) {
 	const queryFactories = [
 		(query) =>
@@ -126,7 +126,7 @@ async function fetchPublishedScopedRows(
 		queryFactories.push((query) => query.eq('management_company_id', viewerManagementCompanyId));
 	}
 
-	if (viewerEmail) {
+	if (viewerEmail && supportsSubmittedByEmail) {
 		queryFactories.push((query) => query.eq('submitted_by_email', viewerEmail));
 	}
 
@@ -148,7 +148,7 @@ async function fetchPublishedScopedRows(
 
 async function fetchPublishedScopedRowsForChildren(
 	buildBaseQuery,
-	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '' } = {}
+	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '', supportsSubmittedByEmail = true } = {}
 ) {
 	const queryFactories = [
 		(query) => query.in('lifecycle_status', ['published', 'archived']).eq('is_visible_to_users', true)
@@ -158,7 +158,7 @@ async function fetchPublishedScopedRowsForChildren(
 		queryFactories.push((query) => query.eq('management_company_id', viewerManagementCompanyId));
 	}
 
-	if (viewerEmail) {
+	if (viewerEmail && supportsSubmittedByEmail) {
 		queryFactories.push((query) => query.eq('submitted_by_email', viewerEmail));
 	}
 
@@ -183,6 +183,11 @@ export async function fetchMemberDealDataset(
 	normalizedQuery,
 	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '', isAdmin = false, publishedOnly = false } = {}
 ) {
+	const supportsSubmittedByEmail =
+		publishedOnly && viewerEmail
+			? await supportsOpportunitySubmittedByEmail(adminClient)
+			: true;
+
 	const buildParentQuery = () =>
 		adminClient
 			.from('opportunities')
@@ -195,7 +200,8 @@ export async function fetchMemberDealDataset(
 		parentDeals = await fetchPublishedScopedRows(buildParentQuery, normalizedQuery, {
 			include506b,
 			viewerManagementCompanyId,
-			viewerEmail
+			viewerEmail,
+			supportsSubmittedByEmail
 		});
 	} else {
 		let parentQuery = applyDealVisibilityQuery(buildParentQuery(), { isAdmin, viewerManagementCompanyId });
@@ -236,7 +242,8 @@ export async function fetchMemberDealDataset(
 					{
 						include506b,
 						viewerManagementCompanyId,
-						viewerEmail
+						viewerEmail,
+						supportsSubmittedByEmail
 					}
 				)
 				: (async () => {
