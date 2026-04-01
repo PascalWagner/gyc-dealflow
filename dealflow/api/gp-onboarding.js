@@ -293,6 +293,18 @@ export default async function handler(req, res) {
 
       // Step: complete (Phase 5 → marks onboarding done)
       if (step === 'complete') {
+        const isLpCompletion = data?.role === 'lp' || profile.onboarding_role === 'lp';
+        if (isLpCompletion) {
+          await supabase
+            .from('user_profiles')
+            .update({
+              onboarding_role: 'lp',
+              gp_onboarding_step: 1
+            })
+            .eq('id', profile.id);
+          return res.status(200).json({ success: true, step: 1, role: 'lp' });
+        }
+
         await supabase
           .from('user_profiles')
           .update({

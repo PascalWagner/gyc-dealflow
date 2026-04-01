@@ -5,9 +5,15 @@
 	import { accessTier, user, isLoggedIn } from '$lib/stores/auth.js';
 	import TeamContactsStage from '$lib/components/onboarding/TeamContactsStage.svelte';
 	import WebOnlyNotice from '$lib/components/WebOnlyNotice.svelte';
-	import { currentAdminRealUser, readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
+	import {
+		currentAdminRealUser,
+		readUserScopedJson,
+		writeUserScopedJson,
+		writeUserScopedString
+	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import { normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import {
 		buildFallbackTeamContacts,
 		normalizeTeamContacts,
@@ -40,6 +46,8 @@
 	let lpGoal = $state(null);
 	let lpDealsCount = $state(0);
 	let baselineIncome = $state(0);
+	let lpCompletionSaving = $state(false);
+	let lpCompletionError = $state('');
 
 	// GP Steps
 	let companyName = $state('');
@@ -53,6 +61,10 @@
 	let companyDropdownResults = $state([]);
 	let showCompanyDropdown = $state(false);
 	let selectedAssetClasses = $state([]);
+	let gpCompanySaving = $state(false);
+	let gpCompanyError = $state('');
+	let gpAssetClassesSaving = $state(false);
+	let gpAssetClassesError = $state('');
 	let teamContacts = $state([]);
 	let teamContactsError = $state('');
 		let offeringType = $state('506c');
@@ -104,6 +116,30 @@
 		})[0] || null
 	));
 	let teamContactsValidation = $derived.by(() => validateTeamContacts(teamContacts));
+	const LP_QUERY_STEP_MAP = {
+		goal: 'stepLpGoal',
+		'lp-goal': 'stepLpGoal',
+		experience: 'stepLpDeals',
+		'lp-deals': 'stepLpDeals',
+		'starting-point': 'stepLpBaseline',
+		'lp-baseline': 'stepLpBaseline',
+		completion: 'stepLpComplete',
+		'lp-complete': 'stepLpComplete'
+	};
+	const GP_QUERY_STEP_MAP = {
+		name: 'step0',
+		role: 'step1',
+		gp: 'step2',
+		'gp-company': 'step3',
+		'gp-assets': 'step4',
+		'gp-ir': 'step5',
+		'gp-agreement': 'step6',
+		'gp-upload': 'step7',
+		'gp-presentation': 'step8',
+		'gp-upsell': 'step9',
+		'gp-checklist': 'step10',
+		'gp-also-lp': 'step11'
+	};
 
 	// ===== Step Navigation =====
 	function goToStep(stepId, isBack = false) {
@@ -121,6 +157,70 @@
 
 		if (stepId === 'step10') buildChecklist();
 		if (browser) window.scrollTo(0, 0);
+	}
+
+	function readLpWizardSnapshot() {
+		return normalizeWizardData(readUserScopedJson('gycBuyBoxWizard', {}) || {});
+	}
+
+	function persistLpWizardSnapshot(overrides = {}) {
+		const existing = readLpWizardSnapshot();
+		const next = normalizeWizardData({
+			...existing,
+			sharePortfolio: lpNetworkOptIn,
+			goal: lpGoal ?? existing.goal,
+			_branch: lpGoal ?? existing._branch,
+			lpDealsCount,
+			dealExperience: lpDealsCount,
+			baselineIncome,
+			...overrides
+		});
+		writeUserScopedJson('gycBuyBoxWizard', next);
+		return next;
+	}
+
+	function hydrateLpWizardSnapshot(snapshot = readLpWizardSnapshot()) {
+		const next = normalizeWizardData(snapshot || {});
+		const nextGoal = next.goal || next._branch;
+		if (nextGoal) lpGoal = nextGoal;
+		if (next.lpDealsCount !== undefined || next.dealExperience !== undefined) {
+			lpDealsCount = Number(next.lpDealsCount ?? next.dealExperience ?? 0) || 0;
+		}
+		if (next.baselineIncome !== undefined && next.baselineIncome !== null && next.baselineIncome !== '') {
+			baselineIncome = Number(next.baselineIncome) || 0;
+		}
+		baselineInputValue = fmtDollar(baselineIncome);
+		if (typeof next.sharePortfolio === 'boolean') {
+			lpNetworkOptIn = next.sharePortfolio;
+		}
+		return next;
+	}
+
+	function lpSnapshotHasStepValue(snapshot, key) {
+		return Object.prototype.hasOwnProperty.call(snapshot || {}, key);
+	}
+
+	function inferLpResumeStep(snapshot = readLpWizardSnapshot()) {
+		if (
+			lpSnapshotHasStepValue(snapshot, 'baselineIncome') &&
+			snapshot.baselineIncome !== null &&
+			snapshot.baselineIncome !== ''
+		) {
+			return 'stepLpComplete';
+		}
+		if (lpSnapshotHasStepValue(snapshot, 'lpDealsCount') || lpSnapshotHasStepValue(snapshot, 'dealExperience')) {
+			return 'stepLpBaseline';
+		}
+		if (snapshot.goal || snapshot._branch) {
+			return 'stepLpDeals';
+		}
+		return 'stepLpGoal';
+	}
+
+	function resolveLpAppModeStep(url) {
+		const stage = (url.searchParams.get('stage') || '').toLowerCase();
+		const hash = url.hash.replace('#', '').toLowerCase();
+		return LP_QUERY_STEP_MAP[stage] || LP_QUERY_STEP_MAP[hash] || null;
 	}
 
 	// ===== Step 0: Name =====
@@ -167,20 +267,27 @@
 	// ===== LP: Goal Selection (U3) =====
 	function selectGoal(goal) {
 		lpGoal = goal;
+		lpCompletionError = '';
+		persistLpWizardSnapshot({ goal, _branch: goal });
 		setTimeout(() => goToStep('stepLpDeals'), 350);
 	}
 
 	// ===== LP: Deal Count =====
 	function adjustDealCount(delta) {
-		lpDealsCount = Math.max(0, lpDealsCount + delta);
+		const nextCount = Math.max(0, lpDealsCount + delta);
+		lpDealsCount = nextCount;
+		persistLpWizardSnapshot({ lpDealsCount: nextCount, dealExperience: nextCount });
 	}
 
 	function onDealCountInput(e) {
 		const clean = e.target.value.replace(/[^0-9]/g, '');
-		lpDealsCount = parseInt(clean) || 0;
+		const nextCount = parseInt(clean) || 0;
+		lpDealsCount = nextCount;
+		persistLpWizardSnapshot({ lpDealsCount: nextCount, dealExperience: nextCount });
 	}
 
 	function saveDealCount() {
+		persistLpWizardSnapshot({ lpDealsCount, dealExperience: lpDealsCount });
 		goToStep('stepLpBaseline');
 	}
 
@@ -198,11 +305,13 @@
 	function selectBaselinePreset(val) {
 		baselineIncome = val;
 		baselineInputValue = fmtDollar(val);
+		persistLpWizardSnapshot({ baselineIncome: val });
 	}
 
 	function onBaselineInput(e) {
 		const n = parseDollar(e.target.value);
 		baselineIncome = n;
+		persistLpWizardSnapshot({ baselineIncome: n });
 	}
 
 	function onBaselineFocus(e) {
@@ -214,6 +323,7 @@
 		const n = parseDollar(e.target.value);
 		baselineIncome = n;
 		baselineInputValue = fmtDollar(n);
+		persistLpWizardSnapshot({ baselineIncome: n });
 	}
 
 	// ===== LP: Completion =====
@@ -239,32 +349,67 @@
 	});
 
 	function showLpComplete() {
+		lpCompletionError = '';
+		persistLpWizardSnapshot({ baselineIncome });
 		goToStep('stepLpComplete');
 	}
 
-	function completeLpOnboarding() {
-		const wizardData = { goal: lpGoal, _branch: lpGoal, lpDealsCount: lpDealsCount || 0, baselineIncome };
+	async function completeLpOnboarding() {
+		if (lpCompletionSaving) return;
+		if (!lpGoal) {
+			lpCompletionError = 'Choose your investment goal before finishing setup.';
+			return;
+		}
+		lpCompletionSaving = true;
+		lpCompletionError = '';
+
+		const wizardData = persistLpWizardSnapshot({
+			goal: lpGoal,
+			_branch: lpGoal,
+			lpDealsCount: lpDealsCount || 0,
+			dealExperience: lpDealsCount || 0,
+			baselineIncome
+		});
 		const realUser = currentAdminRealUser();
 		const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== ($user?.email || '').toLowerCase();
+		try {
+			const buyBoxResponse = await fetch('/api/buybox', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({
+					email: $user.email,
+					wizardData,
+					...(isAdminImpersonation ? { admin: true } : {})
+				})
+			});
+			const buyBoxPayload = await buyBoxResponse.json().catch(() => ({}));
+			if (!buyBoxResponse.ok) {
+				throw new Error(buyBoxPayload?.error || 'Unable to save your plan right now.');
+			}
 
-		fetch('/api/buybox', {
-			method: 'POST', headers,
-			body: JSON.stringify({ email: $user.email, wizardData, ...(isAdminImpersonation ? { admin: true } : {}) })
-		}).catch(e => console.warn('LP onboarding save error:', e));
+			const roleResponse = await fetch('/api/gp-onboarding', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({ email: $user.email, step: 'role-select', data: { role: 'lp' } })
+			});
+			const rolePayload = await roleResponse.json().catch(() => ({}));
+			if (!roleResponse.ok) {
+				throw new Error(rolePayload?.error || 'Unable to finish onboarding right now.');
+			}
 
-		fetch('/api/gp-onboarding', {
-			method: 'POST', headers,
-			body: JSON.stringify({ email: $user.email, step: 'complete', data: { role: 'lp' } })
-		}).catch(() => {});
+			writeUserScopedString('gycBuyBoxComplete', 'true');
+			writeUserScopedString('gycOnboardingComplete', 'true');
 
-		const u = { ...$user, onboardingComplete: true };
-		user.set(u);
+			const u = { ...$user, onboardingComplete: true, onboardingRole: 'lp', sharePortfolio: lpNetworkOptIn };
+			user.set(u);
 
-		const existingBB = readUserScopedJson('gycBuyBoxWizard', {});
-		Object.assign(existingBB, { goal: lpGoal, _branch: lpGoal, lpDealsCount: lpDealsCount || 0, baselineIncome });
-		writeUserScopedJson('gycBuyBoxWizard', existingBB);
-
-		goto(lpDealsRedirect());
+			await goto(lpDealsRedirect());
+		} catch (error) {
+			console.warn('LP onboarding save error:', error);
+			lpCompletionError = error?.message || 'Unable to save your plan right now.';
+		} finally {
+			lpCompletionSaving = false;
+		}
 	}
 
 	// ===== GP: Company Search =====
@@ -288,6 +433,7 @@
 		const q = e.target.value.trim();
 		companyName = q;
 		companyId = null;
+		gpCompanyError = '';
 
 		if (q.length < 2) { showCompanyDropdown = false; return; }
 
@@ -303,6 +449,7 @@
 	}
 
 	function pickCompany(co) {
+		gpCompanyError = '';
 		companyId = co.id;
 		companyName = co.operator_name;
 		if (co.type) firmType = co.type;
@@ -325,10 +472,15 @@
 		showCompanyDropdown = false;
 	}
 
-	function createNewCompany() { showCompanyDropdown = false; }
+	function createNewCompany() {
+		gpCompanyError = '';
+		showCompanyDropdown = false;
+	}
 
 	async function saveCompanyProfile() {
-		if (!companyName.trim()) return;
+		if (!companyName.trim() || gpCompanySaving) return;
+		gpCompanySaving = true;
+		gpCompanyError = '';
 
 		const data = { companyName: companyName.trim(), gpType, firmType, ceo, linkedinCeo, website, foundingYear, assetClasses: selectedAssetClasses };
 
@@ -337,28 +489,66 @@
 				method: 'POST', headers,
 				body: JSON.stringify({ email: $user.email, step: 'company-profile', data })
 			});
-			const result = await r.json();
+			const result = await r.json().catch(() => ({}));
+			if (!r.ok) {
+				throw new Error(result?.error || 'Unable to save your company profile right now.');
+			}
 			if (result.companyId) companyId = result.companyId;
-		} catch {}
-
-		goToStep('step4');
+			goToStep('step4');
+		} catch (error) {
+			gpCompanyError = error?.message || 'Unable to save your company profile right now.';
+		} finally {
+			gpCompanySaving = false;
+		}
 	}
 
 	// ===== GP: Asset Classes =====
 	function toggleAssetClass(ac) {
+		gpAssetClassesError = '';
 		const idx = selectedAssetClasses.indexOf(ac);
 		if (idx === -1) selectedAssetClasses = [...selectedAssetClasses, ac];
 		else selectedAssetClasses = selectedAssetClasses.filter(a => a !== ac);
 	}
 
-	function saveAssetClasses() {
-		if (companyId) {
-			fetch('/api/gp-onboarding', {
-				method: 'POST', headers,
-				body: JSON.stringify({ email: $user.email, step: 'company-profile', data: { companyName: companyName.trim(), gpType, firmType, assetClasses: selectedAssetClasses } })
-			}).catch(() => {});
+	async function saveAssetClasses() {
+		if (gpAssetClassesSaving) return;
+		if (!companyId) {
+			gpAssetClassesError = 'Save your company profile first before continuing.';
+			return;
 		}
-		goToStep('step5');
+
+		gpAssetClassesSaving = true;
+		gpAssetClassesError = '';
+		try {
+			const response = await fetch('/api/gp-onboarding', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({
+					email: $user.email,
+					step: 'company-profile',
+					data: {
+						companyName: companyName.trim(),
+						gpType,
+						firmType,
+						ceo,
+						linkedinCeo,
+						website,
+						foundingYear,
+						assetClasses: selectedAssetClasses
+					}
+				})
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(payload?.error || 'Unable to save your asset classes right now.');
+			}
+			if (payload?.companyId) companyId = payload.companyId;
+			goToStep('step5');
+		} catch (error) {
+			gpAssetClassesError = error?.message || 'Unable to save your asset classes right now.';
+		} finally {
+			gpAssetClassesSaving = false;
+		}
 	}
 
 	// ===== GP: Team & Contacts =====
@@ -711,9 +901,14 @@
 		loadNetworkStats();
 
 		// The embedded /app/plan experience only uses the LP setup path.
-		// Skip legacy GP onboarding bootstrap there so free users don't hit GP-only APIs.
+		// Skip legacy GP onboarding bootstrap there so free users don't hit GP-only APIs,
+		// but still restore local LP progress and honor LP deep links.
 		if (appMode) {
 			syncTeamContacts([]);
+			selectedRole = 'lp';
+			const snapshot = hydrateLpWizardSnapshot();
+			const requestedLpStep = resolveLpAppModeStep($page.url);
+			goToStep(requestedLpStep || inferLpResumeStep(snapshot));
 			return;
 		}
 
@@ -772,12 +967,6 @@
 				const resumeStep = $page.url.searchParams.get('resumeStep');
 				if (resumeStep) {
 					goToStep('step' + resumeStep);
-				} else if (appMode && data.profile?.onboardingRole === 'lp') {
-					selectedRole = 'lp';
-					goToStep('stepLpGoal');
-				} else if (appMode && step > 0 && stepMap[step]) {
-					selectedRole = data.profile?.onboardingRole || selectedRole;
-					goToStep(stepMap[step]);
 				} else if (!reviewMode && step >= 4 && !agreementStatus.hasCurrentAgreement) {
 					agreementError = 'A current signed operator listing agreement is required before you can continue.';
 					goToStep('step6');
@@ -790,38 +979,19 @@
 
 		// Deep link hash / query
 		const stage = ($page.url.searchParams.get('stage') || '').toLowerCase();
-		const hash = $page.url.hash.replace('#', '');
-		const queryStepMap = {
-			goal: 'stepLpGoal',
-			experience: 'stepLpDeals',
-			'lp-deals': 'stepLpDeals',
-			'starting-point': 'stepLpBaseline',
-			'lp-baseline': 'stepLpBaseline',
-			completion: 'stepLpComplete',
-			'lp-complete': 'stepLpComplete',
-			name: 'step0',
-			role: 'step1',
-			gp: 'step2',
-			'gp-company': 'step3',
-			'gp-assets': 'step4',
-			'gp-ir': 'step5',
-			'gp-agreement': 'step6',
-			'gp-upload': 'step7',
-			'gp-presentation': 'step8',
-			'gp-upsell': 'step9',
-			'gp-checklist': 'step10',
-			'gp-also-lp': 'step11'
-		};
-		if (stage && queryStepMap[stage]) {
-			if (queryStepMap[stage].startsWith('stepLp')) selectedRole = 'lp';
-			goToStep(queryStepMap[stage]);
+		const hash = $page.url.hash.replace('#', '').toLowerCase();
+		const requestedStep = LP_QUERY_STEP_MAP[stage] || GP_QUERY_STEP_MAP[stage];
+		if (requestedStep) {
+			if (requestedStep.startsWith('stepLp')) selectedRole = 'lp';
+			goToStep(requestedStep);
 			return;
 		}
 		if (hash) {
-			const gpStepMap = { 'name': 'step0', 'role': 'step1', 'gp': 'step2', 'gp-company': 'step3', 'gp-assets': 'step4', 'gp-ir': 'step5', 'gp-agreement': 'step6', 'gp-upload': 'step7', 'gp-presentation': 'step8', 'gp-upsell': 'step9', 'gp-checklist': 'step10', 'gp-also-lp': 'step11' };
-			const lpStepMap = { 'lp-goal': 'stepLpGoal', 'lp-deals': 'stepLpDeals', 'lp-baseline': 'stepLpBaseline', 'lp-complete': 'stepLpComplete' };
-			if (gpStepMap[hash]) goToStep(gpStepMap[hash]);
-			else if (lpStepMap[hash]) { selectedRole = 'lp'; goToStep(lpStepMap[hash]); }
+			const hashStep = GP_QUERY_STEP_MAP[hash] || LP_QUERY_STEP_MAP[hash];
+			if (hashStep) {
+				if (hashStep.startsWith('stepLp')) selectedRole = 'lp';
+				goToStep(hashStep);
+			}
 		}
 	});
 
@@ -1049,14 +1219,17 @@
 							</div>
 						{/each}
 					</div>
+					{#if lpCompletionError}
+						<div class="step-error">{lpCompletionError}</div>
+					{/if}
 				</div>
 				<div class="step-footer">
 					<button class="btn-secondary" onclick={() => goToStep('stepLpBaseline', true)}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 						Back
 					</button>
-					<button class="btn-primary" onclick={completeLpOnboarding} style="min-width:220px;">
-							<span>{completionBtnText}</span>
+					<button class="btn-primary" onclick={completeLpOnboarding} style="min-width:220px;" disabled={lpCompletionSaving || !lpGoal}>
+							<span>{lpCompletionSaving ? 'Saving...' : completionBtnText}</span>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
 				</div>
@@ -1202,14 +1375,17 @@
 							</select>
 						</div>
 					</div>
+					{#if gpCompanyError}
+						<div class="step-error">{gpCompanyError}</div>
+					{/if}
 				</div>
 				<div class="step-footer">
 					<button class="btn-secondary" onclick={() => goToStep('step2', true)}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 						Back
 					</button>
-					<button class="btn-primary" onclick={saveCompanyProfile} disabled={!companyName.trim()}>
-						Continue
+					<button class="btn-primary" onclick={saveCompanyProfile} disabled={!companyName.trim() || gpCompanySaving}>
+						{gpCompanySaving ? 'Saving...' : 'Continue'}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
 				</div>
@@ -1229,14 +1405,17 @@
 							<button type="button" class="pill-option" class:selected={selectedAssetClasses.includes(ac)} aria-pressed={selectedAssetClasses.includes(ac)} onclick={() => toggleAssetClass(ac)}>{ac}</button>
 						{/each}
 					</div>
+					{#if gpAssetClassesError}
+						<div class="step-error">{gpAssetClassesError}</div>
+					{/if}
 				</div>
 				<div class="step-footer">
 					<button class="btn-secondary" onclick={() => goToStep('step3', true)}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 						Back
 					</button>
-					<button class="btn-primary" onclick={saveAssetClasses}>
-						Continue
+					<button class="btn-primary" onclick={saveAssetClasses} disabled={gpAssetClassesSaving}>
+						{gpAssetClassesSaving ? 'Saving...' : 'Continue'}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
 				</div>
