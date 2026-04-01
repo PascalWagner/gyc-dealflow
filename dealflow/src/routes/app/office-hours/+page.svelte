@@ -14,10 +14,14 @@
 		resolveBrowserTimeZone
 	} from '$lib/utils/memberEvents.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import { readScopedJson, writeScopedJson } from '$lib/utils/userScopedState.js';
 
 	const ET_TIMEZONE = 'America/New_York';
+	const OFFICE_HOURS_CACHE_KEY = 'gycOfficeHoursSchedule';
+	const OFFICE_HOURS_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
 	let loading = $state(true);
+	let refreshing = $state(false);
 	let error = $state('');
 	let forbidden = $state(false);
 	let events = $state([]);
@@ -154,6 +158,44 @@
 		return TIMEZONE_OPTIONS.find((option) => option.value === value)?.label || value;
 	}
 
+	function createEmptyOfficeHoursCache() {
+		return {
+			events: [],
+			nextSession: null,
+			refreshedAt: 0
+		};
+	}
+
+	function readCachedOfficeHours() {
+		if (!browser) return null;
+		const cache = readScopedJson(OFFICE_HOURS_CACHE_KEY, null);
+		if (!cache) return null;
+		return {
+			events: Array.isArray(cache.events) ? cache.events : [],
+			nextSession: cache.nextSession || cache.events?.[0] || null,
+			refreshedAt: Number(cache.refreshedAt || 0)
+		};
+	}
+
+	function writeCachedOfficeHours(payload) {
+		if (!browser) return;
+		writeScopedJson(OFFICE_HOURS_CACHE_KEY, {
+			events: payload?.events || [],
+			nextSession: payload?.nextSession || payload?.events?.[0] || null,
+			refreshedAt: payload?.refreshedAt || Date.now()
+		});
+	}
+
+	function isOfficeHoursCacheFresh(cache) {
+		return Boolean(cache?.refreshedAt) && Date.now() - cache.refreshedAt < OFFICE_HOURS_CACHE_MAX_AGE_MS;
+	}
+
+	function applyOfficeHoursPayload(payload) {
+		events = Array.isArray(payload?.upcomingSessions) ? payload.upcomingSessions : payload?.events || [];
+		nextSession = payload?.nextSession || events[0] || null;
+		activeMonthIndex = 0;
+	}
+
 	function handleTimeZoneChange(event) {
 		selectedTimeZone = event.currentTarget.value;
 		localTimeZone = selectedTimeZone;
@@ -200,10 +242,9 @@
 		}
 	}
 
-	async function loadOfficeHours() {
+	async function loadOfficeHours({ force = false } = {}) {
 		if (!browser) return;
 
-		loading = true;
 		error = '';
 		forbidden = false;
 		const preferredZone = resolvePreferredTimeZone();
@@ -212,11 +253,25 @@
 		savedTimeZone = preferredZone;
 
 		try {
-			const token = $userToken || getStoredSessionToken();
+			const token = getToken();
 			if (!token) {
 				throw new Error('Missing session token');
 			}
 
+			const cached = !force ? readCachedOfficeHours() : null;
+			const hasCachedSchedule = Boolean(cached?.events?.length);
+			if (hasCachedSchedule) {
+				applyOfficeHoursPayload(cached);
+				loading = false;
+			} else {
+				loading = true;
+			}
+
+			if (hasCachedSchedule && isOfficeHoursCacheFresh(cached)) {
+				return;
+			}
+
+			refreshing = hasCachedSchedule;
 			const response = await fetch('/api/member-events?programSlug=cashflow_academy&eventType=office_hours&limit=20', {
 				headers: {
 					Authorization: `Bearer ${token}`
@@ -225,6 +280,7 @@
 
 			if (response.status === 403) {
 				forbidden = true;
+				writeCachedOfficeHours(createEmptyOfficeHoursCache());
 				events = [];
 				nextSession = null;
 				return;
@@ -235,14 +291,20 @@
 			}
 
 			const payload = await response.json();
-			events = payload.upcomingSessions || payload.events || [];
-			nextSession = payload.nextSession || payload.upcomingSessions?.[0] || payload.events?.[0] || null;
-			activeMonthIndex = 0;
+			applyOfficeHoursPayload(payload);
+			writeCachedOfficeHours({
+				events,
+				nextSession,
+				refreshedAt: Date.now()
+			});
 		} catch (fetchError) {
 			console.warn('office hours load failed:', fetchError);
-			error = 'Unable to load the Office Hours schedule right now.';
+			if (!events.length) {
+				error = 'Unable to load the Office Hours schedule right now.';
+			}
 		} finally {
 			loading = false;
+			refreshing = false;
 		}
 	}
 
@@ -450,7 +512,7 @@
 			<h2>Office Hours couldn’t be loaded.</h2>
 			<p>{error}</p>
 			<div class="gate-actions">
-				<button class="primary-btn button-reset" onclick={loadOfficeHours}>Try Again</button>
+				<button class="primary-btn button-reset" onclick={() => loadOfficeHours({ force: true })}>Try Again</button>
 				<a class="secondary-btn" href={replayLibraryUrl}>Replay Library</a>
 			</div>
 		</div>
@@ -539,6 +601,9 @@
 				<p class="card-copy">
 					This page no longer tries to be a full calendar app. The next few confirmed dates are enough for planning, and any moved session shows up here once it changes live.
 				</p>
+				{#if refreshing}
+					<div class="refresh-note">Refreshing the latest schedule in the background.</div>
+				{/if}
 
 				{#if visibleUpcomingSessions.length === 0}
 					<div class="empty-state">No upcoming office hours are available yet.</div>
@@ -731,6 +796,14 @@
 
 	.card-copy {
 		margin: 10px 0 0;
+	}
+
+	.refresh-note {
+		margin: 10px 0 0;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--primary);
 	}
 
 	.calendar-copy {

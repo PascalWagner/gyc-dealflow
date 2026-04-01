@@ -5,6 +5,8 @@ const DEFAULT_EVENT_TYPE = 'office_hours';
 const DEFAULT_REPLAY_LIBRARY_URL = '/app/resources?category=Office%20Hours';
 const DEFAULT_SOURCE_TIMEZONE = 'America/New_York';
 const UPCOMING_WINDOW_DAYS = 180;
+const MEMBER_EVENTS_CACHE_TTL_MS = 30 * 60 * 1000;
+const MEMBER_EVENTS_CACHE_LIMIT = 24;
 const RRULE_DAY_TO_INDEX = {
 	SU: 0,
 	MO: 1,
@@ -14,6 +16,8 @@ const RRULE_DAY_TO_INDEX = {
 	FR: 5,
 	SA: 6
 };
+let memberEventsCache = null;
+let memberEventsCachePromise = null;
 
 export function getOfficeHoursConfig() {
 	return {
@@ -37,16 +41,57 @@ export async function getMemberEvents({ programSlug, eventType, limit = 6 }) {
 		};
 	}
 
-	const calendar = await fetchGoogleCalendarCalendar(config.calendarId);
-	const events = expandOfficeHoursEvents(calendar, { limit, replayLibraryUrl: config.replayLibraryUrl });
+	const payload = await getCachedMemberEvents(config);
 	return {
-		programSlug: config.programSlug,
-		eventType: config.eventType,
-		sourceKind: 'google_calendar',
-		sourceTimezone: calendar.timezone || DEFAULT_SOURCE_TIMEZONE,
-		calendarName: calendar.name || 'Cashflow Academy - Office Hours',
-		events
+		...payload,
+		events: (payload.events || []).slice(0, Math.max(1, limit))
 	};
+}
+
+async function getCachedMemberEvents(config) {
+	const cacheKey = JSON.stringify({
+		calendarId: config.calendarId,
+		replayLibraryUrl: config.replayLibraryUrl
+	});
+	const now = Date.now();
+	const hasFreshCache =
+		memberEventsCache?.key === cacheKey &&
+		memberEventsCache?.payload &&
+		now - memberEventsCache.refreshedAt < MEMBER_EVENTS_CACHE_TTL_MS;
+
+	if (hasFreshCache) {
+		return memberEventsCache.payload;
+	}
+
+	if (memberEventsCachePromise) {
+		return memberEventsCachePromise;
+	}
+
+	memberEventsCachePromise = (async () => {
+		const calendar = await fetchGoogleCalendarCalendar(config.calendarId);
+		const payload = {
+			programSlug: config.programSlug,
+			eventType: config.eventType,
+			sourceKind: 'google_calendar',
+			sourceTimezone: calendar.timezone || DEFAULT_SOURCE_TIMEZONE,
+			calendarName: calendar.name || 'Cashflow Academy - Office Hours',
+			events: expandOfficeHoursEvents(calendar, {
+				limit: MEMBER_EVENTS_CACHE_LIMIT,
+				replayLibraryUrl: config.replayLibraryUrl
+			})
+		};
+
+		memberEventsCache = {
+			key: cacheKey,
+			payload,
+			refreshedAt: Date.now()
+		};
+		return payload;
+	})().finally(() => {
+		memberEventsCachePromise = null;
+	});
+
+	return memberEventsCachePromise;
 }
 
 async function fetchGoogleCalendarCalendar(calendarId) {
