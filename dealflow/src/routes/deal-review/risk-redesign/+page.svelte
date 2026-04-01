@@ -1,4 +1,5 @@
 <script>
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
@@ -146,6 +147,15 @@
 		if (stageId === 'summary') params.set('allowSummary', '1');
 		params.set('from', from);
 		return `/deal-review?${params.toString()}`;
+	}
+
+	function openStage(stageId) {
+		const href = buildStageHref(stageId);
+		if (browser && stageId === 'summary') {
+			window.location.assign(href);
+			return;
+		}
+		goto(href);
 	}
 
 	function tone(value) {
@@ -304,7 +314,7 @@
 				{#if nextView}
 					<a class="primary-btn" href={buildViewHref(nextView.id)}>Next</a>
 				{:else}
-					<a class="primary-btn" href={buildStageHref('summary')}>Continue to summary</a>
+					<button type="button" class="primary-btn" onclick={() => openStage('summary')}>Continue to summary</button>
 				{/if}
 			</div>
 		</div>
@@ -314,7 +324,7 @@
 			currentStage="risks"
 			completedStages={['intake', 'sec', 'team', 'overview', 'details']}
 			accessibleStages={reviewStages.map((stage) => stage.id)}
-			onselect={(stageId) => goto(buildStageHref(stageId))}
+			onselect={(stageId) => openStage(stageId)}
 			deckUrl={documentUrls.deck}
 			ppmUrl={documentUrls.ppm}
 			extractionState="success"
