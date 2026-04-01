@@ -9,9 +9,15 @@
 	export let showMobileTabs = true;
 
 	const mobileNavItems = PRIMARY_MOBILE_NAV_ITEMS;
+	const mobileTabBarOffset = 'calc(72px + env(safe-area-inset-bottom, 0px))';
 </script>
 
-<div class={`ly-app-shell ly-sidebar-shell ${className}`.trim()}>
+<div
+	class={`ly-app-shell ly-sidebar-shell ${className}`.trim()}
+	style={showMobileTabs
+		? `--ly-main-pad-bottom-tablet: ${mobileTabBarOffset}; --ly-main-pad-bottom-mobile: ${mobileTabBarOffset};`
+		: ''}
+>
 	<Sidebar {currentPage} />
 
 	<MainContent>
