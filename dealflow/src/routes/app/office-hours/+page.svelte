@@ -462,7 +462,6 @@
 				{#if nextSession}
 					<div class="featured-stage refined-stage">
 						<div class="featured-time-panel">
-							<div class="featured-panel-label">Your Local Time</div>
 							<div class="time-local display-time">
 								{localTime(nextSession) || 'Local time unavailable. Use ET below.'}
 							</div>
@@ -752,15 +751,6 @@
 	.featured-time-panel {
 		display: grid;
 		gap: 8px;
-	}
-
-	.featured-panel-label {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 1.1px;
-		text-transform: uppercase;
-		color: var(--text-muted);
 	}
 
 	.time-local {
