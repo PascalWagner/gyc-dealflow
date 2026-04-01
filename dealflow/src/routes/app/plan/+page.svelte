@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
 	import LegacyPlanWizard from '$lib/components/LegacyPlanWizard.svelte';
+	import PlanRoadmapChart from '$lib/components/PlanRoadmapChart.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
@@ -1173,15 +1174,11 @@
 		if (!finalPoint) return '';
 		return `The left side shows the last 5 completed years of portfolio history. The right side shows the next 5 years modeled from today. By ${finalPoint.year}, this roadmap reaches ${roadmapMetricConfig.describe(finalPoint.metricValue)} on ${currency(finalPoint.capitalTotal)} deployed.`;
 	});
-	const legendItems = $derived.by(() => {
-		return roadmapChart.dominantLabels.map((label) => ({
-			label,
-			color: getAssetProfile(label).color
-		}));
+	const roadmapFinalMix = $derived.by(() => {
+		const finalPoint = roadmapChart.points[roadmapChart.points.length - 1];
+		if (!finalPoint?.displaySegments?.length) return [];
+		return finalPoint.displaySegments;
 	});
-	const legendHasOther = $derived.by(() =>
-		roadmapChart.points.some((point) => point.displaySegments.some((segment) => segment.label === 'Other'))
-	);
 	const concentrationAlert = $derived.by(() => {
 		if (!roadmapChart.finalShare || roadmapChart.finalShare.share < 45) return null;
 		return `${Math.round(roadmapChart.finalShare.share)}% of the deployed capital in this 5-year forward plan lands in ${roadmapChart.finalShare.label}. Consider diversifying.`;
@@ -1442,92 +1439,18 @@
 						</div>
 						<div class="growth-target">{roadmapMetricConfig.label}</div>
 					</div>
-					<div class="roadmap-chart-scroll">
-						<div class="roadmap-chart-frame">
-							<div class="roadmap-chart-periods">
-								<div class="roadmap-chart-period roadmap-chart-period--actual">Historical · {roadmapChart.actualRangeLabel}</div>
-								<div class="roadmap-chart-period roadmap-chart-period--modeled">Forward · {roadmapChart.modeledRangeLabel}</div>
-							</div>
-							<div class="roadmap-chart-canvas">
-								<div class="roadmap-chart-divider"></div>
-								<div class="roadmap-chart-target-pill" style={`top: calc(${Math.max(8, Math.min(90, roadmapChart.targetY))}% - 14px);`}>Target</div>
-								<svg class="roadmap-line-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-									<line x1="0" y1={roadmapChart.targetY} x2="100" y2={roadmapChart.targetY} class="roadmap-target-line"></line>
-									<polyline points={roadmapChart.polylinePoints} class="roadmap-metric-line"></polyline>
-									{#each roadmapChart.points as point}
-										<circle
-											cx={point.plotX}
-											cy={point.plotY}
-											r={point.showMetricDot ? 1.4 : 0.9}
-											class="roadmap-metric-dot"
-											class:roadmap-metric-dot--key={point.showMetricDot}
-										></circle>
-									{/each}
-								</svg>
-								<div class="roadmap-chart-grid">
-									{#each roadmapChart.points as point}
-										<div class="roadmap-chart-column">
-											<div class="roadmap-chart-capital" class:roadmap-chart-capital--visible={point.showCapitalLabel}>
-												{point.showCapitalLabel ? compactCurrency(point.capitalTotal) : ''}
-											</div>
-											<div class="roadmap-chart-bar-shell">
-												<div
-													class="roadmap-chart-bar"
-													class:roadmap-chart-bar--actual={point.period === 'actual'}
-													class:roadmap-chart-bar--modeled={point.period === 'modeled'}
-													style={`height:${point.capitalTotal > 0 ? Math.max(8, point.capitalPct) : 0}%`}
-												>
-													<div class="roadmap-chart-bar-fill"></div>
-													{#if point.displaySegments.length}
-														<div class="roadmap-chart-bar-cap">
-															{#each point.displaySegments as segment}
-																<span
-																	class="roadmap-chart-cap-segment"
-																	style={`width:${segment.widthPct}%; background:${segment.color}`}
-																></span>
-															{/each}
-														</div>
-													{/if}
-												</div>
-											</div>
-										</div>
-									{/each}
-								</div>
-							</div>
-							<div class="roadmap-chart-labels">
-								{#each roadmapChart.points as point}
-									<div class="roadmap-chart-label-group">
-										<div class="roadmap-chart-year">{point.year}</div>
-									</div>
-								{/each}
-							</div>
-						</div>
-					</div>
-					<div class="roadmap-chart-legend">
-						<div class="legend-item">
-							<span class="legend-line legend-line--metric"></span>
-							<span>{roadmapMetricConfig.label}</span>
-						</div>
-						<div class="legend-item">
-							<span class="legend-line legend-line--target"></span>
-							<span>Target</span>
-						</div>
-						{#each legendItems as item}
-							<div class="legend-item">
-								<span class="legend-swatch" style={`background:${item.color}`}></span>
-								<span>{item.label}</span>
-							</div>
-						{/each}
-						{#if legendHasOther}
-							<div class="legend-item">
-								<span class="legend-swatch legend-swatch--other"></span>
-								<span>Other</span>
-							</div>
-						{/if}
-					</div>
-					{#if concentrationAlert}
-						<div class="growth-alert">{concentrationAlert}</div>
-					{/if}
+					<PlanRoadmapChart
+						points={roadmapChart.points}
+						targetValue={annualTargetAmount}
+						metricLabel={roadmapMetricConfig.label}
+						actualRangeLabel={roadmapChart.actualRangeLabel}
+						modeledRangeLabel={roadmapChart.modeledRangeLabel}
+						formatMetricValue={roadmapMetricConfig.describe}
+						formatCapitalValue={compactCurrency}
+						finalMixSegments={roadmapFinalMix}
+						finalMixTotal={roadmapChart.points[roadmapChart.points.length - 1]?.capitalTotal || 0}
+						concentrationAlert={concentrationAlert}
+					/>
 				{:else}
 					<div class="schedule-card schedule-card--embedded">
 						<div class="schedule-topline">
