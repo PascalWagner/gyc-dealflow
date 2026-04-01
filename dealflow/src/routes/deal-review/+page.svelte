@@ -905,6 +905,10 @@
 			includeFieldKeys: scopedFieldKeys
 		});
 		if (Object.keys(errors).length > 0) {
+			const errorLabels = Object.keys(errors).map((fieldKey) => dealFieldConfig[fieldKey]?.label || fieldKey);
+			const errorSummary = errorLabels.length <= 3
+				? errorLabels.join(', ')
+				: `${errorLabels.slice(0, 2).join(', ')}, +${errorLabels.length - 2} more`;
 			fieldErrors = scopedFieldKeys
 				? {
 					...fieldErrors,
@@ -912,7 +916,7 @@
 					...errors
 				}
 				: errors;
-			saveError = 'Fix the highlighted fields before saving.';
+			saveError = `Fix these fields before saving: ${errorSummary}.`;
 			saveMessage = '';
 			console.warn('[deal-review] stage save blocked by validation', {
 				dealId,
@@ -1109,6 +1113,8 @@
 		const targetIndex = onboardingStages.findIndex((candidate) => candidate.id === targetStage);
 		const unlockedIndex = onboardingStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
 		const movingForward = targetIndex > currentIndex;
+		const isImmediateNextStage = movingForward && targetIndex === currentIndex + 1;
+		const allowImmediateAdvance = allowAdvance && isImmediateNextStage;
 		const isAdvancingIntoNextNewStage =
 			targetIndex > unlockedIndex
 			&& allowAdvance
@@ -1116,10 +1122,22 @@
 			&& targetIndex === unlockedIndex + 1;
 
 		if (targetIndex < 0) return;
-		if (targetIndex > unlockedIndex && !isAdvancingIntoNextNewStage) return;
+		if (targetIndex > unlockedIndex && !isAdvancingIntoNextNewStage && !allowImmediateAdvance) {
+			console.warn('[deal-review] navigation blocked', {
+				dealId,
+				activeStage,
+				targetStage,
+				currentIndex,
+				targetIndex,
+				unlockedIndex,
+				furthestUnlockedStage
+			});
+			return;
+		}
 
 		if (movingForward) {
-			const ok = await saveCurrentStage(activeStage);
+			const shouldSaveBeforeAdvance = dirty || ['intake', 'team', 'sec'].includes(activeStage);
+			const ok = shouldSaveBeforeAdvance ? await saveCurrentStage(activeStage) : true;
 			if (!ok) return;
 		}
 
