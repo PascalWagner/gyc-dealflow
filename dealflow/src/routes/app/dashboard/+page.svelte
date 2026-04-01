@@ -2,7 +2,17 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
+	import CompareView from '$lib/components/CompareView.svelte';
+	import {
+		deals,
+		dealStages,
+		stageCounts,
+		compareDealIds,
+		dealFlowViewMode,
+		fetchDeals,
+		queryMemberDeals,
+		MAX_COMPARE_DEALS
+	} from '$lib/stores/deals.js';
 	import { user, getFreshSessionToken, canBuildFullPlan } from '$lib/stores/auth.js';
 	import AddDealModal from '$lib/components/AddDealModal.svelte';
 	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
@@ -10,6 +20,7 @@
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { getUserScopedCacheSnapshot } from '$lib/utils/userScopedState.js';
 	import { buildInvestedPortfolio, normalizePortfolioRecord } from '$lib/utils/investedPortfolio.js';
+	import { getUiStage } from '$lib/utils/dealflow-contract.js';
 
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
@@ -20,6 +31,9 @@
 	let distributions = $state([]);
 	let portfolioPlan = $state(null);
 	let showAddDealModal = $state(false);
+	let dashboardCompareDeals = $state([]);
+	let dashboardCompareLoading = $state(false);
+	let dashboardCompareRequestId = 0;
 	const portfolioView = $derived.by(() =>
 		buildInvestedPortfolio({
 			stageMap: $dealStages || {},
@@ -79,11 +93,11 @@
 	});
 	const goalProgress = $derived(hasGoals ? Math.min(100, Math.round((currentIncome / targetIncome) * 100)) : 0);
 	const goalLabel = $derived.by(() => {
-		if (hasGoals) return 'YOUR PASSIVE INCOME GOAL';
-		if (branch === 'cashflow') return 'PASSIVE INCOME GOAL';
-		if (branch === 'tax') return 'TAX OFFSET GOAL';
-		if (branch === 'growth') return 'WEALTH GROWTH GOAL';
-		return 'YOUR PASSIVE INCOME GOAL';
+		if (hasGoals) return 'Passive Income Goal';
+		if (branch === 'cashflow') return 'Passive Income Goal';
+		if (branch === 'tax') return 'Tax Offset Goal';
+		if (branch === 'growth') return 'Wealth Growth Goal';
+		return 'Passive Income Goal';
 	});
 	const goalValueText = $derived.by(() => {
 		if (hasGoals) return `$${currentIncome.toLocaleString()} / $${targetIncome.toLocaleString()} per year`;
@@ -129,10 +143,6 @@
 		}
 		return `You haven't started deploying yet, and the fastest way to make progress is to browse deals that fit your plan.`;
 	});
-	const coachPrimaryLabel = $derived(needsPlanSetup ? 'Finish Plan' : 'Browse Deals');
-	const coachPrimaryHref = $derived(needsPlanSetup ? '/app/plan' : '/app/deals');
-	const coachSecondaryLabel = $derived(needsPlanSetup ? 'Browse Deals First' : 'Review Plan');
-	const coachSecondaryHref = $derived(needsPlanSetup ? '/app/deals' : '/app/plan');
 	const statsLine = $derived(
 		activeInvestments > 0
 			? `${activeInvestments} active investment${activeInvestments !== 1 ? 's' : ''} · $${totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(2) + 'M' : totalInvested.toLocaleString()} deployed`
@@ -148,7 +158,8 @@
 		if (connect > 0) {
 			items.push({
 				icon: 'connect',
-				text: `<strong>${connect} deal${connect !== 1 ? 's' : ''} ready to connect</strong> — request an intro with the operator`,
+				headline: `${connect} deal${connect !== 1 ? 's' : ''} ready to connect`,
+				copy: 'Request an intro with the operator.',
 				link: 'Connect Now',
 				page: 'deals',
 				href: '/app/deals?tab=connect'
@@ -157,7 +168,8 @@
 		if (review > 0) {
 			items.push({
 				icon: 'bookmark',
-				text: `You have <strong>${review} deal${review !== 1 ? 's' : ''} to review</strong> — pick one and work through the checklist`,
+				headline: `You have ${review} deal${review !== 1 ? 's' : ''} to review`,
+				copy: 'Pick one and work through the checklist.',
 				link: 'Review Deals',
 				page: 'deals',
 				href: '/app/deals?tab=review'
@@ -170,14 +182,16 @@
 		if (!needsPlanSetup) {
 			items.push({
 				icon: 'plan',
-				text: 'Review your plan so your roadmap and next move stay aligned with what you are actually targeting',
+				headline: 'Review your plan',
+				copy: 'Keep your roadmap and next move aligned with what you are actually targeting.',
 				link: 'Review Plan',
 				href: '/app/plan'
 			});
 		}
 		items.push({
 			icon: 'plus',
-			text: 'Add a deal you are evaluating or already invested in so it lands in the right place right away',
+			headline: 'Add a deal you are evaluating or already invested in',
+			copy: 'Make sure it lands in the right place right away.',
 			link: 'Add Deal',
 			action: 'modal'
 		});
@@ -187,7 +201,8 @@
 		if (needsPlanSetup) {
 			return {
 				icon: 'search',
-				text: 'Browse deals now and start building your pipeline while you refine your plan',
+				headline: 'Browse deals that fit your plan',
+				copy: 'Start building your pipeline now while you refine the details of your plan.',
 				link: 'Browse Deals',
 				page: 'deals',
 				href: '/app/deals'
@@ -200,7 +215,8 @@
 			? [
 				{
 					icon: 'plan',
-					text: 'Finish your plan so your dashboard, deal flow, and portfolio reflect what you are actually trying to buy',
+					headline: 'Finish your plan',
+					copy: 'So your dashboard, deal flow, and portfolio reflect what you are actually trying to buy.',
 					link: 'Finish Plan',
 					page: 'plan',
 					href: '/app/plan'
@@ -212,6 +228,47 @@
 				? [...actionItems.slice(1), ...standardActionItems]
 				: standardActionItems.slice(1)
 	);
+	const dashboardAutoCompareIds = $derived.by(() => {
+		const grouped = { decide: [], connect: [], review: [] };
+		for (const [dealId, stage] of Object.entries($dealStages || {})) {
+			const uiStage = getUiStage(stage);
+			if (grouped[uiStage]) grouped[uiStage].push(dealId);
+		}
+
+		return ['decide', 'connect', 'review']
+			.flatMap((stage) => grouped[stage])
+			.slice(0, MAX_COMPARE_DEALS);
+	});
+	const dashboardCompareIds = $derived.by(() => {
+		const pinned = Array.isArray($compareDealIds) ? $compareDealIds.slice(0, MAX_COMPARE_DEALS) : [];
+		const pinnedSet = new Set(pinned);
+		const fallback = dashboardAutoCompareIds.filter((dealId) => !pinnedSet.has(dealId));
+		return [...pinned, ...fallback].slice(0, MAX_COMPARE_DEALS);
+	});
+	const showDashboardCompare = $derived.by(() => {
+		const activePipelineCount = ($stageCounts.review || 0) + ($stageCounts.connect || 0) + ($stageCounts.decide || 0);
+		return dashboardCompareIds.length > 0 || activePipelineCount >= 2;
+	});
+	const dashboardCompareTitle = $derived('Deal Comparison');
+	const dashboardCompareSubtitle = $derived.by(() => {
+		if (($compareDealIds || []).length > 0) {
+			return 'Pinned deals first, plus the next-most-ready opportunities from your live pipeline.';
+		}
+		if (dashboardCompareIds.length > 0) {
+			return 'A live shortlist pulled from Review, Connect, and Decide so you can pressure-test it quickly.';
+		}
+		return 'Side by side on fees, returns, minimums, and hold period.';
+	});
+	const dashboardCompareNote = $derived.by(() => {
+		if (($compareDealIds || []).length > 0) {
+			return 'Open the compare view to edit the set, swap deals in or out, and keep the shortlist pinned.';
+		}
+		if (dashboardCompareIds.length > 0) {
+			return 'Until you pin specific deals in Deal Flow, Home keeps a live comparison ready from the deals closest to a decision.';
+		}
+		return 'Once you shortlist deals in Review, Connect, or Decide, Home will keep the comparison ready here.';
+	});
+	const dashboardCompareButtonLabel = $derived(dashboardCompareIds.length > 0 ? 'Open Compare View' : 'Start Comparing');
 
 	// First name
 	const firstName = $derived.by(() => {
@@ -236,6 +293,14 @@
 
 	function openAddDealModal() {
 		showAddDealModal = true;
+	}
+
+	function openDashboardCompare() {
+		if (dashboardCompareIds.length > 0) {
+			compareDealIds.set(dashboardCompareIds);
+		}
+		dealFlowViewMode.set('compare');
+		goto('/app/deals');
 	}
 
 	async function syncDashboardState() {
@@ -272,6 +337,7 @@
 	onMount(() => {
 		if (!browser) return;
 		void syncDashboardState();
+		compareDealIds.syncFromSession();
 		const handleScopedStateUpdate = () => {
 			void syncDashboardState();
 		};
@@ -283,6 +349,42 @@
 
 	onMount(() => {
 		fetchDeals().catch(() => {});
+	});
+
+	$effect(() => {
+		if (!browser) return;
+
+		const compareIds = dashboardCompareIds;
+		const catalogDeals = $deals;
+		if (compareIds.length === 0) {
+			dashboardCompareDeals = [];
+			dashboardCompareLoading = false;
+			return;
+		}
+
+		const requestId = ++dashboardCompareRequestId;
+		dashboardCompareLoading = true;
+
+		queryMemberDeals({
+			scope: 'ids',
+			ids: compareIds,
+			limit: MAX_COMPARE_DEALS
+		})
+			.then((data) => {
+				if (requestId !== dashboardCompareRequestId) return;
+				const byId = new Map((data?.deals || []).map((deal) => [deal.id, deal]));
+				dashboardCompareDeals = compareIds.map((dealId) => byId.get(dealId)).filter(Boolean);
+			})
+			.catch(() => {
+				if (requestId !== dashboardCompareRequestId) return;
+				const byId = new Map((catalogDeals || []).map((deal) => [deal.id, deal]));
+				dashboardCompareDeals = compareIds.map((dealId) => byId.get(dealId)).filter(Boolean);
+			})
+			.finally(() => {
+				if (requestId === dashboardCompareRequestId) {
+					dashboardCompareLoading = false;
+				}
+			});
 	});
 </script>
 
@@ -313,10 +415,10 @@
 		{:else}
 		<div class="coach-card ly-surface ly-surface--accent ly-surface--strong">
 			<div class="coach-copy">
-				<div class="coach-eyebrow">Your investing coach</div>
+				<div class="coach-eyebrow">Your Investing Coach</div>
 				<h2 class="coach-title">{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h2>
-				<p class="coach-text">{coachTargetCopy}</p>
-				<p class="coach-text coach-text--muted">{coachProgressCopy}</p>
+				<p class="coach-text coach-text--support">{coachTargetCopy}</p>
+				<p class="coach-text coach-text--meta">{coachProgressCopy}</p>
 			</div>
 		</div>
 
@@ -351,8 +453,8 @@
 					<div class="action-header">What To Do Next</div>
 					<div class="next-action-panel">
 						<div class="next-action-copy">
-							<div class="next-action-kicker">Next Best Action</div>
-							<div class="next-action-text">{@html primaryAction.text}</div>
+							<div class="next-action-title">{primaryAction.headline}</div>
+							<p class="next-action-copy-text">{primaryAction.copy}</p>
 						</div>
 						<a href={primaryAction.href || `/app/${primaryAction.page}`} class="btn-primary next-action-btn">{primaryAction.link} →</a>
 					</div>
@@ -384,7 +486,10 @@
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 								{/if}
 							</div>
-							<div class="action-text">{@html item.text}</div>
+							<div class="action-text">
+								<div class="action-row-title">{item.headline}</div>
+								<div class="action-row-copy">{item.copy}</div>
+							</div>
 							<span class="action-link">{item.link} →</span>
 						</svelte:element>
 					{/each}
@@ -420,10 +525,35 @@
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 								{/if}
 							</div>
-							<div class="action-text">{@html item.text}</div>
+							<div class="action-text">
+								<div class="action-row-title">{item.headline}</div>
+								<div class="action-row-copy">{item.copy}</div>
+							</div>
 							<span class="action-link">{item.link} →</span>
 						</svelte:element>
 					{/each}
+				</div>
+			{/if}
+
+			{#if showDashboardCompare}
+				<div class="dashboard-compare-stack">
+					<CompareView
+						deals={dashboardCompareDeals}
+						loading={dashboardCompareLoading}
+						maxDeals={MAX_COMPARE_DEALS}
+						title={dashboardCompareTitle}
+						subtitle={dashboardCompareSubtitle}
+						emptyTitle="Shortlist a couple of deals"
+						emptySubtitle="Move deals into Review, Connect, or Decide, or use Compare in Deal Flow and Home will keep the side-by-side view here."
+						showRemove={false}
+						onremove={() => {}}
+					/>
+					<div class="dashboard-compare-footer ly-surface ly-surface--muted">
+						<p class="dashboard-compare-note">{dashboardCompareNote}</p>
+						<button type="button" class="btn-primary dashboard-compare-btn" onclick={openDashboardCompare}>
+							{dashboardCompareButtonLabel} →
+						</button>
+					</div>
 				</div>
 			{/if}
 		</div>
@@ -494,49 +624,56 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 18px;
-		padding: 22px 24px;
-		margin-bottom: 18px;
+		padding: 28px 32px 26px;
+		margin-bottom: 20px;
 	}
 	.coach-copy {
-		max-width: 760px;
+		max-width: 820px;
 	}
 	.coach-eyebrow {
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 12px;
 		font-weight: 700;
-		letter-spacing: 1.2px;
-		text-transform: uppercase;
-		color: var(--primary);
+		letter-spacing: 0.6px;
+		text-transform: none;
+		color: var(--text-muted);
 	}
 	.coach-title {
-		margin: 10px 0 0;
+		margin: 8px 0 0;
 		font-family: var(--font-headline);
-		font-size: 30px;
-		line-height: 1.12;
+		font-size: clamp(36px, 4vw, 46px);
+		line-height: 1.02;
+		letter-spacing: -0.4px;
 		color: var(--text-dark);
 	}
 	.coach-text {
 		margin: 12px 0 0;
-		font-family: var(--font-body);
-		font-size: 15px;
-		line-height: 1.7;
-		color: var(--text-dark);
+		line-height: 1.6;
 	}
-	.coach-text--muted {
+	.coach-text--support {
+		font-family: var(--font-ui);
+		font-size: 19px;
+		font-weight: 600;
+		color: var(--text-dark);
+		line-height: 1.45;
+	}
+	.coach-text--meta {
+		font-family: var(--font-body);
+		font-size: 17px;
 		color: var(--text-secondary);
 	}
 	.dash-hero {
-		padding: 34px 36px 24px;
+		padding: 30px 32px 24px;
 		margin-bottom: 22px;
 	}
 	.dash-hero-label {
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 12px;
 		font-weight: 700;
-		letter-spacing: 1.6px;
-		text-transform: uppercase;
+		letter-spacing: 0.6px;
+		text-transform: none;
 		color: var(--text-muted);
-		margin-bottom: 20px;
+		margin-bottom: 18px;
 	}
 	.dash-hero-bar {
 		height: 12px;
@@ -554,25 +691,26 @@
 		display: flex;
 		align-items: baseline;
 		flex-wrap: wrap;
-		gap: 12px;
-		margin-top: 12px;
+		gap: 16px;
+		margin-top: 16px;
 	}
 	.dash-hero-value {
 		font-family: var(--font-ui);
-		font-size: 18px;
+		font-size: clamp(34px, 3.4vw, 44px);
 		font-weight: 800;
-		line-height: 1.2;
+		line-height: 1;
+		letter-spacing: -0.7px;
 		color: var(--text-dark);
 	}
 	.dash-hero-pct {
 		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
+		font-size: 18px;
+		font-weight: 800;
 		color: var(--primary);
 	}
 	.dash-hero-stats {
 		font-family: var(--font-body);
-		font-size: 13px;
+		font-size: 15px;
 		color: var(--text-muted);
 		margin-bottom: 0;
 		padding-top: 18px;
@@ -594,10 +732,10 @@
 	.plan-cta-eyebrow,
 	.action-header {
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 12px;
 		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		text-transform: none;
+		letter-spacing: 0.6px;
 		color: var(--text-muted);
 	}
 	.plan-cta-title {
@@ -638,60 +776,89 @@
 		flex-direction: column;
 		gap: 18px;
 	}
+	.dashboard-compare-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.dashboard-compare-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 18px 20px;
+		flex-wrap: wrap;
+	}
+	.dashboard-compare-note {
+		margin: 0;
+		max-width: 760px;
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+	.dashboard-compare-btn {
+		white-space: nowrap;
+	}
 
 	/* ── Action Items ── */
 	.action-card {
 		overflow: hidden;
 	}
 	.action-header {
-		padding: 16px 16px 0;
-		margin-bottom: 12px;
+		padding: 18px 16px 0;
+		margin-bottom: 10px;
 	}
 	.next-action-panel {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 18px;
-		padding: 0 16px 16px;
+		padding: 0 16px 18px;
 		flex-wrap: wrap;
 	}
 	.next-action-copy {
 		flex: 1;
 		min-width: 220px;
 	}
-	.next-action-kicker,
 	.secondary-actions-label {
 		font-family: var(--font-ui);
-		font-size: 10px;
+		font-size: 11px;
 		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		text-transform: none;
+		letter-spacing: 0.6px;
 		color: var(--text-muted);
 	}
-	.next-action-text {
-		margin-top: 8px;
-		font-family: var(--font-body);
-		font-size: 15px;
-		line-height: 1.6;
+	.next-action-title {
+		font-family: var(--font-ui);
+		font-size: clamp(28px, 3vw, 38px);
+		font-weight: 800;
+		line-height: 1.08;
+		letter-spacing: -0.4px;
 		color: var(--text-dark);
 	}
-	.next-action-text :global(strong) {
-		font-weight: 700;
+	.next-action-copy-text {
+		margin: 10px 0 0;
+		max-width: 760px;
+		font-family: var(--font-body);
+		font-size: 17px;
+		line-height: 1.6;
+		color: var(--text-secondary);
 	}
 	.next-action-btn {
 		flex-shrink: 0;
 	}
 	.secondary-actions-label {
-		padding: 0 16px 8px;
+		padding: 4px 16px 10px;
 	}
 	.secondary-actions-label--standalone {
 		padding-top: 18px;
 	}
 	.action-row {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: 12px;
-		padding: 13px 16px;
+		padding: 16px;
 		border-bottom: 1px solid var(--border);
 		cursor: pointer;
 		transition: background var(--transition);
@@ -726,16 +893,31 @@
 	}
 	.action-text {
 		flex: 1;
+		min-width: 0;
+	}
+	.action-row-title {
+		font-family: var(--font-ui);
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--text-dark);
+		line-height: 1.4;
+	}
+	.action-row-copy {
+		margin-top: 4px;
 		font-family: var(--font-body);
-		font-size: 13px;
+		font-size: 15px;
 		color: var(--text-secondary);
 		line-height: 1.5;
 	}
-	.action-text :global(strong) {
-		color: var(--text-dark);
+	.action-link {
+		flex-shrink: 0;
+		align-self: center;
+		font-family: var(--font-ui);
+		font-size: 13px;
 		font-weight: 700;
+		color: var(--primary);
+		white-space: nowrap;
 	}
-	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
 	.empty-dashboard-card {
 		padding: 0 0 18px;
 	}
@@ -768,13 +950,13 @@
 				padding-bottom: 0;
 			}
 
-			.coach-card {
-				flex-direction: column;
-				padding: 20px 18px;
-				margin-bottom: 16px;
+		.coach-card {
+			flex-direction: column;
+			padding: 22px 18px;
+			margin-bottom: 16px;
 		}
 		.coach-title {
-			font-size: 24px;
+			font-size: 32px;
 		}
 		.dashboard-onboarding-card {
 			margin-top: 20px;
@@ -787,14 +969,28 @@
 			padding: 24px 18px 18px;
 		}
 		.dash-hero-value {
-			font-size: 16px;
+			font-size: 30px;
 		}
 		.dash-hero-stats {
-			font-size: 12px;
+			font-size: 14px;
 		}
 		.plan-cta-card { padding: 18px 16px; }
 		.next-action-panel {
 			align-items: flex-start;
+		}
+		.dashboard-compare-footer {
+			padding: 16px;
+		}
+		.dashboard-compare-btn {
+			width: 100%;
+			text-align: center;
+		}
+		.next-action-title {
+			font-size: 24px;
+		}
+		.next-action-copy-text,
+		.action-row-copy {
+			font-size: 15px;
 		}
 		.next-action-btn {
 			width: 100%;

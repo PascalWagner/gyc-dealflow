@@ -6,7 +6,15 @@
 		maxDeals = 3,
 		loading = false,
 		planFitById = {},
-		onremove = () => {}
+		onremove = () => {},
+		title = 'Compare Deals',
+		subtitle = '',
+		loadingTitle = 'Preparing comparison',
+		loadingSubtitle = 'Loading your selected deals into the compare table.',
+		emptyTitle = 'Select deals to compare',
+		emptySubtitle = 'Add up to 3 deals from the cards below to see them side by side.',
+		showRemove = true,
+		showDealLinks = true
 	} = $props();
 
 	const visibleDeals = $derived(deals.slice(0, maxDeals));
@@ -14,6 +22,9 @@
 		...visibleDeals,
 		...Array.from({ length: Math.max(0, maxDeals - visibleDeals.length) }, () => null)
 	]);
+	const compareSubtitle = $derived(
+		subtitle || `${visibleDeals.length}/${maxDeals} selected across your pipeline`
+	);
 
 	const COMPARISON_ROWS = [
 		{ label: 'Asset Class', get: (deal) => deal.assetClass || '—' },
@@ -23,6 +34,7 @@
 		{ label: 'Cash-on-Cash', key: 'cashOnCash', format: 'pct', higher: true },
 		{ label: 'Equity Multiple', key: 'equityMultiple', format: 'multiple', higher: true },
 		{ label: 'Minimum', key: 'investmentMinimum', format: 'money', higher: false },
+		{ label: 'Fees', get: (deal) => formatFees(deal) },
 		{ label: 'Hold Period', key: 'holdPeriod', format: 'hold', higher: false },
 		{ label: 'Leverage', key: 'avgLoanLTV', format: 'pct', higher: false },
 		{ label: 'Distributions', get: (deal) => deal.distributions || deal.distributionFrequency || '—' },
@@ -61,6 +73,24 @@
 		if (Number.isNaN(n)) return val;
 		if (n < 1) return `${Math.round(n * 12)} mo`;
 		return `${n} ${n === 1 ? 'yr' : 'yrs'}`;
+	}
+
+	function formatFees(deal) {
+		const rawValue = deal?.feeSummary || deal?.fee_summary || deal?.fees;
+		const normalized = String(rawValue || '')
+			.replace(/\s+/g, ' ')
+			.replace(/\s*•\s*/g, ' · ')
+			.replace(/\s*;\s*/g, ' · ')
+			.replace(/\s*\|\s*/g, ' · ')
+			.trim();
+
+		if (!normalized) return '—';
+		if (normalized.length <= 64) return normalized;
+
+		const preview = normalized.slice(0, 64);
+		const breakIndex = Math.max(preview.lastIndexOf(' · '), preview.lastIndexOf(', '), preview.lastIndexOf(' '));
+		const safeCutoff = breakIndex > 20 ? preview.slice(0, breakIndex) : preview;
+		return `${safeCutoff.trim()}…`;
 	}
 
 	function formatPlanFit(deal) {
@@ -127,20 +157,20 @@
 
 {#if loading && visibleDeals.length === 0}
 	<section class="compare-shell compare-status">
-		<div class="compare-title">Preparing comparison</div>
-		<div class="compare-subtitle">Loading your selected deals into the compare table.</div>
+		<div class="compare-title">{loadingTitle}</div>
+		<div class="compare-subtitle">{loadingSubtitle}</div>
 	</section>
 {:else if visibleDeals.length === 0}
 	<section class="compare-shell compare-status">
-		<div class="compare-title">Select deals to compare</div>
-		<div class="compare-subtitle">Add up to 3 deals from the cards below to see them side by side.</div>
+		<div class="compare-title">{emptyTitle}</div>
+		<div class="compare-subtitle">{emptySubtitle}</div>
 	</section>
 {:else}
 	<section class="compare-shell">
 		<div class="compare-header">
 			<div>
-				<div class="compare-title">Compare Deals</div>
-				<div class="compare-subtitle">{visibleDeals.length}/{maxDeals} selected across your pipeline</div>
+				<div class="compare-title">{title}</div>
+				<div class="compare-subtitle">{compareSubtitle}</div>
 			</div>
 		</div>
 
@@ -154,13 +184,17 @@
 								{#if deal}
 									<div class="deal-topline">
 										<span class="deal-badge">{deal.assetClass || 'Deal'}</span>
-										<button class="remove-btn" onclick={() => onremove(deal.id)} aria-label="Remove from compare">&times;</button>
+										{#if showRemove}
+											<button class="remove-btn" onclick={() => onremove(deal.id)} aria-label="Remove from compare">&times;</button>
+										{/if}
 									</div>
 									{@const stage = getStageMeta(deal.id)}
 									<span class="stage-pill" style:--stage-color={stage.color}>{stage.label}</span>
 									<div class="deal-name">{deal.investmentName}</div>
 									<div class="deal-manager">{deal.managementCompany || 'Unknown operator'}</div>
-									<a href="/deal/{deal.id}" class="deal-link">Open deal</a>
+									{#if showDealLinks}
+										<a href="/deal/{deal.id}" class="deal-link">Open deal</a>
+									{/if}
 								{:else}
 									<div class="deal-placeholder-title">Select a deal</div>
 									<div class="deal-placeholder-copy">Add from the cards below</div>
