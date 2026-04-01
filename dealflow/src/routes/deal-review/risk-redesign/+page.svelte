@@ -1,4 +1,5 @@
 <script>
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
@@ -134,10 +135,14 @@
 		return `/deal-review/risk-redesign?${params.toString()}`;
 	}
 
-	function buildLiveRiskHref() {
+	function buildStageHref(stageId) {
+		if (stageId === 'risks') {
+			return buildViewHref(viewId);
+		}
 		const params = new URLSearchParams();
 		params.set('id', dealId);
-		params.set('stage', 'risks');
+		params.set('stage', stageId);
+		if (stageId === 'intake') params.set('step', 'intake');
 		params.set('from', from);
 		return `/deal-review?${params.toString()}`;
 	}
@@ -157,7 +162,7 @@
 		className="risk-redesign-header"
 	>
 		<div slot="actions" class="header-actions">
-			<a class="ghost-btn" href={buildLiveRiskHref()}>Back to live step</a>
+			<a class="ghost-btn" href={buildStageHref('details')}>Back to details</a>
 		</div>
 	</PageHeader>
 
@@ -298,7 +303,7 @@
 				{#if nextView}
 					<a class="primary-btn" href={buildViewHref(nextView.id)}>Next</a>
 				{:else}
-					<a class="primary-btn" href={buildLiveRiskHref()}>Back to live step</a>
+					<a class="primary-btn" href={buildStageHref('summary')}>Continue to summary</a>
 				{/if}
 			</div>
 		</div>
@@ -308,6 +313,7 @@
 			currentStage="risks"
 			completedStages={['intake', 'sec', 'team', 'overview', 'details']}
 			accessibleStages={reviewStages.map((stage) => stage.id)}
+			onselect={(stageId) => goto(buildStageHref(stageId))}
 			deckUrl={documentUrls.deck}
 			ppmUrl={documentUrls.ppm}
 			extractionState="success"

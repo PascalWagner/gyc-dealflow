@@ -7,7 +7,6 @@
 	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import KeyDetailsStage from '$lib/components/deal-review/stages/KeyDetailsStage.svelte';
-	import RiskSourceValidationStage from '$lib/components/deal-review/RiskSourceValidationStage.svelte';
 	import SecVerificationStage from '$lib/components/deal-review/SecVerificationStage.svelte';
 	import TeamContactsStage from '$lib/components/onboarding/TeamContactsStage.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
@@ -82,7 +81,17 @@
 		markDirty();
 	}
 
+	function getRiskRedesignHref({ from = '' } = {}) {
+		const params = new URLSearchParams({ id: dealId });
+		params.set('view', 'extract');
+		if (from) params.set('from', from);
+		return `/deal-review/risk-redesign?${params.toString()}`;
+	}
+
 	function getStageHref(stage, { extract = false, from = '' } = {}) {
+		if (stage === 'risks') {
+			return getRiskRedesignHref({ from });
+		}
 		const params = new URLSearchParams({ id: dealId });
 		params.set('stage', stage);
 		if (stage === 'intake') params.set('step', 'intake');
@@ -1565,6 +1574,11 @@
 							onupdate={updateField}
 							onaction={generateSlug}
 						/>
+					{:else if activeStage === 'risks'}
+						<section class="state-card">
+							<strong>Opening the redesigned risk review...</strong>
+							<p>This stage now lives in the split risk-review flow.</p>
+						</section>
 					{:else if activeStage === 'summary'}
 						<section class="editor-card">
 							<div class="card-heading">
@@ -1689,56 +1703,9 @@
 								</div>
 							</section>
 						{/each}
-
-						{#if activeStage === 'risks'}
-							<section class="editor-card">
-								<div class="card-heading">
-									<div>
-										<h2>Risk extraction and highlights</h2>
-										<p>Use one line per item. The first list captures what the documents say. The second list captures what you want highlighted on the deal page.</p>
-									</div>
-								</div>
-								<div class="field-grid field-grid--single">
-									<label class="editor-list-field">
-										<span>Source risk factors</span>
-										<textarea
-											rows="6"
-											placeholder="One risk factor per line pulled from the PPM or deck"
-											value={listToTextarea(sourceRiskFactors)}
-											oninput={(event) => updateListState('source', event.currentTarget.value)}
-										></textarea>
-									</label>
-									<label class="editor-list-field">
-										<span>Highlighted risks for the deal page</span>
-										<textarea
-											rows="5"
-											placeholder="One highlighted risk per line"
-											value={listToTextarea(highlightedRisks)}
-											oninput={(event) => updateListState('highlight', event.currentTarget.value)}
-										></textarea>
-									</label>
-								</div>
-							</section>
-
-							<RiskSourceValidationStage
-								deal={{
-									...deal,
-									deckUrl: getDocumentUrl('deck') || deal?.deck_url || form.deckUrl,
-									ppmUrl: getDocumentUrl('ppm') || deal?.ppm_url || form.ppmUrl,
-									primarySourceUrl: form.primarySourceUrl,
-									primarySourceContext: form.primarySourceContext,
-									riskNotes: form.riskNotes,
-									downsideNotes: form.downsideNotes,
-									operatorBackground: form.operatorBackground,
-									keyDates: form.keyDates,
-									sourceRiskFactors,
-									highlightedRisks
-								}}
-							/>
-						{/if}
 					{/if}
 
-					{#if activeStage !== 'team'}
+					{#if activeStage !== 'team' && activeStage !== 'risks'}
 						<div class="form-footer wizard-footer">
 							<div class="wizard-footer__left">
 								{#if activeStage !== 'intake' && previousStage && previousStage !== activeStage}
