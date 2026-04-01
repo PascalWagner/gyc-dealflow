@@ -174,6 +174,14 @@
 	});
 	const standardActionItems = $derived.by(() => {
 		const items = [];
+		if (!needsPlanSetup) {
+			items.push({
+				icon: 'plan',
+				text: 'Review your plan so your roadmap and next move stay aligned with what you are actually targeting',
+				link: 'Review Plan',
+				href: '/app/plan'
+			});
+		}
 		items.push({
 			icon: 'plus',
 			text: 'Add a deal you are evaluating or already invested in so it lands in the right place right away',
@@ -512,7 +520,7 @@
 		margin-bottom: 18px;
 	}
 	.coach-copy {
-		max-width: 680px;
+		max-width: 760px;
 	}
 	.coach-eyebrow {
 		font-family: var(--font-ui);
@@ -539,28 +547,6 @@
 	.coach-text--muted {
 		color: var(--text-secondary);
 	}
-	.coach-actions {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		flex-wrap: wrap;
-		flex-shrink: 0;
-	}
-	.coach-primary {
-		white-space: nowrap;
-	}
-	.coach-secondary {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 10px 0;
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-secondary);
-		text-decoration: none;
-	}
-
 	.dash-hero {
 		padding: 34px 36px 24px;
 		margin-bottom: 22px;
@@ -807,16 +793,6 @@
 		}
 		.coach-title {
 			font-size: 24px;
-		}
-		.coach-actions {
-			width: 100%;
-			flex-direction: column;
-			align-items: stretch;
-		}
-		.coach-primary,
-		.coach-secondary {
-			width: 100%;
-			text-align: center;
 		}
 		.dashboard-onboarding-card {
 			margin-top: 20px;

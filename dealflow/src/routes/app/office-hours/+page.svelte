@@ -497,11 +497,17 @@
 
 	.schedule-card,
 	.gate-card {
+		background: var(--surface-1);
+		border: 1px solid var(--surface-border);
+		border-radius: var(--surface-radius);
+		box-shadow: var(--surface-shadow);
 		padding: 28px;
 	}
 
 	.featured-card {
 		position: relative;
+		background: var(--surface-accent);
+		border-color: var(--surface-border-accent);
 	}
 
 	.card-header {
@@ -565,7 +571,7 @@
 		gap: 18px;
 		padding: 20px;
 		border-radius: 24px;
-		border: 1px solid var(--surface-border);
+		border: 1px solid var(--surface-border-strong);
 		background: var(--surface-2);
 		margin-bottom: 18px;
 	}
@@ -698,9 +704,9 @@
 		gap: 16px;
 		align-items: center;
 		padding: 16px 18px;
-		border: 1px solid rgba(15, 23, 42, 0.08);
+		border: 1px solid var(--surface-border);
 		border-radius: 22px;
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 249, 250, 0.96));
+		background: var(--surface-2);
 	}
 
 	.session-stamp {
@@ -708,8 +714,8 @@
 		min-width: 78px;
 		padding: 14px 10px;
 		border-radius: 18px;
-		border: 1px solid rgba(15, 23, 42, 0.06);
-		background: rgba(244, 247, 248, 0.92);
+		border: 1px solid var(--surface-border);
+		background: var(--surface-1);
 		text-align: center;
 	}
 
@@ -798,8 +804,8 @@
 	.calendar-surface {
 		padding: 18px;
 		border-radius: 24px;
-		background: linear-gradient(180deg, rgba(246, 248, 249, 0.94), rgba(255, 255, 255, 0.98));
-		border: 1px solid rgba(15, 23, 42, 0.08);
+		background: var(--surface-2);
+		border: 1px solid var(--surface-border);
 		overflow-x: auto;
 	}
 
@@ -822,8 +828,8 @@
 		width: 40px;
 		height: 40px;
 		border-radius: 999px;
-		border: 1px solid rgba(15, 23, 42, 0.08);
-		background: rgba(255, 255, 255, 0.96);
+		border: 1px solid var(--surface-border);
+		background: var(--surface-1);
 		color: var(--text-dark);
 		font-family: var(--font-ui);
 		font-size: 15px;
@@ -870,8 +876,8 @@
 		min-height: 122px;
 		padding: 12px;
 		border-radius: 20px;
-		border: 1px solid rgba(15, 23, 42, 0.08);
-		background: rgba(255, 255, 255, 0.88);
+		border: 1px solid var(--surface-border);
+		background: var(--surface-1);
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
@@ -885,7 +891,7 @@
 
 	.calendar-day-outside {
 		opacity: 0.4;
-		background: rgba(244, 246, 247, 0.74);
+		background: var(--surface-2);
 	}
 
 	.calendar-day-today {
@@ -896,7 +902,7 @@
 	}
 
 	.calendar-day-has-events {
-		background: linear-gradient(180deg, rgba(240, 248, 243, 0.96), rgba(255, 255, 255, 0.96));
+		background: color-mix(in srgb, var(--surface-1) 84%, rgba(81, 190, 123, 0.12));
 	}
 
 	.calendar-day-number {
@@ -914,7 +920,7 @@
 		justify-content: center;
 		padding: 0 6px;
 		border-radius: 999px;
-		background: rgba(16, 37, 42, 0.08);
+		background: var(--surface-2);
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 800;
@@ -931,8 +937,8 @@
 		gap: 3px;
 		padding: 8px 10px;
 		border-radius: 14px;
-		background: linear-gradient(135deg, rgba(81, 190, 123, 0.16), rgba(81, 190, 123, 0.06));
-		border: 1px solid rgba(81, 190, 123, 0.12);
+		background: color-mix(in srgb, var(--surface-2) 80%, rgba(81, 190, 123, 0.14));
+		border: 1px solid var(--surface-border-accent);
 	}
 
 	.calendar-event-title {
@@ -1019,7 +1025,7 @@
 	}
 
 	.gate-pill {
-		background: rgba(81, 190, 123, 0.1);
+		background: color-mix(in srgb, var(--surface-2) 74%, rgba(81, 190, 123, 0.18));
 		color: var(--primary);
 		margin-bottom: 12px;
 	}
@@ -1027,7 +1033,7 @@
 	.skeleton-card {
 		min-height: 460px;
 		background:
-			linear-gradient(90deg, rgba(241, 245, 246, 0.8), rgba(255, 255, 255, 0.95), rgba(241, 245, 246, 0.8));
+			linear-gradient(90deg, color-mix(in srgb, var(--surface-2) 88%, transparent), color-mix(in srgb, var(--surface-1) 96%, transparent), color-mix(in srgb, var(--surface-2) 88%, transparent));
 		background-size: 200% 100%;
 		animation: shimmer 1.2s infinite linear;
 	}
@@ -1167,13 +1173,13 @@
 		gap: 16px;
 		padding: 16px 18px;
 		border-radius: 18px;
-		border: 1px solid rgba(15, 23, 42, 0.08);
-		background: rgba(255, 255, 255, 0.9);
+		border: 1px solid var(--surface-border);
+		background: var(--surface-2);
 	}
 
 	.rhythm-row-active {
-		background: linear-gradient(180deg, rgba(246, 251, 247, 0.98), rgba(255, 255, 255, 0.98));
-		border-color: rgba(81, 190, 123, 0.28);
+		background: color-mix(in srgb, var(--surface-2) 78%, rgba(81, 190, 123, 0.14));
+		border-color: var(--surface-border-accent);
 		box-shadow: inset 0 0 0 1px rgba(81, 190, 123, 0.08);
 	}
 
