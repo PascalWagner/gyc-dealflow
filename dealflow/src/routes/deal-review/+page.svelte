@@ -251,6 +251,7 @@
 			? 'Upload the source documents first, then review and clean up the extracted deal details.'
 			: activeStageConfig?.description || 'Fix missing fields, tighten source context, and move the deal toward publishing with confidence.'
 	);
+	const stageMetaById = $derived.by(() => new Map(onboardingStages.map((stage) => [stage.id, stage])));
 	const fieldStageLabels = $derived.by(() => {
 		const labels = new Map();
 		for (const stage of onboardingStages) {
@@ -263,6 +264,19 @@
 			}
 		}
 		return labels;
+	});
+	const fieldStageIds = $derived.by(() => {
+		const ids = new Map();
+		for (const stage of onboardingStages) {
+			for (const group of stage.fieldGroups || []) {
+				for (const fieldKey of group.fieldKeys || []) {
+					if (!ids.has(fieldKey)) {
+						ids.set(fieldKey, stage.id);
+					}
+				}
+			}
+		}
+		return ids;
 	});
 	const summaryRelevantWarningFieldKeys = $derived.by(() => {
 		const keys = new Set();
@@ -312,6 +326,31 @@
 			? `Imported values still need normalization before publishing: ${labelSummary}. Use Edit on the matching stage and choose the closest canonical options.`
 			: `Imported values in this step still need normalization: ${labelSummary}. Choose the closest canonical options before moving on.`;
 	});
+
+	function getStageLabel(stageId) {
+		return stageMetaById.get(stageId)?.label || '';
+	}
+
+	function getRuleTargetStage(rule) {
+		const candidateFieldKeys = [
+			...(Array.isArray(rule?.missingFieldKeys) ? rule.missingFieldKeys : []),
+			...(Array.isArray(rule?.fieldKeys) ? rule.fieldKeys : [])
+		];
+
+		for (const fieldKey of candidateFieldKeys) {
+			const stageId = fieldStageIds.get(fieldKey);
+			if (stageId) return stageId;
+		}
+
+		if (rule?.stageId && rule.stageId !== 'summary') return rule.stageId;
+		return 'summary';
+	}
+
+	function getRuleActionLabel(rule) {
+		const stageId = getRuleTargetStage(rule);
+		const stageLabel = getStageLabel(stageId);
+		return stageLabel ? `Open ${stageLabel}` : 'Open';
+	}
 
 	function markDirty() {
 		dirty = true;
@@ -1675,19 +1714,49 @@
 									</div>
 								</div>
 								<div class="check-grid">
-									<div class={`check-row ${secGateResolved ? 'is-ready' : 'is-blocked'}`}>
-										<strong>SEC / issuer verification resolved</strong>
-										<span>{secGateResolved ? 'Resolved' : 'Resolve the SEC stage first'}</span>
-									</div>
-									<div class={`check-row ${teamContactsValidation.valid ? 'is-ready' : 'is-blocked'}`}>
-										<strong>LP-facing contacts validated</strong>
-										<span>{teamContactsValidation.valid ? 'Ready' : (teamContactsValidation.formError || 'Add a valid primary/IR contact')}</span>
-									</div>
-									{#each onboardingFlow.publishRules as rule}
-										<div class={`check-row ${rule.satisfied ? 'is-ready' : 'is-blocked'}`}>
-											<strong>{rule.label}</strong>
-											<span>{rule.satisfied ? 'Ready' : `${rule.missingFieldKeys.length} fields still missing`}</span>
+									<button
+										type="button"
+										class={`check-row check-row--interactive ${secGateResolved ? 'is-ready' : 'is-blocked'}`}
+										onclick={() => navigateToStage('sec')}
+									>
+										<div class="check-row__copy">
+											<strong>SEC / issuer verification resolved</strong>
+											<span>{secGateResolved ? 'Resolved' : 'Resolve the SEC stage first'}</span>
 										</div>
+										<div class="check-row__meta">
+											<span class="check-row__status">{secGateResolved ? 'Resolved' : 'Needs review'}</span>
+											<span class="check-row__action">Open SEC</span>
+										</div>
+									</button>
+									<button
+										type="button"
+										class={`check-row check-row--interactive ${teamContactsValidation.valid ? 'is-ready' : 'is-blocked'}`}
+										onclick={() => navigateToStage('team')}
+									>
+										<div class="check-row__copy">
+											<strong>LP-facing contacts validated</strong>
+											<span>{teamContactsValidation.valid ? 'Ready' : (teamContactsValidation.formError || 'Add a valid primary/IR contact')}</span>
+										</div>
+										<div class="check-row__meta">
+											<span class="check-row__status">{teamContactsValidation.valid ? 'Ready' : 'Needs review'}</span>
+											<span class="check-row__action">Open Team</span>
+										</div>
+									</button>
+									{#each onboardingFlow.publishRules as rule}
+										<button
+											type="button"
+											class={`check-row check-row--interactive ${rule.satisfied ? 'is-ready' : 'is-blocked'}`}
+											onclick={() => navigateToStage(getRuleTargetStage(rule))}
+										>
+											<div class="check-row__copy">
+												<strong>{rule.label}</strong>
+												<span>{rule.satisfied ? 'Ready' : `${rule.missingFieldKeys.length} fields still missing`}</span>
+											</div>
+											<div class="check-row__meta">
+												<span class="check-row__status">{rule.satisfied ? 'Ready' : 'Needs review'}</span>
+												<span class="check-row__action">{getRuleActionLabel(rule)}</span>
+											</div>
+										</button>
 									{/each}
 								</div>
 							</section>
@@ -2334,6 +2403,26 @@
 		border: 1px solid rgba(31, 81, 89, 0.08);
 	}
 
+	.check-row--interactive {
+		appearance: none;
+		width: 100%;
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+		transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+	}
+
+	.check-row--interactive:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 12px 24px rgba(16, 37, 42, 0.08);
+	}
+
+	.check-row--interactive:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.18);
+		border-color: rgba(81, 190, 123, 0.42);
+	}
+
 	.check-row.is-ready {
 		border-color: rgba(81, 190, 123, 0.24);
 		background: rgba(81, 190, 123, 0.08);
@@ -2342,6 +2431,39 @@
 	.check-row.is-blocked {
 		border-color: rgba(175, 66, 47, 0.14);
 		background: rgba(175, 66, 47, 0.06);
+	}
+
+	.check-row__copy {
+		display: grid;
+		gap: 4px;
+	}
+
+	.check-row__copy span {
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--text-secondary);
+	}
+
+	.check-row__meta {
+		display: grid;
+		gap: 4px;
+		justify-items: end;
+		text-align: right;
+		flex-shrink: 0;
+	}
+
+	.check-row__status {
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+
+	.check-row__action {
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
 	}
 
 	.field-grid--single {
