@@ -27,8 +27,8 @@
 			portfolio: portfolioDetails
 		})
 	);
+	const portfolioEntries = $derived.by(() => portfolioView.entries || []);
 	const metricPortfolio = $derived.by(() => portfolioView.metricEntries || []);
-	const pendingEntries = $derived.by(() => portfolioView.pendingEntries || []);
 
 	// Derived
 	const branch = $derived(wizardData._branch || '');
@@ -136,6 +136,8 @@
 	const statsLine = $derived(
 		activeInvestments > 0
 			? `${activeInvestments} active investment${activeInvestments !== 1 ? 's' : ''} · $${totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(2) + 'M' : totalInvested.toLocaleString()} deployed`
+			: portfolioEntries.length > 0
+				? 'Portfolio activity is underway'
 			: 'No investments yet — start building your portfolio'
 	);
 
@@ -159,15 +161,6 @@
 				link: 'Review Deals',
 				page: 'deals',
 				href: '/app/deals?tab=review'
-			});
-		}
-		if (pendingEntries.length > 0) {
-			items.push({
-				icon: 'plan',
-				text: `<strong>${pendingEntries.length} invested deal${pendingEntries.length !== 1 ? 's are' : ' is'} pending review</strong> — visible in your portfolio now, but not counted in totals yet`,
-				link: 'Open Portfolio',
-				page: 'portfolio',
-				href: '/app/portfolio'
 			});
 		}
 		return items;
@@ -200,7 +193,7 @@
 				href: '/app/deals'
 			};
 		}
-		return actionItems[0] || null;
+		return actionItems[0] || standardActionItems[0] || null;
 	});
 	const secondaryActionItems = $derived.by(() =>
 		needsPlanSetup
@@ -215,7 +208,9 @@
 				...actionItems,
 				...standardActionItems
 			]
-			: [...actionItems.slice(1), ...standardActionItems]
+			: actionItems.length > 0
+				? [...actionItems.slice(1), ...standardActionItems]
+				: standardActionItems.slice(1)
 	);
 
 	// First name
@@ -336,13 +331,6 @@
 					<div class="dash-hero-pct">{goalProgress}%</div>
 				</div>
 				<div class="dash-hero-stats">{statsLine}</div>
-			</div>
-		{/if}
-
-		{#if pendingEntries.length > 0}
-			<div class="dashboard-pending-note">
-				<strong>{pendingEntries.length} invested deal{pendingEntries.length !== 1 ? 's are' : ' is'} pending review.</strong>
-				They are visible in your portfolio now and will count toward roll-up metrics after review is complete.
 			</div>
 		{/if}
 
@@ -493,16 +481,6 @@
 		align-items: flex-start;
 		gap: 14px;
 		margin-top: 28px;
-	}
-	.dashboard-pending-note {
-		margin: 18px 0 0;
-		padding: 14px 18px;
-		border-radius: 18px;
-		background: rgba(245, 158, 11, 0.08);
-		border: 1px solid rgba(245, 158, 11, 0.18);
-		font-size: 14px;
-		line-height: 1.6;
-		color: #7c5a00;
 	}
 	.dashboard-onboarding-link {
 		font-family: var(--font-ui);

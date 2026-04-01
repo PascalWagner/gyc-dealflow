@@ -598,15 +598,6 @@
 			</div>
 		</div>
 	{:else}
-		{#if pendingEntries.length > 0}
-			<div class="pending-banner">
-				<div class="pending-banner__title">Pending-review investments are visible now.</div>
-				<div class="pending-banner__copy">
-					They appear in your portfolio immediately, but they are excluded from the summary metrics until the underlying deal clears review.
-				</div>
-			</div>
-		{/if}
-
 		<div class="summary-grid">
 			<div class="stat-card ly-surface">
 				<div class="stat-label">Total Invested</div>
@@ -629,6 +620,12 @@
 				<div class="stat-value">{avgHoldPeriodYears ? formatHoldPeriodValue(avgHoldPeriodYears) : '—'}</div>
 			</div>
 		</div>
+
+		{#if pendingEntries.length > 0}
+			<div class="portfolio-summary-note">
+				{pendingEntries.length} investment{pendingEntries.length !== 1 ? 's are' : ' is'} pending review. They are listed below now and will be added to totals after review.
+			</div>
+		{/if}
 
 		<div class="portfolio-view-switch" role="tablist" aria-label="Portfolio views">
 			<button
@@ -694,8 +691,6 @@
 										</div>
 										{#if inv._missingDetails}
 											<div class="holding-note">Add your invested amount and actual first-year metrics to complete this line item.</div>
-										{:else if inv.isPendingReview}
-											<div class="holding-note">This line item is visible now and will count toward portfolio totals once the deal completes review.</div>
 										{:else if inv.notes}
 											<div class="holding-note">{inv.notes}</div>
 										{/if}
@@ -704,7 +699,7 @@
 									<div class="holding-cell" data-label="Status">
 										<span class="inv-status" style="--sc:{sc}">{inv.displayStatus || inv.status || 'Unknown'}</span>
 										{#if inv.isPendingReview}
-											<div class="holding-meta">Excluded from totals</div>
+											<div class="holding-meta">Not in totals yet</div>
 										{/if}
 									</div>
 
@@ -1032,31 +1027,18 @@
 		padding: 8px 20px;
 		font-size: 12px;
 	}
-	.pending-banner {
-		margin: 0 0 18px;
-		padding: 16px 18px;
-		border-radius: 18px;
-		background: rgba(245, 158, 11, 0.08);
-		border: 1px solid rgba(245, 158, 11, 0.18);
-	}
-	.pending-banner__title {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 800;
-		color: #9a6700;
-	}
-	.pending-banner__copy {
-		margin-top: 6px;
-		font-size: 14px;
-		line-height: 1.6;
-		color: #7c5a00;
-	}
-
 	.summary-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 		gap: 12px;
 		margin-bottom: 18px;
+	}
+	.portfolio-summary-note {
+		margin: -6px 0 18px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--text-secondary);
 	}
 	.stat-card {
 		padding: 18px 20px;

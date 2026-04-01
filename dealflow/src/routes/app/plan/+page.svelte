@@ -15,6 +15,8 @@
 	import {
 		currentAdminRealUser,
 		getUserScopedCacheSnapshot,
+		readScopedJson,
+		writeScopedJson,
 		writeUserScopedJson,
 		writeUserScopedString
 	} from '$lib/utils/userScopedState.js';
@@ -38,9 +40,19 @@
 	let roadmapView = $state('plan');
 	let reportUser = $state(null);
 	let portfolioPlan = $state(null);
-	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
+	let marketSnapshot = $state({
+		rows: [],
+		total: 0,
+		newThisMonth: 0,
+		loaded: false,
+		refreshing: false,
+		refreshedAt: 0,
+		requestKey: ''
+	});
 	const nativeCompanionMode = browser && isNativeApp();
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
+	const PLAN_MARKET_SNAPSHOT_CACHE_KEY = 'gycPlanMarketSnapshot';
+	const PLAN_MARKET_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 	const portfolioView = $derived.by(() =>
 		buildInvestedPortfolio({
 			stageMap: $dealStages || {},
@@ -276,6 +288,153 @@
 				deal?.minimum_investment,
 				deal?.minimum
 			) || 0
+		);
+	}
+
+	function createEmptyMarketSnapshot(requestKey = '') {
+		return {
+			rows: [],
+			total: 0,
+			newThisMonth: 0,
+			loaded: false,
+			refreshing: false,
+			refreshedAt: 0,
+			requestKey
+		};
+	}
+
+	function buildMarketSnapshotRequestKey(assets = [], checkSize = 0) {
+		const normalizedAssets = [...new Set((assets || []).map((asset) => normalizeAssetKey(asset)).filter(Boolean))];
+		return JSON.stringify({
+			assets: normalizedAssets,
+			checkSize: Number(checkSize || 0)
+		});
+	}
+
+	function readCachedMarketSnapshot(requestKey) {
+		if (!browser || !requestKey) return null;
+		const cache = readScopedJson(PLAN_MARKET_SNAPSHOT_CACHE_KEY, {});
+		const cached = cache?.[requestKey];
+		if (!cached) return null;
+		return {
+			rows: Array.isArray(cached.rows) ? cached.rows : [],
+			total: Number(cached.total || 0),
+			newThisMonth: Number(cached.newThisMonth || 0),
+			loaded: true,
+			refreshing: false,
+			refreshedAt: Number(cached.refreshedAt || 0),
+			requestKey
+		};
+	}
+
+	function writeCachedMarketSnapshot(requestKey, snapshot) {
+		if (!browser || !requestKey) return;
+		const cache = readScopedJson(PLAN_MARKET_SNAPSHOT_CACHE_KEY, {});
+		writeScopedJson(PLAN_MARKET_SNAPSHOT_CACHE_KEY, {
+			...cache,
+			[requestKey]: {
+				rows: snapshot.rows || [],
+				total: snapshot.total || 0,
+				newThisMonth: snapshot.newThisMonth || 0,
+				refreshedAt: snapshot.refreshedAt || Date.now()
+			}
+		});
+	}
+
+	function isMarketSnapshotFresh(snapshot) {
+		return Boolean(snapshot?.refreshedAt) && Date.now() - snapshot.refreshedAt < PLAN_MARKET_SNAPSHOT_MAX_AGE_MS;
+	}
+
+	function dealTargetIrrPct(deal) {
+		return percentNumber(firstDefined(deal?.targetIRR, deal?.target_irr));
+	}
+
+	function dealCashYieldPct(deal) {
+		return percentNumber(
+			firstDefined(
+				deal?.cashYield,
+				deal?.cash_yield,
+				deal?.cashOnCash,
+				deal?.cash_on_cash,
+				deal?.preferredReturn,
+				deal?.preferred_return
+			)
+		);
+	}
+
+	function dealAgeInDays(deal) {
+		const raw = firstDefined(
+			deal?.publishedAt,
+			deal?.published_at,
+			deal?.addedDate,
+			deal?.added_date,
+			deal?.createdAt,
+			deal?.created_at
+		);
+		if (!raw) return null;
+		const date = new Date(raw);
+		if (Number.isNaN(date.getTime())) return null;
+		return Math.max(0, Math.round((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24)));
+	}
+
+	function computeMarketSnapshotFromDeals(assets = [], checkSize = 0, dealsList = []) {
+		const activeDeals = (dealsList || []).filter((deal) => {
+			const status = String(deal?.status || '').trim().toLowerCase();
+			return !['closed', 'fully funded', 'completed', 'archived'].includes(status);
+		});
+
+		const rows = assets.slice(0, 5).map((asset) => {
+			const profile = getAssetProfile(asset);
+			const matchingDeals = activeDeals.filter((deal) => assetChoiceMatchesDeal(asset, deal));
+			const affordableDeals = matchingDeals.filter((deal) => {
+				const minimum = dealMinimum(deal);
+				return minimum <= 0 || Number(checkSize || 0) <= 0 || minimum <= Number(checkSize || 0);
+			});
+			const matchedDeals = Number(checkSize || 0) > 0 ? affordableDeals : matchingDeals;
+			const irrValues = matchedDeals.map((deal) => dealTargetIrrPct(deal)).filter((value) => value > 0);
+			const yieldValues = matchedDeals.map((deal) => dealCashYieldPct(deal)).filter((value) => value > 0);
+			const minimums = matchedDeals.map((deal) => dealMinimum(deal)).filter((value) => value > 0);
+			const ageValues = matchedDeals.map((deal) => dealAgeInDays(deal)).filter((value) => value !== null);
+
+			return {
+				label: profile.label,
+				color: profile.color,
+				icon: profile.icon,
+				assetClass: profile.label,
+				count: matchedDeals.length,
+				irrMin: irrValues.length ? Math.min(...irrValues) : profile.irrMin,
+				irrMax: irrValues.length ? Math.max(...irrValues) : profile.irrMax,
+				avgCoC: yieldValues.length ? average(yieldValues) : profile.cashYield,
+				avgMinimum: minimums.length ? Math.round(average(minimums)) : 0,
+				affordableCount: Number(checkSize || 0) > 0 ? affordableDeals.length : null,
+				newThisMonth: matchedDeals.filter((deal) => {
+					const age = dealAgeInDays(deal);
+					return age !== null && age <= 30;
+				}).length,
+				newestDays: ageValues.length ? Math.min(...ageValues) : profile.newestDays
+			};
+		});
+
+		return {
+			rows,
+			total: rows.reduce((sum, row) => sum + row.count, 0),
+			newThisMonth: rows.reduce((sum, row) => sum + row.newThisMonth, 0),
+			refreshedAt: Date.now()
+		};
+	}
+
+	function hasLocalPlanContent(snapshot = {}) {
+		const localWizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
+		const localPortfolioPlan = snapshot.portfolioPlan || null;
+		if (hasCompletedPlan(localWizardData, localPortfolioPlan)) return true;
+		return Boolean(
+			localWizardData._branch ||
+			localWizardData.goal ||
+			localWizardData.dealExperience !== undefined ||
+			localWizardData.lpDealsCount !== undefined ||
+			parseDollar(localWizardData.baselineIncome) > 0 ||
+			(localWizardData.assetClasses || []).length > 0 ||
+			(localWizardData.strategies || []).length > 0
 		);
 	}
 
@@ -603,7 +762,7 @@
 			...plainSegment(', using '),
 			...listSegments(strategyLabels),
 			...plainSegment(' strategies, writing '),
-			...emphasisSegment(currency(estimateCheckSize(plan?.investableCapital || wizardData.investableCapital))),
+			...emphasisSegment(currency(plannedCheckSize)),
 			...plainSegment(' checks, targeting '),
 			...emphasisSegment('quarterly or better'),
 			...plainSegment(' distributions.')
@@ -621,99 +780,113 @@
 	);
 	const totalMatches = $derived(snapshotRows.reduce((sum, row) => sum + row.dealCount, 0));
 	const totalNewMatches = $derived(snapshotRows.reduce((sum, row) => sum + row.newThisMonth, 0));
-		const wantsLendingSnapshot = $derived.by(() =>
-			selectedStrategies.some((strategy) => isLendingLike(strategy))
-		);
-		const reportRelevantAssets = $derived.by(() => {
-			const assets = [...selectedAssets];
-			if (wantsLendingSnapshot && !assets.some((asset) => isLendingLike(asset))) {
-				assets.push('Lending');
-			}
-			return [...new Set(assets)].slice(0, 5);
-		});
-		const reportSnapshotRows = $derived.by(() => {
-			const fallbackRows = snapshotRows.map((row) => ({
-				label: row.label,
-				color: row.color,
+	const wantsLendingSnapshot = $derived.by(() =>
+		selectedStrategies.some((strategy) => isLendingLike(strategy))
+	);
+	const reportRelevantAssets = $derived.by(() => {
+		const assets = [...selectedAssets];
+		if (wantsLendingSnapshot && !assets.some((asset) => isLendingLike(asset))) {
+			assets.push('Lending');
+		}
+		return [...new Set(assets)].slice(0, 5);
+	});
+	const planMarketSnapshotKey = $derived.by(() =>
+		buildMarketSnapshotRequestKey(reportRelevantAssets, plannedCheckSize)
+	);
+	const reportSnapshotRows = $derived.by(() => {
+		const fallbackRows = snapshotRows.map((row) => ({
+			label: row.label,
+			color: row.color,
 			icon: row.icon,
 			count: row.dealCount,
 			irrMin: row.irrMin,
 			irrMax: row.irrMax,
 			avgCoC: row.cashYield,
-				avgMinimum: plannedCheckSize ? Math.round(plannedCheckSize * 1.35) : 0,
-				affordableCount: plannedCheckSize ? Math.max(1, Math.round(row.dealCount * 0.45)) : null
-			}));
-			const snapshotByAsset = new Map(
-				(marketSnapshot.rows || []).map((row) => [normalizeAssetKey(row.assetClass), row])
-			);
-			if (snapshotByAsset.size === 0) return fallbackRows;
-
-			const rows = reportRelevantAssets.map((asset) => {
-				const profile = getAssetProfile(asset);
-				const snapshot = snapshotByAsset.get(normalizeAssetKey(asset));
-				if (!snapshot) return null;
-
-				return {
-					label: profile.label,
-					color: profile.color,
-					icon: profile.icon,
-					count: snapshot.count || 0,
-					irrMin: snapshot.irrMin ?? profile.irrMin,
-					irrMax: snapshot.irrMax ?? profile.irrMax,
-					avgCoC: snapshot.avgCoC ?? profile.cashYield,
-					avgMinimum: snapshot.avgMinimum || 0,
-					affordableCount: snapshot.affordableCount ?? null
-				};
-			}).filter(Boolean);
-
-			return rows.length ? rows : fallbackRows;
-		});
-		const reportMatchTotal = $derived.by(() =>
-			marketSnapshot.loaded ? marketSnapshot.total : totalMatches
+			avgMinimum: plannedCheckSize ? Math.round(plannedCheckSize * 1.35) : 0,
+			affordableCount: plannedCheckSize ? Math.max(1, Math.round(row.dealCount * 0.45)) : null
+		}));
+		const snapshotByAsset = new Map(
+			(marketSnapshot.rows || []).map((row) => [normalizeAssetKey(row.assetClass), row])
 		);
-		const reportNewThisMonth = $derived.by(() =>
-			marketSnapshot.loaded ? marketSnapshot.newThisMonth : totalNewMatches
-		);
+		if (snapshotByAsset.size === 0) return fallbackRows;
 
-		$effect(() => {
-			if (!browser) return;
-			const assets = reportRelevantAssets;
-			const checkSize = plannedCheckSize;
-			let cancelled = false;
+		const rows = reportRelevantAssets.map((asset) => {
+			const profile = getAssetProfile(asset);
+			const snapshot = snapshotByAsset.get(normalizeAssetKey(asset));
+			if (!snapshot) return null;
 
-			if (assets.length === 0) {
-				marketSnapshot = { rows: [], total: 0, newThisMonth: 0, loaded: true };
-				return;
-			}
-
-			const params = new URLSearchParams();
-			params.set('asset_classes', assets.join(','));
-			if (checkSize) params.set('check_size', String(checkSize));
-
-			void (async () => {
-				try {
-					const response = await fetch(`/api/plan-market-snapshot?${params.toString()}`);
-					if (!response.ok) throw new Error('snapshot failed');
-					const data = await response.json();
-					if (!cancelled) {
-						marketSnapshot = {
-							rows: data?.rows || [],
-							total: data?.total || 0,
-							newThisMonth: data?.newThisMonth || 0,
-							loaded: true
-						};
-					}
-				} catch {
-					if (!cancelled) {
-						marketSnapshot = { rows: [], total: 0, newThisMonth: 0, loaded: false };
-					}
-				}
-			})();
-
-			return () => {
-				cancelled = true;
+			return {
+				label: profile.label,
+				color: profile.color,
+				icon: profile.icon,
+				count: snapshot.count || 0,
+				irrMin: snapshot.irrMin ?? profile.irrMin,
+				irrMax: snapshot.irrMax ?? profile.irrMax,
+				avgCoC: snapshot.avgCoC ?? profile.cashYield,
+				avgMinimum: snapshot.avgMinimum || 0,
+				affordableCount: snapshot.affordableCount ?? null
 			};
-		});
+		}).filter(Boolean);
+
+		return rows.length ? rows : fallbackRows;
+	});
+	const reportMatchTotal = $derived.by(() =>
+		marketSnapshot.loaded ? marketSnapshot.total : totalMatches
+	);
+	const reportNewThisMonth = $derived.by(() =>
+		marketSnapshot.loaded ? marketSnapshot.newThisMonth : totalNewMatches
+	);
+
+	$effect(() => {
+		if (!browser) return;
+		const requestKey = planMarketSnapshotKey;
+		if (!requestKey) {
+			marketSnapshot = createEmptyMarketSnapshot();
+			return;
+		}
+
+		const cached = readCachedMarketSnapshot(requestKey);
+		if (cached) {
+			marketSnapshot = {
+				...cached,
+				refreshing: !isMarketSnapshotFresh(cached)
+			};
+			return;
+		}
+
+		marketSnapshot = createEmptyMarketSnapshot(requestKey);
+	});
+
+	$effect(() => {
+		if (!browser) return;
+		const assets = reportRelevantAssets;
+		const checkSize = plannedCheckSize;
+		const requestKey = planMarketSnapshotKey;
+		const dealsList = $deals || [];
+		if (!requestKey) return;
+
+		if (assets.length === 0) {
+			marketSnapshot = {
+				...createEmptyMarketSnapshot(requestKey),
+				loaded: true
+			};
+			return;
+		}
+
+		const cached = readCachedMarketSnapshot(requestKey);
+		const needsRefresh = !cached || !isMarketSnapshotFresh(cached);
+		if (!needsRefresh || dealsList.length === 0) return;
+
+		const nextSnapshot = computeMarketSnapshotFromDeals(assets, checkSize, dealsList);
+		const normalizedSnapshot = {
+			...nextSnapshot,
+			loaded: true,
+			refreshing: false,
+			requestKey
+		};
+		writeCachedMarketSnapshot(requestKey, normalizedSnapshot);
+		marketSnapshot = normalizedSnapshot;
+	});
 
 	const projection = $derived.by(() => {
 		const preferredAssets = selectedAssets.length ? selectedAssets : [...goalDefaults.cashflow];
@@ -740,7 +913,9 @@
 				income,
 				cumulativeIncome,
 				cumulativeCapital,
-				matches: profile.dealCount,
+				matches:
+					reportSnapshotRows.find((row) => normalizeAssetKey(row.label) === normalizeAssetKey(profile.label))?.count ||
+					profile.dealCount,
 				progressPct: annualTargetAmount > 0 ? Math.min(100, Math.round((cumulativeIncome / annualTargetAmount) * 100)) : 0
 			};
 		});
@@ -1192,13 +1367,22 @@
 		wizardBranch = params.get('branch') || '';
 		wizardFlowKey = params.get('flow') || '';
 		wizardForceEdit = ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase());
+		const snapshot = getUserScopedCacheSnapshot();
+		const shouldRenderFromCache = hasLocalPlanContent(snapshot);
 		syncPlanState();
+		if (shouldRenderFromCache) {
+			loading = false;
+		}
 		fetchDeals().catch(() => {});
 
 		const handleScopedStateUpdate = () => {
 			syncPlanState();
 		};
 		window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
+
+		if (shouldRenderFromCache && canViewFullPlan && (shouldOpenWizardFromLocation || !hasPlan) && !showWizard) {
+			openWizard(wizardForceEdit && hasPlan);
+		}
 
 		void (async () => {
 			try {
@@ -1228,6 +1412,11 @@
 					const data = await response.json();
 					if (data?.buyBox && Object.keys(data.buyBox).length > 0) {
 						wizardData = normalizeWizardData(data.buyBox);
+						writeUserScopedJson('gycBuyBox', data.buyBox);
+						writeUserScopedJson('gycBuyBoxWizard', wizardData);
+						if (data.buyBox._completedAt) {
+							writeUserScopedString('gycBuyBoxComplete', 'true');
+						}
 						plan = wizardData;
 						hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
 					}
@@ -1235,7 +1424,7 @@
 			} catch (error) {
 				console.warn('Failed to load plan:', error);
 			} finally {
-				loading = false;
+				if (loading) loading = false;
 				if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasPlan) && !showWizard) {
 					openWizard(wizardForceEdit && hasPlan);
 				}
@@ -1384,7 +1573,7 @@
 						<div class="plan-snapshot-value">{currency(annualTargetAmount)}</div>
 					</div>
 					<div class="plan-snapshot-item">
-						<div class="plan-snapshot-label">Average Check Size</div>
+						<div class="plan-snapshot-label">Target Check Size</div>
 						<div class="plan-snapshot-value">{currency(plannedCheckSize)}</div>
 					</div>
 					<div class="plan-snapshot-item">
@@ -1427,7 +1616,7 @@
 							<div class="plan-snapshot-value">{currentInvestmentCount} positions</div>
 						</div>
 						<div class="plan-snapshot-item">
-							<div class="plan-snapshot-label">Average Check Size</div>
+							<div class="plan-snapshot-label">Target Check Size</div>
 							<div class="plan-snapshot-value">{currency(projection.checkSize)}</div>
 						</div>
 					</div>
@@ -1474,7 +1663,7 @@
 								</div>
 							{/each}
 						</div>
-						<div class="schedule-total">{projection.years.length} modeled slots · {currency(projection.checkSize)} avg check · {roadmapSummary}</div>
+						<div class="schedule-total">{projection.years.length} modeled slots · {currency(projection.checkSize)} target check · {roadmapSummary}</div>
 					</div>
 				{/if}
 			</section>
@@ -1488,7 +1677,7 @@
 					</p>
 					<div class="next-move-meta">
 						<div class="next-move-pill">{nextBestMove.matchCount} matching deals in the database</div>
-						{#if nextBestMove.affordableCount !== null}
+						{#if nextBestMove.affordableCount !== null && nextBestMove.affordableCount !== nextBestMove.matchCount}
 							<div class="next-move-pill">{nextBestMove.affordableCount} fit your current check size</div>
 						{/if}
 						<div class="next-move-pill">Target pace: {percent(nextBestMove.yieldPct)} yield</div>
