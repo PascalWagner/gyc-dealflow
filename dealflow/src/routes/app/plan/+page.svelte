@@ -371,11 +371,7 @@
 	}
 
 	function openWizard(editMode = hasPlan) {
-		if (!hasPlan) {
-			goto('/onboarding/plan');
-			return;
-		}
-		wizardForceEdit = editMode;
+		wizardForceEdit = editMode && hasPlan;
 		showWizard = true;
 	}
 
@@ -913,10 +909,6 @@
 				console.warn('Failed to load plan:', error);
 			} finally {
 				loading = false;
-				if (!hasPlan && !wizardStage && !wizardFlowKey) {
-					goto('/onboarding/plan', { replaceState: true });
-					return;
-				}
 				if ((shouldOpenWizardFromLocation || !hasPlan) && !showWizard) openWizard(wizardForceEdit && hasPlan);
 			}
 		})();

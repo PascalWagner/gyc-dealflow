@@ -35,6 +35,7 @@
 	const hasGoals = $derived(Boolean(goals && goals.targetIncome > 0));
 	const hasGoalContext = $derived(Boolean(branch) || hasGoals);
 	const hasCompletedDashboardPlan = $derived.by(() => hasCompletedPlan(wizardData || {}, portfolioPlan));
+	const needsPlanSetup = $derived.by(() => !hasCompletedDashboardPlan);
 	const totalInvested = $derived(metricPortfolio.reduce((sum, investment) => sum + (parseFloat(investment.amountInvested) || 0), 0));
 	const totalDistributions = $derived(metricPortfolio.reduce((sum, investment) => sum + (parseFloat(investment.distributionsReceived) || 0), 0));
 	const activeInvestments = $derived(metricPortfolio.filter((investment) => investment.status === 'Active' || investment.status === 'Distributing').length);
@@ -101,6 +102,12 @@
 		return '';
 	});
 	const coachTargetCopy = $derived.by(() => {
+		if (needsPlanSetup) {
+			if (hasGoals) return `You're building toward $${targetIncome.toLocaleString()}/year in passive income, and the next step is to finish your plan so we can tailor every screen to that target.`;
+			if (branch === 'growth') return "You're building toward long-term wealth, and the next step is to finish your plan so we can tailor every screen to that outcome.";
+			if (branch === 'tax') return "You're working toward tax-efficient investing, and the next step is to finish your plan so we can tailor every screen to that goal.";
+			return "You're building toward passive income, but first we need your plan so we can tailor what you see.";
+		}
 		if (hasGoals) return `You're building toward $${targetIncome.toLocaleString()}/year in passive income.`;
 		if (branch === 'growth') {
 			const capital = parseDollar(wizardData.growthCapital) || 500000;
@@ -114,11 +121,18 @@
 		return `You're building toward $${target.toLocaleString()}/year in passive income.`;
 	});
 	const coachProgressCopy = $derived.by(() => {
+		if (needsPlanSetup) {
+			return 'Once your plan is in place, Home, Deal Flow, and Portfolio will all reflect what you are actually trying to buy.';
+		}
 		if (goalProgress > 0 && currentIncome > 0) {
 			return `You're currently at $${currentIncome.toLocaleString()}/year, and the fastest way to keep moving is to browse deals that fit your plan.`;
 		}
 		return `You haven't started deploying yet, and the fastest way to make progress is to browse deals that fit your plan.`;
 	});
+	const coachPrimaryLabel = $derived(needsPlanSetup ? 'Finish Plan' : 'Browse Deals');
+	const coachPrimaryHref = $derived(needsPlanSetup ? '/app/plan' : '/app/deals');
+	const coachSecondaryLabel = $derived(needsPlanSetup ? 'Browse Deals First' : 'Review Plan');
+	const coachSecondaryHref = $derived(needsPlanSetup ? '/app/deals' : '/app/plan');
 	const statsLine = $derived(
 		activeInvestments > 0
 			? `${activeInvestments} active investment${activeInvestments !== 1 ? 's' : ''} · $${totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(2) + 'M' : totalInvested.toLocaleString()} deployed`
@@ -158,16 +172,43 @@
 		}
 		return items;
 	});
-	const standardActionItems = $derived.by(() => [
-		{
+	const standardActionItems = $derived.by(() => {
+		const items = [];
+		items.push({
 			icon: 'plus',
 			text: 'Add a deal you are evaluating or already invested in so it lands in the right place right away',
 			link: 'Add Deal',
 			action: 'modal'
+		});
+		return items;
+	});
+	const primaryAction = $derived.by(() => {
+		if (needsPlanSetup) {
+			return {
+				icon: 'search',
+				text: 'Browse deals now and start building your pipeline while you refine your plan',
+				link: 'Browse Deals',
+				page: 'deals',
+				href: '/app/deals'
+			};
 		}
-	]);
-	const primaryAction = $derived.by(() => actionItems[0] || null);
-	const secondaryActionItems = $derived.by(() => [...actionItems.slice(1), ...standardActionItems]);
+		return actionItems[0] || null;
+	});
+	const secondaryActionItems = $derived.by(() =>
+		needsPlanSetup
+			? [
+				{
+					icon: 'plan',
+					text: 'Finish your plan so your dashboard, deal flow, and portfolio reflect what you are actually trying to buy',
+					link: 'Finish Plan',
+					page: 'plan',
+					href: '/app/plan'
+				},
+				...actionItems,
+				...standardActionItems
+			]
+			: [...actionItems.slice(1), ...standardActionItems]
+	);
 
 	// First name
 	const firstName = $derived.by(() => {
@@ -246,19 +287,6 @@
 	<PageHeader title="Home" className="dashboard-page-header" />
 
 	<div class="content-area">
-		{#if !hasGoalContext && !hasCompletedDashboardPlan}
-			<div class="dashboard-onboarding-card">
-				<div class="dashboard-onboarding-icon">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
-				</div>
-				<div class="dashboard-onboarding-title">{firstName ? `${firstName}, set up your investment plan.` : 'Set up your investment plan.'}</div>
-				<div class="dashboard-onboarding-copy">Get your preferences in place in a couple of minutes so the dashboard, deal flow, and portfolio all reflect what you are actually trying to buy.</div>
-				<div class="dashboard-onboarding-actions">
-					<button class="btn-primary" onclick={openWizard}>Get Started →</button>
-					<a href="/app/deals" class="dashboard-onboarding-link">Browse deals first</a>
-				</div>
-			</div>
-		{:else}
 		<div class="coach-card">
 			<div class="coach-copy">
 				<div class="coach-eyebrow">Your investing coach</div>
@@ -267,8 +295,8 @@
 				<p class="coach-text coach-text--muted">{coachProgressCopy}</p>
 			</div>
 			<div class="coach-actions">
-				<a href="/app/deals" class="btn-primary coach-primary">Browse Deals</a>
-				<a href="/app/plan" class="coach-secondary">Review Plan</a>
+				<a href={coachPrimaryHref} class="btn-primary coach-primary">{coachPrimaryLabel}</a>
+				<a href={coachSecondaryHref} class="coach-secondary">{coachSecondaryLabel}</a>
 			</div>
 		</div>
 
@@ -293,14 +321,14 @@
 			</div>
 		{/if}
 
-		{#if hasGoalContext && !hasCompletedDashboardPlan}
+		{#if hasGoalContext && needsPlanSetup}
 			<div class="plan-cta-card">
 				<div>
 					<div class="plan-cta-eyebrow">Your Investment Plan</div>
 					<div class="plan-cta-title">Turn your goal into concrete deal slots.</div>
 					<div class="plan-cta-copy">Map out check sizes, target yields, and the next investment that should fill your plan.</div>
 				</div>
-				<a href="/onboarding/plan" class="btn-primary plan-cta-btn">Build My Plan →</a>
+				<a href="/app/plan" class="btn-primary plan-cta-btn">Finish Plan →</a>
 			</div>
 		{/if}
 
@@ -386,7 +414,6 @@
 				</div>
 			{/if}
 		</div>
-	{/if}
 	</div>
 </PageContainer>
 

@@ -132,12 +132,13 @@ export function getSupportNavItems({
 }
 
 export function getSidebarSections(options = {}) {
+	const { needsPlanAttention = false } = options;
 	return [
 		{
 			label: '',
 			items: [
 				{ page: 'dashboard', icon: 'dashboard', label: 'Home' },
-				{ page: 'plan', icon: 'plan', label: 'Plan' },
+				{ page: 'plan', icon: 'plan', label: 'Plan', dot: needsPlanAttention },
 				{ page: 'deals', icon: 'deals', label: 'Deals', badge: true },
 				{ page: 'portfolio', icon: 'portfolio', label: 'Portfolio' }
 			]

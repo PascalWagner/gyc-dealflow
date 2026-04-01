@@ -15,11 +15,13 @@
 	import { browser } from '$app/environment';
 	import { deals } from '$lib/stores/deals.js';
 	import { ADMIN_NAV_ITEMS, APP_ROUTES, getSidebarSections } from '$lib/navigation/app-nav.js';
+	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import { selectionChanged } from '$lib/utils/haptics.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import {
 		ADMIN_REAL_USER_KEY,
 		currentAdminRealUser,
+		getUserScopedCacheSnapshot,
 		hydrateUserScopedData,
 		loadUserScopedData,
 		saveUserScopedData
@@ -29,6 +31,14 @@
 
 	let isDark = $state(false);
 	let isImpersonating = $state(false);
+	let needsPlanAttention = $state(false);
+	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
+
+	function syncPlanAttention() {
+		if (!browser) return;
+		const snapshot = getUserScopedCacheSnapshot();
+		needsPlanAttention = !hasCompletedPlan(normalizeWizardData(snapshot.buyBoxWizard || {}), snapshot.portfolioPlan);
+	}
 
 	function syncImpersonationState(sessionUser = null) {
 		const realUser = inferAdminRealUser(sessionUser || $user);
@@ -54,8 +64,12 @@
 		}
 
 		syncImpersonationState(getStoredSessionUser());
+		syncPlanAttention();
 		const impersonationTimers = [50, 250, 750].map((delay) =>
 			window.setTimeout(() => syncImpersonationState(getStoredSessionUser()), delay)
+		);
+		const planAttentionTimers = [50, 250, 750].map((delay) =>
+			window.setTimeout(() => syncPlanAttention(), delay)
 		);
 		const compactNavMedia = window.matchMedia('(max-width: 1024px)');
 		const syncPhoneHiddenState = () => {
@@ -63,6 +77,10 @@
 				mobileOpen = false;
 			}
 		};
+		const handleScopedStateUpdate = () => {
+			syncPlanAttention();
+		};
+		window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
 		syncPhoneHiddenState();
 		if (compactNavMedia.addEventListener) {
 			compactNavMedia.addEventListener('change', syncPhoneHiddenState);
@@ -74,6 +92,10 @@
 			for (const timer of impersonationTimers) {
 				clearTimeout(timer);
 			}
+			for (const timer of planAttentionTimers) {
+				clearTimeout(timer);
+			}
+			window.removeEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
 			if (compactNavMedia.removeEventListener) {
 				compactNavMedia.removeEventListener('change', syncPhoneHiddenState);
 			} else {
@@ -115,7 +137,8 @@
 		getSidebarSections({
 			nativeCompanionMode,
 			canShowMemberHub,
-			canShowOfficeHours
+			canShowOfficeHours,
+			needsPlanAttention
 		})
 	);
 
@@ -446,6 +469,9 @@
 					{#if item.badge && dealFlowCount > 0}
 						<span class="nav-badge">{dealFlowCount}</span>
 					{/if}
+					{#if item.dot}
+						<span class="nav-dot" aria-hidden="true"></span>
+					{/if}
 					{#if item.paidOnly && isFree}
 						<svg class="nav-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
 							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
@@ -700,6 +726,15 @@
 		font-weight: 700;
 		line-height: 1.5;
 		box-shadow: 0 1px 4px rgba(81, 190, 123, 0.18);
+	}
+	.nav-dot {
+		margin-left: auto;
+		width: 8px;
+		height: 8px;
+		border-radius: 999px;
+		background: var(--primary);
+		box-shadow: 0 0 0 4px rgba(81, 190, 123, 0.12);
+		flex-shrink: 0;
 	}
 
 	.nav-spacer { margin-top: auto; }

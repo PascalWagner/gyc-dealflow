@@ -50,6 +50,27 @@
 	const metricPortfolio = $derived.by(() => portfolioView.metricEntries || []);
 	const pendingEntries = $derived.by(() => portfolioView.pendingEntries || []);
 	const canViewAnalysis = $derived($isMember);
+	const hasPortfolioEntries = $derived.by(() => portfolio.length > 0);
+	const analysisAccessState = $derived.by(() => {
+		if (!canViewAnalysis) return 'locked';
+		if (metricPortfolio.length === 0) return 'needs-data';
+		return 'enabled';
+	});
+	const canOpenAnalysis = $derived.by(() => analysisAccessState === 'enabled');
+	const analysisBadgeLabel = $derived.by(() => {
+		if (analysisAccessState === 'locked') return 'Members';
+		if (analysisAccessState === 'needs-data') return 'Add data';
+		return '';
+	});
+	const analysisGateCopy = $derived.by(() => {
+		if (analysisAccessState === 'locked') {
+			return 'Upgrade to member access to unlock allocation, risk, and deployment analysis.';
+		}
+		if (analysisAccessState === 'needs-data') {
+			return 'Add invested amounts and dates to unlock portfolio analysis.';
+		}
+		return '';
+	});
 	const hasPersistedDetails = $derived.by(() =>
 		portfolioDetails.some((investment) => investment.id === editingId)
 	);
@@ -333,9 +354,15 @@
 	}
 
 	function selectPortfolioTab(tab) {
-		if (tab === 'analysis' && !canViewAnalysis) return;
+		if (tab === 'analysis' && !canOpenAnalysis) return;
 		activePortfolioTab = tab;
 	}
+
+	$effect(() => {
+		if (activePortfolioTab === 'analysis' && !canOpenAnalysis) {
+			activePortfolioTab = 'holdings';
+		}
+	});
 
 	function getToken() {
 		return browser ? getStoredSessionToken() : null;
@@ -555,21 +582,7 @@
 	</PageHeader>
 
 	<div class="content-area">
-	{#if portfolio.length === 0}
-		<div class="import-section">
-			<div class="import-card">
-				<div class="empty-briefcase">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="42" height="42"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-				</div>
-				<h3>No invested deals yet</h3>
-				<p>Add an existing investment or move a deal to <strong>Invested</strong> in Deal Flow and it will appear here automatically.</p>
-				<div class="browse-link">
-					<button class="btn-add section-add-btn" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
-				</div>
-			</div>
-		</div>
-	{:else}
-		{#if pendingEntries.length > 0}
+		{#if pendingEntries.length > 0 && hasPortfolioEntries}
 			<div class="pending-banner">
 				<div class="pending-banner__title">Pending-review investments are visible now.</div>
 				<div class="pending-banner__copy">
@@ -614,17 +627,21 @@
 				type="button"
 				class="portfolio-tab"
 				class:portfolio-tab--active={activePortfolioTab === 'analysis'}
-				class:portfolio-tab--locked={!canViewAnalysis}
+				class:portfolio-tab--locked={analysisAccessState !== 'enabled'}
 				onclick={() => selectPortfolioTab('analysis')}
-				disabled={!canViewAnalysis}
-				aria-disabled={!canViewAnalysis}
+				disabled={!canOpenAnalysis}
+				aria-disabled={!canOpenAnalysis}
 			>
 				Analysis
-				{#if !canViewAnalysis}
-					<span class="portfolio-tab-badge">Members</span>
+				{#if analysisBadgeLabel}
+					<span class="portfolio-tab-badge">{analysisBadgeLabel}</span>
 				{/if}
 			</button>
 		</div>
+
+		{#if analysisGateCopy && hasPortfolioEntries}
+			<div class="portfolio-analysis-note">{analysisGateCopy}</div>
+		{/if}
 
 		{#if activePortfolioTab === 'holdings'}
 			<div class="holdings-panel">
@@ -635,195 +652,228 @@
 					</div>
 				</div>
 
-				<div class="holdings-table">
-					<div class="holdings-table-head">
-						<div>Investment</div>
-						<div>Status</div>
-						<div>Invested</div>
-						<div>Year 1 Cash Flow</div>
-						<div>Year 1 Depreciation</div>
-						<div>Target IRR</div>
-						<div>Hold Period</div>
-						<div></div>
-					</div>
+				{#if !hasPortfolioEntries}
+					<div class="holdings-empty-grid">
+						<div class="import-card">
+							<div class="empty-briefcase">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="42" height="42"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+							</div>
+							<h3>No invested deals yet</h3>
+							<p>Add an existing investment or move a deal to <strong>Invested</strong> in Deal Flow and it will appear here automatically.</p>
+							<div class="browse-link">
+								<button class="btn-add section-add-btn" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
+							</div>
+						</div>
 
-					{#each sorted as inv}
-						{@const sc = inv.isPendingReview ? '#f59e0b' : (statusColors[inv.status] || 'var(--text-muted)')}
-						<div class="holdings-row" class:holdings-row--editing={editingId === inv.id}>
-							<div class="holdings-row-grid">
-								<div class="holding-cell holding-cell--primary" data-label="Investment">
-									<div class="holding-primary">{inv.investmentName || 'Unnamed investment'}</div>
-									<div class="holding-secondary">
-										{inv.sponsor || 'Unknown sponsor'}{inv.assetClass ? ` · ${inv.assetClass}` : ''}{inv.dateInvested ? ` · ${formatCardDate(inv.dateInvested)}` : ''}
-									</div>
-									{#if inv._missingDetails}
-										<div class="holding-note">Add your invested amount and actual first-year metrics to complete this line item.</div>
-									{:else if inv.isPendingReview}
-										<div class="holding-note">This line item is visible now and will count toward portfolio totals once the deal completes review.</div>
-									{:else if inv.notes}
-										<div class="holding-note">{inv.notes}</div>
-									{/if}
-								</div>
-
-								<div class="holding-cell" data-label="Status">
-									<span class="inv-status" style="--sc:{sc}">{inv.displayStatus || inv.status || 'Unknown'}</span>
-									{#if inv.isPendingReview}
-										<div class="holding-meta">Excluded from totals</div>
-									{/if}
-								</div>
-
-								<div class="holding-cell" data-label="Invested">
-									<div class="holding-metric">{formatPortfolioMoney(inv.amountInvested)}</div>
-									<div class="holding-meta">{inv.dateInvested ? formatCardDate(inv.dateInvested) : 'Date not set'}</div>
-								</div>
-
-								<div class="holding-cell" data-label="Year 1 Cash Flow">
-									<div class="holding-metric">{displayCashFlowValue(inv)}</div>
-									<div class="holding-metric-source">{formatMetricSource(inv.displayYear1CashFlowSource) || 'No data yet'}</div>
-								</div>
-
-								<div class="holding-cell" data-label="Year 1 Depreciation">
-									<div class="holding-metric">{displayDepreciationValue(inv)}</div>
-									<div class="holding-metric-source">{formatMetricSource(inv.displayYear1DepreciationSource) || 'No data yet'}</div>
-								</div>
-
-								<div class="holding-cell" data-label="Target IRR">
-									<div class="holding-metric">{inv.targetIRR ? `${inv.targetIRR}%` : '—'}</div>
-								</div>
-
-								<div class="holding-cell" data-label="Hold Period">
-									<div class="holding-metric">{formatHoldPeriodValue(inv.holdPeriod)}</div>
-								</div>
-
-								<div class="holding-cell holding-cell--action" data-label="Actions">
-									<button
-										class="btn-edit"
-										class:btn-edit--active={editingId === inv.id}
-										onclick={() => (editingId === inv.id ? closeInlineEditor() : openAddModal(inv.id))}
-									>
-										{editingId === inv.id ? 'Close' : inv._missingDetails ? 'Add Details' : 'Edit'}
-									</button>
+						{#if analysisAccessState === 'locked'}
+							<div class="analysis-locked-card">
+								<div class="analysis-locked-eyebrow">Members only</div>
+								<div class="analysis-locked-title">Unlock portfolio analysis.</div>
+								<p>Track your holdings here now. Upgrade when you want allocation, risk, and deployment analysis layered on top.</p>
+								<a href="/app/office-hours" class="analysis-locked-link">See Office Hours</a>
+							</div>
+						{:else}
+							<div class="analysis-locked-card analysis-locked-card--muted">
+								<div class="analysis-locked-eyebrow">Portfolio analysis</div>
+								<div class="analysis-locked-title">Add your first investment to unlock analysis.</div>
+								<p>Once you have at least one holding with invested data, this page will show allocation, concentration risk, and capital deployment analysis.</p>
+								<div class="analysis-locked-actions">
+									<button class="btn-primary" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
 								</div>
 							</div>
+						{/if}
+					</div>
+				{:else}
+					<div class="holdings-table">
+						<div class="holdings-table-head">
+							<div>Investment</div>
+							<div>Status</div>
+							<div>Invested</div>
+							<div>Year 1 Cash Flow</div>
+							<div>Year 1 Depreciation</div>
+							<div>Target IRR</div>
+							<div>Hold Period</div>
+							<div></div>
+						</div>
 
-							{#if editingId === inv.id}
-								<div class="holding-editor">
-									<div class="holding-editor-header">
-										<div>
-											<div class="holding-editor-title">{hasPersistedDetails ? 'Edit line item' : 'Add line-item details'}</div>
-											<div class="holding-editor-copy">Use actual LP-level results when you have them. Those actuals will override projected values in the holdings table.</div>
+						{#each sorted as inv}
+							{@const sc = inv.isPendingReview ? '#f59e0b' : (statusColors[inv.status] || 'var(--text-muted)')}
+							<div class="holdings-row" class:holdings-row--editing={editingId === inv.id}>
+								<div class="holdings-row-grid">
+									<div class="holding-cell holding-cell--primary" data-label="Investment">
+										<div class="holding-primary">{inv.investmentName || 'Unnamed investment'}</div>
+										<div class="holding-secondary">
+											{inv.sponsor || 'Unknown sponsor'}{inv.assetClass ? ` · ${inv.assetClass}` : ''}{inv.dateInvested ? ` · ${formatCardDate(inv.dateInvested)}` : ''}
 										</div>
-									</div>
-
-									<div class="holding-editor-grid">
-										<label class="editor-field">
-											<span>Investment Name *</span>
-											<input bind:value={modalData.investmentName} placeholder="e.g. Acme Multi-Family Fund II" />
-										</label>
-										<label class="editor-field">
-											<span>Sponsor</span>
-											<input bind:value={modalData.sponsor} placeholder="e.g. Acme Capital" />
-										</label>
-										<label class="editor-field">
-											<span>Asset Class</span>
-											<select bind:value={modalData.assetClass}>
-												<option value="">Select...</option>
-												<option>Multi Family</option>
-												<option>Self Storage</option>
-												<option>Industrial</option>
-												<option>Lending</option>
-												<option>Short Term Rental</option>
-												<option>Hotels/Hospitality</option>
-												<option>Mixed-Use</option>
-												<option>RV/Mobile Home Parks</option>
-												<option>Senior Living</option>
-												<option>Land</option>
-												<option>Car Wash</option>
-												<option>Oil & Gas</option>
-												<option>Other</option>
-											</select>
-										</label>
-										<label class="editor-field">
-											<span>Amount Invested ($)</span>
-											<input type="number" bind:value={modalData.amountInvested} placeholder="50000" />
-										</label>
-										<label class="editor-field">
-											<span>Date Invested</span>
-											<input type="date" bind:value={modalData.dateInvested} />
-										</label>
-										<label class="editor-field">
-											<span>Status</span>
-											<select bind:value={modalData.status}>
-												<option>Active</option>
-												<option>Distributing</option>
-												<option>Exited</option>
-												<option>Pending</option>
-											</select>
-										</label>
-										<label class="editor-field">
-											<span>Actual Year 1 Cash Flow ($)</span>
-											<input type="number" bind:value={modalData.actualYear1CashFlow} placeholder="8200" />
-										</label>
-										<label class="editor-field">
-											<span>Actual Year 1 Depreciation ($)</span>
-											<input type="number" bind:value={modalData.actualYear1Depreciation} placeholder="21000" />
-										</label>
-										<label class="editor-field">
-											<span>Target IRR (%)</span>
-											<input type="number" step="0.1" bind:value={modalData.targetIRR} placeholder="15" />
-										</label>
-										<label class="editor-field">
-											<span>Hold Period (years)</span>
-											<input bind:value={modalData.holdPeriod} placeholder="e.g. 5" />
-										</label>
-										<label class="editor-field">
-											<span>Distributions Received ($)</span>
-											<input type="number" bind:value={modalData.distributionsReceived} placeholder="0" />
-										</label>
-										<label class="editor-field">
-											<span>Investing Entity</span>
-											<input bind:value={modalData.investingEntity} placeholder="e.g. My LLC" />
-										</label>
-										<label class="editor-field full-width">
-											<span>Entity Invested Into</span>
-											<input bind:value={modalData.entityInvestedInto} placeholder="e.g. Acme Fund II LLC" />
-										</label>
-										<label class="editor-field full-width">
-											<span>Notes</span>
-											<textarea bind:value={modalData.notes} rows="3" placeholder="Optional notes about this investment..."></textarea>
-										</label>
-									</div>
-
-									<div class="holding-projection-card">
-										<div class="holding-projection-title">Deal-projected first-year performance</div>
-										<div class="holding-projection-grid">
-											<div class="holding-projection-metric">
-												<span>Projected cash flow</span>
-												<strong>{inv.projectedYear1CashFlow !== '' ? formatPortfolioMoney(inv.projectedYear1CashFlow) : 'Not available'}</strong>
-											</div>
-											<div class="holding-projection-metric">
-												<span>Projected depreciation</span>
-												<strong>{inv.projectedYear1DepreciationText || 'Not available'}</strong>
-											</div>
-										</div>
-										<div class="holding-projection-copy">Projected figures stay attached to the deal for reference. Your LP-entered actuals become the primary numbers shown in holdings when available.</div>
-									</div>
-
-									<div class="holding-editor-actions">
-										{#if hasPersistedDetails}
-											<button class="btn-danger" onclick={() => deleteInvestment(editingId)}>Delete Line Item</button>
+										{#if inv._missingDetails}
+											<div class="holding-note">Add your invested amount and actual first-year metrics to complete this line item.</div>
+										{:else if inv.isPendingReview}
+											<div class="holding-note">This line item is visible now and will count toward portfolio totals once the deal completes review.</div>
+										{:else if inv.notes}
+											<div class="holding-note">{inv.notes}</div>
 										{/if}
-										<div class="holding-editor-actions-spacer"></div>
-										<button class="btn-cancel" onclick={closeInlineEditor}>Cancel</button>
-										<button class="btn-primary" onclick={saveInvestment}>{hasPersistedDetails ? 'Save Changes' : 'Save Line Item'}</button>
+									</div>
+
+									<div class="holding-cell" data-label="Status">
+										<span class="inv-status" style="--sc:{sc}">{inv.displayStatus || inv.status || 'Unknown'}</span>
+										{#if inv.isPendingReview}
+											<div class="holding-meta">Excluded from totals</div>
+										{/if}
+									</div>
+
+									<div class="holding-cell" data-label="Invested">
+										<div class="holding-metric">{formatPortfolioMoney(inv.amountInvested)}</div>
+										<div class="holding-meta">{inv.dateInvested ? formatCardDate(inv.dateInvested) : 'Date not set'}</div>
+									</div>
+
+									<div class="holding-cell" data-label="Year 1 Cash Flow">
+										<div class="holding-metric">{displayCashFlowValue(inv)}</div>
+										<div class="holding-metric-source">{formatMetricSource(inv.displayYear1CashFlowSource) || 'No data yet'}</div>
+									</div>
+
+									<div class="holding-cell" data-label="Year 1 Depreciation">
+										<div class="holding-metric">{displayDepreciationValue(inv)}</div>
+										<div class="holding-metric-source">{formatMetricSource(inv.displayYear1DepreciationSource) || 'No data yet'}</div>
+									</div>
+
+									<div class="holding-cell" data-label="Target IRR">
+										<div class="holding-metric">{inv.targetIRR ? `${inv.targetIRR}%` : '—'}</div>
+									</div>
+
+									<div class="holding-cell" data-label="Hold Period">
+										<div class="holding-metric">{formatHoldPeriodValue(inv.holdPeriod)}</div>
+									</div>
+
+									<div class="holding-cell holding-cell--action" data-label="Actions">
+										<button
+											class="btn-edit"
+											class:btn-edit--active={editingId === inv.id}
+											onclick={() => (editingId === inv.id ? closeInlineEditor() : openAddModal(inv.id))}
+										>
+											{editingId === inv.id ? 'Close' : inv._missingDetails ? 'Add Details' : 'Edit'}
+										</button>
 									</div>
 								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
+
+								{#if editingId === inv.id}
+									<div class="holding-editor">
+										<div class="holding-editor-header">
+											<div>
+												<div class="holding-editor-title">{hasPersistedDetails ? 'Edit line item' : 'Add line-item details'}</div>
+												<div class="holding-editor-copy">Use actual LP-level results when you have them. Those actuals will override projected values in the holdings table.</div>
+											</div>
+										</div>
+
+										<div class="holding-editor-grid">
+											<label class="editor-field">
+												<span>Investment Name *</span>
+												<input bind:value={modalData.investmentName} placeholder="e.g. Acme Multi-Family Fund II" />
+											</label>
+											<label class="editor-field">
+												<span>Sponsor</span>
+												<input bind:value={modalData.sponsor} placeholder="e.g. Acme Capital" />
+											</label>
+											<label class="editor-field">
+												<span>Asset Class</span>
+												<select bind:value={modalData.assetClass}>
+													<option value="">Select...</option>
+													<option>Multi Family</option>
+													<option>Self Storage</option>
+													<option>Industrial</option>
+													<option>Lending</option>
+													<option>Short Term Rental</option>
+													<option>Hotels/Hospitality</option>
+													<option>Mixed-Use</option>
+													<option>RV/Mobile Home Parks</option>
+													<option>Senior Living</option>
+													<option>Land</option>
+													<option>Car Wash</option>
+													<option>Oil & Gas</option>
+													<option>Other</option>
+												</select>
+											</label>
+											<label class="editor-field">
+												<span>Amount Invested ($)</span>
+												<input type="number" bind:value={modalData.amountInvested} placeholder="50000" />
+											</label>
+											<label class="editor-field">
+												<span>Date Invested</span>
+												<input type="date" bind:value={modalData.dateInvested} />
+											</label>
+											<label class="editor-field">
+												<span>Status</span>
+												<select bind:value={modalData.status}>
+													<option>Active</option>
+													<option>Distributing</option>
+													<option>Exited</option>
+													<option>Pending</option>
+												</select>
+											</label>
+											<label class="editor-field">
+												<span>Actual Year 1 Cash Flow ($)</span>
+												<input type="number" bind:value={modalData.actualYear1CashFlow} placeholder="8200" />
+											</label>
+											<label class="editor-field">
+												<span>Actual Year 1 Depreciation ($)</span>
+												<input type="number" bind:value={modalData.actualYear1Depreciation} placeholder="21000" />
+											</label>
+											<label class="editor-field">
+												<span>Target IRR (%)</span>
+												<input type="number" step="0.1" bind:value={modalData.targetIRR} placeholder="15" />
+											</label>
+											<label class="editor-field">
+												<span>Hold Period (years)</span>
+												<input bind:value={modalData.holdPeriod} placeholder="e.g. 5" />
+											</label>
+											<label class="editor-field">
+												<span>Distributions Received ($)</span>
+												<input type="number" bind:value={modalData.distributionsReceived} placeholder="0" />
+											</label>
+											<label class="editor-field">
+												<span>Investing Entity</span>
+												<input bind:value={modalData.investingEntity} placeholder="e.g. My LLC" />
+											</label>
+											<label class="editor-field full-width">
+												<span>Entity Invested Into</span>
+												<input bind:value={modalData.entityInvestedInto} placeholder="e.g. Acme Fund II LLC" />
+											</label>
+											<label class="editor-field full-width">
+												<span>Notes</span>
+												<textarea bind:value={modalData.notes} rows="3" placeholder="Optional notes about this investment..."></textarea>
+											</label>
+										</div>
+
+										<div class="holding-projection-card">
+											<div class="holding-projection-title">Deal-projected first-year performance</div>
+											<div class="holding-projection-grid">
+												<div class="holding-projection-metric">
+													<span>Projected cash flow</span>
+													<strong>{inv.projectedYear1CashFlow !== '' ? formatPortfolioMoney(inv.projectedYear1CashFlow) : 'Not available'}</strong>
+												</div>
+												<div class="holding-projection-metric">
+													<span>Projected depreciation</span>
+													<strong>{inv.projectedYear1DepreciationText || 'Not available'}</strong>
+												</div>
+											</div>
+											<div class="holding-projection-copy">Projected figures stay attached to the deal for reference. Your LP-entered actuals become the primary numbers shown in holdings when available.</div>
+										</div>
+
+										<div class="holding-editor-actions">
+											{#if hasPersistedDetails}
+												<button class="btn-danger" onclick={() => deleteInvestment(editingId)}>Delete Line Item</button>
+											{/if}
+											<div class="holding-editor-actions-spacer"></div>
+											<button class="btn-cancel" onclick={closeInlineEditor}>Cancel</button>
+											<button class="btn-primary" onclick={saveInvestment}>{hasPersistedDetails ? 'Save Changes' : 'Save Line Item'}</button>
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
-		{:else if canViewAnalysis}
+		{:else if canOpenAnalysis}
 			<div class="analysis-panel">
 				<div class="holdings-header">
 					<div>
@@ -945,6 +995,15 @@
 					</div>
 				{/if}
 			</div>
+		{:else if analysisAccessState === 'needs-data'}
+			<div class="analysis-locked-card analysis-locked-card--muted">
+				<div class="analysis-locked-eyebrow">Portfolio analysis</div>
+				<div class="analysis-locked-title">Add your first investment to unlock analysis.</div>
+				<p>Once you have at least one holding with invested data, this page will show allocation, concentration risk, and capital deployment analysis.</p>
+				<div class="analysis-locked-actions">
+					<button class="btn-primary" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
+				</div>
+			</div>
 		{:else}
 			<div class="analysis-locked-card">
 				<div class="analysis-locked-eyebrow">Members only</div>
@@ -953,7 +1012,6 @@
 				<a href="/app/office-hours" class="analysis-locked-link">See Office Hours</a>
 			</div>
 		{/if}
-	{/if}
 	</div>
 </PageContainer>
 
@@ -1090,12 +1148,25 @@
 		background: rgba(255, 255, 255, 0.18);
 		color: #fff;
 	}
+	.portfolio-analysis-note {
+		margin: -4px 0 18px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
 
 	.holdings-panel,
 	.analysis-panel {
 		display: flex;
 		flex-direction: column;
 		gap: 18px;
+	}
+	.holdings-empty-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr);
+		gap: 18px;
+		align-items: stretch;
 	}
 	.holdings-header {
 		display: flex;
@@ -1605,6 +1676,10 @@
 		border: 1px solid rgba(81, 190, 123, 0.16);
 		background: linear-gradient(135deg, rgba(81, 190, 123, 0.08), rgba(245, 158, 11, 0.06));
 	}
+	.analysis-locked-card--muted {
+		border-color: var(--border);
+		background: color-mix(in srgb, var(--bg-card) 86%, var(--bg-cream));
+	}
 	.analysis-locked-eyebrow {
 		font-family: var(--font-ui);
 		font-size: 11px;
@@ -1612,6 +1687,9 @@
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		color: var(--primary);
+	}
+	.analysis-locked-card--muted .analysis-locked-eyebrow {
+		color: var(--text-secondary);
 	}
 	.analysis-locked-title {
 		margin-top: 8px;
@@ -1645,10 +1723,19 @@
 		border-color: var(--primary);
 		color: var(--primary);
 	}
+	.analysis-locked-actions {
+		margin-top: 18px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
 
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.summary-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.holdings-empty-grid {
+			grid-template-columns: 1fr;
 		}
 		.holdings-table-head,
 		.holdings-row-grid {
@@ -1668,6 +1755,9 @@
 	@media (max-width: 768px) {
 		.summary-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.holdings-empty-grid {
+			grid-template-columns: 1fr;
 		}
 		.portfolio-view-switch {
 			display: flex;
