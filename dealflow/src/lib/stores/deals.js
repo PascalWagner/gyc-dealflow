@@ -169,10 +169,19 @@ function normalizeIdList(value) {
 	return [...new Set((Array.isArray(value) ? value : []).map((id) => String(id || '').trim()).filter(Boolean))].sort();
 }
 
+function resolveMemberDealsInternalFlag(value) {
+	if (value === true || value === 'true') return true;
+	if (value === false || value === 'false') return false;
+	if (!browser) return Boolean(value);
+
+	const session = getStoredSessionUser();
+	return Boolean(session?.roleFlags?.admin);
+}
+
 function sanitizeMemberDealsOptions(options = {}) {
 	return {
 		scope: options.scope || 'browse',
-		internal: Boolean(options.internal),
+		internal: resolveMemberDealsInternalFlag(options.internal),
 		limit: Number(options.limit || MEMBER_DEALS_PAGE_SIZE),
 		ids: normalizeIdList(options.ids),
 		excludeIds: normalizeIdList(options.excludeIds),
@@ -548,6 +557,7 @@ export async function fetchDeals({ force = false } = {}) {
 function buildMemberDealsUrl(options = {}) {
 	const baseOrigin = browser ? window.location.origin : 'http://localhost';
 	const url = new URL('/api/member/deals', baseOrigin);
+	const internal = resolveMemberDealsInternalFlag(options.internal);
 	url.searchParams.set('scope', options.scope || 'browse');
 	url.searchParams.set('limit', String(options.limit || MEMBER_DEALS_PAGE_SIZE));
 	url.searchParams.set('offset', String(options.offset || 0));
@@ -571,7 +581,7 @@ function buildMemberDealsUrl(options = {}) {
 	if (options.company) url.searchParams.set('company', options.company);
 	if (options.managementCompanyId) url.searchParams.set('management_company_id', options.managementCompanyId);
 	if (options.matchAnyStrategyOrDealType) url.searchParams.set('match_any_strategy_or_deal_type', 'true');
-	if (options.internal) url.searchParams.set('internal', 'true');
+	if (internal) url.searchParams.set('internal', 'true');
 
 	if (browser) {
 		applyAdminImpersonationToUrl(url);
@@ -606,12 +616,14 @@ export async function fetchMemberDeals(options = {}) {
 	const limit = options.limit || MEMBER_DEALS_PAGE_SIZE;
 	const offset = options.offset || 0;
 	const ids = options.ids || [];
+	const internal = resolveMemberDealsInternalFlag(options.internal);
 	const normalizedOptions = {
 		...options,
 		scope,
 		limit,
 		offset,
-		ids
+		ids,
+		internal
 	};
 	const cacheKey = buildMemberDealsCacheKey(normalizedOptions);
 	const currentMeta = get(memberDealsMeta);
