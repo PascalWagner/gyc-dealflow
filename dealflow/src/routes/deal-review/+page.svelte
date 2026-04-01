@@ -183,19 +183,18 @@
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
 	);
 	const summaryPublishReady = $derived(onboardingFlow.isPublishReady && teamContactsValidation.valid && secGateResolved);
+	function isStageComplete(stage) {
+		if (!stage) return false;
+		if (stage.id === 'intake') return hasSourceDocuments;
+		if (stage.id === 'sec') return secGateResolved;
+		if (stage.id === 'team') return teamContactsValidation.valid;
+		return (stage.rules || []).every((rule) => rule.satisfied);
+	}
 	const furthestUnlockedStage = $derived.by(() => {
 		if (!deal) return reviewStep === 'intake' ? 'intake' : 'sec';
 		if (!hasSourceDocuments) return 'intake';
 		if (!secGateResolved) return 'sec';
 		if (!teamContactsValidation.valid) return 'team';
-
-		for (const stage of onboardingStages) {
-			if (['intake', 'sec', 'team', 'summary'].includes(stage.id)) continue;
-			if ((stage.rules || []).some((rule) => !rule.satisfied)) {
-				return stage.id;
-			}
-		}
-
 		return 'summary';
 	});
 	const unlockedStageIds = $derived.by(() => {
@@ -218,7 +217,10 @@
 	const nextStage = $derived(getNextOnboardingStage(activeStage, branchInfo.branch));
 	const completedStageIds = $derived(
 		onboardingStages
-			.filter((stage) => stage.index < onboardingStages.findIndex((candidate) => candidate.id === activeStage))
+			.filter((stage) =>
+				stage.index < onboardingStages.findIndex((candidate) => candidate.id === activeStage)
+				&& isStageComplete(stage)
+			)
 			.map((stage) => stage.id)
 	);
 	const sidebarCurrentStage = $derived(reviewStep === 'intake' ? 'intake' : activeStage);
