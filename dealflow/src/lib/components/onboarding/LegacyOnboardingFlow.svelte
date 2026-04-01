@@ -710,6 +710,13 @@
 
 		loadNetworkStats();
 
+		// The embedded /app/plan experience only uses the LP setup path.
+		// Skip legacy GP onboarding bootstrap there so free users don't hit GP-only APIs.
+		if (appMode) {
+			syncTeamContacts([]);
+			return;
+		}
+
 		// Load existing onboarding state
 		try {
 			const r = await fetch('/api/gp-onboarding?email=' + encodeURIComponent($user.email), { headers });
