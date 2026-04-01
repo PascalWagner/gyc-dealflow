@@ -43,6 +43,54 @@ const NAME_BLOCKLIST = /\b(fund|capital|management|company|investor|relations|co
 const HIGH_CONFIDENCE_OPERATOR_THRESHOLD = 0.82;
 const HIGH_CONFIDENCE_IR_THRESHOLD = 0.78;
 const EXTRACTION_TEXT_LIMIT = 120000;
+const CONTACT_FIELD_TARGETS = [
+	'full name',
+	'role / title',
+	'email address',
+	'phone number',
+	'LinkedIn URL',
+	'calendar URL',
+	'operator-lead signal',
+	'investor-relations signal'
+];
+const CONTACT_SCAN_RULES = [
+	{
+		id: 'sec_related_people',
+		label: 'SEC related persons',
+		description: 'Load every related person from the matched SEC filing and attach the filing phone number when available.',
+		targets: ['full name', 'role / title', 'phone number', 'operator-lead signal']
+	},
+	{
+		id: 'known_name_window',
+		label: 'Known-name window scan',
+		description: 'Search deck and PPM around each known person name, allowing for middle initials and loose formatting.',
+		targets: ['email address', 'phone number', 'LinkedIn URL', 'calendar URL', 'role / title']
+	},
+	{
+		id: 'email_contact_block',
+		label: 'Email contact block scan',
+		description: 'Search around every explicit email address and capture nearby names, phone numbers, and roles.',
+		targets: ['full name', 'email address', 'phone number', 'role / title']
+	},
+	{
+		id: 'phone_contact_block',
+		label: 'Phone contact block scan',
+		description: 'Search around every explicit phone number and capture nearby names, email addresses, and roles.',
+		targets: ['full name', 'phone number', 'email address', 'role / title']
+	},
+	{
+		id: 'role_anchor_scan',
+		label: 'Role-anchor scan',
+		description: 'Search around cues like investor relations, capital formation, and for more information.',
+		targets: ['investor-relations signal', 'full name', 'email address', 'phone number', 'calendar URL']
+	},
+	{
+		id: 'document_ai_contacts',
+		label: 'Document AI contact extraction',
+		description: 'Ask the document extractor to return every explicit sponsor contact and mark LP-facing roles.',
+		targets: ['all contact fields', 'operator-lead signal', 'investor-relations signal']
+	}
+];
 const CONTACT_EXTRACTION_PROMPT = `You are extracting LP-facing sponsor contacts from a private placement memorandum or pitch deck. Return ONLY valid JSON in this exact shape:
 {
   "contacts": [
@@ -62,7 +110,8 @@ const CONTACT_EXTRACTION_PROMPT = `You are extracting LP-facing sponsor contacts
 
 Rules:
 - Only include contacts explicitly present in the document.
-- Prefer the two LP-facing contacts: the operator lead and the investor relations / capital formation contact.
+- Include every explicit sponsor/operator contact you can find. If multiple contacts are present, return all of them.
+- Prefer the two LP-facing contacts first, but do not omit additional named contacts with phone, email, calendar, or LinkedIn details.
 - Set isPrimary true for CEO, President, Founder, Managing Partner, Principal, Managing Director, or equivalent operator lead.
 - Set isInvestorRelations true for Investor Relations, Capital Formation, Capital Raising, Investor Contact, or a "for more information" LP contact.
 - Use empty strings for missing fields.
@@ -212,6 +261,163 @@ function upsertCandidate(candidates, patch, context = {}) {
 		merged.confidence = nextPatch.confidence;
 	}
 	candidates[existingIndex] = merged;
+}
+
+function summarizeCandidate(candidate = {}) {
+	const name = normalizeWhitespace(candidate.name || candidate.fullName || teamContactFullName(candidate));
+	return {
+		name,
+		role: normalizeWhitespace(candidate.role),
+		email: normalizeWhitespace(candidate.email).toLowerCase(),
+		phone: normalizeWhitespace(candidate.phone),
+		linkedinUrl: normalizeWhitespace(candidate.linkedinUrl),
+		calendarUrl: normalizeWhitespace(candidate.calendarUrl),
+		sourceType: normalizeWhitespace(candidate.sourceType),
+		sourceDocumentId: normalizeWhitespace(candidate.sourceDocumentId),
+		confidence: typeof candidate.confidence === 'number'
+			? Number(candidate.confidence.toFixed(2))
+			: null,
+		isPrimary: candidate.isPrimary === true,
+		isInvestorRelations: candidate.isInvestorRelations === true,
+		matchReason: normalizeWhitespace(candidate.matchReason)
+	};
+}
+
+function mergeDiagnosticSummary(existing = {}, next = {}) {
+	const merged = { ...existing };
+	for (const key of ['name', 'role', 'email', 'phone', 'linkedinUrl', 'calendarUrl', 'sourceType', 'sourceDocumentId']) {
+		if (!normalizeWhitespace(merged[key]) && normalizeWhitespace(next[key])) {
+			merged[key] = next[key];
+		}
+	}
+	merged.matchReason = addReason(merged.matchReason, next.matchReason);
+	if (merged.confidence === null || (next.confidence ?? 0) > (merged.confidence ?? 0)) {
+		merged.confidence = next.confidence;
+	}
+	merged.isPrimary = merged.isPrimary || next.isPrimary;
+	merged.isInvestorRelations = merged.isInvestorRelations || next.isInvestorRelations;
+	return merged;
+}
+
+function dedupeDiagnosticContacts(candidates = []) {
+	const summaries = [];
+	const indexByKey = new Map();
+
+	for (const candidate of candidates) {
+		const summary = summarizeCandidate(candidate);
+		if (
+			!summary.name &&
+			!summary.email &&
+			!summary.phone &&
+			!summary.role &&
+			!summary.linkedinUrl &&
+			!summary.calendarUrl
+		) {
+			continue;
+		}
+
+		const key = summary.email
+			? `email:${summary.email}`
+			: summary.name
+				? `name:${normalizeNameKey(summary.name)}`
+				: summary.phone
+					? `phone:${summary.phone}`
+					: `summary:${summaries.length}`;
+		const existingIndex = indexByKey.get(key);
+		if (existingIndex === undefined) {
+			indexByKey.set(key, summaries.length);
+			summaries.push(summary);
+			continue;
+		}
+		summaries[existingIndex] = mergeDiagnosticSummary(summaries[existingIndex], summary);
+	}
+
+	return summaries;
+}
+
+function createRuleDiagnostics(ruleId = '') {
+	const rule = CONTACT_SCAN_RULES.find((entry) => entry.id === ruleId);
+	return {
+		id: ruleId,
+		label: rule?.label || ruleId,
+		description: rule?.description || '',
+		targets: Array.isArray(rule?.targets) ? [...rule.targets] : [],
+		ran: false,
+		note: '',
+		hitCount: 0,
+		contacts: []
+	};
+}
+
+function createDocumentDiagnostics(documentId = '', url = '') {
+	return {
+		documentId,
+		urlPresent: Boolean(url),
+		bufferAvailable: false,
+		textLength: 0,
+		rules: CONTACT_SCAN_RULES
+			.filter((rule) => rule.id !== 'sec_related_people')
+			.map((rule) => createRuleDiagnostics(rule.id))
+	};
+}
+
+function createExtractionDiagnostics({ dealId = '', companyName = '', ppmUrl = '', deckUrl = '' } = {}) {
+	return {
+		dealId,
+		companyName,
+		fieldTargets: [...CONTACT_FIELD_TARGETS],
+		scanRules: CONTACT_SCAN_RULES.map((rule) => ({
+			...rule,
+			targets: Array.isArray(rule.targets) ? [...rule.targets] : []
+		})),
+		knownNames: [],
+		sources: {
+			managementCompany: {
+				contactCount: 0,
+				contacts: []
+			},
+			sec: {
+				available: false,
+				filingId: '',
+				filingDate: '',
+				entityName: '',
+				issuerPhone: '',
+				edgarUrl: '',
+				relatedPeopleCount: 0,
+				rules: [createRuleDiagnostics('sec_related_people')]
+			},
+			ppm: createDocumentDiagnostics('ppm', ppmUrl),
+			deck: createDocumentDiagnostics('deck', deckUrl)
+		},
+		warnings: [],
+		finalContacts: [],
+		assignments: {}
+	};
+}
+
+function getRuleDiagnostics(container = {}, ruleId = '') {
+	if (!container || !Array.isArray(container.rules)) return null;
+	let ruleDiagnostics = container.rules.find((entry) => entry.id === ruleId) || null;
+	if (!ruleDiagnostics) {
+		ruleDiagnostics = createRuleDiagnostics(ruleId);
+		container.rules.push(ruleDiagnostics);
+	}
+	return ruleDiagnostics;
+}
+
+function setRuleDiagnostics(container = {}, ruleId = '', matches = [], { ran = true, note = '' } = {}) {
+	const ruleDiagnostics = getRuleDiagnostics(container, ruleId);
+	if (!ruleDiagnostics) return;
+
+	ruleDiagnostics.ran = ran;
+	ruleDiagnostics.note = note;
+	ruleDiagnostics.contacts = dedupeDiagnosticContacts(matches);
+	ruleDiagnostics.hitCount = ruleDiagnostics.contacts.length;
+}
+
+function setDocumentStatus(documentDiagnostics = {}, document = {}) {
+	documentDiagnostics.bufferAvailable = Boolean(document?.buffer);
+	documentDiagnostics.textLength = normalizeWhitespace(document?.text || '').length;
 }
 
 function extractTextFromPdfBufferHeuristic(buffer) {
@@ -862,6 +1068,12 @@ export default async function handler(req, res) {
 		const warnings = [];
 		const companyName = inferCompanyLine(deal);
 		const candidates = [];
+		const diagnostics = createExtractionDiagnostics({
+			dealId,
+			companyName,
+			ppmUrl: deal.ppm_url || '',
+			deckUrl: deal.deck_url || ''
+		});
 		const fallbackContacts = buildFallbackTeamContacts({
 			company: {
 				operator_name: deal.management_company?.operator_name || '',
@@ -873,6 +1085,8 @@ export default async function handler(req, res) {
 			},
 			includeUserFallback: false
 		});
+		diagnostics.sources.managementCompany.contacts = dedupeDiagnosticContacts(fallbackContacts);
+		diagnostics.sources.managementCompany.contactCount = diagnostics.sources.managementCompany.contacts.length;
 
 		for (const contact of fallbackContacts) {
 			upsertCandidate(candidates, contact, {
@@ -884,117 +1098,209 @@ export default async function handler(req, res) {
 
 		const secContacts = await loadSecContacts(supabase, dealId);
 		warnings.push(...secContacts.warnings);
+		diagnostics.sources.sec.available = Boolean(secContacts.filing?.id);
+		diagnostics.sources.sec.filingId = secContacts.filing?.id || '';
+		diagnostics.sources.sec.filingDate = secContacts.filing?.filing_date || '';
+		diagnostics.sources.sec.entityName = secContacts.filing?.entity_name || '';
+		diagnostics.sources.sec.issuerPhone = secContacts.filing?.issuer_phone || '';
+		diagnostics.sources.sec.edgarUrl = secContacts.filing?.edgar_url || '';
+		diagnostics.sources.sec.relatedPeopleCount = Array.isArray(secContacts.relatedPeople)
+			? secContacts.relatedPeople.length
+			: 0;
+		const secRuleMatches = [];
 		for (const person of secContacts.relatedPeople || []) {
-			const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
 			const relationships = Array.isArray(person.relationships) ? person.relationships.join(', ') : '';
-			upsertCandidate(candidates, {
+			const secMatch = {
 				firstName: person.first_name || '',
 				lastName: person.last_name || '',
 				role: inferRole(`${relationships} ${person.relationship_clarification || ''}`, relationships || ''),
 				phone: secContacts.filing?.issuer_phone || '',
 				company: inferCompanyLine(deal, secContacts.filing),
 				isPrimary: EXECUTIVE_ROLE_PATTERNS.some((pattern) => pattern.test(relationships)),
-				isInvestorRelations: INVESTOR_RELATIONS_PATTERNS.some((pattern) => pattern.test(relationships))
-			}, {
+				isInvestorRelations: INVESTOR_RELATIONS_PATTERNS.some((pattern) => pattern.test(relationships)),
 				sourceType: 'sec_filing',
 				sourceDocumentId: secContacts.filing?.id || '',
 				confidence: 0.9,
 				matchReason: `SEC related person${relationships ? `: ${relationships}` : ''}`
-			});
+			};
+			upsertCandidate(candidates, secMatch, secMatch);
+			secRuleMatches.push(secMatch);
 		}
+		setRuleDiagnostics(diagnostics.sources.sec, 'sec_related_people', secRuleMatches, {
+			ran: Boolean(secContacts.filing?.id),
+			note: secContacts.filing?.id
+				? ''
+				: 'No matched SEC filing was available for related-person extraction.'
+		});
 
 		const knownNames = [...new Set(
 			candidates
 				.map((candidate) => teamContactFullName(candidate))
 				.filter(Boolean)
 		)];
+		diagnostics.knownNames = knownNames;
 
 		const ppmDocument = await extractTextFromPdf(supabase, deal.ppm_url || '');
 		if (!ppmDocument.text && deal.ppm_url) warnings.push('ppm_text_unavailable');
 		const deckDocument = await extractTextFromPdf(supabase, deal.deck_url || '');
 		if (!deckDocument.text && deal.deck_url) warnings.push('deck_text_unavailable');
+		setDocumentStatus(diagnostics.sources.ppm, ppmDocument);
+		setDocumentStatus(diagnostics.sources.deck, deckDocument);
 
+		const ppmKnownNameMatches = [];
+		const deckKnownNameMatches = [];
 		for (const name of knownNames) {
-			for (const match of scanKnownName(ppmDocument.text, name, {
+			const ppmMatches = scanKnownName(ppmDocument.text, name, {
 				sourceType: 'ppm',
 				sourceDocumentId: 'ppm',
 				companyName
-			})) {
+			});
+			ppmKnownNameMatches.push(...ppmMatches);
+			for (const match of ppmMatches) {
 				upsertCandidate(candidates, match, match);
 			}
-			for (const match of scanKnownName(deckDocument.text, name, {
+
+			const deckMatches = scanKnownName(deckDocument.text, name, {
 				sourceType: 'deck',
 				sourceDocumentId: 'deck',
 				companyName
-			})) {
+			});
+			deckKnownNameMatches.push(...deckMatches);
+			for (const match of deckMatches) {
 				upsertCandidate(candidates, match, match);
 			}
 		}
+		setRuleDiagnostics(diagnostics.sources.ppm, 'known_name_window', ppmKnownNameMatches, {
+			ran: knownNames.length > 0 && Boolean(ppmDocument.text),
+			note: !knownNames.length
+				? 'No known names were available to anchor the scan.'
+				: !ppmDocument.text
+					? 'PPM text was unavailable.'
+					: ''
+		});
+		setRuleDiagnostics(diagnostics.sources.deck, 'known_name_window', deckKnownNameMatches, {
+			ran: knownNames.length > 0 && Boolean(deckDocument.text),
+			note: !knownNames.length
+				? 'No known names were available to anchor the scan.'
+				: !deckDocument.text
+					? 'Deck text was unavailable.'
+					: ''
+		});
 
-		for (const match of scanEmailContactBlocks(ppmDocument.text, {
+		const ppmEmailMatches = scanEmailContactBlocks(ppmDocument.text, {
 			sourceType: 'ppm',
 			sourceDocumentId: 'ppm',
 			companyName
-		})) {
+		});
+		for (const match of ppmEmailMatches) {
 			upsertCandidate(candidates, match, match);
 		}
+		setRuleDiagnostics(diagnostics.sources.ppm, 'email_contact_block', ppmEmailMatches, {
+			ran: Boolean(ppmDocument.text),
+			note: ppmDocument.text ? '' : 'PPM text was unavailable.'
+		});
 
-		for (const match of scanEmailContactBlocks(deckDocument.text, {
+		const deckEmailMatches = scanEmailContactBlocks(deckDocument.text, {
 			sourceType: 'deck',
 			sourceDocumentId: 'deck',
 			companyName
-		})) {
+		});
+		for (const match of deckEmailMatches) {
 			upsertCandidate(candidates, match, match);
 		}
+		setRuleDiagnostics(diagnostics.sources.deck, 'email_contact_block', deckEmailMatches, {
+			ran: Boolean(deckDocument.text),
+			note: deckDocument.text ? '' : 'Deck text was unavailable.'
+		});
 
-		for (const match of scanPhoneContactBlocks(ppmDocument.text, {
+		const ppmPhoneMatches = scanPhoneContactBlocks(ppmDocument.text, {
 			sourceType: 'ppm',
 			sourceDocumentId: 'ppm',
 			companyName
-		})) {
+		});
+		for (const match of ppmPhoneMatches) {
 			upsertCandidate(candidates, match, match);
 		}
+		setRuleDiagnostics(diagnostics.sources.ppm, 'phone_contact_block', ppmPhoneMatches, {
+			ran: Boolean(ppmDocument.text),
+			note: ppmDocument.text ? '' : 'PPM text was unavailable.'
+		});
 
-		for (const match of scanPhoneContactBlocks(deckDocument.text, {
+		const deckPhoneMatches = scanPhoneContactBlocks(deckDocument.text, {
 			sourceType: 'deck',
 			sourceDocumentId: 'deck',
 			companyName
-		})) {
+		});
+		for (const match of deckPhoneMatches) {
 			upsertCandidate(candidates, match, match);
 		}
+		setRuleDiagnostics(diagnostics.sources.deck, 'phone_contact_block', deckPhoneMatches, {
+			ran: Boolean(deckDocument.text),
+			note: deckDocument.text ? '' : 'Deck text was unavailable.'
+		});
 
-		for (const match of scanRoleAnchors(ppmDocument.text, {
+		const ppmRoleMatches = scanRoleAnchors(ppmDocument.text, {
 			sourceType: 'ppm',
 			sourceDocumentId: 'ppm',
 			companyName
-		})) {
+		});
+		for (const match of ppmRoleMatches) {
 			upsertCandidate(candidates, match, match);
 		}
+		setRuleDiagnostics(diagnostics.sources.ppm, 'role_anchor_scan', ppmRoleMatches, {
+			ran: Boolean(ppmDocument.text),
+			note: ppmDocument.text ? '' : 'PPM text was unavailable.'
+		});
 
-		for (const match of scanRoleAnchors(deckDocument.text, {
+		const deckRoleMatches = scanRoleAnchors(deckDocument.text, {
 			sourceType: 'deck',
 			sourceDocumentId: 'deck',
 			companyName
-		})) {
+		});
+		for (const match of deckRoleMatches) {
 			upsertCandidate(candidates, match, match);
 		}
+		setRuleDiagnostics(diagnostics.sources.deck, 'role_anchor_scan', deckRoleMatches, {
+			ran: Boolean(deckDocument.text),
+			note: deckDocument.text ? '' : 'Deck text was unavailable.'
+		});
 
-		if (shouldRunDocumentAi(candidates)) {
-			for (const match of await extractContactsWithAi(ppmDocument.buffer, {
+		const shouldRunAi = shouldRunDocumentAi(candidates);
+		if (shouldRunAi) {
+			const ppmAiMatches = await extractContactsWithAi(ppmDocument.buffer, {
 				sourceType: 'ppm',
 				sourceDocumentId: 'ppm',
 				companyName
-			})) {
+			});
+			for (const match of ppmAiMatches) {
 				upsertCandidate(candidates, match, match);
 			}
+			setRuleDiagnostics(diagnostics.sources.ppm, 'document_ai_contacts', ppmAiMatches, {
+				ran: Boolean(ppmDocument.buffer),
+				note: ppmDocument.buffer ? '' : 'PPM file buffer was unavailable for AI extraction.'
+			});
 
-			for (const match of await extractContactsWithAi(deckDocument.buffer, {
+			const deckAiMatches = await extractContactsWithAi(deckDocument.buffer, {
 				sourceType: 'deck',
 				sourceDocumentId: 'deck',
 				companyName
-			})) {
+			});
+			for (const match of deckAiMatches) {
 				upsertCandidate(candidates, match, match);
 			}
+			setRuleDiagnostics(diagnostics.sources.deck, 'document_ai_contacts', deckAiMatches, {
+				ran: Boolean(deckDocument.buffer),
+				note: deckDocument.buffer ? '' : 'Deck file buffer was unavailable for AI extraction.'
+			});
+		} else {
+			setRuleDiagnostics(diagnostics.sources.ppm, 'document_ai_contacts', [], {
+				ran: false,
+				note: 'Skipped because the rule-based scan already found a reachable operator and an IR contact.'
+			});
+			setRuleDiagnostics(diagnostics.sources.deck, 'document_ai_contacts', [], {
+				ran: false,
+				note: 'Skipped because the rule-based scan already found a reachable operator and an IR contact.'
+			});
 		}
 
 		const normalizedSuggestions = normalizeTeamContacts(candidates, {
@@ -1031,6 +1337,15 @@ export default async function handler(req, res) {
 				? candidate.id === operatorLead?.id
 				: candidate.id === investorRelations?.id;
 		}
+		diagnostics.warnings = [...warnings];
+		diagnostics.finalContacts = dedupeDiagnosticContacts(normalizedSuggestions);
+		diagnostics.assignments = {
+			operatorLeadContactId: operatorLead?.id || '',
+			investorRelationsContactId: samePersonHandlesBothRoles
+				? operatorLead?.id || ''
+				: investorRelations?.id || '',
+			samePersonHandlesBothRoles
+		};
 
 		console.info('[deal-team-contacts] suggestions built', {
 			dealId,
@@ -1039,6 +1354,10 @@ export default async function handler(req, res) {
 			investorRelationsContactId: investorRelations?.id || '',
 			samePersonHandlesBothRoles,
 			warnings
+		});
+		console.info('[deal-team-contacts] extraction diagnostics', {
+			dealId,
+			diagnostics
 		});
 
 		return res.status(200).json({
@@ -1049,7 +1368,8 @@ export default async function handler(req, res) {
 				? operatorLead?.id || ''
 				: investorRelations?.id || '',
 			samePersonHandlesBothRoles,
-			warnings
+			warnings,
+			diagnostics
 		});
 	} catch (error) {
 		console.error('[deal-team-contacts] failed', {

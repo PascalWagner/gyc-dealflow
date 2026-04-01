@@ -740,6 +740,12 @@
 				samePersonHandlesBothRoles: suggestionPayload?.samePersonHandlesBothRoles === true,
 				warnings: suggestionWarnings
 			});
+			if (suggestionPayload?.diagnostics) {
+				console.info('[deal-review/team] extraction diagnostics', {
+					dealId,
+					diagnostics: suggestionPayload.diagnostics
+				});
+			}
 			if (mergedState.decisions.length > 0) {
 				console.info('[deal-review/team] mapping decisions', {
 					dealId,
