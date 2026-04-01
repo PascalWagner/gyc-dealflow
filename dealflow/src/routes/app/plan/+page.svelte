@@ -1102,12 +1102,20 @@
 		const points = [...actualPoints, ...futurePoints];
 		const maxCapital = Math.max(...points.map((point) => point.capitalTotal), 1);
 		const maxMetric = Math.max(annualTargetAmount, ...points.map((point) => point.metricValue), 1);
+		const visibleLabelIndexes = new Set([
+			0,
+			historicalYears.length - 1,
+			historicalYears.length,
+			points.length - 1
+		]);
 		const chartPoints = points.map((point, index, allPoints) => ({
 			...point,
 			capitalPct: point.capitalTotal > 0 ? (point.capitalTotal / maxCapital) * 100 : 0,
 			metricPct: point.metricValue > 0 ? (point.metricValue / maxMetric) * 100 : 0,
 			plotX: allPoints.length > 1 ? (index / (allPoints.length - 1)) * 100 : 50,
-			plotY: 100 - (point.metricValue > 0 ? (point.metricValue / maxMetric) * 100 : 0)
+			plotY: 100 - (point.metricValue > 0 ? (point.metricValue / maxMetric) * 100 : 0),
+			showCapitalLabel: visibleLabelIndexes.has(index),
+			showMetricDot: visibleLabelIndexes.has(index) || index === allPoints.length - 1
 		}));
 		const finalPoint = chartPoints[chartPoints.length - 1];
 		const finalShare =
@@ -1119,14 +1127,41 @@
 						}))
 						.sort((left, right) => right.share - left.share)[0]
 				: null;
+		const dominantLabels = finalPoint?.segments?.slice(0, 4).map((segment) => segment.label) || [];
+		const groupedPoints = chartPoints.map((point) => {
+			const grouped = [];
+			let otherAmount = 0;
+			point.segments.forEach((segment) => {
+				if (dominantLabels.includes(segment.label)) {
+					grouped.push(segment);
+				} else {
+					otherAmount += segment.amount;
+				}
+			});
+			if (otherAmount > 0) {
+				grouped.push({
+					label: 'Other',
+					amount: otherAmount,
+					color: 'rgba(148, 163, 184, 0.9)'
+				});
+			}
+			return {
+				...point,
+				displaySegments: grouped.map((segment) => ({
+					...segment,
+					widthPct: point.capitalTotal > 0 ? (segment.amount / point.capitalTotal) * 100 : 0
+				}))
+			};
+		});
 
 		return {
-			points: chartPoints,
+			points: groupedPoints,
 			maxCapital,
 			maxMetric,
-			polylinePoints: chartPoints.map((point) => `${point.plotX},${point.plotY}`).join(' '),
+			polylinePoints: groupedPoints.map((point) => `${point.plotX},${point.plotY}`).join(' '),
 			targetY: 100 - ((annualTargetAmount / maxMetric) * 100),
 			finalShare,
+			dominantLabels,
 			actualRangeLabel: `${historicalYears[0]}-${historicalYears[historicalYears.length - 1]}`,
 			modeledRangeLabel: futurePoints.length
 				? `${futurePoints[0].year}-${futurePoints[futurePoints.length - 1].year}`
@@ -1139,15 +1174,14 @@
 		return `The left side shows the last 5 completed years of portfolio history. The right side shows the next 5 years modeled from today. By ${finalPoint.year}, this roadmap reaches ${roadmapMetricConfig.describe(finalPoint.metricValue)} on ${currency(finalPoint.capitalTotal)} deployed.`;
 	});
 	const legendItems = $derived.by(() => {
-		const labels = new Set();
-		roadmapChart.points.forEach((point) => {
-			point.segments.forEach((segment) => labels.add(segment.label));
-		});
-		return [...labels].map((label) => ({
+		return roadmapChart.dominantLabels.map((label) => ({
 			label,
 			color: getAssetProfile(label).color
 		}));
 	});
+	const legendHasOther = $derived.by(() =>
+		roadmapChart.points.some((point) => point.displaySegments.some((segment) => segment.label === 'Other'))
+	);
 	const concentrationAlert = $derived.by(() => {
 		if (!roadmapChart.finalShare || roadmapChart.finalShare.share < 45) return null;
 		return `${Math.round(roadmapChart.finalShare.share)}% of the deployed capital in this 5-year forward plan lands in ${roadmapChart.finalShare.label}. Consider diversifying.`;
@@ -1414,27 +1448,47 @@
 								<div class="roadmap-chart-period roadmap-chart-period--actual">Historical · {roadmapChart.actualRangeLabel}</div>
 								<div class="roadmap-chart-period roadmap-chart-period--modeled">Forward · {roadmapChart.modeledRangeLabel}</div>
 							</div>
-							<div class="roadmap-chart-values">
-								{#each roadmapChart.points as point}
-									<div class="roadmap-chart-capital">{compactCurrency(point.capitalTotal)}</div>
-								{/each}
-							</div>
 							<div class="roadmap-chart-canvas">
 								<div class="roadmap-chart-divider"></div>
+								<div class="roadmap-chart-target-pill" style={`top: calc(${Math.max(8, Math.min(90, roadmapChart.targetY))}% - 14px);`}>Target</div>
 								<svg class="roadmap-line-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
 									<line x1="0" y1={roadmapChart.targetY} x2="100" y2={roadmapChart.targetY} class="roadmap-target-line"></line>
 									<polyline points={roadmapChart.polylinePoints} class="roadmap-metric-line"></polyline>
 									{#each roadmapChart.points as point}
-										<circle cx={point.plotX} cy={point.plotY} r="1.8" class="roadmap-metric-dot"></circle>
+										<circle
+											cx={point.plotX}
+											cy={point.plotY}
+											r={point.showMetricDot ? 1.4 : 0.9}
+											class="roadmap-metric-dot"
+											class:roadmap-metric-dot--key={point.showMetricDot}
+										></circle>
 									{/each}
 								</svg>
 								<div class="roadmap-chart-grid">
 									{#each roadmapChart.points as point}
-										<div class="roadmap-chart-bar-shell">
-											<div class="roadmap-chart-bar" style={`height:${point.capitalTotal > 0 ? Math.max(8, point.capitalPct) : 0}%`}>
-												{#each point.segments as segment}
-													<span class="roadmap-chart-segment" style={`height:${point.capitalTotal > 0 ? (segment.amount / point.capitalTotal) * 100 : 0}%; background:${segment.color}`}></span>
-												{/each}
+										<div class="roadmap-chart-column">
+											<div class="roadmap-chart-capital" class:roadmap-chart-capital--visible={point.showCapitalLabel}>
+												{point.showCapitalLabel ? compactCurrency(point.capitalTotal) : ''}
+											</div>
+											<div class="roadmap-chart-bar-shell">
+												<div
+													class="roadmap-chart-bar"
+													class:roadmap-chart-bar--actual={point.period === 'actual'}
+													class:roadmap-chart-bar--modeled={point.period === 'modeled'}
+													style={`height:${point.capitalTotal > 0 ? Math.max(8, point.capitalPct) : 0}%`}
+												>
+													<div class="roadmap-chart-bar-fill"></div>
+													{#if point.displaySegments.length}
+														<div class="roadmap-chart-bar-cap">
+															{#each point.displaySegments as segment}
+																<span
+																	class="roadmap-chart-cap-segment"
+																	style={`width:${segment.widthPct}%; background:${segment.color}`}
+																></span>
+															{/each}
+														</div>
+													{/if}
+												</div>
 											</div>
 										</div>
 									{/each}
@@ -1444,7 +1498,6 @@
 								{#each roadmapChart.points as point}
 									<div class="roadmap-chart-label-group">
 										<div class="roadmap-chart-year">{point.year}</div>
-										<div class="roadmap-chart-period-tag">{point.period === 'actual' ? 'Actual' : 'Modeled'}</div>
 									</div>
 								{/each}
 							</div>
@@ -1465,6 +1518,12 @@
 								<span>{item.label}</span>
 							</div>
 						{/each}
+						{#if legendHasOther}
+							<div class="legend-item">
+								<span class="legend-swatch legend-swatch--other"></span>
+								<span>Other</span>
+							</div>
+						{/if}
 					</div>
 					{#if concentrationAlert}
 						<div class="growth-alert">{concentrationAlert}</div>
@@ -1996,7 +2055,6 @@
 		min-width: 920px;
 	}
 	.roadmap-chart-periods,
-	.roadmap-chart-values,
 	.roadmap-chart-grid,
 	.roadmap-chart-labels {
 		display: grid;
@@ -2024,15 +2082,20 @@
 		background: rgba(81, 190, 123, 0.08);
 		color: var(--primary);
 	}
-	.roadmap-chart-values {
-		margin-bottom: 10px;
-	}
 	.roadmap-chart-capital {
+		height: 18px;
+		margin-bottom: 10px;
 		text-align: center;
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: 700;
-		color: var(--text-dark);
+		letter-spacing: 0.04em;
+		color: rgba(15, 23, 42, 0.56);
+		opacity: 0;
+		transition: opacity 160ms ease;
+	}
+	.roadmap-chart-capital--visible {
+		opacity: 1;
 	}
 	.roadmap-chart-canvas {
 		position: relative;
@@ -2044,8 +2107,24 @@
 		bottom: 0;
 		left: 50%;
 		width: 1px;
-		background: rgba(148, 163, 184, 0.35);
+		background: rgba(148, 163, 184, 0.18);
 		z-index: 1;
+	}
+	.roadmap-chart-target-pill {
+		position: absolute;
+		right: 10px;
+		z-index: 4;
+		padding: 4px 8px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.88);
+		backdrop-filter: blur(8px);
+		border: 1px solid rgba(148, 163, 184, 0.22);
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgba(100, 116, 139, 0.9);
 	}
 	.roadmap-line-layer {
 		position: absolute;
@@ -2056,20 +2135,23 @@
 		pointer-events: none;
 	}
 	.roadmap-target-line {
-		stroke: rgba(100, 116, 139, 0.8);
-		stroke-width: 1.5;
-		stroke-dasharray: 4 4;
+		stroke: rgba(100, 116, 139, 0.42);
+		stroke-width: 1.2;
+		stroke-dasharray: 3 5;
 	}
 	.roadmap-metric-line {
 		fill: none;
 		stroke: var(--primary);
-		stroke-width: 2.8;
+		stroke-width: 2.1;
 		stroke-linecap: round;
 		stroke-linejoin: round;
 	}
 	.roadmap-metric-dot {
-		fill: #fff;
+		fill: rgba(255, 255, 255, 0.92);
 		stroke: var(--primary);
+		stroke-width: 1.1;
+	}
+	.roadmap-metric-dot--key {
 		stroke-width: 1.5;
 	}
 	.roadmap-chart-grid {
@@ -2078,28 +2160,56 @@
 		height: 100%;
 		align-items: end;
 	}
+	.roadmap-chart-column {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
 	.roadmap-chart-bar-shell {
-		height: 100%;
+		height: calc(100% - 28px);
 		display: flex;
 		align-items: flex-end;
 		justify-content: center;
 		padding: 0 10px;
 	}
 	.roadmap-chart-bar {
+		position: relative;
 		width: 100%;
 		max-width: 52px;
-		display: flex;
-		flex-direction: column-reverse;
-		border-radius: 12px 12px 0 0;
+		border-radius: 18px 18px 6px 6px;
 		overflow: hidden;
-		background: rgba(81, 190, 123, 0.08);
+		box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 246, 250, 0.98));
 	}
-	.roadmap-chart-segment {
+	.roadmap-chart-bar--actual {
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
+	}
+	.roadmap-chart-bar--modeled {
+		background: linear-gradient(180deg, rgba(245, 252, 248, 0.98), rgba(232, 246, 238, 0.98));
+	}
+	.roadmap-chart-bar-fill {
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: linear-gradient(180deg, rgba(52, 94, 233, 0.16), rgba(52, 94, 233, 0.88));
+		opacity: 0.88;
+	}
+	.roadmap-chart-bar-cap {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 16px;
+		display: flex;
+		overflow: hidden;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+	}
+	.roadmap-chart-cap-segment {
 		display: block;
-		width: 100%;
+		height: 100%;
 	}
 	.roadmap-chart-labels {
-		margin-top: 12px;
+		margin-top: 14px;
 	}
 	.roadmap-chart-label-group {
 		text-align: center;
@@ -2110,20 +2220,13 @@
 		font-weight: 700;
 		color: var(--text-dark);
 	}
-	.roadmap-chart-period-tag {
-		margin-top: 4px;
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--text-muted);
-	}
 	.roadmap-chart-legend {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 10px 16px;
-		margin-top: 16px;
+		gap: 10px 14px;
+		margin-top: 18px;
+		padding-top: 14px;
+		border-top: 1px solid rgba(148, 163, 184, 0.14);
 	}
 	.legend-line {
 		display: inline-block;
@@ -2134,6 +2237,9 @@
 	.legend-line--target {
 		border-top-style: dashed;
 		border-top-color: rgba(100, 116, 139, 0.85);
+	}
+	.legend-swatch--other {
+		background: rgba(148, 163, 184, 0.9);
 	}
 	.schedule-card--embedded {
 		margin-top: 18px;
@@ -2285,20 +2391,21 @@
 		color: var(--text-secondary);
 	}
 	.legend-swatch {
-		width: 10px;
-		height: 10px;
-		border-radius: 3px;
+		width: 9px;
+		height: 9px;
+		border-radius: 999px;
 	}
 	.growth-alert {
 		margin-top: 16px;
 		padding: 12px 14px;
-		border: 1px solid rgba(245, 158, 11, 0.24);
-		border-radius: 10px;
-		background: rgba(245, 158, 11, 0.08);
+		border: 1px solid rgba(245, 158, 11, 0.16);
+		border-radius: 14px;
+		background: rgba(245, 158, 11, 0.05);
+		backdrop-filter: blur(8px);
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 12px;
 		font-weight: 600;
-		color: #b45309;
+		color: rgba(180, 83, 9, 0.88);
 	}
 	.schedule-summary {
 		margin-top: 6px;
@@ -2896,8 +3003,11 @@
 		.roadmap-summary-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
-		.growth-chart {
-			gap: 8px;
+		.roadmap-chart-frame {
+			min-width: 820px;
+		}
+		.roadmap-chart-bar-shell {
+			padding: 0 8px;
 		}
 	}
 
@@ -2933,12 +3043,17 @@
 			width: 100%;
 			justify-content: flex-start;
 		}
-		.growth-chart {
-			grid-template-columns: repeat(5, minmax(0, 1fr));
-			row-gap: 18px;
+		.roadmap-chart-frame {
+			min-width: 720px;
 		}
-		.growth-bar-shell {
-			height: 180px;
+		.roadmap-chart-canvas {
+			height: 240px;
+		}
+		.roadmap-chart-bar-shell {
+			padding: 0 6px;
+		}
+		.roadmap-chart-target-pill {
+			right: 6px;
 		}
 		.schedule-row-top {
 			flex-direction: column;
