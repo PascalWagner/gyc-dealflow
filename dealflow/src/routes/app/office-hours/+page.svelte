@@ -86,10 +86,6 @@
 		return formatLocalTimeRange(event.startDateTime, event.endDateTime, localTimeZone) || canonicalTime(event);
 	}
 
-	function rhythmZoneLabel() {
-		return localTimeZone ? `${timeZoneLabel(localTimeZone)} Time` : 'Eastern Time';
-	}
-
 	function weekdayShort(event) {
 		return formatEventDatePart(event.startDateTime, { weekday: 'short' });
 	}
@@ -476,9 +472,6 @@
 							<div class="time-local display-time">
 								{localTime(nextSession) || 'Local time unavailable. Use ET below.'}
 							</div>
-							<div class="time-et accent-time">
-								{canonicalDate(nextSession)} • {canonicalTime(nextSession)}
-							</div>
 						</div>
 
 						<div class="featured-date-pill refined-date-pill">
@@ -572,7 +565,6 @@
 							<article class="rhythm-row" class:rhythm-row-active={event.id === nextSession?.id}>
 								<div class="rhythm-copy">
 									<div class="rhythm-date-line">{monthDayLocal(event)} • {weekdayShortLocal(event)}</div>
-									<div class="rhythm-local-line">{rhythmZoneLabel()}</div>
 								</div>
 								<div class="rhythm-time-line">{rhythmTime(event)}</div>
 							</article>
@@ -793,15 +785,6 @@
 		font-weight: 800;
 		line-height: 1.35;
 		color: var(--text-dark);
-	}
-
-	.time-et,
-	.session-et,
-	.month-session-et {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 800;
-		color: var(--primary);
 	}
 
 	.featured-date-pill {
@@ -1489,13 +1472,6 @@
 		font-size: 15px;
 		font-weight: 800;
 		color: var(--text-dark);
-	}
-
-	.rhythm-local-line {
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-secondary);
-		margin-top: 4px;
 	}
 
 	.rhythm-time-line {
