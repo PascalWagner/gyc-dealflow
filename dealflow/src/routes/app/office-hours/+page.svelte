@@ -23,7 +23,6 @@
 	let events = $state([]);
 	let nextSession = $state(null);
 	let localTimeZone = $state(null);
-	let sourceLabel = $state('Google Calendar');
 	let activeMonthIndex = $state(0);
 	const nativeCompanionMode = browser && isNativeApp();
 
@@ -49,10 +48,6 @@
 	let savedTimeZone = $state(ET_TIMEZONE);
 	let timeZoneSaving = $state(false);
 	let timeZoneSaved = $state(false);
-	const timezoneSummary = $derived.by(() => {
-		if (!localTimeZone) return 'Local timezone unavailable. Eastern Time is the canonical schedule reference.';
-		return `Showing your local time in ${timeZoneLabel(localTimeZone)}. Eastern Time remains the canonical schedule reference.`;
-	});
 	const calendarSummary = $derived.by(() => {
 		if (!localTimeZone) return 'Month view is using your browser date. Eastern Time remains the canonical schedule reference.';
 		return `Month view uses your local date in ${localTimeZone}. Eastern Time remains the canonical schedule reference.`;
@@ -240,7 +235,6 @@
 			}
 
 			const payload = await response.json();
-			sourceLabel = payload.sourceKind === 'google_calendar' ? 'Live Google Calendar' : 'Event source';
 			events = payload.upcomingSessions || payload.events || [];
 			nextSession = payload.nextSession || payload.upcomingSessions?.[0] || payload.events?.[0] || null;
 			activeMonthIndex = 0;
@@ -506,16 +500,6 @@
 						{/if}
 					</div>
 
-					<div class="detail-grid">
-						<div class="detail-card ly-surface ly-surface--muted">
-							<div class="detail-label">Source</div>
-							<div class="detail-value">{sourceLabel}</div>
-						</div>
-						<div class="detail-card detail-card-wide ly-surface ly-surface--muted">
-							<div class="detail-label">Time Reference</div>
-							<div class="detail-value">{timezoneSummary}</div>
-						</div>
-					</div>
 				{:else}
 					<div class="empty-state">No upcoming session is scheduled yet.</div>
 				{/if}
@@ -1399,39 +1383,6 @@
 		max-width: 100%;
 	}
 
-	.detail-grid {
-		display: grid;
-		grid-template-columns: 160px minmax(0, 1fr);
-		gap: 14px;
-		margin-top: 18px;
-	}
-
-	.detail-card {
-		padding: 14px 16px;
-	}
-
-	.detail-card-wide {
-		min-width: 0;
-	}
-
-	.detail-label {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 1px;
-		text-transform: uppercase;
-		color: var(--text-muted);
-		margin-bottom: 8px;
-	}
-
-	.detail-value {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		line-height: 1.55;
-		color: var(--text-dark);
-	}
-
 	.rhythm-title {
 		font-family: var(--font-ui);
 		font-size: 18px;
@@ -1580,10 +1531,6 @@
 		.calendar-month-label {
 			min-width: 0;
 			flex: 1;
-		}
-
-		.detail-grid {
-			grid-template-columns: 1fr;
 		}
 
 		.rhythm-row {
