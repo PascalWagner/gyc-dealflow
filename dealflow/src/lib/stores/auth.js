@@ -5,6 +5,12 @@ import {
 	ACCESS_TIERS,
 	SESSION_VERSION,
 	buildAccessModel,
+	canAccessMarketIntel as sessionCanAccessMarketIntel,
+	canAccessPlanPage as sessionCanAccessPlanPage,
+	canBuildFullPlan as sessionCanBuildFullPlan,
+	canSaveDeals as sessionCanSaveDeals,
+	canViewAdvancedDealAnalysis as sessionCanViewAdvancedDealAnalysis,
+	canViewInvestorProfile as sessionCanViewInvestorProfile,
 	hasCapability,
 	hasRoleFlag,
 	normalizeEmail,
@@ -377,11 +383,27 @@ export const roleFlags = derived(accessProfile, ($profile) => $profile.roleFlags
 
 export const sessionCapabilities = derived(accessProfile, ($profile) => $profile.capabilities);
 
+export const isFree = derived(accessTier, ($tier) => $tier === 'free');
+
 export const isMember = derived(accessTier, ($tier) => ['member', 'admin'].includes($tier));
 
 export const isAdmin = derived(roleFlags, ($roleFlags) => $roleFlags.admin === true);
 
 export const isGP = derived(roleFlags, ($roleFlags) => $roleFlags.gp === true);
+
+export const canAccessPlanPage = derived(user, ($user) => sessionCanAccessPlanPage($user || {}));
+
+export const canViewInvestorProfile = derived(user, ($user) => sessionCanViewInvestorProfile($user || {}));
+
+export const canBuildFullPlan = derived(user, ($user) => sessionCanBuildFullPlan($user || {}));
+
+export const canSaveDeals = derived(user, ($user) => sessionCanSaveDeals($user || {}));
+
+export const canViewAdvancedDealAnalysis = derived(user, ($user) =>
+	sessionCanViewAdvancedDealAnalysis($user || {})
+);
+
+export const canAccessMarketIntel = derived(user, ($user) => sessionCanAccessMarketIntel($user || {}));
 
 export function getSessionAccessProfile(sessionUser) {
 	return buildAccessModel(sessionUser || {});

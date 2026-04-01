@@ -1,7 +1,7 @@
 	<script>
 	import { browser } from '$app/environment';
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { accessTier } from '$lib/stores/auth.js';
+	import { isAdmin } from '$lib/stores/auth.js';
 	import { getDealHistoricalReturns, isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
@@ -14,7 +14,7 @@
 	let Chart;
 	const nativeCompanionMode = browser && isNativeApp();
 
-	const showGate = $derived(['public', 'free'].includes($accessTier));
+	const showGate = $derived(!$isAdmin);
 	const totalDeals = $derived(analyticsDeals.length);
 	const activeDeals = $derived(analyticsDeals.filter(d => !d.isStale));
 
@@ -722,17 +722,10 @@
 		<div class="mi-gate-overlay">
 			<div class="mi-gate-card">
 				<div class="mi-gate-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>
-				<h2>{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Full Market Intelligence'}</h2>
+				<h2>Admin-only workspace</h2>
 				<p>
-					{#if nativeCompanionMode}
-						Full SEC filing trends, asset class benchmarks, and deal flow analytics remain available to existing members in their web account.
-					{:else}
-						Get SEC filing trends, asset class benchmarks, deal flow analytics, and more with Academy membership.
-					{/if}
+					Market Intelligence is reserved for internal admin use. Use the main app surfaces for member-facing plan, deal, and portfolio workflows.
 				</p>
-				{#if !nativeCompanionMode}
-					<a href="/app/academy">Join Academy &rarr;</a>
-				{/if}
 			</div>
 		</div>
 	{/snippet}

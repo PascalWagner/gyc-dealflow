@@ -2,13 +2,12 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
-	import MarketSnapshot from '$lib/components/MarketSnapshot.svelte';
-	import OnboardingAppLayout from '$lib/components/onboarding/OnboardingAppLayout.svelte';
-	import LegacyOnboardingFlow from '$lib/components/onboarding/LegacyOnboardingFlow.svelte';
+	import LegacyPlanWizard from '$lib/components/LegacyPlanWizard.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 	import {
+		canBuildFullPlan,
 		getStoredSessionUser,
 		isMember
 	} from '$lib/stores/auth.js';
@@ -35,6 +34,7 @@
 	let wizardStage = $state('');
 	let wizardBranch = $state('');
 	let wizardFlowKey = $state('');
+	let roadmapView = $state('map');
 	let reportUser = $state(null);
 	let portfolioPlan = $state(null);
 	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
@@ -50,6 +50,19 @@
 	const portfolio = $derived.by(() => portfolioView.entries);
 
 	const canViewAnalytics = $derived($isMember);
+	const canViewFullPlan = $derived($canBuildFullPlan);
+	const hasInvestorProfile = $derived.by(() =>
+		Boolean(
+			wizardData._branch ||
+			wizardData.goal ||
+			wizardData.dealExperience !== undefined ||
+			wizardData.lpDealsCount !== undefined ||
+			parseDollar(wizardData.baselineIncome) > 0 ||
+			(wizardData.assetClasses || []).length > 0 ||
+			(wizardData.strategies || []).length > 0
+		)
+	);
+	const showInlineWizard = $derived(canViewFullPlan && (showWizard || !hasPlan));
 
 	let wizardStep = $state(0);
 	let wizardData = $state(normalizeWizardData({}));
@@ -371,8 +384,20 @@
 	}
 
 	function openWizard(editMode = hasPlan) {
-		wizardForceEdit = editMode && hasPlan;
+		if (!canViewFullPlan) {
+			goto('/onboarding');
+			return;
+		}
+		wizardForceEdit = Boolean(editMode && hasPlan);
 		showWizard = true;
+	}
+
+	function openInvestorProfile() {
+		goto('/onboarding');
+	}
+
+	function closeWizard() {
+		showWizard = false;
 	}
 
 	function syncWizardView(detail = {}) {
@@ -858,6 +883,104 @@
 			avgCheckSize: projection.checkSize
 		};
 	});
+	const planPageSubtitle = $derived.by(() =>
+		canViewFullPlan
+			? 'This page turns your goal into a thesis, a roadmap, and your next best move.'
+			: 'This page keeps your investor profile, deal-fit context, and upgrade path in one place.'
+	);
+	const freeProfileGoalLabel = $derived.by(() => goalLabels[wizardData._branch || wizardData.goal] || 'Define your investing goal');
+	const freeProfileExperience = $derived.by(() => {
+		const dealsCount = Number(wizardData.dealExperience ?? wizardData.lpDealsCount ?? 0);
+		if (!Number.isFinite(dealsCount) || dealsCount <= 0) return 'First-time investor';
+		return `${dealsCount} completed deal${dealsCount === 1 ? '' : 's'}`;
+	});
+	const freeProfileBaseline = $derived.by(() => {
+		const baseline = parseDollar(wizardData.baselineIncome);
+		return baseline > 0 ? `${currency(baseline)}/yr current baseline` : 'No passive baseline saved yet';
+	});
+	const freeProfileSummary = $derived.by(() => {
+		if (!hasInvestorProfile) return 'Finish your investor profile so the app can tailor the deal feed, holdings context, and upgrade path to you.';
+		const assets = selectedAssets.slice(0, 2).map((asset) => getAssetProfile(asset).label);
+		const strategies = selectedStrategies.slice(0, 2);
+		const focus = [assets.join(' + '), strategies.join(' + ')].filter(Boolean).join(' with ');
+		if (!focus) return `Your profile is currently centered on ${freeProfileGoalLabel.toLowerCase()}.`;
+		return `Your deal feed is being tuned for ${freeProfileGoalLabel.toLowerCase()} with ${focus}.`;
+	});
+	const roadmapMetricConfig = $derived.by(() => {
+		const avgIrrPct =
+			average(
+				selectedAssets.map((asset) => {
+					const profile = getAssetProfile(asset);
+					return (profile.irrMin + profile.irrMax) / 2;
+				})
+			) || 14;
+		if (goalKey === 'growth') {
+			return {
+				label: 'Projected portfolio value',
+				unitSuffix: '',
+				describe: (value) => currency(value),
+				valueForYear: (item) => Math.round(item.cumulativeCapital * (1 + (avgIrrPct / 100) * 0.75))
+			};
+		}
+		if (goalKey === 'tax') {
+			return {
+				label: 'Estimated first-year tax offset',
+				unitSuffix: '/yr',
+				describe: (value) => `${currency(value)}/yr`,
+				valueForYear: (item) => Math.round(item.cumulativeCapital * 0.18)
+			};
+		}
+		return {
+			label: 'Annual passive income run-rate',
+			unitSuffix: '/yr',
+			describe: (value) => `${currency(value)}/yr`,
+			valueForYear: (item) => item.cumulativeIncome
+		};
+	});
+	const roadmapYears = $derived.by(() =>
+		projection.years.map((item) => {
+			const metricValue = roadmapMetricConfig.valueForYear(item);
+			return {
+				...item,
+				metricValue,
+				metricLabel: roadmapMetricConfig.label,
+				progressPct:
+					annualTargetAmount > 0 ? Math.min(100, Math.round((metricValue / annualTargetAmount) * 100)) : 0
+			};
+		})
+	);
+	const roadmapSummary = $derived.by(() => {
+		const finalYear = roadmapYears[roadmapYears.length - 1];
+		if (!finalYear) return '';
+		return `${roadmapMetricConfig.describe(finalYear.metricValue)} on ${currency(finalYear.cumulativeCapital)} deployed across ${roadmapYears.length} modeled slots.`;
+	});
+	const nextBestMove = $derived.by(() => {
+		const nextYear = printSchedule.years.find((year) => year.slots.some((slot) => !slot.filled)) || printSchedule.years[0];
+		const nextSlot = nextYear?.slots?.find((slot) => !slot.filled) || nextYear?.slots?.[0];
+		if (!nextSlot) return null;
+		const assetMatch =
+			reportSnapshotRows.find((row) => normalizeAssetKey(row.label) === normalizeAssetKey(nextSlot.assetClass)) ||
+			reportSnapshotRows[0] ||
+			null;
+		const matchCount = assetMatch?.count ?? totalMatches;
+		const affordableCount = assetMatch?.affordableCount ?? null;
+		const estimatedImpact = goalKey === 'growth'
+			? `toward an estimated ${roadmapMetricConfig.describe(
+				Math.round(nextSlot.checkSize * 1.12)
+			)} value contribution`
+			: goalKey === 'tax'
+				? `toward roughly ${roadmapMetricConfig.describe(Math.round(nextSlot.checkSize * 0.18))} in modeled offset`
+				: `toward roughly ${roadmapMetricConfig.describe(nextSlot.estIncome)} in modeled income`;
+		return {
+			year: nextYear?.year || currentYearNumber(),
+			assetClass: nextSlot.assetClass,
+			checkSize: nextSlot.checkSize,
+			yieldPct: nextSlot.yieldPct,
+			estimatedImpact,
+			matchCount,
+			affordableCount
+		};
+	});
 
 	onMount(() => {
 		if (!browser) return;
@@ -880,7 +1003,9 @@
 				const stored = getStoredSessionUser();
 				if (!stored?.token) {
 					loading = false;
-					if (shouldOpenWizardFromLocation || !hasPlan) openWizard(wizardForceEdit);
+					if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasPlan)) {
+						openWizard(wizardForceEdit && hasPlan);
+					}
 					return;
 				}
 				const realUser = currentAdminRealUser();
@@ -909,7 +1034,9 @@
 				console.warn('Failed to load plan:', error);
 			} finally {
 				loading = false;
-				if ((shouldOpenWizardFromLocation || !hasPlan) && !showWizard) openWizard(wizardForceEdit && hasPlan);
+				if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasPlan) && !showWizard) {
+					openWizard(wizardForceEdit && hasPlan);
+				}
 			}
 		})();
 
@@ -924,10 +1051,10 @@
 </svelte:head>
 
 <PageContainer className="plan-shell ly-page-stack">
-	<PageHeader title="Plan" className="dashboard-page-header" />
+	<PageHeader title="Plan" subtitle={planPageSubtitle} className="dashboard-page-header" />
 
 	<div class="plan-page">
-	{#if saveMsg && !(showWizard || !hasPlan)}
+	{#if saveMsg && !showInlineWizard}
 		<div class="save-toast">{saveMsg}</div>
 	{/if}
 
@@ -941,10 +1068,92 @@
 				<div class="sk-bar" style="width: 84%; height: 14px;"></div>
 			</div>
 		</div>
-	{:else if showWizard || !hasPlan}
-		<OnboardingAppLayout>
-			<LegacyOnboardingFlow appMode={true} loginReturnBase="/app/plan" lpMemberContinuePath="/app/dashboard" />
-		</OnboardingAppLayout>
+	{:else if showInlineWizard}
+		<div class="plan-setup-shell">
+			<section class="plan-card plan-setup-card">
+				<div class="plan-card-top">
+					<div class="section-eyebrow">Build Your Plan</div>
+					{#if hasPlan}
+						<button class="inline-action" onclick={closeWizard}>Back To Plan</button>
+					{/if}
+				</div>
+				<div class="section-subcopy">
+					Complete your thesis, roadmap, and next-best-move setup without leaving the app shell.
+				</div>
+				<LegacyPlanWizard
+					initialData={wizardData}
+					forceEdit={wizardForceEdit && hasPlan}
+					forcedStage={wizardStage}
+					forcedBranch={wizardBranch}
+					forcedFlowKey={wizardFlowKey}
+					fullPlanMode={true}
+					paidCompleteRedirectTo="/app/plan"
+					on:state={handleWizardState}
+					on:complete={handleWizardComplete}
+				/>
+			</section>
+		</div>
+	{:else if !canViewFullPlan}
+		<div class="plan-stack plan-stack--free">
+			<section class="plan-card plan-target-card profile-card">
+				<div class="plan-card-top">
+					<span class="goal-pill goal-pill--profile">Investor Profile</span>
+					<div class="target-actions">
+						<button class="inline-action" onclick={openInvestorProfile}>Update Profile</button>
+					</div>
+				</div>
+				<div class="plan-kicker">Current Focus</div>
+				<h1 class="plan-headline">{freeProfileGoalLabel}</h1>
+				<p class="plan-copy">{freeProfileSummary}</p>
+				{#if hasInvestorProfile}
+					<div class="plan-snapshot-grid">
+						<div class="plan-snapshot-item">
+							<div class="plan-snapshot-label">Experience</div>
+							<div class="plan-snapshot-value">{freeProfileExperience}</div>
+						</div>
+						<div class="plan-snapshot-item">
+							<div class="plan-snapshot-label">Starting Point</div>
+							<div class="plan-snapshot-value">{freeProfileBaseline}</div>
+						</div>
+						<div class="plan-snapshot-item">
+							<div class="plan-snapshot-label">Preferred Asset Classes</div>
+							<div class="plan-snapshot-value plan-snapshot-value--wrap">
+								{selectedAssets.length ? selectedAssets.slice(0, 3).map((asset) => getAssetProfile(asset).label).join(', ') : 'Not saved yet'}
+							</div>
+						</div>
+						<div class="plan-snapshot-item">
+							<div class="plan-snapshot-label">Preferred Strategies</div>
+							<div class="plan-snapshot-value plan-snapshot-value--wrap">
+								{selectedStrategies.length ? selectedStrategies.slice(0, 3).join(', ') : 'Not saved yet'}
+							</div>
+						</div>
+					</div>
+				{:else}
+					<div class="profile-empty-copy">Finish your investor profile to personalize deals, portfolio context, and your future plan.</div>
+				{/if}
+			</section>
+
+			<section class="plan-card locked-card">
+				<div class="locked-title">
+					{nativeCompanionMode ? 'Full planning stays on the web for members' : 'Membership unlocks your full investment plan'}
+				</div>
+				<div class="locked-copy">
+					You can keep browsing deals, saving opportunities, and managing holdings as a free user. Membership unlocks your synthesized thesis, roadmap, and next best move on this page.
+				</div>
+				<div class="locked-actions">
+					<a href="/app/deals" class="btn-cta secondary">Browse Matching Deals</a>
+					{#if nativeCompanionMode}
+						<CompanionGate
+							compact={true}
+							title="Available to existing members"
+							message="Full plan roadmap, next-best-move guidance, and advanced projections stay available to existing members on the web."
+						/>
+					{:else}
+						<a href="/app/academy" class="btn-cta">Unlock Full Plan</a>
+					{/if}
+				</div>
+			</section>
+		</div>
 	{:else}
 		<div class="plan-stack">
 			<section class="plan-card plan-target-card">
@@ -989,43 +1198,52 @@
 				</div>
 			</section>
 
-			{#if canViewAnalytics}
-				<section class="plan-card market-card">
-					<div class="section-eyebrow">Market Snapshot</div>
-					<div class="section-subcopy">Deals in the database right now that line up with your selected asset classes.</div>
-					<MarketSnapshot rows={snapshotRows} {totalMatches} totalNewMatches={totalNewMatches} />
-				</section>
-
-				<section class="plan-card schedule-card">
-					<div class="schedule-topline">
-						<div>
-							<div class="section-eyebrow">Your Investment Plan</div>
-							<div class="schedule-summary">{currentInvestmentCount} of 9 investments · {currency(currentInvestedTotal)} deployed</div>
-						</div>
-						<button class="inline-action green" onclick={openWizard}>Edit Plan</button>
+			<section class="plan-card roadmap-card">
+				<div class="roadmap-topline">
+					<div>
+						<div class="section-eyebrow">Your Roadmap</div>
+						<div class="section-subcopy">Here is the visual map and the year-by-year plan for how this thesis moves toward your goal.</div>
 					</div>
-					<div class="schedule-list">
-						{#each projection.years as item}
-							<div class="schedule-row">
-								<div class="schedule-row-top">
-									<div class="schedule-year">Year {item.index} <span>({item.year})</span></div>
-									<div class="schedule-income">{currency(item.cumulativeIncome)}/yr <span>{item.progressPct}%</span></div>
+					<div class="roadmap-toggle" role="tablist" aria-label="Plan views">
+						<button type="button" class="roadmap-toggle-btn" class:active={roadmapView === 'map'} onclick={() => (roadmapView = 'map')}>Map</button>
+						<button type="button" class="roadmap-toggle-btn" class:active={roadmapView === 'plan'} onclick={() => (roadmapView = 'plan')}>Plan</button>
+					</div>
+				</div>
+
+				{#if roadmapView === 'map'}
+					<div class="roadmap-summary-grid">
+						<div class="plan-snapshot-item">
+							<div class="plan-snapshot-label">{roadmapMetricConfig.label}</div>
+							<div class="plan-snapshot-value">{roadmapMetricConfig.describe(roadmapYears[roadmapYears.length - 1]?.metricValue || 0)}</div>
+						</div>
+						<div class="plan-snapshot-item">
+							<div class="plan-snapshot-label">Modeled Capital Deployed</div>
+							<div class="plan-snapshot-value">{currency(projection.finalBar?.total || 0)}</div>
+						</div>
+						<div class="plan-snapshot-item">
+							<div class="plan-snapshot-label">Current Holdings</div>
+							<div class="plan-snapshot-value">{currentInvestmentCount} positions</div>
+						</div>
+						<div class="plan-snapshot-item">
+							<div class="plan-snapshot-label">Average Check Size</div>
+							<div class="plan-snapshot-value">{currency(projection.checkSize)}</div>
+						</div>
+					</div>
+					<div class="roadmap-summary-note">{roadmapSummary}</div>
+					<div class="roadmap-progress-list">
+						{#each roadmapYears as item}
+							<div class="roadmap-progress-row">
+								<div class="roadmap-progress-copy">
+									<div class="roadmap-progress-year">Year {item.index} <span>({item.year})</span></div>
+									<div class="roadmap-progress-meta">{item.profile.label} · {currency(item.checkSize)} deployment · {item.progressPct}% of target</div>
 								</div>
-								<div class="schedule-row-detail">
-									<span class="schedule-bullet"></span>
-									{item.profile.label} · {currency(item.checkSize)} · ~{percent(item.profile.cashYield)} · ~{currency(item.income)}/yr
-									<a href="/app/deals" class="schedule-link">{item.matches} matches</a>
-								</div>
+								<div class="roadmap-progress-value">{roadmapMetricConfig.describe(item.metricValue)}</div>
 							</div>
 						{/each}
 					</div>
-					<div class="schedule-total">{projection.years.length} deals · {currency(projection.checkSize)} avg check · {currency(projection.years[projection.years.length - 1]?.cumulativeIncome || 0)}/yr</div>
-				</section>
-
-				<section class="plan-card growth-card">
-					<div class="growth-topline">
-						<div class="section-eyebrow">Portfolio Growth By Asset Class</div>
-						<div class="growth-target">{compactCurrency(projection.finalBar?.total || 0)} target</div>
+					<div class="growth-topline growth-topline--embedded">
+						<div class="section-eyebrow">Capital Mix By Asset Class</div>
+						<div class="growth-target">{compactCurrency(projection.finalBar?.total || 0)} deployed</div>
 					</div>
 					<div class="growth-chart">
 						{#each projection.bars as bar}
@@ -1053,35 +1271,57 @@
 					{#if concentrationAlert}
 						<div class="growth-alert">{concentrationAlert}</div>
 					{/if}
-				</section>
-			{:else}
-				<section class="plan-card locked-card">
-					<div class="locked-title">
-						{nativeCompanionMode ? 'Advanced plan analytics stay on the web' : 'Advanced plan analytics are for members and admins'}
+				{:else}
+					<div class="schedule-card schedule-card--embedded">
+						<div class="schedule-topline">
+							<div>
+								<div class="section-eyebrow">Your Investment Plan</div>
+								<div class="schedule-summary">{currentInvestmentCount} current investments · {currency(currentInvestedTotal)} deployed today</div>
+							</div>
+							<button class="inline-action green" onclick={openWizard}>Edit Plan</button>
+						</div>
+						<div class="schedule-list">
+							{#each roadmapYears as item}
+								<div class="schedule-row">
+									<div class="schedule-row-top">
+										<div class="schedule-year">Year {item.index} <span>({item.year})</span></div>
+										<div class="schedule-income">{roadmapMetricConfig.describe(item.metricValue)} <span>{item.progressPct}%</span></div>
+									</div>
+									<div class="schedule-row-detail">
+										<span class="schedule-bullet"></span>
+										{item.profile.label} · {currency(item.checkSize)} · ~{percent(item.profile.cashYield)} · {item.matches} matches
+									</div>
+								</div>
+							{/each}
+						</div>
+						<div class="schedule-total">{projection.years.length} modeled slots · {currency(projection.checkSize)} avg check · {roadmapSummary}</div>
 					</div>
-					<div class="locked-copy">
-						{#if nativeCompanionMode}
-							Free users can still build and edit a plan in the iOS app. Market snapshots, projection bars, and deployment schedules remain available to existing members on the web.
-						{:else}
-							Free users can still build and edit a plan, but the market snapshot, projection bars, and year-by-year deployment schedule stay locked until upgrade.
+				{/if}
+			</section>
+
+			{#if nextBestMove}
+				<section class="plan-card next-move-card">
+					<div class="next-move-kicker">Your Next Best Move</div>
+					<h2 class="next-move-title">Add a {currency(nextBestMove.checkSize)} {nextBestMove.assetClass} allocation.</h2>
+					<p class="next-move-copy">
+						The next modeled slot in your roadmap lands in {nextBestMove.year} and points to {nextBestMove.assetClass}. A move at this size should help you move {nextBestMove.estimatedImpact}.
+					</p>
+					<div class="next-move-meta">
+						<div class="next-move-pill">{nextBestMove.matchCount} matching deals in the database</div>
+						{#if nextBestMove.affordableCount !== null}
+							<div class="next-move-pill">{nextBestMove.affordableCount} fit your current check size</div>
 						{/if}
+						<div class="next-move-pill">Target pace: {percent(nextBestMove.yieldPct)} yield</div>
 					</div>
-					<div class="locked-actions">
-						<button class="btn-cta secondary" onclick={openWizard}>Update Plan</button>
-						{#if nativeCompanionMode}
-							<CompanionGate
-								compact={true}
-								title="Available to existing members"
-								message="Advanced projections and market snapshots stay available to existing members on the web."
-							/>
-						{:else}
-							<a href="/app/academy" class="btn-cta">Unlock Full Plan</a>
-						{/if}
+					<div class="next-move-actions">
+						<a href="/app/deals" class="btn-cta">Browse Matching Deals</a>
+						<button class="btn-cta secondary" onclick={openWizard}>Edit Plan</button>
 					</div>
 				</section>
 			{/if}
 		</div>
 
+		{#if canViewFullPlan && hasPlan}
 		<div class="print-plan" aria-hidden="true">
 			<section class="print-page">
 				<header class="print-header">
@@ -1132,9 +1372,9 @@
 
 				{#if canViewAnalytics}
 					<section class="print-section">
-						<div class="print-section-title">Market Snapshot - {reportMatchTotal} Matching Deals</div>
+						<div class="print-section-title">Matching Deal Signal - {reportMatchTotal} Matching Deals</div>
 						<div class="print-section-copy">
-							{reportMatchTotal} active offerings match your criteria on the Grow Your Cashflow platform as of {preparedOn}.
+							{reportMatchTotal} active offerings line up with your current thesis on the Grow Your Cashflow platform as of {preparedOn}.
 						</div>
 						<table class="print-table">
 							<thead>
@@ -1170,7 +1410,7 @@
 				{:else}
 					<section class="print-card print-lock-card">
 						<div class="print-kicker">Upgrade Required</div>
-						<p class="print-copy">Market snapshot and deployment schedule print views are only included for member and admin accounts.</p>
+						<p class="print-copy">Roadmap and matching-deal print views are only included for member and admin accounts.</p>
 					</section>
 				{/if}
 			</section>
@@ -1289,6 +1529,7 @@
 			{/if}
 		</div>
 	{/if}
+	{/if}
 	</div>
 </PageContainer>
 
@@ -1314,9 +1555,24 @@
 	.plan-target-card {
 		padding: 32px 34px 34px;
 	}
+	.plan-setup-shell {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.plan-setup-card {
+		padding-top: 22px;
+	}
+	.plan-setup-card .section-eyebrow {
+		margin-top: 0;
+	}
+	.profile-card {
+		background: linear-gradient(135deg, rgba(81, 190, 123, 0.08), rgba(255, 255, 255, 0.96));
+	}
 	.plan-card-top,
 	.schedule-topline,
-	.growth-topline {
+	.growth-topline,
+	.roadmap-topline {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -1335,6 +1591,11 @@
 		font-weight: 700;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
+	}
+	.goal-pill--profile {
+		background: rgba(59, 130, 246, 0.1);
+		border-color: rgba(59, 130, 246, 0.18);
+		color: #2563eb;
 	}
 	.target-actions {
 		display: flex;
@@ -1424,8 +1685,162 @@
 		line-height: 1.8;
 		color: var(--text-secondary);
 	}
+	.profile-empty-copy {
+		margin-top: 18px;
+		padding: 18px 20px;
+		border-radius: 14px;
+		background: rgba(59, 130, 246, 0.06);
+		border: 1px solid rgba(59, 130, 246, 0.14);
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1.7;
+		color: var(--text-secondary);
+	}
 	.market-card {
 		padding-top: 18px;
+	}
+	.roadmap-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 4px;
+		border-radius: 999px;
+		background: rgba(15, 23, 42, 0.05);
+		border: 1px solid rgba(148, 163, 184, 0.2);
+	}
+	.roadmap-toggle-btn {
+		border: none;
+		background: transparent;
+		padding: 8px 14px;
+		border-radius: 999px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-muted);
+		cursor: pointer;
+	}
+	.roadmap-toggle-btn.active {
+		background: #fff;
+		color: var(--text-dark);
+		box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+	}
+	.roadmap-summary-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 12px;
+		margin-top: 18px;
+	}
+	.roadmap-summary-note {
+		margin-top: 14px;
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1.7;
+		color: var(--text-secondary);
+	}
+	.roadmap-progress-list {
+		display: grid;
+		gap: 10px;
+		margin-top: 18px;
+	}
+	.roadmap-progress-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 14px 16px;
+		border-radius: 14px;
+		border: 1px solid rgba(81, 190, 123, 0.12);
+		background: rgba(81, 190, 123, 0.05);
+	}
+	.roadmap-progress-copy {
+		min-width: 0;
+	}
+	.roadmap-progress-year {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.roadmap-progress-year span {
+		font-weight: 500;
+		color: var(--text-muted);
+	}
+	.roadmap-progress-meta {
+		margin-top: 4px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		line-height: 1.5;
+		color: var(--text-secondary);
+	}
+	.roadmap-progress-value {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--primary);
+		white-space: nowrap;
+	}
+	.growth-topline--embedded {
+		margin-top: 24px;
+	}
+	.schedule-card--embedded {
+		margin-top: 18px;
+	}
+	.next-move-card {
+		background:
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.18), transparent 34%),
+			linear-gradient(135deg, rgba(10, 30, 33, 0.98), rgba(18, 55, 43, 0.98));
+		border-color: rgba(81, 190, 123, 0.28);
+		color: #f7fbf8;
+	}
+	.next-move-kicker {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: rgba(226, 232, 240, 0.78);
+	}
+	.next-move-title {
+		margin: 10px 0 0;
+		font-family: var(--font-headline);
+		font-size: 30px;
+		line-height: 1.15;
+		color: #fff;
+	}
+	.next-move-copy {
+		margin: 12px 0 0;
+		font-family: var(--font-body);
+		font-size: 16px;
+		line-height: 1.75;
+		color: rgba(241, 245, 249, 0.88);
+	}
+	.next-move-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		margin-top: 20px;
+	}
+	.next-move-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: #e2f6ea;
+	}
+	.next-move-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		margin-top: 22px;
+	}
+	.next-move-card .btn-cta.secondary {
+		border-color: rgba(255, 255, 255, 0.24);
+		color: #fff;
 	}
 	.btn-cta {
 		display: inline-flex;
@@ -2125,6 +2540,9 @@
 		.plan-snapshot-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
+		.roadmap-summary-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
 		.growth-chart {
 			gap: 8px;
 		}
@@ -2137,15 +2555,28 @@
 		}
 		.plan-card-top,
 		.schedule-topline,
-		.growth-topline {
+		.growth-topline,
+		.roadmap-topline,
+		.roadmap-progress-row {
 			flex-direction: column;
 			align-items: flex-start;
 		}
 		.plan-snapshot-grid {
 			grid-template-columns: minmax(0, 1fr);
 		}
+		.roadmap-summary-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.roadmap-toggle {
+			width: 100%;
+			justify-content: space-between;
+		}
+		.roadmap-toggle-btn {
+			flex: 1 1 0;
+		}
 		.target-actions,
-		.locked-actions {
+		.locked-actions,
+		.next-move-actions {
 			width: 100%;
 			justify-content: flex-start;
 		}
@@ -2166,6 +2597,13 @@
 		.wizard-modal {
 			padding: 24px 18px;
 		}
+		.next-move-title {
+			font-size: 24px;
+		}
+		.next-move-meta {
+			flex-direction: column;
+			align-items: stretch;
+		}
 		.btn-cta {
 			width: 100%;
 		}
@@ -2183,6 +2621,7 @@
 		.ly-dashboard-topbar,
 		.save-toast,
 		.loading-skeleton,
+		.plan-setup-shell,
 		.wizard-overlay,
 		.empty-state,
 		.plan-stack {

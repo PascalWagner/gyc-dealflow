@@ -293,6 +293,35 @@ export function hasAccessTier(sessionLike, minimumTier) {
 	return (ACCESS_TIER_RANK[accessTier] || 0) >= (ACCESS_TIER_RANK[normalizedMinimum] || 0);
 }
 
+export function canAccessApp(sessionLike) {
+	return hasAccessTier(sessionLike, 'free');
+}
+
+export function canAccessPlanPage(sessionLike) {
+	return hasAccessTier(sessionLike, 'free');
+}
+
+export function canViewInvestorProfile(sessionLike) {
+	return hasAccessTier(sessionLike, 'free');
+}
+
+export function canBuildFullPlan(sessionLike) {
+	return hasAccessTier(sessionLike, 'member');
+}
+
+export function canSaveDeals(sessionLike) {
+	return hasAccessTier(sessionLike, 'free');
+}
+
+export function canViewAdvancedDealAnalysis(sessionLike, { ownsDeal = false } = {}) {
+	if (ownsDeal) return true;
+	return hasAccessTier(sessionLike, 'member');
+}
+
+export function canAccessMarketIntel(sessionLike) {
+	return hasRoleFlag(sessionLike, 'admin');
+}
+
 export function formatAccessTierLabel(value) {
 	const normalizedValue = String(value || 'free').trim().toLowerCase();
 	return ACCESS_TIER_LABELS[normalizedValue] || ACCESS_TIER_LABELS.free;

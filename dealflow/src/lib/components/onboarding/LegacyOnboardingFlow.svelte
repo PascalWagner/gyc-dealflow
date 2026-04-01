@@ -24,7 +24,7 @@
 	let {
 		appMode = false,
 		loginReturnBase = '/onboarding',
-		lpMemberContinuePath = '/onboarding/plan'
+		lpMemberContinuePath = '/app/plan'
 	} = $props();
 
 	// ===== State =====
@@ -96,7 +96,7 @@
 		if (lpDealsCount === 0) return "Everyone starts somewhere. We'll walk you through everything.";
 		if (lpDealsCount <= 3) return "Nice, you've got some skin in the game. The database will help you find your next deal.";
 		if (lpDealsCount <= 10) return "Solid portfolio building. You know what you're looking for.";
-		return "Seasoned investor. You'll appreciate the comparison tools and market intel.";
+		return "Seasoned investor. You'll appreciate the comparison tools and deeper deal analysis.";
 	});
 
 	let baselineFeedback = $derived.by(() => {

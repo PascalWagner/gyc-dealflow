@@ -49,6 +49,9 @@
 	export let forcedStage = '';
 	export let forcedBranch = '';
 	export let forcedFlowKey = '';
+	export let fullPlanMode = false;
+	export let freeCompleteRedirectTo = '/app/deals';
+	export let paidCompleteRedirectTo = '/app/deals';
 
 	const dispatch = createEventDispatcher();
 
@@ -64,7 +67,7 @@
 	$: sequence =
 		forcedFlowKey && STEP_SEQUENCE[forcedFlowKey]
 			? [...STEP_SEQUENCE[forcedFlowKey]]
-			: getStepSequence(wizardData, { editing: forceEdit });
+			: getStepSequence(wizardData, { editing: forceEdit, includePaidFlow: fullPlanMode });
 	$: if (sequence.length && wizardStepIndex > sequence.length - 1) wizardStepIndex = sequence.length - 1;
 	$: currentStep = sequence[wizardStepIndex] || sequence[0] || STEP.GOAL;
 	$: currentPhase = phaseForStep(currentStep);
@@ -252,7 +255,7 @@
 		}
 		validationError = '';
 
-		if (!forceEdit && !forcedFlowKey && !isFreeFlowComplete(wizardData) && wizardStepIndex >= sequence.length - 1) {
+		if (!forceEdit && !forcedFlowKey && !fullPlanMode && !isFreeFlowComplete(wizardData) && wizardStepIndex >= sequence.length - 1) {
 			void completeFreeFlow();
 			return;
 		}
@@ -361,7 +364,7 @@
 		await saveBuyBox(false);
 		dispatch('complete', {
 			wizardData: normalizeWizardData(wizardData),
-			redirectTo: '/app/deals'
+			redirectTo: freeCompleteRedirectTo
 		});
 	}
 
@@ -375,7 +378,7 @@
 			wizardData: normalizeWizardData(wizardData),
 			portfolioPlan: planPreview,
 			persistedPortfolioPlan: true,
-			redirectTo: '/app/deals'
+			redirectTo: paidCompleteRedirectTo
 		});
 	}
 

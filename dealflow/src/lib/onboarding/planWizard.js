@@ -527,11 +527,17 @@ export function hasCompletedPlan(wizardData = {}, portfolioPlan = null) {
 	return isPaidFlowComplete(data);
 }
 
-export function getStepSequence(wizardData = {}, { editing = false } = {}) {
+export function getStepSequence(wizardData = {}, { editing = false, includePaidFlow = false } = {}) {
 	const data = normalizeWizardData(wizardData);
 	const branch = data._branch || 'cashflow';
 	const paidKey = getBranchFlowKey(branch);
 
+	if (includePaidFlow) {
+		return [
+			...STEP_SEQUENCE.free,
+			...(STEP_SEQUENCE[paidKey] || STEP_SEQUENCE.paid_cashflow)
+		];
+	}
 	if (!isFreeFlowComplete(data)) {
 		return [...STEP_SEQUENCE.free];
 	}

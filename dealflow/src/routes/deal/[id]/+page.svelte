@@ -8,7 +8,15 @@
 	import DealAnalysisDashboard from '$lib/components/DealAnalysisDashboard.svelte';
 	import DealDisclaimer from '$lib/components/DealDisclaimer.svelte';
 	import DealModalLayer from '$lib/components/deal/DealModalLayer.svelte';
-	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember, isGP } from '$lib/stores/auth.js';
+	import {
+		canViewAdvancedDealAnalysis,
+		getStoredSessionUser,
+		user,
+		isLoggedIn,
+		isAdmin,
+		isMember,
+		isGP
+	} from '$lib/stores/auth.js';
 	import {
 		applyAdminImpersonationToUrl,
 		currentAdminRealUser,
@@ -234,9 +242,9 @@
 		}
 		return false;
 	});
-	const hasMemberAccess = $derived($isAdmin || $isMember || gpOwnsDeal);
+	const hasMemberAccess = $derived($canViewAdvancedDealAnalysis || gpOwnsDeal);
 	const isPublicViewer = $derived(!$isLoggedIn);
-	const isFreeViewer = $derived($isLoggedIn && !$isAdmin && !$isMember && !gpOwnsDeal);
+	const isFreeViewer = $derived($isLoggedIn && !$canViewAdvancedDealAnalysis && !gpOwnsDeal);
 	const isPaid = $derived(hasMemberAccess);
 	const showGpInsights = $derived(($isAdmin || gpOwnsDeal) && !!dealOperatorManagementCompanyId);
 	const currentStage = $derived(deal ? getUiStage($dealStages[deal.id] || 'filter') : 'filter');

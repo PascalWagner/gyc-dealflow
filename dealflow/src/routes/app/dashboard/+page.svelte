@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
-	import { user, getFreshSessionToken } from '$lib/stores/auth.js';
+	import { user, getFreshSessionToken, canBuildFullPlan } from '$lib/stores/auth.js';
 	import AddDealModal from '$lib/components/AddDealModal.svelte';
 	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
@@ -224,7 +224,11 @@
 	}
 
 	function openWizard() {
-		goto(hasCompletedDashboardPlan ? '/app/plan?edit=1' : '/onboarding/plan');
+		if (!hasGoalContext) {
+			goto('/onboarding');
+			return;
+		}
+		goto(hasCompletedDashboardPlan ? '/app/plan?edit=1' : '/app/plan');
 	}
 
 	function openAddDealModal() {
@@ -284,24 +288,37 @@
 </svelte:head>
 
 <PageContainer className="dashboard-shell ly-page-stack">
-	<PageHeader title="Home" className="dashboard-page-header" />
+	<PageHeader
+		title="Home"
+		subtitle="Your dashboard for progress, priorities, and next actions."
+		className="dashboard-page-header"
+	/>
 
 	<div class="content-area">
-		<div class="coach-card">
+		{#if !hasGoalContext && !hasCompletedDashboardPlan}
+			<div class="dashboard-onboarding-card ly-surface ly-surface--strong">
+				<div class="dashboard-onboarding-icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+				</div>
+				<div class="dashboard-onboarding-title">{firstName ? `${firstName}, set up your investor profile.` : 'Set up your investor profile.'}</div>
+				<div class="dashboard-onboarding-copy">Get your preferences in place in a couple of minutes so the dashboard, deal flow, portfolio, and plan page reflect what you are actually trying to buy.</div>
+				<div class="dashboard-onboarding-actions">
+					<button class="btn-primary" onclick={openWizard}>Get Started →</button>
+					<a href="/app/deals" class="dashboard-onboarding-link">Browse deals first</a>
+				</div>
+			</div>
+		{:else}
+		<div class="coach-card ly-surface ly-surface--accent ly-surface--strong">
 			<div class="coach-copy">
 				<div class="coach-eyebrow">Your investing coach</div>
 				<h2 class="coach-title">{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h2>
 				<p class="coach-text">{coachTargetCopy}</p>
 				<p class="coach-text coach-text--muted">{coachProgressCopy}</p>
 			</div>
-			<div class="coach-actions">
-				<a href={coachPrimaryHref} class="btn-primary coach-primary">{coachPrimaryLabel}</a>
-				<a href={coachSecondaryHref} class="coach-secondary">{coachSecondaryLabel}</a>
-			</div>
 		</div>
 
 		{#if hasGoalContext}
-			<div class="dash-hero">
+			<div class="dash-hero ly-surface ly-surface--strong">
 				<div class="dash-hero-label">{goalLabel}</div>
 				<div class="dash-hero-bar" aria-hidden="true">
 					<div class="dash-hero-fill" style={`width:${goalProgress}%;${goalProgress > 0 ? 'min-width:10px;' : ''}`}></div>
@@ -322,19 +339,19 @@
 		{/if}
 
 		{#if hasGoalContext && needsPlanSetup}
-			<div class="plan-cta-card">
+			<div class="plan-cta-card ly-surface ly-surface--muted">
 				<div>
-					<div class="plan-cta-eyebrow">Your Investment Plan</div>
-					<div class="plan-cta-title">Turn your goal into concrete deal slots.</div>
-					<div class="plan-cta-copy">Map out check sizes, target yields, and the next investment that should fill your plan.</div>
+					<div class="plan-cta-eyebrow">Your Plan</div>
+					<div class="plan-cta-title">{$canBuildFullPlan ? 'Turn your goal into a roadmap.' : 'Review the investor profile driving your deal feed.'}</div>
+					<div class="plan-cta-copy">{$canBuildFullPlan ? 'Build out your thesis, roadmap, and next best move without leaving the app shell.' : 'See your saved goal, preferences, and the upgrade path into a full plan.'}</div>
 				</div>
-				<a href="/app/plan" class="btn-primary plan-cta-btn">Finish Plan →</a>
+				<a href="/app/plan" class="btn-primary plan-cta-btn">{$canBuildFullPlan ? 'Open My Plan →' : 'Review My Profile →'}</a>
 			</div>
 		{/if}
 
 		<div class="dashboard-stack" data-dashboard-version="overview-cleanup-2">
 			{#if primaryAction}
-				<div class="action-card">
+				<div class="action-card ly-surface">
 					<div class="action-header">What To Do Next</div>
 					<div class="next-action-panel">
 						<div class="next-action-copy">
@@ -377,7 +394,7 @@
 					{/each}
 				</div>
 			{:else}
-				<div class="empty-dashboard-card">
+				<div class="empty-dashboard-card ly-surface">
 					<div class="action-header">What To Do Next</div>
 					<div class="empty-dashboard-title">You’re caught up for now.</div>
 					<div class="empty-dashboard-copy">Use this page to launch the next meaningful action, not to monitor a bunch of dashboard metrics. Right now there isn’t anything urgent blocking you.</div>
@@ -414,6 +431,7 @@
 				</div>
 			{/if}
 		</div>
+	{/if}
 	</div>
 </PageContainer>
 

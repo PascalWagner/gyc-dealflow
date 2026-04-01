@@ -577,9 +577,7 @@
 </svelte:head>
 
 <PageContainer className="portfolio-shell ly-page-stack">
-	<PageHeader title="Portfolio" className="dashboard-page-header">
-		<button slot="actions" class="btn-add" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
-	</PageHeader>
+	<PageHeader title="Portfolio" className="dashboard-page-header" />
 
 	<div class="content-area">
 		{#if pendingEntries.length > 0 && hasPortfolioEntries}
@@ -649,6 +647,9 @@
 					<div>
 						<div class="holdings-title">Your Holdings</div>
 						<div class="holdings-copy">Manage one line item per investment event. Actual LP results supersede projected deal figures whenever you add them.</div>
+					</div>
+					<div class="holdings-header-actions">
+						<button class="btn-add section-add-btn" onclick={() => (showIntakeModal = true)}>Add Existing Investment</button>
 					</div>
 				</div>
 
@@ -1173,6 +1174,10 @@
 		justify-content: space-between;
 		align-items: flex-end;
 		gap: 16px;
+	}
+	.holdings-header-actions {
+		display: flex;
+		flex-shrink: 0;
 	}
 	.holdings-title {
 		font-family: var(--font-ui);
@@ -1768,7 +1773,11 @@
 			justify-content: center;
 		}
 		.holdings-header {
+			flex-direction: column;
 			align-items: stretch;
+		}
+		.holdings-header-actions {
+			width: 100%;
 		}
 		.holdings-table {
 			border-radius: 18px;
