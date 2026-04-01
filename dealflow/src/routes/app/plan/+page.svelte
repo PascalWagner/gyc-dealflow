@@ -34,7 +34,7 @@
 	let wizardStage = $state('');
 	let wizardBranch = $state('');
 	let wizardFlowKey = $state('');
-	let roadmapView = $state('map');
+	let roadmapView = $state('plan');
 	let reportUser = $state(null);
 	let portfolioPlan = $state(null);
 	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
@@ -1373,15 +1373,15 @@
 				<div class="roadmap-topline">
 					<div>
 						<div class="section-eyebrow">Your Roadmap</div>
-						<div class="section-subcopy">Here is the visual map and the year-by-year plan for how this thesis moves toward your goal.</div>
+						<div class="section-subcopy">Here is the year-by-year plan and chart view for how this thesis moves toward your goal.</div>
 					</div>
-					<div class="roadmap-toggle" role="tablist" aria-label="Plan views">
-						<button type="button" class="roadmap-toggle-btn" class:active={roadmapView === 'map'} onclick={() => (roadmapView = 'map')}>Map</button>
+					<div class="roadmap-toggle" role="tablist" aria-label="Roadmap views">
 						<button type="button" class="roadmap-toggle-btn" class:active={roadmapView === 'plan'} onclick={() => (roadmapView = 'plan')}>Plan</button>
+						<button type="button" class="roadmap-toggle-btn" class:active={roadmapView === 'charts'} onclick={() => (roadmapView = 'charts')}>Charts</button>
 					</div>
 				</div>
 
-				{#if roadmapView === 'map'}
+				{#if roadmapView === 'charts'}
 					<div class="roadmap-summary-grid">
 						<div class="plan-snapshot-item">
 							<div class="plan-snapshot-label">{roadmapMetricConfig.label}</div>
