@@ -182,18 +182,32 @@
 		return String(contact.calendarUrl || '').trim() || 'no calendar link';
 	}
 
+	function hasReachableOperatorDetails(contact = {}) {
+		return EMAIL_PATTERN.test(String(contact.email || '').trim().toLowerCase())
+			|| Boolean(String(contact.phone || '').trim());
+	}
+
 	function additionalContactSummary(contact = {}) {
 		return [String(contact.email || '').trim(), String(contact.phone || '').trim()].filter(Boolean).join(' • ');
 	}
 
-	function roleCardStatus(contact = {}) {
+	function roleCardStatus(contact = {}, role = 'operator') {
 		if (!contact) return 'Needs contact';
+		if (role === 'operator') {
+			if (hasReachableOperatorDetails(contact)) {
+				return EMAIL_PATTERN.test(String(contact.email || '').trim().toLowerCase()) ? 'Ready' : 'Phone only';
+			}
+			return 'Needs contact';
+		}
 		if (!EMAIL_PATTERN.test(String(contact.email || '').trim().toLowerCase())) return 'Needs email';
 		return 'Ready';
 	}
 
-	function roleCardTone(contact = {}) {
+	function roleCardTone(contact = {}, role = 'operator') {
 		if (!contact) return 'empty';
+		if (role === 'operator') {
+			return hasReachableOperatorDetails(contact) ? 'ready' : 'attention';
+		}
 		return EMAIL_PATTERN.test(String(contact.email || '').trim().toLowerCase()) ? 'ready' : 'attention';
 	}
 
@@ -227,7 +241,7 @@
 	const stageSummary = $derived(
 		strictValidation.valid
 			? 'Both LP-facing roles have usable contact details.'
-			: 'Keep this step focused. You only need an operator lead and an investor relations contact with valid emails.'
+			: 'Keep this step focused. You only need an operator lead with a direct line and an investor relations contact with a valid email.'
 	);
 </script>
 
@@ -242,7 +256,7 @@
 
 	<div class="team-role-grid">
 		{#each roleCards as roleCard}
-			<article class={`role-card role-card--${roleCardTone(roleCard.contact)}`}>
+			<article class={`role-card role-card--${roleCardTone(roleCard.contact, roleCard.key)}`}>
 				<div class="role-card__header">
 					<div>
 						<div class="role-card__label">{roleCard.label}</div>
@@ -255,8 +269,8 @@
 							{roleCard.contact ? contactTitleLine(roleCard.contact) : roleCard.help}
 						</p>
 					</div>
-					<span class={`role-card__flag role-card__flag--${roleCardTone(roleCard.contact)}`}>
-						{roleCardStatus(roleCard.contact)}
+					<span class={`role-card__flag role-card__flag--${roleCardTone(roleCard.contact, roleCard.key)}`}>
+						{roleCardStatus(roleCard.contact, roleCard.key)}
 					</span>
 				</div>
 
