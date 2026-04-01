@@ -33,7 +33,6 @@
 		isGP
 	} from '$lib/stores/auth.js';
 	import {
-		buildDealReviewCompletenessModel,
 		buildDealReviewPayload,
 		createDealReviewFormFromDeal,
 		createEmptyDealReviewForm,
@@ -54,7 +53,6 @@
 		resolveDealOnboardingBranch
 	} from '$lib/utils/dealOnboardingFlow.js';
 	import {
-		computeDealCompleteness,
 		slugify
 	} from '$lib/utils/dealWorkflow.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
@@ -164,8 +162,6 @@
 	const shouldAutoExtract = $derived($page.url.searchParams.get('extract') === '1');
 	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
 	const cameFromQueue = $derived($page.url.searchParams.get('from') === 'queue');
-	const completeness = $derived(computeDealCompleteness(buildDealReviewCompletenessModel(form, deal)));
-	const canPublishFromQueue = $derived(!completeness.hasBlockingIssues);
 	const onboardingSource = $derived({
 		...(deal || {}),
 		...form,
@@ -1419,8 +1415,6 @@
 				</div>
 
 				<DealReviewSidebar
-					completeness={completeness}
-					canPublishFromQueue={canPublishFromQueue}
 					stages={onboardingStages}
 					currentStage={sidebarCurrentStage}
 					completedStages={sidebarCompletedStages}
@@ -1745,8 +1739,6 @@
 				</form>
 
 				<DealReviewSidebar
-					completeness={completeness}
-					canPublishFromQueue={canPublishFromQueue}
 					stages={onboardingStages}
 					currentStage={sidebarCurrentStage}
 					completedStages={sidebarCompletedStages}
