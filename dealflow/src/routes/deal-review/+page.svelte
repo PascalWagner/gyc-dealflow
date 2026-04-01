@@ -88,7 +88,7 @@
 		return `/deal-review/risk-redesign?${params.toString()}`;
 	}
 
-	function getStageHref(stage, { extract = false, from = '' } = {}) {
+	function getStageHref(stage, { extract = false, from = '', allowSummary = false } = {}) {
 		if (stage === 'risks') {
 			return getRiskRedesignHref({ from });
 		}
@@ -97,6 +97,7 @@
 		if (stage === 'intake') params.set('step', 'intake');
 		if (from) params.set('from', from);
 		if (extract) params.set('extract', '1');
+		if (stage === 'summary' && allowSummary) params.set('allowSummary', '1');
 		return `/deal-review?${params.toString()}`;
 	}
 
@@ -172,6 +173,7 @@
 	const shouldAutoExtract = $derived($page.url.searchParams.get('extract') === '1');
 	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
 	const cameFromQueue = $derived($page.url.searchParams.get('from') === 'queue');
+	const allowSummaryPreview = $derived($page.url.searchParams.get('allowSummary') === '1');
 	const onboardingSource = $derived({
 		...(deal || {}),
 		...form,
@@ -190,6 +192,9 @@
 	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
 	const hasSourceDocuments = $derived(
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
+	);
+	const canOpenSummaryPreview = $derived(
+		allowSummaryPreview && hasSourceDocuments && secGateResolved && teamContactsValidation.valid
 	);
 	const summaryPublishReady = $derived(onboardingFlow.isPublishReady && teamContactsValidation.valid && secGateResolved);
 	function isStageComplete(stage) {
@@ -214,18 +219,27 @@
 			return onboardingStages.map((stage) => stage.id);
 		}
 		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) {
-			return onboardingStages
+			const unlockedIds = onboardingStages
 				.filter((stage) => stage.id !== 'summary')
 				.map((stage) => stage.id);
+			if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
+				return [...unlockedIds, 'summary'];
+			}
+			return unlockedIds;
 		}
 		const unlockedIndex = onboardingStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
 		if (unlockedIndex < 0) return ['intake'];
-		return onboardingStages
+		const unlockedIds = onboardingStages
 			.filter((stage, index) => index <= unlockedIndex)
 			.map((stage) => stage.id);
+		if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
+			return [...unlockedIds, 'summary'];
+		}
+		return unlockedIds;
 	});
 	const activeStage = $derived.by(() => {
 		if (reviewStep === 'intake') return 'intake';
+		if (requestedStage === 'summary' && canOpenSummaryPreview) return 'summary';
 		if (!isValidOnboardingStage(requestedStage)) return firstIncompleteStage;
 		return unlockedStageIds.includes(requestedStage) ? requestedStage : firstIncompleteStage;
 	});
@@ -1277,7 +1291,8 @@
 		if (!browser || loading || !dealId || loadError) return;
 		const targetHref = getStageHref(activeStage, {
 			from: cameFromQueue ? 'queue' : cameFromIntake ? 'intake' : '',
-			extract: shouldAutoExtract && !autoExtractionHandled
+			extract: shouldAutoExtract && !autoExtractionHandled,
+			allowSummary: activeStage === 'summary' && canOpenSummaryPreview
 		});
 		const currentHref = `${$page.url.pathname}${$page.url.search}`;
 		if (targetHref === currentHref) return;

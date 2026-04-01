@@ -143,6 +143,7 @@
 		params.set('id', dealId);
 		params.set('stage', stageId);
 		if (stageId === 'intake') params.set('step', 'intake');
+		if (stageId === 'summary') params.set('allowSummary', '1');
 		params.set('from', from);
 		return `/deal-review?${params.toString()}`;
 	}
