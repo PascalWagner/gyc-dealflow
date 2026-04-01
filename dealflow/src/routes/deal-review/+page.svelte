@@ -199,14 +199,25 @@
 		if (stage.id === 'team') return teamContactsValidation.valid;
 		return (stage.rules || []).every((rule) => rule.satisfied);
 	}
+	const firstIncompleteStage = $derived.by(() => {
+		const incompleteStage = onboardingStages.find((stage) => stage.id !== 'summary' && !isStageComplete(stage));
+		return incompleteStage?.id || 'summary';
+	});
 	const furthestUnlockedStage = $derived.by(() => {
 		if (!deal) return reviewStep === 'intake' ? 'intake' : 'sec';
-		if (!hasSourceDocuments) return 'intake';
-		if (!secGateResolved) return 'sec';
-		if (!teamContactsValidation.valid) return 'team';
-		return 'summary';
+		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) return 'risks';
+		return firstIncompleteStage;
 	});
 	const unlockedStageIds = $derived.by(() => {
+		if (!deal) return reviewStep === 'intake' ? ['intake'] : ['sec'];
+		if (firstIncompleteStage === 'summary') {
+			return onboardingStages.map((stage) => stage.id);
+		}
+		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) {
+			return onboardingStages
+				.filter((stage) => stage.id !== 'summary')
+				.map((stage) => stage.id);
+		}
 		const unlockedIndex = onboardingStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
 		if (unlockedIndex < 0) return ['intake'];
 		return onboardingStages
@@ -215,11 +226,8 @@
 	});
 	const activeStage = $derived.by(() => {
 		if (reviewStep === 'intake') return 'intake';
-		const unlockedIndex = onboardingStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
-		if (!isValidOnboardingStage(requestedStage)) return furthestUnlockedStage;
-
-		const requestedIndex = onboardingStages.findIndex((candidate) => candidate.id === requestedStage);
-		return requestedIndex >= 0 && requestedIndex <= unlockedIndex ? requestedStage : furthestUnlockedStage;
+		if (!isValidOnboardingStage(requestedStage)) return firstIncompleteStage;
+		return unlockedStageIds.includes(requestedStage) ? requestedStage : firstIncompleteStage;
 	});
 	const activeStageConfig = $derived(getDealOnboardingStageById(activeStage, { branch: branchInfo.branch, source: onboardingSource }));
 	const previousStage = $derived(getPreviousOnboardingStage(activeStage, branchInfo.branch));
@@ -243,10 +251,41 @@
 			? 'Upload the source documents first, then review and clean up the extracted deal details.'
 			: activeStageConfig?.description || 'Fix missing fields, tighten source context, and move the deal toward publishing with confidence.'
 	);
+	const fieldStageLabels = $derived.by(() => {
+		const labels = new Map();
+		for (const stage of onboardingStages) {
+			for (const group of stage.fieldGroups || []) {
+				for (const fieldKey of group.fieldKeys || []) {
+					if (!labels.has(fieldKey)) {
+						labels.set(fieldKey, stage.label);
+					}
+				}
+			}
+		}
+		return labels;
+	});
+	const summaryRelevantWarningFieldKeys = $derived.by(() => {
+		const keys = new Set();
+		for (const stage of onboardingStages) {
+			for (const group of stage.fieldGroups || []) {
+				for (const fieldKey of group.fieldKeys || []) {
+					keys.add(fieldKey);
+				}
+			}
+		}
+		for (const rule of onboardingFlow.publishRules || []) {
+			for (const fieldKey of rule.fieldKeys || []) {
+				keys.add(fieldKey);
+			}
+		}
+		return keys;
+	});
 	const visibleSchemaWarnings = $derived.by(() => {
 		const warningEntries = Object.entries(fieldWarnings).filter(([, message]) => Boolean(message));
 		if (warningEntries.length === 0) return [];
-		if (activeStage === 'summary') return warningEntries;
+		if (activeStage === 'summary') {
+			return warningEntries.filter(([fieldKey]) => summaryRelevantWarningFieldKeys.has(fieldKey));
+		}
 
 		const stageFieldKeys = new Set(
 			getStageFieldGroups(activeStage)
@@ -254,8 +293,13 @@
 		);
 		return warningEntries.filter(([fieldKey]) => stageFieldKeys.has(fieldKey));
 	});
-	const visibleSchemaWarningLabels = $derived(
-		visibleSchemaWarnings.map(([fieldKey]) => dealFieldConfig[fieldKey]?.label || fieldKey)
+	const visibleSchemaWarningLabels = $derived.by(() =>
+		visibleSchemaWarnings.map(([fieldKey]) => {
+			const fieldLabel = dealFieldConfig[fieldKey]?.label || fieldKey;
+			if (activeStage !== 'summary') return fieldLabel;
+			const stageLabel = fieldStageLabels.get(fieldKey);
+			return stageLabel ? `${fieldLabel} (${stageLabel})` : fieldLabel;
+		})
 	);
 	const schemaWarningMessage = $derived.by(() => {
 		if (visibleSchemaWarnings.length === 0) return '';
@@ -265,7 +309,7 @@
 			: `${visibleSchemaWarningLabels.slice(0, 2).join(', ')}, +${visibleSchemaWarningLabels.length - 2} more`;
 
 		return activeStage === 'summary'
-			? `Imported values still need normalization before publishing: ${labelSummary}. Choose the closest canonical options.`
+			? `Imported values still need normalization before publishing: ${labelSummary}. Use Edit on the matching stage and choose the closest canonical options.`
 			: `Imported values in this step still need normalization: ${labelSummary}. Choose the closest canonical options before moving on.`;
 	});
 
