@@ -1,5 +1,7 @@
 import { ASSET_ALIASES } from './constants.js';
 
+const DEAL_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function normalizeKey(value) {
 	return String(value || '')
 		.trim()
@@ -21,6 +23,17 @@ export function parseList(value) {
 	return String(value || '')
 		.split(',')
 		.map((item) => item.trim())
+		.filter(Boolean);
+}
+
+export function normalizeDealId(value) {
+	const normalized = String(value || '').trim();
+	return DEAL_ID_PATTERN.test(normalized) ? normalized : '';
+}
+
+export function parseDealIdList(value) {
+	return parseList(value)
+		.map((item) => normalizeDealId(item))
 		.filter(Boolean);
 }
 
@@ -47,8 +60,8 @@ export function normalizeMemberDealsQuery(query = {}) {
 	return {
 		scope: String(query.scope || 'browse').trim().toLowerCase(),
 		internal: query.internal === 'true',
-		ids: parseList(query.ids),
-		excludedIds: new Set(parseList(query.exclude_ids)),
+		ids: parseDealIdList(query.ids),
+		excludedIds: new Set(parseDealIdList(query.exclude_ids)),
 		search: String(query.q || '').trim(),
 		includeArchived: query.include_archived === 'true',
 		assetClass: normalizeAssetClass(query.asset_class),

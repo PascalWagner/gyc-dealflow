@@ -38,6 +38,12 @@ export const ALL_STAGES = [...PIPELINE_STAGES, ...OUTCOME_STAGES];
 export const MEMBER_DEALS_PAGE_SIZE = 24;
 const MEMBER_DEALS_CACHE_REVALIDATE_COOLDOWN_MS = 15000;
 const MEMBER_DEALS_CACHE_KEY_PREFIX = 'member-deals-v2';
+const DEAL_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function normalizeDealId(value) {
+	const normalized = String(value || '').trim();
+	return DEAL_ID_PATTERN.test(normalized) ? normalized : '';
+}
 
 function persistStageCache(value) {
 	writeScopedJson('gycDealStages', value, { email: currentSessionEmail() });
@@ -56,7 +62,7 @@ function normalizeCompareDealIds(value) {
 	const seen = new Set();
 
 	for (const item of Array.isArray(value) ? value : []) {
-		const nextId = String(typeof item === 'string' ? item : item?.id || '').trim();
+		const nextId = normalizeDealId(typeof item === 'string' ? item : item?.id || '');
 		if (!nextId || seen.has(nextId)) continue;
 		seen.add(nextId);
 		ids.push(nextId);
@@ -99,9 +105,11 @@ function readCachedDealFlowViewMode() {
 function normalizeStageMap(value) {
 	const normalized = {};
 	for (const [dealId, stage] of Object.entries(value || {})) {
+		const nextDealId = normalizeDealId(dealId);
+		if (!nextDealId) continue;
 		const nextStage = normalizeStage(stage);
 		if (nextStage !== 'filter') {
-			normalized[dealId] = nextStage;
+			normalized[nextDealId] = nextStage;
 		}
 	}
 	return normalized;
@@ -121,10 +129,11 @@ function readCachedStageMap() {
 function mapStageRows(rows) {
 	const stages = {};
 	for (const row of rows || []) {
-		if (!row?.deal_id || !row?.stage) continue;
+		const dealId = normalizeDealId(row?.deal_id);
+		if (!dealId || !row?.stage) continue;
 		const normalized = normalizeStage(row.stage);
 		if (normalized !== 'filter') {
-			stages[row.deal_id] = normalized;
+			stages[dealId] = normalized;
 		}
 	}
 	return stages;
@@ -312,7 +321,7 @@ function createStagesStore() {
 	return {
 		subscribe,
 		async setStage(dealId, stage) {
-			const nextDealId = String(dealId || '').trim();
+			const nextDealId = normalizeDealId(dealId);
 			if (!nextDealId) {
 				return { ok: false, reason: 'invalid', previousStage: 'filter', nextStage: 'filter' };
 			}
