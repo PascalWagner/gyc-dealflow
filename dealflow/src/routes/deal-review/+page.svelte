@@ -234,9 +234,31 @@
 			? 'Upload the source documents first, then review and clean up the extracted deal details.'
 			: activeStageConfig?.description || 'Fix missing fields, tighten source context, and move the deal toward publishing with confidence.'
 	);
-	const schemaWarnings = $derived(
-		Object.entries(fieldWarnings).filter(([, message]) => Boolean(message))
+	const visibleSchemaWarnings = $derived.by(() => {
+		const warningEntries = Object.entries(fieldWarnings).filter(([, message]) => Boolean(message));
+		if (warningEntries.length === 0) return [];
+		if (activeStage === 'summary') return warningEntries;
+
+		const stageFieldKeys = new Set(
+			getStageFieldGroups(activeStage)
+				.flatMap((group) => Array.isArray(group?.fieldKeys) ? group.fieldKeys : [])
+		);
+		return warningEntries.filter(([fieldKey]) => stageFieldKeys.has(fieldKey));
+	});
+	const visibleSchemaWarningLabels = $derived(
+		visibleSchemaWarnings.map(([fieldKey]) => dealFieldConfig[fieldKey]?.label || fieldKey)
 	);
+	const schemaWarningMessage = $derived.by(() => {
+		if (visibleSchemaWarnings.length === 0) return '';
+
+		const labelSummary = visibleSchemaWarningLabels.length <= 3
+			? visibleSchemaWarningLabels.join(', ')
+			: `${visibleSchemaWarningLabels.slice(0, 2).join(', ')}, +${visibleSchemaWarningLabels.length - 2} more`;
+
+		return activeStage === 'summary'
+			? `Imported values still need normalization before publishing: ${labelSummary}. Choose the closest canonical options.`
+			: `Imported values in this step still need normalization: ${labelSummary}. Choose the closest canonical options before moving on.`;
+	});
 
 	function markDirty() {
 		dirty = true;
@@ -1467,9 +1489,9 @@
 						<div class="message-banner message-banner--success">{saveMessage}</div>
 					{/if}
 
-					{#if schemaWarnings.length > 0}
+					{#if schemaWarningMessage}
 						<div class="message-banner message-banner--warning">
-							Some imported values do not match the canonical field options yet. Review the highlighted structured fields before publishing.
+							{schemaWarningMessage}
 						</div>
 					{/if}
 
