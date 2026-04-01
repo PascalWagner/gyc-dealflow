@@ -1,4 +1,5 @@
 import { ADMIN_EMAILS, getAdminClient, setCors } from './_supabase.js';
+import { extractFromPdf } from './_enrichment.js';
 import { fetchFilingXml, parseFormD } from './_sec-edgar.js';
 import {
 	buildFallbackTeamContacts,
@@ -41,6 +42,32 @@ const INVESTOR_RELATIONS_PATTERNS = [
 const NAME_BLOCKLIST = /\b(fund|capital|management|company|investor|relations|contact|email|phone|calendly|linkedin|llc|lp|inc|group)\b/i;
 const HIGH_CONFIDENCE_OPERATOR_THRESHOLD = 0.82;
 const HIGH_CONFIDENCE_IR_THRESHOLD = 0.78;
+const EXTRACTION_TEXT_LIMIT = 120000;
+const CONTACT_EXTRACTION_PROMPT = `You are extracting LP-facing sponsor contacts from a private placement memorandum or pitch deck. Return ONLY valid JSON in this exact shape:
+{
+  "contacts": [
+    {
+      "name": "Full name",
+      "role": "Exact role if stated",
+      "email": "Email if stated",
+      "phone": "Phone if stated",
+      "linkedinUrl": "LinkedIn URL if stated",
+      "calendarUrl": "Calendar URL if stated",
+      "isPrimary": true,
+      "isInvestorRelations": false,
+      "confidence": "high"
+    }
+  ]
+}
+
+Rules:
+- Only include contacts explicitly present in the document.
+- Prefer the two LP-facing contacts: the operator lead and the investor relations / capital formation contact.
+- Set isPrimary true for CEO, President, Founder, Managing Partner, Principal, Managing Director, or equivalent operator lead.
+- Set isInvestorRelations true for Investor Relations, Capital Formation, Capital Raising, Investor Contact, or a "for more information" LP contact.
+- Use empty strings for missing fields.
+- Do not invent names, emails, or phone numbers.
+- Return no prose, only JSON.`;
 
 function isMissingVerificationTable(error) {
 	if (!error) return false;
@@ -71,6 +98,14 @@ function firstMatch(regex, value = '') {
 
 function findAll(regex, value = '') {
 	return [...String(value || '').matchAll(regex)].map((match) => normalizeWhitespace(match[0])).filter(Boolean);
+}
+
+function hasValidEmail(value = '') {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim().toLowerCase());
+}
+
+function hasPhone(value = '') {
+	return Boolean(normalizeWhitespace(value));
 }
 
 function pickCalendarUrl(text = '') {
@@ -179,33 +214,167 @@ function upsertCandidate(candidates, patch, context = {}) {
 	candidates[existingIndex] = merged;
 }
 
-async function extractTextFromPdf(url = '') {
-	if (!url) return '';
+function extractTextFromPdfBufferHeuristic(buffer) {
+	const raw = buffer.toString('latin1');
+	const textChunks = [];
+
+	const btEtRegex = /BT\s([\s\S]*?)ET/g;
+	let match;
+	while ((match = btEtRegex.exec(raw)) !== null) {
+		const parenStrings = match[1].match(/\(([^)]*)\)/g);
+		if (!parenStrings) continue;
+		for (const value of parenStrings) {
+			const cleaned = value.slice(1, -1)
+				.replace(/\\n/g, '\n')
+				.replace(/\\r/g, '')
+				.replace(/\\\(/g, '(')
+				.replace(/\\\)/g, ')')
+				.replace(/\\\\/g, '\\');
+			if (cleaned.trim()) textChunks.push(cleaned);
+		}
+	}
+
+	if (textChunks.join('').length < 500) {
+		const readableRegex = /[\x20-\x7E]{10,}/g;
+		let readableMatch;
+		while ((readableMatch = readableRegex.exec(raw)) !== null) {
+			const chunk = readableMatch[0].trim();
+			if (chunk && !/^[A-Fa-f0-9\s]+$/.test(chunk) && !/^[\/\[\]<>{}]+$/.test(chunk)) {
+				textChunks.push(chunk);
+			}
+		}
+	}
+
+	return textChunks.join(' ').substring(0, EXTRACTION_TEXT_LIMIT);
+}
+
+function parseSupabaseStorageLocation(url = '') {
 	try {
-		const response = await fetch(url);
-		if (!response.ok) throw new Error(`download_failed_${response.status}`);
-		const fileBuffer = Buffer.from(await response.arrayBuffer());
+		const parsed = new URL(url);
+		const signMarker = '/storage/v1/object/sign/';
+		const publicMarker = '/storage/v1/object/public/';
+		const authenticatedMarker = '/storage/v1/object/authenticated/';
+		const marker = [signMarker, publicMarker, authenticatedMarker].find((value) => parsed.pathname.includes(value));
+		if (!marker) return null;
+
+		const [, remainder = ''] = parsed.pathname.split(marker);
+		const segments = remainder.split('/').filter(Boolean);
+		if (segments.length < 2) return null;
+		const bucket = segments.shift();
+		const path = decodeURIComponent(segments.join('/'));
+		if (!bucket || !path) return null;
+		return { bucket, path };
+	} catch {
+		return null;
+	}
+}
+
+async function downloadPdfBuffer(supabase, url = '') {
+	if (!url) return null;
+
+	try {
+		const response = await fetch(url, {
+			headers: {
+				'User-Agent': 'GYC Research pascal@growyourcashflow.com'
+			}
+		});
+		if (response.ok) {
+			return Buffer.from(await response.arrayBuffer());
+		}
+	} catch {}
+
+	const storageLocation = parseSupabaseStorageLocation(url);
+	if (!storageLocation) {
+		throw new Error('document_download_failed');
+	}
+
+	const { data, error } = await supabase.storage.from(storageLocation.bucket).download(storageLocation.path);
+	if (error || !data) {
+		throw new Error(error?.message || 'storage_download_failed');
+	}
+
+	return Buffer.from(await data.arrayBuffer());
+}
+
+async function extractTextFromPdfBuffer(buffer) {
+	const heuristicText = normalizeWhitespace(extractTextFromPdfBufferHeuristic(buffer));
+	let parsedText = '';
+
+	try {
 		const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
-		const result = await pdfParse(fileBuffer);
-		return normalizeWhitespace(result.text || '');
+		const result = await pdfParse(buffer);
+		parsedText = normalizeWhitespace(result.text || '');
+	} catch (error) {
+		console.warn('[deal-team-contacts] pdf-parse failed', {
+			message: error?.message || 'unknown_error'
+		});
+	}
+
+	const combined = [parsedText, heuristicText]
+		.filter(Boolean)
+		.reduce((accumulator, value) => {
+			if (!value) return accumulator;
+			if (accumulator.includes(value)) return accumulator;
+			return `${accumulator} ${value}`.trim();
+		}, '');
+
+	return normalizeWhitespace(combined).slice(0, EXTRACTION_TEXT_LIMIT);
+}
+
+async function extractTextFromPdf(supabase, url = '') {
+	if (!url) return { text: '', buffer: null };
+	try {
+		const fileBuffer = await downloadPdfBuffer(supabase, url);
+		return {
+			text: await extractTextFromPdfBuffer(fileBuffer),
+			buffer: fileBuffer
+		};
 	} catch (error) {
 		console.warn('[deal-team-contacts] pdf extraction failed', {
 			url,
 			message: error?.message || 'unknown_error'
 		});
-		return '';
+		return {
+			text: '',
+			buffer: null
+		};
 	}
+}
+
+function buildFlexibleNameRegex(fullName = '') {
+	const parts = normalizeWhitespace(fullName)
+		.split(/\s+/)
+		.filter(Boolean)
+		.map((part) => part.replace(/[^A-Za-z0-9.'’-]/g, ''));
+	if (parts.length === 0) return null;
+	if (parts.length === 1) {
+		return new RegExp(`\\b${escapeRegExp(parts[0])}\\b`, 'ig');
+	}
+
+	const firstName = parts[0];
+	const lastName = parts[parts.length - 1];
+	return new RegExp(
+		`\\b${escapeRegExp(firstName)}(?:\\s+[A-Z][a-z.'’-]+|\\s+[A-Z]\\.?)?\\s+${escapeRegExp(lastName)}\\b`,
+		'ig'
+	);
+}
+
+function extractPossibleNames(window = '') {
+	return [...window.matchAll(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z.'’-]+){1,3})\b/g)]
+		.map((match) => normalizeWhitespace(match[1]))
+		.filter((value) => value && !NAME_BLOCKLIST.test(value));
 }
 
 function scanKnownName(text = '', fullName = '', { sourceType = '', sourceDocumentId = '', companyName = '' } = {}) {
 	const query = normalizeWhitespace(fullName);
 	if (!text || !query) return [];
 	const matches = [];
-	const regex = new RegExp(escapeRegExp(query), 'ig');
+	const regex = buildFlexibleNameRegex(query);
+	if (!regex) return matches;
 	let match;
 	while ((match = regex.exec(text)) !== null && matches.length < 4) {
-		const start = Math.max(0, match.index - 220);
-		const end = Math.min(text.length, match.index + query.length + 220);
+		const start = Math.max(0, match.index - 320);
+		const end = Math.min(text.length, match.index + match[0].length + 320);
 		const window = text.slice(start, end);
 		const email = firstMatch(EMAIL_REGEX, window);
 		const phone = firstMatch(PHONE_REGEX, window);
@@ -238,11 +407,9 @@ function scanEmailContactBlocks(text = '', { sourceType = '', sourceDocumentId =
 	for (const email of findAll(EMAIL_REGEX, text).slice(0, 12)) {
 		const index = text.toLowerCase().indexOf(email.toLowerCase());
 		if (index < 0) continue;
-		const window = text.slice(Math.max(0, index - 180), Math.min(text.length, index + email.length + 180));
+		const window = text.slice(Math.max(0, index - 260), Math.min(text.length, index + email.length + 260));
 		const role = inferRole(window, '');
-		const possibleNames = [...window.matchAll(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z.'’-]+){1,2})\b/g)]
-			.map((match) => normalizeWhitespace(match[1]))
-			.filter((value) => value && !NAME_BLOCKLIST.test(value));
+		const possibleNames = extractPossibleNames(window);
 		const name = possibleNames[0] || '';
 		const phone = firstMatch(PHONE_REGEX, window);
 		const linkedinUrl = pickLinkedInUrl(window);
@@ -263,6 +430,72 @@ function scanEmailContactBlocks(text = '', { sourceType = '', sourceDocumentId =
 			sourceDocumentId,
 			confidence: sourceType === 'ppm' ? 0.68 : 0.56,
 			matchReason: `${sourceType.toUpperCase()} contact block`
+		});
+	}
+	return candidates;
+}
+
+function scanPhoneContactBlocks(text = '', { sourceType = '', sourceDocumentId = '', companyName = '' } = {}) {
+	const candidates = [];
+	for (const phone of findAll(PHONE_REGEX, text).slice(0, 16)) {
+		const index = text.indexOf(phone);
+		if (index < 0) continue;
+		const window = text.slice(Math.max(0, index - 260), Math.min(text.length, index + phone.length + 260));
+		const role = inferRole(window, '');
+		const possibleNames = extractPossibleNames(window);
+		const name = possibleNames[0] || '';
+		const email = firstMatch(EMAIL_REGEX, window);
+		const linkedinUrl = pickLinkedInUrl(window);
+		const calendarUrl = pickCalendarUrl(window);
+
+		if (!name && !email && !role) continue;
+
+		candidates.push({
+			firstName: splitFullName(name).firstName,
+			lastName: splitFullName(name).lastName,
+			email,
+			phone,
+			role,
+			company: companyName,
+			linkedinUrl,
+			calendarUrl,
+			sourceType,
+			sourceDocumentId,
+			confidence: sourceType === 'ppm' ? 0.74 : 0.62,
+			matchReason: `${sourceType.toUpperCase()} phone contact block`
+		});
+	}
+	return candidates;
+}
+
+function scanRoleAnchors(text = '', { sourceType = '', sourceDocumentId = '', companyName = '' } = {}) {
+	const anchorRegex = /\b(investor relations|capital formation|capital raising|for more information|for additional information|contact us|questions\??)\b/ig;
+	const candidates = [];
+	let match;
+	while ((match = anchorRegex.exec(text)) !== null && candidates.length < 8) {
+		const window = text.slice(Math.max(0, match.index - 220), Math.min(text.length, match.index + match[0].length + 320));
+		const possibleNames = extractPossibleNames(window);
+		const name = possibleNames[0] || '';
+		const email = firstMatch(EMAIL_REGEX, window);
+		const phone = firstMatch(PHONE_REGEX, window);
+		const linkedinUrl = pickLinkedInUrl(window);
+		const calendarUrl = pickCalendarUrl(window);
+
+		if (!name && !email && !phone) continue;
+
+		candidates.push({
+			firstName: splitFullName(name).firstName,
+			lastName: splitFullName(name).lastName,
+			email,
+			phone,
+			role: inferRole(window, 'Investor Relations'),
+			company: companyName,
+			linkedinUrl,
+			calendarUrl,
+			sourceType,
+			sourceDocumentId,
+			confidence: sourceType === 'ppm' ? 0.76 : 0.64,
+			matchReason: `${sourceType.toUpperCase()} role anchor`
 		});
 	}
 	return candidates;
@@ -503,6 +736,69 @@ async function loadSecContacts(supabase, dealId) {
 	}
 }
 
+function normalizeAiConfidence(value = '') {
+	const normalized = normalizeWhitespace(value).toLowerCase();
+	if (normalized === 'high') return 0.9;
+	if (normalized === 'medium') return 0.72;
+	if (normalized === 'low') return 0.56;
+	return 0.68;
+}
+
+function hasReachableOperatorCandidate(candidates = []) {
+	return candidates.some((candidate) =>
+		hasExplicitExecutiveRole(candidate.role) && (hasValidEmail(candidate.email) || hasPhone(candidate.phone))
+	);
+}
+
+function hasInvestorRelationsCandidate(candidates = []) {
+	return candidates.some((candidate) =>
+		hasExplicitInvestorRelationsRole(candidate.role) && hasValidEmail(candidate.email)
+	);
+}
+
+function shouldRunDocumentAi(candidates = []) {
+	if (!hasReachableOperatorCandidate(candidates)) return true;
+	if (!hasInvestorRelationsCandidate(candidates)) return true;
+	return !candidates.some((candidate) => hasValidEmail(candidate.email));
+}
+
+async function extractContactsWithAi(fileBuffer, { sourceType = '', sourceDocumentId = '', companyName = '' } = {}) {
+	if (!fileBuffer) return [];
+
+	try {
+		const { extracted } = await extractFromPdf(fileBuffer, CONTACT_EXTRACTION_PROMPT);
+		const contacts = Array.isArray(extracted?.contacts) ? extracted.contacts : [];
+		return contacts
+			.map((contact) => {
+				const fullName = normalizeWhitespace(contact?.name || '');
+				const split = splitFullName(fullName);
+				return {
+					firstName: split.firstName,
+					lastName: split.lastName,
+					email: normalizeWhitespace(contact?.email).toLowerCase(),
+					phone: normalizeWhitespace(contact?.phone),
+					role: normalizeWhitespace(contact?.role),
+					company: companyName,
+					linkedinUrl: normalizeWhitespace(contact?.linkedinUrl),
+					calendarUrl: normalizeWhitespace(contact?.calendarUrl),
+					sourceType,
+					sourceDocumentId,
+					confidence: normalizeAiConfidence(contact?.confidence),
+					matchReason: `${sourceType.toUpperCase()} AI contact extraction`,
+					isPrimary: contact?.isPrimary === true,
+					isInvestorRelations: contact?.isInvestorRelations === true
+				};
+			})
+			.filter((contact) => teamContactFullName(contact) || contact.email);
+	} catch (error) {
+		console.warn('[deal-team-contacts] AI contact extraction failed', {
+			sourceType,
+			message: error?.message || 'unknown_error'
+		});
+		return [];
+	}
+}
+
 export default async function handler(req, res) {
 	setCors(res);
 	if (req.method === 'OPTIONS') return res.status(200).end();
@@ -613,20 +909,20 @@ export default async function handler(req, res) {
 				.filter(Boolean)
 		)];
 
-		const ppmText = await extractTextFromPdf(deal.ppm_url || '');
-		if (!ppmText && deal.ppm_url) warnings.push('ppm_text_unavailable');
-		const deckText = await extractTextFromPdf(deal.deck_url || '');
-		if (!deckText && deal.deck_url) warnings.push('deck_text_unavailable');
+		const ppmDocument = await extractTextFromPdf(supabase, deal.ppm_url || '');
+		if (!ppmDocument.text && deal.ppm_url) warnings.push('ppm_text_unavailable');
+		const deckDocument = await extractTextFromPdf(supabase, deal.deck_url || '');
+		if (!deckDocument.text && deal.deck_url) warnings.push('deck_text_unavailable');
 
 		for (const name of knownNames) {
-			for (const match of scanKnownName(ppmText, name, {
+			for (const match of scanKnownName(ppmDocument.text, name, {
 				sourceType: 'ppm',
 				sourceDocumentId: 'ppm',
 				companyName
 			})) {
 				upsertCandidate(candidates, match, match);
 			}
-			for (const match of scanKnownName(deckText, name, {
+			for (const match of scanKnownName(deckDocument.text, name, {
 				sourceType: 'deck',
 				sourceDocumentId: 'deck',
 				companyName
@@ -635,7 +931,7 @@ export default async function handler(req, res) {
 			}
 		}
 
-		for (const match of scanEmailContactBlocks(ppmText, {
+		for (const match of scanEmailContactBlocks(ppmDocument.text, {
 			sourceType: 'ppm',
 			sourceDocumentId: 'ppm',
 			companyName
@@ -643,12 +939,62 @@ export default async function handler(req, res) {
 			upsertCandidate(candidates, match, match);
 		}
 
-		for (const match of scanEmailContactBlocks(deckText, {
+		for (const match of scanEmailContactBlocks(deckDocument.text, {
 			sourceType: 'deck',
 			sourceDocumentId: 'deck',
 			companyName
 		})) {
 			upsertCandidate(candidates, match, match);
+		}
+
+		for (const match of scanPhoneContactBlocks(ppmDocument.text, {
+			sourceType: 'ppm',
+			sourceDocumentId: 'ppm',
+			companyName
+		})) {
+			upsertCandidate(candidates, match, match);
+		}
+
+		for (const match of scanPhoneContactBlocks(deckDocument.text, {
+			sourceType: 'deck',
+			sourceDocumentId: 'deck',
+			companyName
+		})) {
+			upsertCandidate(candidates, match, match);
+		}
+
+		for (const match of scanRoleAnchors(ppmDocument.text, {
+			sourceType: 'ppm',
+			sourceDocumentId: 'ppm',
+			companyName
+		})) {
+			upsertCandidate(candidates, match, match);
+		}
+
+		for (const match of scanRoleAnchors(deckDocument.text, {
+			sourceType: 'deck',
+			sourceDocumentId: 'deck',
+			companyName
+		})) {
+			upsertCandidate(candidates, match, match);
+		}
+
+		if (shouldRunDocumentAi(candidates)) {
+			for (const match of await extractContactsWithAi(ppmDocument.buffer, {
+				sourceType: 'ppm',
+				sourceDocumentId: 'ppm',
+				companyName
+			})) {
+				upsertCandidate(candidates, match, match);
+			}
+
+			for (const match of await extractContactsWithAi(deckDocument.buffer, {
+				sourceType: 'deck',
+				sourceDocumentId: 'deck',
+				companyName
+			})) {
+				upsertCandidate(candidates, match, match);
+			}
 		}
 
 		const normalizedSuggestions = normalizeTeamContacts(candidates, {
