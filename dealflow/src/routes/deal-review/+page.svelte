@@ -128,6 +128,14 @@
 		return `mailto:${encodeURIComponent(contact.email)}?subject=${subject}&body=${body}`;
 	}
 
+	function readDealTeamContacts(sourceDeal = deal) {
+		const snapshot = sourceDeal?.teamContacts || sourceDeal?.team_contacts || [];
+		return normalizeTeamContacts(snapshot, {
+			ensureOne: false,
+			preserveEmpty: true
+		});
+	}
+
 	let loading = $state(true);
 	let saving = $state(false);
 	let loadError = $state('');
@@ -774,7 +782,7 @@
 	async function loadTeamContacts() {
 		teamContactsError = '';
 		const managementCompanyId = getManagementCompanyId();
-		let savedContacts = [];
+		let savedContacts = readDealTeamContacts();
 		let suggestionWarnings = [];
 		let token = '';
 
@@ -793,10 +801,13 @@
 					throw new Error(payload?.error || 'Could not load the management company contacts.');
 				}
 
-				savedContacts = normalizeTeamContacts(payload.teamContacts || payload.team_contacts || [], {
+				savedContacts = normalizeTeamContacts(
+					payload.teamContacts || payload.team_contacts || savedContacts,
+					{
 					ensureOne: false,
 					preserveEmpty: true
-				});
+					}
+				);
 			}
 		} catch (error) {
 			console.error('[deal-review/team] load failed', {
@@ -923,10 +934,49 @@
 				throw new Error(payload?.formError || payload?.error || 'Could not save the team contacts.');
 			}
 
-			teamContacts = normalizeTeamContacts(payload.teamContacts || payload.team_contacts || validation.contacts, {
+			const persistedContacts = normalizeTeamContacts(payload.teamContacts || payload.team_contacts || validation.contacts, {
 				ensureOne: false,
 				preserveEmpty: true
 			});
+			teamContacts = persistedContacts;
+
+			try {
+				const dealSnapshotResponse = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
+					method: 'PATCH',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${token}`
+					},
+					body: JSON.stringify({
+						teamContacts: serializeTeamContactsForApi(persistedContacts)
+					})
+				});
+				const dealSnapshotPayload = await dealSnapshotResponse.json().catch(() => ({}));
+				if (dealSnapshotResponse.ok && dealSnapshotPayload?.deal) {
+					syncDealState(
+						{
+							...(deal || {}),
+							...dealSnapshotPayload.deal,
+							team_contacts: persistedContacts,
+							teamContacts: persistedContacts
+						},
+						{ clearSaveMessage: true }
+					);
+				} else {
+					deal = {
+						...(deal || {}),
+						team_contacts: persistedContacts,
+						teamContacts: persistedContacts
+					};
+				}
+			} catch {
+				deal = {
+					...(deal || {}),
+					team_contacts: persistedContacts,
+					teamContacts: persistedContacts
+				};
+			}
+
 			teamContactsSaveState = 'success';
 			dirty = false;
 			if (!quiet) {

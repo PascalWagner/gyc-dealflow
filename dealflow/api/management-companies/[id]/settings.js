@@ -61,7 +61,8 @@ export default async function handler(req, res) {
       ir_contact_name: company.ir_contact_name || '',
       ir_contact_email: company.ir_contact_email || '',
       team_contacts: contactState.contacts,
-      teamContacts: contactState.contacts
+      teamContacts: contactState.contacts,
+      storageMode: contactState.storageMode || 'legacy'
     });
   }
 
@@ -119,7 +120,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       team_contacts: teamContactState?.contacts || null,
-      teamContacts: teamContactState?.contacts || null
+      teamContacts: teamContactState?.contacts || null,
+      storageMode: teamContactState?.storageMode || 'legacy'
     });
   }
 
