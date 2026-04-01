@@ -1,5 +1,5 @@
 import { CHILD_SHARE_CLASS_SELECT, DEAL_SELECT, SPONSOR_SELECT } from './constants.js';
-import { applyDealVisibilityQuery, applyPublishedCatalogQuery } from '../../_deal-access.js';
+import { applyDealVisibilityQuery } from '../../_deal-access.js';
 
 const DEAL_RELATION_BATCH_SIZE = 75;
 
@@ -14,6 +14,19 @@ async function fetchInChunks(ids, fetcher, batchSize = DEAL_RELATION_BATCH_SIZE)
 	}
 
 	return allRows;
+}
+
+function mergeRowsById(resultSets = []) {
+	const rowsById = new Map();
+
+	for (const rows of resultSets) {
+		for (const row of rows || []) {
+			if (!row?.id) continue;
+			rowsById.set(row.id, row);
+		}
+	}
+
+	return [...rowsById.values()];
 }
 
 function applyDbFilters(query, normalizedQuery, { include506b }) {
@@ -97,36 +110,109 @@ function applyDbSort(query, normalizedQuery) {
 	return query.order('added_date', { ascending: false });
 }
 
+async function fetchPublishedScopedRows(
+	buildBaseQuery,
+	normalizedQuery,
+	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '' } = {}
+) {
+	const queryFactories = [
+		(query) =>
+			query
+				.in('lifecycle_status', ['published', 'archived'])
+				.eq('is_visible_to_users', true)
+	];
+
+	if (viewerManagementCompanyId) {
+		queryFactories.push((query) => query.eq('management_company_id', viewerManagementCompanyId));
+	}
+
+	if (viewerEmail) {
+		queryFactories.push((query) => query.eq('submitted_by_email', viewerEmail));
+	}
+
+	const resultSets = await Promise.all(
+		queryFactories.map(async (applyVisibilityFilter) => {
+			let query = buildBaseQuery();
+			query = applyDbFilters(query, normalizedQuery, { include506b });
+			if (!query) return [];
+			query = applyVisibilityFilter(query);
+			query = applyDbSort(query, normalizedQuery);
+			const { data, error } = await query;
+			if (error) throw error;
+			return data || [];
+		})
+	);
+
+	return mergeRowsById(resultSets);
+}
+
+async function fetchPublishedScopedRowsForChildren(
+	buildBaseQuery,
+	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '' } = {}
+) {
+	const queryFactories = [
+		(query) => query.in('lifecycle_status', ['published', 'archived']).eq('is_visible_to_users', true)
+	];
+
+	if (viewerManagementCompanyId) {
+		queryFactories.push((query) => query.eq('management_company_id', viewerManagementCompanyId));
+	}
+
+	if (viewerEmail) {
+		queryFactories.push((query) => query.eq('submitted_by_email', viewerEmail));
+	}
+
+	const resultSets = await Promise.all(
+		queryFactories.map(async (applyVisibilityFilter) => {
+			let query = buildBaseQuery();
+			if (!include506b) {
+				query = query.not('is_506b', 'is', true);
+			}
+			query = applyVisibilityFilter(query);
+			const { data, error } = await query;
+			if (error) throw error;
+			return data || [];
+		})
+	);
+
+	return mergeRowsById(resultSets);
+}
+
 export async function fetchMemberDealDataset(
 	adminClient,
 	normalizedQuery,
 	{ include506b = false, viewerManagementCompanyId = null, viewerEmail = '', isAdmin = false, publishedOnly = false } = {}
 ) {
-	let parentQuery = adminClient
-		.from('opportunities')
-		.select(DEAL_SELECT)
-		.is('parent_deal_id', null)
-		.not('investment_name', 'eq', '');
+	const buildParentQuery = () =>
+		adminClient
+			.from('opportunities')
+			.select(DEAL_SELECT)
+			.is('parent_deal_id', null)
+			.not('investment_name', 'eq', '');
 
-	parentQuery = publishedOnly
-		? applyPublishedCatalogQuery(parentQuery, {
-			email: viewerEmail,
+	let parentDeals = [];
+	if (publishedOnly) {
+		parentDeals = await fetchPublishedScopedRows(buildParentQuery, normalizedQuery, {
+			include506b,
 			viewerManagementCompanyId,
-			isAdmin
-		})
-		: applyDealVisibilityQuery(parentQuery, { isAdmin, viewerManagementCompanyId });
-	parentQuery = applyDbFilters(parentQuery, normalizedQuery, { include506b });
-	parentQuery = parentQuery ? applyDbSort(parentQuery, normalizedQuery) : parentQuery;
-	if (!parentQuery) {
-		return {
-			parentDeals: [],
-			childShareClasses: [],
-			sponsorRows: []
-		};
-	}
+			viewerEmail
+		});
+	} else {
+		let parentQuery = applyDealVisibilityQuery(buildParentQuery(), { isAdmin, viewerManagementCompanyId });
+		parentQuery = applyDbFilters(parentQuery, normalizedQuery, { include506b });
+		parentQuery = parentQuery ? applyDbSort(parentQuery, normalizedQuery) : parentQuery;
+		if (!parentQuery) {
+			return {
+				parentDeals: [],
+				childShareClasses: [],
+				sponsorRows: []
+			};
+		}
 
-	const { data: parentDeals, error: parentError } = await parentQuery;
-	if (parentError) throw parentError;
+		const { data, error } = await parentQuery;
+		if (error) throw error;
+		parentDeals = data || [];
+	}
 
 	const parentIds = (parentDeals || []).map((deal) => deal.id).filter(Boolean);
 	if (!parentIds.length) {
@@ -139,29 +225,33 @@ export async function fetchMemberDealDataset(
 
 	const [childShareClasses, sponsorRows] = await Promise.all([
 		fetchInChunks(parentIds, (batchIds) =>
-			(
-				publishedOnly
-					? applyPublishedCatalogQuery(
+			publishedOnly
+				? fetchPublishedScopedRowsForChildren(
+					() =>
 						adminClient
 							.from('opportunities')
 							.select(CHILD_SHARE_CLASS_SELECT)
 							.in('parent_deal_id', batchIds)
 							.order('created_at', { ascending: true }),
-						{
-							email: viewerEmail,
-							viewerManagementCompanyId,
-							isAdmin
-						}
-					)
-					: applyDealVisibilityQuery(
+					{
+						include506b,
+						viewerManagementCompanyId,
+						viewerEmail
+					}
+				)
+				: (async () => {
+					const query = applyDealVisibilityQuery(
 						adminClient
 							.from('opportunities')
 							.select(CHILD_SHARE_CLASS_SELECT)
 							.in('parent_deal_id', batchIds)
 							.order('created_at', { ascending: true }),
 						{ isAdmin, viewerManagementCompanyId }
-					)
-			)
+					);
+					const { data, error } = await query;
+					if (error) throw error;
+					return data || [];
+				})()
 		),
 		fetchInChunks(parentIds, (batchIds) =>
 			adminClient
