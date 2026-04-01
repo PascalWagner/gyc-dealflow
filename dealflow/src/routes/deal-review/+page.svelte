@@ -48,6 +48,7 @@
 		getDealOnboardingStageById,
 		getDealOnboardingStages,
 		getNextOnboardingStage,
+		getOnboardingStageFieldKeys,
 		getPreviousOnboardingStage,
 		isValidOnboardingStage,
 		resolveDealOnboardingBranch
@@ -855,6 +856,11 @@
 		}
 	}
 
+	function getSaveFieldKeysForStage(stage = activeStage) {
+		if (!stage || stage === 'summary') return null;
+		return getOnboardingStageFieldKeys(stage, branchInfo.branch);
+	}
+
 	async function loadDeal() {
 		if (!dealId) {
 			loadError = 'Pick a deal from Manage Data to start review.';
@@ -891,14 +897,28 @@
 		}
 	}
 
-	async function saveDeal({ quiet = false } = {}) {
+	async function saveDeal({ quiet = false, stage = activeStage } = {}) {
 		if (!dealId || saving) return false;
 
-		const { payload: nextPayload, errors } = buildDealReviewPayload(form);
+		const scopedFieldKeys = getSaveFieldKeysForStage(stage);
+		const { payload: nextPayload, errors } = buildDealReviewPayload(form, {
+			includeFieldKeys: scopedFieldKeys
+		});
 		if (Object.keys(errors).length > 0) {
-			fieldErrors = errors;
+			fieldErrors = scopedFieldKeys
+				? {
+					...fieldErrors,
+					...Object.fromEntries(scopedFieldKeys.map((fieldKey) => [fieldKey, ''])),
+					...errors
+				}
+				: errors;
 			saveError = 'Fix the highlighted fields before saving.';
 			saveMessage = '';
+			console.warn('[deal-review] stage save blocked by validation', {
+				dealId,
+				stage,
+				errorKeys: Object.keys(errors)
+			});
 			return false;
 		}
 
@@ -940,6 +960,9 @@
 					}
 					fieldErrors = {
 						...fieldErrors,
+						...(scopedFieldKeys
+							? Object.fromEntries(scopedFieldKeys.map((fieldKey) => [fieldKey, '']))
+							: {}),
 						...nextFieldErrors
 					};
 				}
@@ -1064,7 +1087,7 @@
 			}
 			return true;
 		}
-		return await saveDeal({ quiet: true });
+		return await saveDeal({ quiet: true, stage });
 	}
 
 	async function saveActiveReviewStage() {
@@ -1074,7 +1097,7 @@
 		if (activeStage === 'team') {
 			return await saveTeamContacts({ quiet: false, requireComplete: false });
 		}
-		return await saveDeal();
+		return await saveDeal({ stage: activeStage });
 	}
 
 	async function navigateToStage(stage, { from = '', allowAdvance = false } = {}) {

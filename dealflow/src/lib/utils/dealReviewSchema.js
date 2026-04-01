@@ -1115,11 +1115,15 @@ function buildLocationPayload(value) {
 	};
 }
 
-export function buildDealReviewPayload(form) {
+export function buildDealReviewPayload(form, options = {}) {
+	const includeFieldKeys = Array.isArray(options?.includeFieldKeys) && options.includeFieldKeys.length > 0
+		? new Set(options.includeFieldKeys)
+		: null;
 	const payload = {};
 	const errors = {};
 
 	for (const field of Object.values(dealFieldConfig)) {
+		if (includeFieldKeys && !includeFieldKeys.has(field.key)) continue;
 		const rawValue = form[field.key];
 
 		if (field.type === 'entity_reference') {
@@ -1168,9 +1172,14 @@ export function buildDealReviewPayload(form) {
 		payload[field.key] = String(rawValue || '').trim();
 	}
 
-	payload.slug = payload.slug || slugify(payload.investmentName);
-	payload.status = payload.offeringStatus || '';
-	delete payload.offeringStatus;
+	if (!includeFieldKeys || includeFieldKeys.has('slug') || includeFieldKeys.has('investmentName')) {
+		payload.slug = payload.slug || slugify(payload.investmentName);
+	}
+
+	if (!includeFieldKeys || includeFieldKeys.has('offeringStatus')) {
+		payload.status = payload.offeringStatus || '';
+		delete payload.offeringStatus;
+	}
 
 	return { payload, errors };
 }
