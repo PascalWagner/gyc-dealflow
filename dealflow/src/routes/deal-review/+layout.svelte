@@ -1,5 +1,5 @@
 <script>
-	import AuthenticatedAppShellLayout from '$lib/layout/AuthenticatedAppShellLayout.svelte';
+	import AppShell from '$lib/layout/AppShell.svelte';
 	import { page } from '$app/stores';
 	import { isAdmin } from '$lib/stores/auth.js';
 
@@ -9,6 +9,6 @@
 	);
 </script>
 
-<AuthenticatedAppShellLayout {currentPage}>
+<AppShell {currentPage}>
 	{@render children()}
-</AuthenticatedAppShellLayout>
+</AppShell>

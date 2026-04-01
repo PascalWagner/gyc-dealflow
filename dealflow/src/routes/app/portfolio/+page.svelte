@@ -858,9 +858,8 @@
 							</div>
 						{/each}
 					</div>
-				{/if}
-			</div>
-		{:else if canOpenAnalysis}
+				</div>
+			{:else if canOpenAnalysis}
 			<div class="analysis-panel">
 				<div class="holdings-header">
 					<div>
