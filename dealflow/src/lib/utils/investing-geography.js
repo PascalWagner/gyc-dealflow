@@ -51,11 +51,17 @@ export const STATE_NAME_BY_CODE = {
 	WY: 'Wyoming'
 };
 
+function escapeRegExp(value) {
+	return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 const STATE_CODE_BY_NAME = Object.fromEntries(
 	Object.entries(STATE_NAME_BY_CODE).map(([code, name]) => [name.toLowerCase(), code])
 );
 
 const ALL_STATE_CODES = Object.keys(STATE_NAME_BY_CODE);
+const ORDERED_STATE_ENTRIES = Object.entries(STATE_NAME_BY_CODE)
+	.sort(([, leftName], [, rightName]) => rightName.length - leftName.length);
 
 const REGION_STATE_GROUPS = {
 	nationwide: ALL_STATE_CODES,
@@ -72,6 +78,112 @@ const REGION_STATE_GROUPS = {
 	'sun belt': ['FL', 'GA', 'SC', 'NC', 'TX', 'AZ', 'NM', 'NV', 'CA', 'TN', 'AL', 'LA'],
 	'east coast': ['FL', 'GA', 'SC', 'NC', 'VA', 'MD', 'DE', 'NJ', 'NY', 'CT', 'RI', 'MA', 'NH', 'ME']
 };
+
+const DOCUMENT_GEOGRAPHY_CONTEXT_PATTERNS = [
+	/\bprimary focus\b/i,
+	/\bwestern region\b/i,
+	/\bcurrent core markets?\b/i,
+	/\bfuture core markets?\b/i,
+	/\bnew core markets?\b/i,
+	/\bmarket expansion\b/i,
+	/\bbreakdown by state\b/i,
+	/\bportfolio construction\b/i,
+	/\bfast-growing sunbelt states?\b/i,
+	/\bincluding\b/i,
+	/\blocated primarily\b/i,
+	/\blocation of real property\b/i,
+	/\blocation of properties\b/i,
+	/\binvest in properties\b/i,
+	/\bmake loans\b/i,
+	/\boperates in\b/i,
+	/\bfootprint\b/i
+];
+
+const DOCUMENT_GEOGRAPHY_EXCLUSION_PATTERNS = [
+	/\bsources?:/i,
+	/\bdepartment of commerce\b/i,
+	/\beconomic development\b/i,
+	/\bpress release\b/i,
+	/\bannual review\b/i,
+	/\byear in review\b/i,
+	/\bmassachusetts or similar business trust\b/i,
+	/\bborn in\b/i,
+	/\blives in\b/i,
+	/\buniversity\b/i,
+	/\bstate bar\b/i,
+	/\barizona act\b/i,
+	/\barizona rules\b/i,
+	/\barizona corporation commission\b/i,
+	/\bgoverning law\b/i,
+	/\btax law\b/i,
+	/\bstate and local tax\b/i
+];
+
+function normalizeDocumentLine(value) {
+	return String(value || '')
+		.replace(/([a-z])([A-Z])/g, '$1 $2')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+function collapseBrokenStateLines(lines) {
+	const collapsed = [];
+	for (let index = 0; index < lines.length; index += 1) {
+		const current = normalizeDocumentLine(lines[index]);
+		const next = normalizeDocumentLine(lines[index + 1]);
+		if (!current) continue;
+
+		const combined = normalizeStateCode(`${current} ${next}`);
+		if (!normalizeStateCode(current) && next && combined) {
+			collapsed.push(STATE_NAME_BY_CODE[combined] || `${current} ${next}`);
+			index += 1;
+			continue;
+		}
+
+		collapsed.push(current);
+	}
+	return collapsed;
+}
+
+function extractDocumentStateCodes(text) {
+	const rawLines = String(text || '').split(/\r?\n/);
+	if (rawLines.length === 0) return [];
+
+	const lines = collapseBrokenStateLines(rawLines);
+	const extracted = [];
+	const seen = new Set();
+
+	const addStatesFromText = (value) => {
+		for (const stateCode of extractExplicitStateCodes(value)) {
+			appendState(extracted, seen, stateCode);
+		}
+	};
+
+	for (let index = 0; index < lines.length; index += 1) {
+		const line = normalizeDocumentLine(lines[index]);
+		if (!line) continue;
+
+		const nearbyLines = lines
+			.slice(Math.max(0, index - 15), Math.min(lines.length, index + 16))
+			.map((entry) => normalizeDocumentLine(entry))
+			.filter(Boolean);
+		const nearbyText = nearbyLines.join(' ');
+		const stateCount = extractExplicitStateCodes(line).length;
+		const hasContext = DOCUMENT_GEOGRAPHY_CONTEXT_PATTERNS.some((pattern) => pattern.test(line) || pattern.test(nearbyText));
+		const hasExclusion = DOCUMENT_GEOGRAPHY_EXCLUSION_PATTERNS.some((pattern) => pattern.test(line));
+
+		if (hasExclusion) continue;
+		if (stateCount >= 2) {
+			addStatesFromText(line);
+			continue;
+		}
+		if (stateCount >= 1 && hasContext) {
+			addStatesFromText(line);
+		}
+	}
+
+	return extracted;
+}
 
 function appendState(matches, seen, stateCode) {
 	if (!stateCode || seen.has(stateCode)) return;
@@ -111,6 +223,64 @@ export function normalizeStateCode(value) {
 	const normalized = String(value).trim();
 	if (STATE_NAME_BY_CODE[normalized.toUpperCase()]) return normalized.toUpperCase();
 	return STATE_CODE_BY_NAME[normalized.toLowerCase()] || null;
+}
+
+export function mergeStateCodeLists(...lists) {
+	const merged = [];
+	const seen = new Set();
+
+	for (const list of lists) {
+		for (const value of Array.isArray(list) ? list : []) {
+			const stateCode = normalizeStateCode(value);
+			if (!stateCode || seen.has(stateCode)) continue;
+			seen.add(stateCode);
+			merged.push(stateCode);
+		}
+	}
+
+	return merged;
+}
+
+export function extractExplicitStateCodes(text) {
+	const raw = String(text || '');
+	if (!raw) return [];
+
+	const matches = [];
+	for (const [stateCode, stateName] of ORDERED_STATE_ENTRIES) {
+		const pattern = new RegExp(`\\b${escapeRegExp(stateName)}\\b`, 'gi');
+		for (const match of raw.matchAll(pattern)) {
+			matches.push({
+				stateCode,
+				index: match.index ?? 0
+			});
+		}
+	}
+
+	return mergeStateCodeLists(
+		matches
+			.sort((left, right) => left.index - right.index)
+			.map((match) => match.stateCode)
+	);
+}
+
+export function buildDocumentInvestingStateSignals({ ppmText = '', deckText = '' } = {}) {
+	const ppmStates = extractDocumentStateCodes(ppmText);
+	const deckStates = extractDocumentStateCodes(deckText);
+	const suggestedStates = mergeStateCodeLists(ppmStates, deckStates);
+
+	return {
+		ppmStates,
+		deckStates,
+		suggestedStates
+	};
+}
+
+export function formatStateCodesAsGeographyValue(stateCodes, { includeCountry = true } = {}) {
+	const normalizedStates = mergeStateCodeLists(stateCodes);
+	if (normalizedStates.length === 0) return includeCountry ? 'United States' : '';
+	return includeCountry
+		? `${normalizedStates.join(', ')}, United States`
+		: normalizedStates.join(', ');
 }
 
 export function getDealStateCodes(deal) {

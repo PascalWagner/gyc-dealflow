@@ -6,10 +6,53 @@
 //   Step 3: Web search (sponsor website, SEC Edgar, investclearly.com)
 // API fallback chain: Gemini (free tier) → Anthropic → OpenAI
 
+import { createRequire } from 'node:module';
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
 import { fetchAndStoreSecFiling, findSecMatchesForDeal } from './_sec-edgar.js';
+import {
+  buildDocumentInvestingStateSignals,
+  extractExplicitStateCodes,
+  formatStateCodesAsGeographyValue,
+  mergeStateCodeLists
+} from '../src/lib/utils/investing-geography.js';
 
 const EXTRACTION_TEXT_LIMIT = 120000;
+const require = createRequire(import.meta.url);
+let pdfNodePrimitivesReady = false;
+let pdfNodePrimitivesWarningShown = false;
+let pdfJsModulePromise = null;
+let pdfJsWorkerModulePromise = null;
+
+function ensurePdfNodePrimitives() {
+  if (pdfNodePrimitivesReady) return;
+
+  try {
+    const canvas = require('@napi-rs/canvas');
+    if (typeof globalThis.DOMMatrix === 'undefined' && canvas?.DOMMatrix) {
+      globalThis.DOMMatrix = canvas.DOMMatrix;
+    }
+    if (typeof globalThis.DOMPoint === 'undefined' && canvas?.DOMPoint) {
+      globalThis.DOMPoint = canvas.DOMPoint;
+    }
+    if (typeof globalThis.DOMRect === 'undefined' && canvas?.DOMRect) {
+      globalThis.DOMRect = canvas.DOMRect;
+    }
+    if (typeof globalThis.ImageData === 'undefined' && canvas?.ImageData) {
+      globalThis.ImageData = canvas.ImageData;
+    }
+    if (typeof globalThis.Path2D === 'undefined' && canvas?.Path2D) {
+      globalThis.Path2D = canvas.Path2D;
+    }
+    pdfNodePrimitivesReady = true;
+  } catch (error) {
+    if (!pdfNodePrimitivesWarningShown) {
+      pdfNodePrimitivesWarningShown = true;
+      console.warn('[deal-cleanup] failed to initialize PDF node primitives', {
+        message: error?.message || 'unknown_error'
+      });
+    }
+  }
+}
 
 // ── Quality fields to track ──────────────────────────────────────────────────
 
@@ -54,7 +97,21 @@ function getCompletenessPercent(deal) {
 
 // ── PDF text extraction (same as deck-upload.js) ─────────────────────────────
 
-function extractTextFromPdfBuffer(buffer) {
+function normalizeWhitespace(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeDocumentText(value) {
+  return String(value || '')
+    .replace(/\r/g, '\n')
+    .replace(/\u0000/g, '')
+    .split('\n')
+    .map((line) => normalizeWhitespace(line.replace(/([a-z])([A-Z])/g, '$1 $2')))
+    .filter(Boolean)
+    .join('\n');
+}
+
+function extractTextFromPdfBufferHeuristic(buffer) {
   const raw = buffer.toString('latin1');
   const textChunks = [];
 
@@ -88,7 +145,144 @@ function extractTextFromPdfBuffer(buffer) {
     }
   }
 
-  return textChunks.join(' ').substring(0, EXTRACTION_TEXT_LIMIT);
+  return textChunks.join('\n').substring(0, EXTRACTION_TEXT_LIMIT);
+}
+
+async function getPdfJsModule() {
+  if (!pdfJsModulePromise) {
+    pdfJsModulePromise = import('pdfjs-dist/legacy/build/pdf.mjs');
+  }
+  return pdfJsModulePromise;
+}
+
+async function ensurePdfJsWorkerGlobal() {
+  if (globalThis.pdfjsWorker?.WorkerMessageHandler) return globalThis.pdfjsWorker;
+
+  if (!pdfJsWorkerModulePromise) {
+    pdfJsWorkerModulePromise = import('pdfjs-dist/legacy/build/pdf.worker.mjs').then((workerModule) => {
+      globalThis.pdfjsWorker = workerModule;
+      return workerModule;
+    });
+  }
+
+  return pdfJsWorkerModulePromise;
+}
+
+function buildPdfPageLines(textItems = []) {
+  const lines = [];
+
+  for (const item of textItems) {
+    const value = String(item?.str || '').trim();
+    if (!value) continue;
+
+    const x = Number(item?.transform?.[4] || 0);
+    const y = Number(item?.transform?.[5] || 0);
+
+    let line = lines.find((entry) => Math.abs(entry.y - y) < 2);
+    if (!line) {
+      line = { y, parts: [] };
+      lines.push(line);
+    }
+
+    line.parts.push({ x, value });
+  }
+
+  return lines
+    .sort((left, right) => right.y - left.y)
+    .map((line) =>
+      line.parts
+        .sort((left, right) => left.x - right.x)
+        .map((part) => part.value)
+        .join(' ')
+    )
+    .filter(Boolean);
+}
+
+async function extractTextFromPdfBufferWithPdfJs(buffer) {
+  ensurePdfNodePrimitives();
+  await ensurePdfJsWorkerGlobal();
+
+  const pdfjs = await getPdfJsModule();
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    disableWorker: true,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    verbosity: 0
+  });
+
+  const pdf = await loadingTask.promise;
+  const pageChunks = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const pageText = buildPdfPageLines(content?.items || []).join('\n');
+      if (pageText) pageChunks.push(pageText);
+    }
+  } finally {
+    await pdf.destroy();
+  }
+
+  return pageChunks.join('\n\n');
+}
+
+function mergeDocumentText(...values) {
+  const lines = [];
+  const seen = new Set();
+
+  for (const value of values) {
+    const normalized = normalizeDocumentText(value);
+    if (!normalized) continue;
+
+    for (const line of normalized.split('\n')) {
+      const cleaned = normalizeWhitespace(line);
+      if (!cleaned) continue;
+      const key = cleaned.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      lines.push(cleaned);
+    }
+  }
+
+  return lines.join('\n').slice(0, EXTRACTION_TEXT_LIMIT);
+}
+
+async function extractTextFromPdfBuffer(buffer) {
+  const heuristicText = extractTextFromPdfBufferHeuristic(buffer);
+  let parsedText = '';
+
+  try {
+    parsedText = await extractTextFromPdfBufferWithPdfJs(buffer);
+  } catch (error) {
+    console.warn('[deal-cleanup] pdfjs extraction failed', {
+      message: error?.message || 'unknown_error'
+    });
+  }
+
+  return mergeDocumentText(parsedText, heuristicText);
+}
+
+function parseSupabaseStorageLocation(url = '') {
+  try {
+    const parsed = new URL(url);
+    const signMarker = '/storage/v1/object/sign/';
+    const publicMarker = '/storage/v1/object/public/';
+    const authenticatedMarker = '/storage/v1/object/authenticated/';
+    const marker = [signMarker, publicMarker, authenticatedMarker].find((value) => parsed.pathname.includes(value));
+    if (!marker) return null;
+
+    const [, remainder = ''] = parsed.pathname.split(marker);
+    const segments = remainder.split('/').filter(Boolean);
+    if (segments.length < 2) return null;
+    const bucket = segments.shift();
+    const path = decodeURIComponent(segments.join('/'));
+    if (!bucket || !path) return null;
+    return { bucket, path };
+  } catch {
+    return null;
+  }
 }
 
 // ── Extraction prompt (matches deal-enrich.js format) ────────────────────────
@@ -469,10 +663,62 @@ function mapToDbFields(extracted) {
 async function downloadPdf(supabase, url) {
   // The deck_url / ppm_url is a signed Supabase storage URL
   // Download the raw bytes
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`PDF download failed: ${resp.status}`);
-  const arrayBuf = await resp.arrayBuffer();
-  return Buffer.from(arrayBuf);
+  try {
+    const resp = await fetch(url, {
+      headers: {
+        'User-Agent': 'GYC Research pascal@growyourcashflow.com'
+      }
+    });
+    if (resp.ok) {
+      const arrayBuf = await resp.arrayBuffer();
+      return Buffer.from(arrayBuf);
+    }
+  } catch {}
+
+  const storageLocation = parseSupabaseStorageLocation(url);
+  if (!storageLocation) throw new Error('PDF download failed');
+
+  const { data, error } = await supabase.storage.from(storageLocation.bucket).download(storageLocation.path);
+  if (error || !data) throw new Error(error?.message || 'storage_download_failed');
+
+  return Buffer.from(await data.arrayBuffer());
+}
+
+async function loadDealSourceTexts(supabase, deal) {
+  const sourceTexts = {
+    ppmText: '',
+    deckText: ''
+  };
+
+  if (deal?.ppm_url) {
+    const ppmBuffer = await downloadPdf(supabase, deal.ppm_url);
+    sourceTexts.ppmText = await extractTextFromPdfBuffer(ppmBuffer);
+  }
+
+  if (deal?.deck_url) {
+    const deckBuffer = await downloadPdf(supabase, deal.deck_url);
+    sourceTexts.deckText = await extractTextFromPdfBuffer(deckBuffer);
+  }
+
+  return sourceTexts;
+}
+
+function buildClassificationSignals(deal, { ppmText = '', deckText = '' } = {}) {
+  const documentSignals = buildDocumentInvestingStateSignals({ ppmText, deckText });
+  const currentStates = mergeStateCodeLists(
+    deal?.investing_states || deal?.investingStates || [],
+    extractExplicitStateCodes(deal?.investing_geography || deal?.investingGeography || deal?.location || '')
+  );
+  const suggestedStates = documentSignals.suggestedStates;
+
+  return {
+    ppmStates: documentSignals.ppmStates,
+    deckStates: documentSignals.deckStates,
+    suggestedStates,
+    currentStates,
+    missingSuggestedStates: suggestedStates.filter((stateCode) => !currentStates.includes(stateCode)),
+    extraCurrentStates: currentStates.filter((stateCode) => !suggestedStates.includes(stateCode))
+  };
 }
 
 // ── Build web search prompt ──────────────────────────────────────────────────
@@ -566,7 +812,7 @@ async function enrichDeal(supabase, deal, operatorName) {
   if (deal.ppm_url) {
     try {
       const pdfBuffer = await downloadPdf(supabase, deal.ppm_url);
-      ppmTextCache = extractTextFromPdfBuffer(pdfBuffer);
+      ppmTextCache = await extractTextFromPdfBuffer(pdfBuffer);
 
       const heuristicIssuer = extractIssuerHintFromText(ppmTextCache);
       let identityFieldCount = heuristicIssuer ? 1 : 0;
@@ -682,7 +928,7 @@ async function enrichDeal(supabase, deal, operatorName) {
     try {
       if (!deckTextCache) {
         const pdfBuffer = await downloadPdf(supabase, deal.deck_url);
-        deckTextCache = extractTextFromPdfBuffer(pdfBuffer);
+        deckTextCache = await extractTextFromPdfBuffer(pdfBuffer);
       }
       const pdfText = deckTextCache;
 
@@ -721,7 +967,7 @@ async function enrichDeal(supabase, deal, operatorName) {
     try {
       if (!ppmTextCache) {
         const pdfBuffer = await downloadPdf(supabase, deal.ppm_url);
-        ppmTextCache = extractTextFromPdfBuffer(pdfBuffer);
+        ppmTextCache = await extractTextFromPdfBuffer(pdfBuffer);
       }
       const pdfText = ppmTextCache;
 
@@ -787,6 +1033,27 @@ async function enrichDeal(supabase, deal, operatorName) {
     steps.push({ step: 'web_search', fields_found: 0, note: 'All fields already found' });
   } else {
     steps.push({ step: 'web_search', fields_found: 0, note: 'No deal name for search' });
+  }
+
+  const classificationSignals = buildClassificationSignals(deal, {
+    ppmText: ppmTextCache,
+    deckText: deckTextCache
+  });
+  if (classificationSignals.suggestedStates.length > 0) {
+    allFound.investing_states = classificationSignals.suggestedStates;
+    allConfidence.investing_states = 'high';
+    allFound.investing_geography = formatStateCodesAsGeographyValue(classificationSignals.suggestedStates);
+    allConfidence.investing_geography = 'high';
+    steps.push({
+      step: 'classification_geography',
+      fields_found: 2,
+      ppm_states: classificationSignals.ppmStates,
+      deck_states: classificationSignals.deckStates,
+      suggested_states: classificationSignals.suggestedStates,
+      note: classificationSignals.missingSuggestedStates.length > 0
+        ? `Merged ${classificationSignals.missingSuggestedStates.length} additional states from the source documents into the Classification suggestion set.`
+        : 'Source-document geography was merged into the Classification suggestion set.'
+    });
   }
 
   return {
@@ -857,6 +1124,39 @@ export default async function handler(req, res) {
     }
 
     // Action: enrich a single deal via multi-step pipeline
+    if (action === 'classification-signals') {
+      const { dealId } = req.body;
+      if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
+
+      const { data: deal, error: dealErr } = await supabase
+        .from('opportunities')
+        .select('*')
+        .eq('id', dealId)
+        .single();
+
+      if (dealErr) {
+        console.error('[deal-cleanup/classification-signals] deal lookup failed', {
+          dealId,
+          message: dealErr.message
+        });
+        return res.status(500).json({ error: 'Failed to inspect the deal record' });
+      }
+
+      if (!deal) {
+        return res.status(404).json({ error: 'Deal not found' });
+      }
+
+      const { ppmText, deckText } = await loadDealSourceTexts(supabase, deal);
+      const signals = buildClassificationSignals(deal, { ppmText, deckText });
+
+      return res.status(200).json({
+        success: true,
+        deal_id: dealId,
+        ...signals
+      });
+    }
+
+    // Action: enrich a single deal via multi-step pipeline
     if (action === 'enrich-deal') {
       const { dealId } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
@@ -910,6 +1210,26 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No updates to apply' });
       }
 
+      const { data: currentDeal, error: currentDealError } = await supabase
+        .from('opportunities')
+        .select('*')
+        .eq('id', dealId)
+        .single();
+
+      if (currentDealError) {
+        console.error('[deal-cleanup/apply-enrichment] deal lookup failed', {
+          dealId,
+          message: currentDealError.message
+        });
+        return res.status(500).json({ error: 'Failed to load the deal before applying enrichment' });
+      }
+
+      if (!currentDeal) {
+        return res.status(404).json({ error: 'Deal not found' });
+      }
+
+      const availableColumns = new Set(Object.keys(currentDeal || {}));
+
       const allowedFields = Array.from(new Set([
         ...QUALITY_FIELDS.map(f => f.key),
         ...Object.values(FIELD_MAP),
@@ -921,6 +1241,7 @@ export default async function handler(req, res) {
         'fund_aum',
         'sponsor_in_deal_pct',
         'investing_geography',
+        'investing_states',
         'sec_cik',
         'date_of_first_sale',
         'total_amount_sold',
@@ -932,6 +1253,22 @@ export default async function handler(req, res) {
       for (const [key, val] of Object.entries(updates)) {
         if (allowedFields.includes(key) && val !== null && val !== undefined && val !== '') {
           safeUpdates[key] = val;
+        }
+      }
+
+      if (
+        Array.isArray(safeUpdates.investing_states)
+        && safeUpdates.investing_states.length > 0
+        && !availableColumns.has('investing_states')
+        && availableColumns.has('investing_geography')
+        && !safeUpdates.investing_geography
+      ) {
+        safeUpdates.investing_geography = formatStateCodesAsGeographyValue(safeUpdates.investing_states);
+      }
+
+      for (const key of Object.keys(safeUpdates)) {
+        if (!availableColumns.has(key) && key !== 'updated_at') {
+          delete safeUpdates[key];
         }
       }
 

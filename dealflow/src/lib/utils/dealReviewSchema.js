@@ -1,4 +1,9 @@
-import { CANONICAL_OFFERING_TYPES, normalizeOfferingType } from './dealflow-contract.js';
+import {
+	CANONICAL_OFFERING_TYPES,
+	normalizeDealComplianceFields,
+	normalizeOfferingType
+} from './dealflow-contract.js';
+import { formatStateCodesAsGeographyValue, mergeStateCodeLists } from './investing-geography.js';
 import { slugify } from './dealWorkflow.js';
 
 export const DEAL_ASSET_CLASS_OPTIONS = [
@@ -1515,6 +1520,7 @@ export function getDealReviewFieldWarning(fieldKey, value) {
 export function createDealReviewFormFromDeal(source) {
 	const form = createEmptyDealReviewForm();
 	const warnings = {};
+	const normalizedCompliance = normalizeDealComplianceFields(source || {});
 
 	for (const field of Object.values(dealFieldConfig)) {
 		if (field.type === 'entity_reference') {
@@ -1546,6 +1552,16 @@ export function createDealReviewFormFromDeal(source) {
 		}
 
 		form[field.key] = coercePrimitiveField(field, readField(source, field.readFrom));
+	}
+
+	form.offeringType = normalizedCompliance.offeringType || form.offeringType;
+	const derivedInvestingStates = mergeStateCodeLists(
+		form.investingStates,
+		ensureArray(readField(source, ['investingGeography', 'investing_geography', 'location'])),
+		[source?.state, source?.regionState]
+	);
+	if (derivedInvestingStates.length > 0) {
+		form.investingStates = derivedInvestingStates;
 	}
 
 	if (!form.slug && form.investmentName) {
@@ -1701,6 +1717,20 @@ export function buildDealReviewPayload(form, options = {}) {
 		delete payload.offeringStatus;
 	}
 
+	if (!includeFieldKeys || includeFieldKeys.has('offeringType')) {
+		const normalizedCompliance = normalizeDealComplianceFields(payload);
+		payload.offeringType = normalizedCompliance.offeringType;
+		payload.is506b = normalizedCompliance.is506b;
+	}
+
+	if (!includeFieldKeys || includeFieldKeys.has('investingStates')) {
+		const normalizedStateCodes = ensureArray(payload.investingStates);
+		payload.investingStates = normalizedStateCodes;
+		if (normalizedStateCodes.length > 0) {
+			payload.investingGeography = formatStateCodesAsGeographyValue(normalizedStateCodes);
+		}
+	}
+
 	return { payload, errors };
 }
 
@@ -1785,6 +1815,23 @@ export function normalizeDealReviewPatch(body = {}) {
 
 	if ('companyWebsite' in body) {
 		normalized.companyWebsite = String(body.companyWebsite || '').trim();
+	}
+
+	const normalizedCompliance = normalizeDealComplianceFields(normalized);
+	if ('offeringType' in normalized || 'is506b' in normalized || 'is_506b' in body) {
+		normalized.offeringType = normalizedCompliance.offeringType;
+		normalized.is506b = normalizedCompliance.is506b;
+	}
+
+	if ('investingStates' in normalized) {
+		normalized.investingStates = ensureArray(normalized.investingStates);
+		if (
+			normalized.investingStates.length > 0
+			&& !('investingGeography' in normalized)
+			&& !('investing_geography' in body)
+		) {
+			normalized.investingGeography = formatStateCodesAsGeographyValue(normalized.investingStates);
+		}
 	}
 
 	return { values: normalized, errors };

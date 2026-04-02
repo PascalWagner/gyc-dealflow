@@ -57,6 +57,10 @@
 		resolveDealLifecycleStatus,
 		slugify
 	} from '$lib/utils/dealWorkflow.js';
+	import {
+		mergeStateCodeLists,
+		STATE_NAME_BY_CODE
+	} from '$lib/utils/investing-geography.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
 
 	function listFromValue(value) {
@@ -71,6 +75,14 @@
 
 	function listToTextarea(value = []) {
 		return listFromValue(value).join('\n');
+	}
+
+	function formatStateCodesForDisplay(stateCodes = []) {
+		const normalizedStates = mergeStateCodeLists(stateCodes);
+		if (normalizedStates.length === 0) return 'None found';
+		return normalizedStates
+			.map((stateCode) => STATE_NAME_BY_CODE[stateCode] || stateCode)
+			.join(', ');
 	}
 
 	function updateListState(kind, rawValue) {
@@ -554,6 +566,12 @@
 	let teamContactsSaveState = $state('idle');
 	let lifecycleSyncState = $state('idle');
 	let secVerificationContext = $state(null);
+	let classificationSignals = $state(null);
+	let classificationSignalsState = $state('idle');
+	let classificationSignalsError = $state('');
+	let classificationSignalsDealId = $state('');
+	let classificationSignalsAppliedKey = $state('');
+	let classificationSignalsAppliedMessage = $state('');
 	let sourceRiskFactors = $state([]);
 	let highlightedRisks = $state([]);
 	let riskFactorDraft = $state('');
@@ -589,6 +607,24 @@
 	const teamContactsValidation = $derived(validateTeamContacts(teamContacts));
 	const primaryTeamContact = $derived(pickPrimaryTeamContact(teamContacts));
 	const irTeamContact = $derived(pickInvestorRelationsContact(teamContacts));
+	const classificationPpmStates = $derived(
+		Array.isArray(classificationSignals?.ppmStates) ? classificationSignals.ppmStates : []
+	);
+	const classificationDeckStates = $derived(
+		Array.isArray(classificationSignals?.deckStates) ? classificationSignals.deckStates : []
+	);
+	const classificationSuggestedStates = $derived(
+		Array.isArray(classificationSignals?.suggestedStates) ? classificationSignals.suggestedStates : []
+	);
+	const classificationCurrentStates = $derived(
+		mergeStateCodeLists(Array.isArray(form.investingStates) ? form.investingStates : [])
+	);
+	const classificationMissingSuggestedStates = $derived(
+		classificationSuggestedStates.filter((stateCode) => !classificationCurrentStates.includes(stateCode))
+	);
+	const classificationExtraStates = $derived(
+		classificationCurrentStates.filter((stateCode) => !classificationSuggestedStates.includes(stateCode))
+	);
 	const secStatus = $derived(secVerificationContext?.view?.currentStatus || 'pending');
 	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
 	const secCanAdvance = $derived(secGateResolved || secStatus === 'skipped');
@@ -797,13 +833,15 @@
 		saveMessage = '';
 	}
 
-	function updateField(fieldKey, nextValue) {
+	function applyFormPatch(patch, { shouldMarkDirty = true } = {}) {
 		const nextForm = {
 			...form,
-			[fieldKey]: nextValue
+			...patch
 		};
-		if (branchInfo.branch === 'lending_fund' && fieldKey === 'offeringType') {
-			const normalizedOfferingType = String(nextValue || '').trim().toLowerCase();
+		const patchedFieldKeys = Object.keys(patch);
+
+		if (branchInfo.branch === 'lending_fund' && patchedFieldKeys.includes('offeringType')) {
+			const normalizedOfferingType = String(nextForm.offeringType || '').trim().toLowerCase();
 			if (normalizedOfferingType === '506(c)') {
 				nextForm.availableTo = 'Accredited Investors';
 			} else if (normalizedOfferingType === '506(b)') {
@@ -813,16 +851,40 @@
 		if (branchInfo.branch === 'lending_fund' && !hasMeaningfulReviewValue(nextForm.assetClass)) {
 			nextForm.assetClass = 'Private Debt / Credit';
 		}
+
 		form = nextForm;
 		fieldErrors = {
 			...fieldErrors,
-			[fieldKey]: ''
+			...Object.fromEntries(patchedFieldKeys.map((fieldKey) => [fieldKey, '']))
 		};
 		fieldWarnings = {
 			...fieldWarnings,
-			[fieldKey]: getDealReviewFieldWarning(fieldKey, nextValue)
+			...Object.fromEntries(
+				patchedFieldKeys.map((fieldKey) => [fieldKey, getDealReviewFieldWarning(fieldKey, nextForm[fieldKey])])
+			)
 		};
-		markDirty();
+
+		if (shouldMarkDirty) {
+			markDirty();
+		}
+	}
+
+	function updateField(fieldKey, nextValue) {
+		applyFormPatch({
+			[fieldKey]: nextValue
+		});
+	}
+
+	function applyClassificationSuggestions({ auto = false } = {}) {
+		const nextInvestingStates = mergeStateCodeLists(classificationCurrentStates, classificationSuggestedStates);
+		if (nextInvestingStates.length === 0) return;
+
+		applyFormPatch({
+			investingStates: nextInvestingStates
+		});
+		classificationSignalsAppliedMessage = auto
+			? `Added ${classificationMissingSuggestedStates.length} source-backed state${classificationMissingSuggestedStates.length === 1 ? '' : 's'} to the current selection.`
+			: 'Applied the source-backed geography suggestion to Classification.';
 	}
 
 	function updateIntakeSponsorName(nextName) {
@@ -1459,6 +1521,57 @@
 		}
 	}
 
+	async function loadClassificationSignals({ force = false } = {}) {
+		if (!dealId || branchInfo.branch !== 'lending_fund') return;
+		if (!force && classificationSignalsState === 'running') return;
+		if (!force && classificationSignalsDealId === dealId && classificationSignals) return;
+
+		classificationSignalsState = 'running';
+		classificationSignalsError = '';
+		classificationSignalsAppliedMessage = '';
+
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active session to inspect Classification source signals.');
+
+			const response = await fetch('/api/deal-cleanup', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					action: 'classification-signals',
+					dealId
+				})
+			});
+			const payload = await response.json().catch(() => ({}));
+
+			if (!response.ok || !payload?.success) {
+				throw new Error(payload?.error || 'Could not inspect the Classification source documents.');
+			}
+
+			classificationSignals = payload;
+			classificationSignalsDealId = dealId;
+			classificationSignalsState = 'success';
+		} catch (error) {
+			classificationSignals = null;
+			classificationSignalsError = error?.message || 'Could not inspect the Classification source documents.';
+			classificationSignalsState = 'error';
+		}
+	}
+
+	function getClassificationSaveValidation(stage = activeStage) {
+		if (stage !== 'classification' || branchInfo.branch !== 'lending_fund') return null;
+		if (classificationSuggestedStates.length === 0) return null;
+		if (classificationCurrentStates.length > 0) return null;
+
+		return {
+			fieldKey: 'investingStates',
+			message: `The deck and PPM mention ${classificationSuggestedStates.length} target states. Select at least one state or apply the suggested geography before saving.`
+		};
+	}
+
 	function getSaveFieldKeysForStage(stage = activeStage) {
 		if (!stage || stage === 'summary') return null;
 		if (branchInfo.branch === 'lending_fund') {
@@ -1510,6 +1623,10 @@
 		const { payload: nextPayload, errors } = buildDealReviewPayload(form, {
 			includeFieldKeys: scopedFieldKeys
 		});
+		const classificationValidation = getClassificationSaveValidation(stage);
+		if (classificationValidation) {
+			errors[classificationValidation.fieldKey] = classificationValidation.message;
+		}
 		if (Object.keys(errors).length > 0) {
 			const errorLabels = Object.keys(errors).map((fieldKey) => dealFieldConfig[fieldKey]?.label || fieldKey);
 			const errorSummary = errorLabels.length <= 3
@@ -1835,6 +1952,12 @@
 		if (!dealId || dealId === previousDealId) return;
 		previousDealId = dealId;
 		autoExtractionHandled = false;
+		classificationSignals = null;
+		classificationSignalsState = 'idle';
+		classificationSignalsError = '';
+		classificationSignalsDealId = '';
+		classificationSignalsAppliedKey = '';
+		classificationSignalsAppliedMessage = '';
 		void loadDeal();
 	});
 
@@ -1865,6 +1988,23 @@
 			noScroll: true,
 			keepFocus: true
 		}).catch(() => {});
+	});
+
+	$effect(() => {
+		if (!dealId || loading || branchInfo.branch !== 'lending_fund' || activeStage !== 'classification') return;
+		if (classificationSignalsState === 'running') return;
+		if (classificationSignalsDealId === dealId && classificationSignals) return;
+		void loadClassificationSignals();
+	});
+
+	$effect(() => {
+		if (branchInfo.branch !== 'lending_fund' || activeStage !== 'classification') return;
+		if (classificationSignalsState !== 'success' || classificationSuggestedStates.length === 0) return;
+		const autoApplyKey = `${dealId}:${classificationSuggestedStates.join(',')}`;
+		if (classificationSignalsAppliedKey === autoApplyKey) return;
+		classificationSignalsAppliedKey = autoApplyKey;
+		if (dirty || classificationMissingSuggestedStates.length === 0) return;
+		applyClassificationSuggestions({ auto: true });
 	});
 
 	$effect(() => {
@@ -2250,8 +2390,70 @@
 							onupdate={updateField}
 							labelOverrides={{}}
 						/>
-						{:else if ['classification', 'static_terms', 'fees', 'portfolio_snapshot', 'sponsor_trust'].includes(activeStage)}
+					{:else if ['classification', 'static_terms', 'fees', 'portfolio_snapshot', 'sponsor_trust'].includes(activeStage)}
 							{#if branchInfo.branch === 'lending_fund'}
+								{#if activeStage === 'classification'}
+									<section class="editor-card classification-signals-card">
+										<div class="card-heading">
+											<div>
+												<h2>Classification source signals</h2>
+												<p>We compare the uploaded PPM and deck, merge the states they mention, and use that union as the recommended investing geography.</p>
+											</div>
+											{#if classificationSignalsState === 'success' && classificationSuggestedStates.length > 0}
+												<span class="classification-signals-card__badge">
+													{classificationSuggestedStates.length} states found
+												</span>
+											{/if}
+										</div>
+
+										{#if classificationSignalsState === 'running'}
+											<p class="classification-signals-card__status">Reading the deck and PPM for lending-geography references...</p>
+										{:else if classificationSignalsState === 'error'}
+											<div class="message-banner message-banner--warning">
+												{classificationSignalsError}
+											</div>
+										{:else if classificationSignalsState === 'success'}
+											<div class="classification-signals-grid">
+												<div class="classification-signal-item">
+													<span>PPM states</span>
+													<strong>{formatStateCodesForDisplay(classificationPpmStates)}</strong>
+												</div>
+												<div class="classification-signal-item">
+													<span>Deck states</span>
+													<strong>{formatStateCodesForDisplay(classificationDeckStates)}</strong>
+												</div>
+												<div class="classification-signal-item classification-signal-item--wide">
+													<span>Suggested union</span>
+													<strong>{formatStateCodesForDisplay(classificationSuggestedStates)}</strong>
+												</div>
+											</div>
+
+											{#if classificationSignalsAppliedMessage}
+												<p class="classification-signal-note classification-signal-note--success">
+													{classificationSignalsAppliedMessage}
+												</p>
+											{/if}
+
+											{#if classificationMissingSuggestedStates.length > 0}
+												<p class="classification-signal-note classification-signal-note--warning">
+													Source documents mention {formatStateCodesForDisplay(classificationMissingSuggestedStates)}, but those states are not currently selected in Classification.
+												</p>
+											{/if}
+
+											{#if classificationExtraStates.length > 0}
+												<p class="classification-signal-note">
+													Currently selected outside the source-document union: {formatStateCodesForDisplay(classificationExtraStates)}.
+												</p>
+											{/if}
+
+											<div class="classification-signals-card__actions">
+												<button type="button" class="ghost-btn" onclick={() => applyClassificationSuggestions()}>
+													Apply Suggested States
+												</button>
+											</div>
+										{/if}
+									</section>
+								{/if}
 								<LendingFundReviewSectionStage
 									eyebrow={activeStageConfig?.label || 'Review'}
 									title={activeStageConfig?.title || 'Review the deal'}
@@ -2583,6 +2785,84 @@
 			radial-gradient(circle at top right, rgba(81, 190, 123, 0.06), transparent 44%);
 		border: 1px solid rgba(31, 81, 89, 0.08);
 		box-shadow: 0 14px 32px rgba(16, 37, 42, 0.04);
+	}
+
+	.classification-signals-card {
+		gap: 18px;
+		display: grid;
+	}
+
+	.classification-signals-card__badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(31, 81, 89, 0.08);
+		color: #1f5159;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+	}
+
+	.classification-signals-card__status {
+		margin: 0;
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+
+	.classification-signals-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.classification-signal-item {
+		display: grid;
+		gap: 6px;
+		padding: 16px;
+		border-radius: 18px;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		background: rgba(255, 255, 255, 0.58);
+	}
+
+	.classification-signal-item--wide {
+		grid-column: 1 / -1;
+	}
+
+	.classification-signal-item span {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.classification-signal-item strong {
+		font-size: 15px;
+		line-height: 1.6;
+		color: var(--text-dark);
+	}
+
+	.classification-signal-note {
+		margin: 0;
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+
+	.classification-signal-note--warning {
+		color: #9c4527;
+	}
+
+	.classification-signal-note--success {
+		color: #167a52;
+	}
+
+	.classification-signals-card__actions {
+		display: flex;
+		justify-content: flex-start;
 	}
 
 	.intake-screen__header h2 {
@@ -3223,7 +3503,8 @@
 
 		.intake-basics-grid,
 		.intake-document-strip,
-		.intake-upload-grid {
+		.intake-upload-grid,
+		.classification-signals-grid {
 			grid-template-columns: 1fr;
 		}
 	}
