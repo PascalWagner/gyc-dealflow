@@ -8,6 +8,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
+    "qa:plan-wizard": "node scripts/qa-plan-wizard.mjs",
     "test:deal-card-state": "node --test --import ./scripts/register-codex-alias-loader.mjs ./scripts/test-deal-card-state.mjs",
     "audit:architecture": "node scripts/audit-architecture-sizes.mjs",
     "audit:routes": "node scripts/audit-route-contracts.mjs",

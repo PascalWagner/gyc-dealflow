@@ -11,6 +11,7 @@
 		STEP_SEQUENCE,
 		PHASE_NAMES,
 		GOAL_CARDS,
+		PLAN_ASSET_OPTIONS,
 		CAPITAL_OPTIONS,
 		READINESS_OPTIONS,
 		SOURCE_OPTIONS,
@@ -26,6 +27,7 @@
 		ASSET_CLASS_OPTIONS,
 		STRATEGY_ORDER,
 		STRATEGY_OPTIONS,
+		averageDealYieldForAsset,
 		applyGoalDefaults,
 		flowKeyToBranch,
 		formatCompactMoney,
@@ -63,6 +65,10 @@
 	let saving = false;
 	let saveMessage = '';
 	let saveTimer = null;
+	let draggedPlanSlotId = null;
+	let planDropYear = null;
+	let planDropBeforeSlotId = null;
+	let planFieldState = {};
 
 	function sequenceSourceData() {
 		const inferredBranch = wizardData._branch || forcedBranch || flowKeyToBranch(forcedFlowKey);
@@ -87,8 +93,23 @@
 	$: currentFlowKey = activeFlowKey(currentStep);
 	$: reviewRows = wizardSummaryRows(wizardData);
 	$: planPreview = generatePortfolioPlan(wizardData, allDeals);
+	$: groupedPlanYearRows = buildGroupedPlanYears(planPreview);
 	$: heroCopy = planHeroCopy(wizardData, planPreview);
 	$: phaseItems = PHASE_NAMES.map((label, index) => buildPhaseItem(label, index));
+	$: globalPlanCheckSize = parseDollar(wizardData.checkSize) || planPreview.check_size || 100000;
+	$: globalPlanYieldPct = wizardData.planTargetYieldPct !== undefined && wizardData.planTargetYieldPct !== null && wizardData.planTargetYieldPct !== ''
+		? Number(wizardData.planTargetYieldPct)
+		: Math.round(Number(planPreview.blended_coc || 0.08) * 100);
+	$: planFieldState = Object.fromEntries(
+		(Array.isArray(planPreview?.slots) ? planPreview.slots : []).map((slot) => [
+			slot.id,
+			{
+				assetClass: slot.asset_class,
+				checkSize: String(Number(slot.check_size || 0)),
+				yieldPct: (Number(slot.target_coc || 0) * 100).toFixed(1)
+			}
+		])
+	);
 	$: if (browser && initialized && currentStep) {
 		syncReviewUrl({
 			step: currentStep,
@@ -186,6 +207,13 @@
 
 	function jumpToPhase(phaseIndex) {
 		const nextIndex = sequence.findIndex((step) => phaseForStep(step) === phaseIndex);
+		if (nextIndex < 0 || nextIndex === wizardStepIndex) return;
+		validationError = '';
+		wizardStepIndex = nextIndex;
+	}
+
+	function jumpToStep(step) {
+		const nextIndex = sequence.findIndex((candidate) => candidate === step);
 		if (nextIndex < 0 || nextIndex === wizardStepIndex) return;
 		validationError = '';
 		wizardStepIndex = nextIndex;
@@ -430,8 +458,8 @@
 		});
 	}
 
-	function groupedPlanYears() {
-		const rows = Array.isArray(planPreview?.slots) ? planPreview.slots : [];
+	function buildGroupedPlanYears(plan = planPreview) {
+		const rows = Array.isArray(plan?.slots) ? plan.slots : [];
 		const grouped = new Map();
 		for (const slot of rows) {
 			const year = slot.year || new Date().getFullYear();
@@ -439,6 +467,157 @@
 			grouped.get(year).push(slot);
 		}
 		return [...grouped.entries()].sort((a, b) => a[0] - b[0]);
+	}
+
+	function cloneEditablePlanSlots() {
+		return (Array.isArray(planPreview?.slots) ? planPreview.slots : []).map((slot) => ({ ...slot }));
+	}
+
+	function sanitizePlanSlots(slots = []) {
+		return slots.map((slot, index) => {
+			const checkSize = parseDollar(slot?.check_size ?? slot?.checkSize ?? globalPlanCheckSize);
+			const targetCocRaw = Number(slot?.target_coc ?? slot?.targetCoC ?? 0);
+			const targetCoc = Math.round(((targetCocRaw > 1 ? targetCocRaw / 100 : targetCocRaw) || 0.08) * 1000) / 1000;
+			return {
+				id: Number(slot?.id) || index + 1,
+				asset_class: slot?.asset_class || 'Multi-Family',
+				strategy: slot?.strategy || null,
+				check_size: checkSize,
+				target_coc: targetCoc,
+				est_income: Math.round(checkSize * targetCoc),
+				year: Number(slot?.year) || new Date().getFullYear(),
+				filled_by: slot?.filled_by ?? null,
+				filled_name: slot?.filled_name ?? null
+			};
+		});
+	}
+
+	function persistCustomPlanSlots(slots, overrides = {}) {
+		const nextSlots = sanitizePlanSlots(slots);
+		const next = {
+			...wizardData,
+			customPlanSlots: nextSlots,
+			planSlots: nextSlots
+		};
+		if (overrides.checkSize !== undefined) next.checkSize = String(parseDollar(overrides.checkSize) || globalPlanCheckSize);
+		if (overrides.planTargetYieldPct !== undefined) next.planTargetYieldPct = overrides.planTargetYieldPct === '' ? '' : String(overrides.planTargetYieldPct);
+		setWizardData(next);
+		if (browser && forceEdit) {
+			writeUserScopedJson('gycPortfolioPlan', generatePortfolioPlan(next, allDeals));
+		}
+	}
+
+	function updateGlobalPlanCheckSize(value) {
+		const checkSize = Math.max(25000, parseDollar(value) || globalPlanCheckSize || 100000);
+		const slots = cloneEditablePlanSlots().map((slot) => ({
+			...slot,
+			check_size: checkSize,
+			est_income: Math.round(checkSize * Number(slot.target_coc || 0))
+		}));
+		persistCustomPlanSlots(slots, { checkSize });
+	}
+
+	function updateGlobalPlanYield(value) {
+		const numeric = Math.max(1, Number(value || globalPlanYieldPct || 8));
+		const targetCoc = Math.round((numeric / 100) * 1000) / 1000;
+		const slots = cloneEditablePlanSlots().map((slot) => ({
+			...slot,
+			target_coc: targetCoc,
+			est_income: Math.round(Number(slot.check_size || 0) * targetCoc)
+		}));
+		persistCustomPlanSlots(slots, { planTargetYieldPct: numeric });
+	}
+
+	function updatePlanSlotAssetClass(slotId, assetClass) {
+		const slots = cloneEditablePlanSlots();
+		const slot = slots.find((candidate) => candidate.id === slotId);
+		if (!slot) return;
+		const nextYield = averageDealYieldForAsset(assetClass, allDeals);
+		slot.asset_class = assetClass;
+		slot.target_coc = nextYield;
+		slot.est_income = Math.round(Number(slot.check_size || 0) * nextYield);
+		persistCustomPlanSlots(slots);
+	}
+
+	function updatePlanSlotCheckSize(slotId, value) {
+		const nextCheck = Math.max(25000, parseDollar(value) || 0);
+		if (!nextCheck) return;
+		const slots = cloneEditablePlanSlots();
+		const slot = slots.find((candidate) => candidate.id === slotId);
+		if (!slot) return;
+		slot.check_size = nextCheck;
+		slot.est_income = Math.round(nextCheck * Number(slot.target_coc || 0));
+		persistCustomPlanSlots(slots);
+	}
+
+	function updatePlanSlotYield(slotId, value) {
+		const numeric = Number(value);
+		if (!Number.isFinite(numeric) || numeric <= 0) return;
+		const targetCoc = Math.round((numeric / 100) * 1000) / 1000;
+		const slots = cloneEditablePlanSlots();
+		const slot = slots.find((candidate) => candidate.id === slotId);
+		if (!slot) return;
+		slot.target_coc = targetCoc;
+		slot.est_income = Math.round(Number(slot.check_size || 0) * targetCoc);
+		persistCustomPlanSlots(slots);
+	}
+
+	function beginPlanDrag(slotId) {
+		draggedPlanSlotId = slotId;
+		planDropBeforeSlotId = null;
+	}
+
+	function hoverPlanDrop(event, year, beforeSlotId = null) {
+		event.preventDefault();
+		planDropYear = year;
+		planDropBeforeSlotId = beforeSlotId;
+	}
+
+	function clearPlanYearHover(year) {
+		if (planDropYear === year && !planDropBeforeSlotId) planDropYear = null;
+	}
+
+	function clearPlanSlotHover(slotId) {
+		if (planDropBeforeSlotId === slotId) planDropBeforeSlotId = null;
+	}
+
+	function resetPlanDragState() {
+		draggedPlanSlotId = null;
+		planDropYear = null;
+		planDropBeforeSlotId = null;
+	}
+
+	function applyPlanDrop(event, year, beforeSlotId = null) {
+		event.preventDefault();
+		if (!draggedPlanSlotId) return;
+
+		const slots = cloneEditablePlanSlots();
+		const fromIndex = slots.findIndex((candidate) => candidate.id === draggedPlanSlotId);
+		if (fromIndex < 0) {
+			resetPlanDragState();
+			return;
+		}
+
+		const [moved] = slots.splice(fromIndex, 1);
+		moved.year = year;
+
+		if (beforeSlotId) {
+			const insertIndex = slots.findIndex((candidate) => candidate.id === beforeSlotId);
+			if (insertIndex >= 0) {
+				slots.splice(insertIndex, 0, moved);
+			} else {
+				slots.push(moved);
+			}
+		} else {
+			const firstFutureIndex = slots.findIndex((candidate) => Number(candidate.year) > year);
+			const lastSameYearIndex = slots.reduce((lastIndex, candidate, index) => (Number(candidate.year) === year ? index : lastIndex), -1);
+			if (lastSameYearIndex >= 0) slots.splice(lastSameYearIndex + 1, 0, moved);
+			else if (firstFutureIndex >= 0) slots.splice(firstFutureIndex, 0, moved);
+			else slots.push(moved);
+		}
+
+		persistCustomPlanSlots(slots);
+		resetPlanDragState();
 	}
 
 	function riskDollarRange(option) {
@@ -983,48 +1162,159 @@
 			</label>
 		{:else if currentStep === STEP.PLAN}
 			<div class="plan-stage">
-				<div class="plan-summary-grid">
+				<div class="plan-summary-grid plan-summary-grid--wide">
 					<div class="plan-metric">
 						<div class="plan-metric-label">Total Capital</div>
 						<div class="plan-metric-value">{formatCompactMoney(planPreview.total_capital)}</div>
 					</div>
 					<div class="plan-metric">
-						<div class="plan-metric-label">Check Size</div>
+						<div class="plan-metric-label">Average Check</div>
 						<div class="plan-metric-value">{formatCompactMoney(planPreview.check_size)}</div>
 					</div>
 					<div class="plan-metric">
 						<div class="plan-metric-label">Target</div>
 						<div class="plan-metric-value">{formatCompactMoney(planPreview.target_income)}</div>
 					</div>
+					<div class="plan-metric">
+						<div class="plan-metric-label">Average Yield</div>
+						<div class="plan-metric-value">{Math.round(Number(planPreview.blended_coc || 0.08) * 100)}%</div>
+					</div>
+					<div class="plan-metric">
+						<div class="plan-metric-label">Annual Income</div>
+						<div class="plan-metric-value">{formatCompactMoney(planPreview.slots.reduce((sum, slot) => sum + Number(slot.est_income || 0), 0))}/yr</div>
+					</div>
 				</div>
 
-				<div class="plan-roster">
-					{#each groupedPlanYears() as [year, slots], yearIndex}
-						<div class="plan-year">
+				<div class="plan-controls-grid">
+					<label class="plan-control">
+						<span>Global Check Size</span>
+						<input
+							data-testid="plan-global-check"
+							class="plan-control-input"
+							type="number"
+							min="25000"
+							step="25000"
+							value={globalPlanCheckSize}
+							onchange={(event) => updateGlobalPlanCheckSize(event.currentTarget.value)}
+						/>
+					</label>
+					<label class="plan-control">
+						<span>Global Yield Target</span>
+						<div class="plan-percent-input">
+							<input
+								data-testid="plan-global-yield"
+								class="plan-control-input"
+								type="number"
+								min="1"
+								step="0.5"
+								value={globalPlanYieldPct}
+								onchange={(event) => updateGlobalPlanYield(event.currentTarget.value)}
+							/>
+							<strong>%</strong>
+						</div>
+					</label>
+				</div>
+
+				<div class="plan-stage-note">
+					Drag rows between years to change timing. Global controls update the full plan, and each row can override its own asset class, check, and yield.
+				</div>
+
+				<div class="plan-roster plan-roster--interactive">
+					{#each groupedPlanYearRows as [year, slots], yearIndex}
+						<section
+							class="plan-year"
+							class:plan-year--drop-target={planDropYear === year && !planDropBeforeSlotId}
+							data-testid={`plan-year-${year}`}
+							ondragover={(event) => hoverPlanDrop(event, year)}
+							ondrop={(event) => applyPlanDrop(event, year)}
+							ondragleave={() => clearPlanYearHover(year)}
+						>
 							<div class="plan-year-head">
 								<span>Year {yearIndex + 1} ({year})</span>
 								<span>{slots.length} slot{slots.length === 1 ? '' : 's'}</span>
 							</div>
 							{#each slots as slot}
-								<div class="plan-slot">
-									<div>
-										<div class="plan-slot-title">{slot.asset_class}</div>
-										<div class="plan-slot-copy">{formatCompactMoney(slot.check_size)} check • ~{Math.round((slot.target_coc || 0) * 100)}% yield</div>
+								{#key `${slot.id}:${slot.year}:${slot.asset_class}:${slot.check_size}:${slot.target_coc}` }
+									<div
+										class="plan-slot plan-slot--interactive"
+										class:plan-slot--drop-target={planDropBeforeSlotId === slot.id}
+										data-testid={`plan-slot-${slot.id}`}
+										draggable="true"
+										ondragstart={() => beginPlanDrag(slot.id)}
+										ondragend={resetPlanDragState}
+										ondragover={(event) => hoverPlanDrop(event, year, slot.id)}
+										ondrop={(event) => applyPlanDrop(event, year, slot.id)}
+										ondragleave={() => clearPlanSlotHover(slot.id)}
+									>
+										<div class="plan-drag-handle" aria-hidden="true">≡</div>
+										<div class="plan-slot-fields">
+											<label class="plan-slot-field">
+												<span>Asset Class</span>
+												<select
+													data-testid={`slot-asset-${slot.id}`}
+													class="plan-slot-select"
+													bind:value={planFieldState[slot.id].assetClass}
+													onchange={(event) => updatePlanSlotAssetClass(slot.id, event.currentTarget.value)}
+												>
+													{#each PLAN_ASSET_OPTIONS as option}
+														<option value={option.value}>{option.label}</option>
+													{/each}
+												</select>
+											</label>
+											<label class="plan-slot-field">
+												<span>Check</span>
+												<input
+													data-testid={`slot-check-${slot.id}`}
+													class="plan-slot-input"
+													type="number"
+													min="25000"
+													step="25000"
+													bind:value={planFieldState[slot.id].checkSize}
+													onchange={(event) => updatePlanSlotCheckSize(slot.id, event.currentTarget.value)}
+												/>
+											</label>
+											<label class="plan-slot-field plan-slot-field--yield">
+												<span>Yield</span>
+												<div class="plan-percent-input">
+													<input
+														data-testid={`slot-yield-${slot.id}`}
+														class="plan-slot-input"
+														type="number"
+														min="1"
+														step="0.5"
+														bind:value={planFieldState[slot.id].yieldPct}
+														onchange={(event) => updatePlanSlotYield(slot.id, event.currentTarget.value)}
+													/>
+													<strong>%</strong>
+												</div>
+											</label>
+										</div>
+										<div class="plan-slot-income" data-testid={`slot-income-${slot.id}`}>{formatCompactMoney(slot.est_income)}/yr</div>
 									</div>
-									<div class="plan-slot-income">{formatCompactMoney(slot.est_income)}/yr</div>
-								</div>
+								{/key}
 							{/each}
-						</div>
+						</section>
 					{/each}
 				</div>
 			</div>
 		{:else if currentStep === STEP.PROFILE_REVIEW}
 			<div class="review-grid">
 				{#each reviewRows as row}
-					<div class="review-row">
-						<span>{row.label}</span>
-						<strong>{row.value}</strong>
-					</div>
+					<button
+						type="button"
+						class="review-row"
+						data-testid={`review-row-${row.step}`}
+						onclick={() => jumpToStep(row.step)}
+					>
+						<div class="review-row-copy">
+							<span>{row.label}</span>
+							<small>{PHASE_NAMES[phaseForStep(row.step)]}</small>
+						</div>
+						<div class="review-row-value">
+							<strong>{row.value}</strong>
+							<span class="review-row-arrow">›</span>
+						</div>
+					</button>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.COMPLETION}
@@ -1221,6 +1511,10 @@
 		gap: 12px;
 	}
 
+	.plan-summary-grid--wide {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+
 	.plan-metric {
 		padding: 16px;
 		border: 1px solid var(--border, #dde5e8);
@@ -1243,6 +1537,72 @@
 		color: var(--text-dark, #141413);
 	}
 
+	.plan-controls-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.plan-control {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 16px;
+		border: 1px solid var(--border, #dde5e8);
+		border-radius: 14px;
+		background: #fff;
+	}
+
+	.plan-control span,
+	.plan-slot-field span {
+		font-size: 11px;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--text-muted, #607179);
+	}
+
+	.plan-control-input,
+	.plan-slot-input,
+	.plan-slot-select {
+		width: 100%;
+		border: 1px solid var(--border, #dde5e8);
+		border-radius: 10px;
+		background: #fff;
+		padding: 10px 12px;
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--text-dark, #141413);
+	}
+
+	.plan-control-input:focus,
+	.plan-slot-input:focus,
+	.plan-slot-select:focus {
+		outline: 2px solid rgba(81, 190, 123, 0.18);
+		border-color: var(--primary, #51be7b);
+	}
+
+	.plan-percent-input {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.plan-percent-input strong {
+		font-size: 15px;
+		color: var(--text-dark, #141413);
+	}
+
+	.plan-stage-note {
+		padding: 14px 16px;
+		border: 1px solid rgba(81, 190, 123, 0.14);
+		border-radius: 14px;
+		background: rgba(81, 190, 123, 0.06);
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--text-secondary, #607179);
+	}
+
 	.plan-roster {
 		display: grid;
 		gap: 14px;
@@ -1253,6 +1613,12 @@
 		border: 1px solid var(--border, #dde5e8);
 		border-radius: 14px;
 		background: #fff;
+		transition: border-color 0.18s ease, background 0.18s ease;
+	}
+
+	.plan-year--drop-target {
+		border-color: var(--primary, #51be7b);
+		background: rgba(81, 190, 123, 0.05);
 	}
 
 	.plan-year-head,
@@ -1282,6 +1648,41 @@
 		padding-bottom: 0;
 	}
 
+	.plan-slot--interactive {
+		align-items: stretch;
+		gap: 14px;
+		padding: 14px 0;
+	}
+
+	.plan-slot--drop-target {
+		border-top: 2px solid var(--primary, #51be7b);
+	}
+
+	.plan-drag-handle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		color: var(--text-muted, #607179);
+		font-size: 18px;
+		font-weight: 700;
+		cursor: grab;
+		user-select: none;
+	}
+
+	.plan-slot-fields {
+		flex: 1;
+		display: grid;
+		grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.plan-slot-field {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
 	.plan-slot-title {
 		font-size: 14px;
 		font-weight: 800;
@@ -1297,6 +1698,9 @@
 	.plan-slot-income {
 		font-weight: 800;
 		color: var(--primary, #51be7b);
+		align-self: center;
+		min-width: 88px;
+		text-align: right;
 	}
 
 	.review-grid {
@@ -1309,17 +1713,51 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 16px;
+		width: 100%;
 		padding: 12px 14px;
 		border: 1px solid var(--border-light, #edf1f2);
 		border-radius: 12px;
 		background: #fff;
 		font-size: 13px;
 		color: var(--text-secondary, #607179);
+		cursor: pointer;
+		text-align: left;
+		transition: border-color 0.18s ease, transform 0.18s ease;
+	}
+
+	.review-row:hover {
+		border-color: rgba(81, 190, 123, 0.3);
+		transform: translateY(-1px);
+	}
+
+	.review-row-copy,
+	.review-row-value {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.review-row-copy small {
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--text-muted, #607179);
 	}
 
 	.review-row strong {
 		color: var(--text-dark, #141413);
 		text-align: right;
+	}
+
+	.review-row-value {
+		align-items: flex-end;
+	}
+
+	.review-row-arrow {
+		font-size: 16px;
+		font-weight: 800;
+		color: var(--primary, #51be7b);
 	}
 
 	.completion-panel {
@@ -1373,7 +1811,10 @@
 	@media (max-width: 900px) {
 		.goal-grid,
 		.choice-grid,
-		.plan-summary-grid {
+		.plan-summary-grid,
+		.plan-summary-grid--wide,
+		.plan-controls-grid,
+		.plan-slot-fields {
 			grid-template-columns: 1fr;
 		}
 
@@ -1386,6 +1827,12 @@
 		.review-row {
 			flex-direction: column;
 			align-items: flex-start;
+		}
+
+		.plan-slot-income,
+		.review-row-value {
+			align-items: flex-start;
+			text-align: left;
 		}
 	}
 

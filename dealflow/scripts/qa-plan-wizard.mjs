@@ -166,6 +166,8 @@ async function installApiMocks(page, fixture) {
 	const requestFailures = [];
 	const consoleErrors = [];
 	const pageErrors = [];
+	let currentBuyBox = structuredClone(fixture);
+	let currentPlanRecord = null;
 
 	page.on('requestfailed', (request) => {
 		if (request.url().startsWith('https://fonts.googleapis.com/') || request.url().startsWith('https://fonts.gstatic.com/')) {
@@ -185,10 +187,13 @@ async function installApiMocks(page, fixture) {
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
-				body: JSON.stringify({ success: true, buyBox: fixture })
+				body: JSON.stringify({ success: true, buyBox: currentBuyBox })
 			});
 			return;
 		}
+
+		const body = JSON.parse(route.request().postData() || '{}');
+		currentBuyBox = structuredClone(body?.wizardData || currentBuyBox);
 
 		await route.fulfill({
 			status: 200,
@@ -200,6 +205,8 @@ async function installApiMocks(page, fixture) {
 	await page.route('**/api/userdata**', async (route) => {
 		const url = new URL(route.request().url());
 		if (route.request().method() === 'POST') {
+			const body = JSON.parse(route.request().postData() || '{}');
+			if (body?.type === 'plan') currentPlanRecord = structuredClone(body?.data || null);
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
@@ -213,7 +220,11 @@ async function installApiMocks(page, fixture) {
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
-				body: JSON.stringify({ records: [], count: 0, type })
+				body: JSON.stringify({
+					records: type === 'plan' && currentPlanRecord ? [currentPlanRecord] : [],
+					count: type === 'plan' && currentPlanRecord ? 1 : 0,
+					type
+				})
 			});
 			return;
 		}
@@ -410,14 +421,180 @@ async function assertTitle(page, expected) {
 	);
 }
 
+async function assertTitleIncludes(page, expectedSubstring) {
+	await page.waitForFunction((needle) => {
+		const el = document.querySelector('.ob-title');
+		return el?.textContent?.includes(needle);
+	}, expectedSubstring);
+	const title = (await page.locator('.ob-title').textContent())?.trim() || '';
+	assert(title.includes(expectedSubstring), `expected wizard title to include "${expectedSubstring}", received "${title}"`);
+}
+
+async function reopenReview(page, branch) {
+	await page.goto(`${BASE_URL}/app/plan?stage=profile-review&edit=1&branch=${branch}&flow=paid_${branch}`);
+	await page.waitForLoadState('networkidle');
+	await assertTitle(page, 'Your Investment Profile');
+}
+
+async function dragAndDropSlot(page, sourceSelector, targetSelector) {
+	await page.evaluate(({ sourceSelector, targetSelector }) => {
+		const source = document.querySelector(sourceSelector);
+		const target = document.querySelector(targetSelector);
+		if (!source || !target) throw new Error(`Missing drag target: ${sourceSelector} -> ${targetSelector}`);
+		const dataTransfer = new DataTransfer();
+		source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer }));
+		target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
+		target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
+		source.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer }));
+	}, { sourceSelector, targetSelector });
+}
+
+async function runReviewScenario(page, branch, config) {
+	await reopenReview(page, branch);
+	const reviewRows = page.locator('[data-testid^="review-row-"]');
+	assert((await reviewRows.count()) >= 18, `${branch}: profile review should show the full question index`);
+
+	await page.locator('[data-testid="review-row-re-professional"]').click();
+	await page.waitForLoadState('networkidle');
+	await assertTitle(page, 'Do you have Real Estate Professional status?');
+
+	await reopenReview(page, branch);
+	const goalRow = branch === 'cashflow' ? 'review-row-income-target' : branch === 'growth' ? 'review-row-growth-target' : 'review-row-tax-target';
+	await page.locator(`[data-testid="${goalRow}"]`).click();
+	await page.waitForLoadState('networkidle');
+	await assertTitle(page, config.goalTitle);
+
+	await reopenReview(page, branch);
+	await page.locator('[data-testid="review-row-distributions"]').click();
+	await page.waitForLoadState('networkidle');
+	await assertTitle(page, 'How often do you want to get paid?');
+}
+
+async function runPlanBuilderInteractionScenario(browser) {
+	const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+	const page = await context.newPage();
+	const errors = await installApiMocks(page, branchFixtures.cashflow.wizardData);
+	await seedSession(page);
+
+	await page.goto(`${BASE_URL}/app/plan?stage=plan&edit=1&branch=cashflow&flow=paid_cashflow`);
+	await page.waitForLoadState('networkidle');
+	await expectWizardShell(page);
+	await assertTitleIncludes(page, "Here's your plan to reach");
+
+	const globalCheck = page.locator('[data-testid="plan-global-check"]');
+	const globalYield = page.locator('[data-testid="plan-global-yield"]');
+	await globalCheck.fill('150000');
+	await globalCheck.dispatchEvent('change');
+	await globalYield.fill('7.5');
+	await globalYield.dispatchEvent('change');
+	await page.waitForFunction(() => document.querySelector('[data-testid^="slot-check-"]')?.value === '150000');
+	await page.waitForFunction(() => document.querySelector('[data-testid^="slot-yield-"]')?.value === '7.5');
+
+	const firstSlot = page.locator('[data-testid^="plan-slot-"]').first();
+	const firstSlotId = await firstSlot.getAttribute('data-testid');
+	assert(firstSlotId, 'cashflow: first plan slot test id missing');
+
+	const yearSections = page.locator('[data-testid^="plan-year-"]');
+	assert((await yearSections.count()) >= 2, 'cashflow: plan builder should render multiple years');
+	const secondYearId = await yearSections.nth(1).getAttribute('data-testid');
+	assert(secondYearId, 'cashflow: missing second year test id');
+	await dragAndDropSlot(page, `[data-testid="${firstSlotId}"]`, `[data-testid="${secondYearId}"]`);
+	await page.waitForFunction(({ slotId, targetYear }) => {
+		const yearSection = document.querySelector(`[data-testid="${targetYear}"]`);
+		return !!yearSection?.querySelector(`[data-testid="${slotId}"]`);
+	}, { slotId: firstSlotId, targetYear: secondYearId });
+
+	await page.waitForTimeout(1500);
+	await page.reload();
+	await page.waitForLoadState('networkidle');
+	await expectWizardShell(page);
+	await assertTitleIncludes(page, "Here's your plan to reach");
+	await page.waitForFunction(({ slotId, targetYear }) => {
+		const yearSection = document.querySelector(`[data-testid="${targetYear}"]`);
+		const slot = yearSection?.querySelector(`[data-testid="${slotId}"]`);
+		if (!slot) return false;
+		const slotKey = slotId.replace('plan-slot-', '');
+		const checkInput = yearSection.querySelector(`[data-testid="slot-check-${slotKey}"]`);
+		const yieldInput = yearSection.querySelector(`[data-testid="slot-yield-${slotKey}"]`);
+		return checkInput?.value === '150000' && yieldInput?.value === '7.5';
+	}, { slotId: firstSlotId, targetYear: secondYearId });
+
+	await page.getByRole('button', { name: 'Next' }).click();
+	await page.waitForLoadState('networkidle');
+	await assertTitle(page, 'Invest alongside other LPs');
+	await page.getByRole('button', { name: 'Build My Plan →' }).click();
+	await page.waitForLoadState('networkidle');
+	await assertTitle(page, 'Your Investment Profile');
+
+	assert.deepEqual(errors.consoleErrors, [], 'plan builder: console errors');
+	assert.deepEqual(errors.pageErrors, [], 'plan builder: page errors');
+	assert.deepEqual(errors.requestFailures, [], 'plan builder: request failures');
+
+	await context.close();
+}
+
+async function runPlanRowOverrideScenario(browser) {
+	const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+	const page = await context.newPage();
+	const errors = await installApiMocks(page, branchFixtures.cashflow.wizardData);
+	await seedSession(page);
+
+	await page.goto(`${BASE_URL}/app/plan?stage=plan&edit=1&branch=cashflow&flow=paid_cashflow`);
+	await page.waitForLoadState('networkidle');
+	await expectWizardShell(page);
+	await assertTitleIncludes(page, "Here's your plan to reach");
+
+	const rowAsset = page.locator('[data-testid="slot-asset-1"]');
+	const rowCheck = page.locator('[data-testid="slot-check-1"]');
+	const rowYield = page.locator('[data-testid="slot-yield-1"]');
+
+	await rowAsset.selectOption('Lending');
+	await page.waitForTimeout(500);
+	assert.equal(await rowAsset.inputValue(), 'Lending', 'cashflow row override: asset class should update');
+
+	await rowCheck.fill('175000');
+	await rowCheck.press('Tab');
+	await page.waitForTimeout(500);
+	assert.equal(await rowCheck.inputValue(), '175000', 'cashflow row override: check size should update');
+
+	await rowYield.fill('9.5');
+	await rowYield.press('Tab');
+	await page.waitForTimeout(500);
+	assert.equal(await rowYield.inputValue(), '9.5', 'cashflow row override: yield should update');
+
+	await page.waitForTimeout(1500);
+	await page.reload();
+	await page.waitForLoadState('networkidle');
+	assert.equal(await page.locator('[data-testid="slot-asset-1"]').inputValue(), 'Lending', 'cashflow row override: asset class should persist');
+	assert.equal(await page.locator('[data-testid="slot-check-1"]').inputValue(), '175000', 'cashflow row override: check size should persist');
+	assert.equal(await page.locator('[data-testid="slot-yield-1"]').inputValue(), '9.5', 'cashflow row override: yield should persist');
+
+	assert.deepEqual(errors.consoleErrors, [], 'plan row override: console errors');
+	assert.deepEqual(errors.pageErrors, [], 'plan row override: page errors');
+	assert.deepEqual(errors.requestFailures, [], 'plan row override: request failures');
+
+	await context.close();
+}
+
 async function main() {
 	const browser = await chromium.launch({ headless: true });
 	try {
 		for (const [branch, config] of Object.entries(branchFixtures)) {
 			await runBranchScenario(browser, branch, config);
+			const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+			const page = await context.newPage();
+			const errors = await installApiMocks(page, config.wizardData);
+			await seedSession(page);
+			await runReviewScenario(page, branch, config);
+			assert.deepEqual(errors.consoleErrors, [], `${branch} review: console errors`);
+			assert.deepEqual(errors.pageErrors, [], `${branch} review: page errors`);
+			assert.deepEqual(errors.requestFailures, [], `${branch} review: request failures`);
+			await context.close();
 		}
+		await runPlanBuilderInteractionScenario(browser);
+		await runPlanRowOverrideScenario(browser);
 		await runPartialProgressScenario(browser);
-		console.log('Plan wizard QA passed for cashflow, growth, tax, and partial-progress returning user scenarios.');
+		console.log('Plan wizard QA passed for cashflow, growth, tax, profile review jump scenarios, global plan controls, row overrides, drag-and-drop timing changes, and partial-progress returning user scenarios.');
 	} finally {
 		await browser.close();
 	}
