@@ -1,4 +1,4 @@
-import { getDealHistoricalReturns, isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
+import { getDealHistoricalReturns, isDebtOrLendingDeal } from './dealReturns.js';
 
 const DEFAULT_HERO_PRESET = {
 	gradient: 'linear-gradient(135deg, #0A1E21 0%, #1F5159 100%)',
@@ -72,11 +72,26 @@ function getHeroPreset(assetClassText, isLendingDeal) {
 
 function getActualHeroImage(deal = {}) {
 	return firstDefined(
+		deal.coverImageUrl,
+		deal.cover_image_url,
+		deal.heroMediaUrl,
+		deal.hero_media_url,
 		deal.propertyImageUrl,
 		deal.property_image_url,
 		deal.imageUrl,
 		deal.image_url
 	);
+}
+
+export function hasRenderableHeroMedia(deal = {}, { allowGenericFallback = false } = {}) {
+	const actualImageUrl = getActualHeroImage(deal);
+	if (actualImageUrl) return true;
+
+	const heroConfig = getDealCardHeroConfig(deal);
+	if (!heroConfig) return false;
+	if (heroConfig.variant === 'lending-returns' || heroConfig.variant === 'lending-empty') return true;
+	if (allowGenericFallback && heroConfig.variant === 'fallback') return true;
+	return false;
 }
 
 export function getLendingHeroLabel(deal = {}) {

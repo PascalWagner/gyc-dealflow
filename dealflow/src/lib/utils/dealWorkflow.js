@@ -1,4 +1,5 @@
 import { getDealOperatorName } from './dealSponsors.js';
+import { hasRenderableHeroMedia } from './dealCardHero.js';
 import {
 	DEAL_SUBMISSION_INTENT_LABELS,
 	DEAL_SUBMISSION_SURFACE_LABELS,
@@ -187,18 +188,7 @@ function buildRequiredFieldChecks(deal) {
 		},
 		{
 			label: 'Cover image or hero media',
-			present: hasMeaningfulValue(
-				firstMeaningfulValue(deal, [
-					'cover_image_url',
-					'coverImageUrl',
-					'hero_media_url',
-					'heroMediaUrl',
-					'property_image_url',
-					'propertyImageUrl',
-					'image_url',
-					'imageUrl'
-				])
-			)
+			present: hasRenderableHeroMedia(deal)
 		},
 		{
 			label: 'Return or payout metric',

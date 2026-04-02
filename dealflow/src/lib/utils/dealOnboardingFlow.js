@@ -10,6 +10,7 @@ import {
 	resolveDealCatalogState,
 	resolveDealLifecycleStatus
 } from './dealWorkflow.js';
+import { hasRenderableHeroMedia } from './dealCardHero.js';
 
 export const DEAL_ONBOARDING_STAGE_ORDER = ['intake', 'sec', 'team', 'overview', 'details', 'risks', 'summary'];
 
@@ -540,6 +541,10 @@ export function createDealOnboardingFieldValueMap(source = {}) {
 function hasFieldValue(source, fieldKey) {
 	const field = dealFieldConfig[fieldKey];
 	if (!field) return hasMeaningfulString(source?.[fieldKey]);
+
+	if (fieldKey === 'coverImageUrl' || fieldKey === 'heroMediaUrl') {
+		return hasRenderableHeroMedia(source);
+	}
 
 	const value = getFieldValue(source, fieldKey);
 
