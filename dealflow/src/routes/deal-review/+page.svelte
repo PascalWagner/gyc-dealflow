@@ -1922,6 +1922,12 @@
 		return await saveDeal({ stage: activeStage });
 	}
 
+	async function continueToNextStage() {
+		const targetStage = nextStage;
+		if (!targetStage || targetStage === activeStage) return false;
+		return await navigateToStage(targetStage, { allowAdvance: true });
+	}
+
 	async function navigateToStage(stage, { from = '', allowAdvance = false } = {}) {
 		if (!dealId) return false;
 		const targetStage = stage;
@@ -2739,28 +2745,30 @@
 					{/if}
 
 					{#if activeStage !== 'team'}
-						<div class="form-footer wizard-footer">
-							<div class="wizard-footer__left">
-								{#if activeStage !== 'intake' && previousStage && previousStage !== activeStage}
-									<button type="button" class="ghost-btn" onclick={() => navigateToStage(previousStage)}>
-										Back
-									</button>
-								{/if}
+						{#key `${activeStage}:${nextStage}:${previousStage}`}
+							<div class="form-footer wizard-footer">
+								<div class="wizard-footer__left">
+									{#if activeStage !== 'intake' && previousStage && previousStage !== activeStage}
+										<button type="button" class="ghost-btn" onclick={() => navigateToStage(previousStage)}>
+											Back
+										</button>
+									{/if}
 								</div>
 								<div class="wizard-footer__right">
-										<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || reviewFooterBusy}>
-											Reset unsaved changes
-										</button>
-										<button type="submit" class="ghost-btn" disabled={reviewFooterBusy}>
-											{reviewFooterBusy ? 'Loading...' : 'Save changes'}
-										</button>
-										{#if activeStage !== 'summary' && nextStage && nextStage !== activeStage}
-											<button type="button" class="primary-btn" disabled={reviewFooterBusy} onclick={() => navigateToStage(nextStage, { allowAdvance: true })}>
-												Save & Continue
+											<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || reviewFooterBusy}>
+												Reset unsaved changes
 											</button>
-										{/if}
+											<button type="submit" class="ghost-btn" disabled={reviewFooterBusy}>
+												{reviewFooterBusy ? 'Loading...' : 'Save changes'}
+											</button>
+											{#if activeStage !== 'summary' && nextStage && nextStage !== activeStage}
+												<button type="button" class="primary-btn" disabled={reviewFooterBusy} onclick={continueToNextStage}>
+													Save & Continue
+												</button>
+											{/if}
+										</div>
 								</div>
-							</div>
+						{/key}
 					{/if}
 				</form>
 
