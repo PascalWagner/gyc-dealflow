@@ -28,8 +28,6 @@
 		})
 	);
 	const metricPortfolio = $derived.by(() => portfolioView.metricEntries || []);
-	const pendingEntries = $derived.by(() => portfolioView.pendingEntries || []);
-
 	// Derived
 	const branch = $derived(wizardData._branch || '');
 	const hasGoals = $derived(Boolean(goals && goals.targetIncome > 0));
@@ -159,15 +157,6 @@
 				link: 'Review Deals',
 				page: 'deals',
 				href: '/app/deals?tab=review'
-			});
-		}
-		if (pendingEntries.length > 0) {
-			items.push({
-				icon: 'plan',
-				text: `<strong>${pendingEntries.length} invested deal${pendingEntries.length !== 1 ? 's are' : ' is'} pending review</strong> — visible in your portfolio now, but not counted in totals yet`,
-				link: 'Open Portfolio',
-				page: 'portfolio',
-				href: '/app/portfolio'
 			});
 		}
 		return items;
@@ -339,13 +328,6 @@
 			</div>
 		{/if}
 
-		{#if pendingEntries.length > 0}
-			<div class="dashboard-pending-note">
-				<strong>{pendingEntries.length} invested deal{pendingEntries.length !== 1 ? 's are' : ' is'} pending review.</strong>
-				They are visible in your portfolio now and will count toward roll-up metrics after review is complete.
-			</div>
-		{/if}
-
 		{#if hasGoalContext && needsPlanSetup}
 			<div class="plan-cta-card ly-surface ly-surface--muted">
 				<div>
@@ -493,16 +475,6 @@
 		align-items: flex-start;
 		gap: 14px;
 		margin-top: 28px;
-	}
-	.dashboard-pending-note {
-		margin: 18px 0 0;
-		padding: 14px 18px;
-		border-radius: 18px;
-		background: rgba(245, 158, 11, 0.08);
-		border: 1px solid rgba(245, 158, 11, 0.18);
-		font-size: 14px;
-		line-height: 1.6;
-		color: #7c5a00;
 	}
 	.dashboard-onboarding-link {
 		font-family: var(--font-ui);

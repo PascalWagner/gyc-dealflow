@@ -442,14 +442,27 @@
 		);
 	}
 
-		function openWizard(editMode = hasSavedPlanProgress) {
-			if (!canViewFullPlan) {
-				goto('/onboarding');
-				return;
-			}
-			wizardForceEdit = Boolean(editMode);
-			showWizard = true;
+	function openWizard(editMode = hasSavedPlanProgress) {
+		if (!canViewFullPlan) {
+			goto('/onboarding');
+			return;
 		}
+		wizardForceEdit = Boolean(editMode);
+		showWizard = true;
+	}
+
+	function openPlanEditor() {
+		if (!canViewFullPlan) {
+			goto('/onboarding');
+			return;
+		}
+		const branch = String(plan?._branch || wizardData._branch || wizardData.branch || 'cashflow').toLowerCase();
+		wizardStage = 'plan';
+		wizardBranch = ['cashflow', 'growth', 'tax'].includes(branch) ? branch : 'cashflow';
+		wizardFlowKey = `paid_${wizardBranch}`;
+		wizardForceEdit = true;
+		showWizard = true;
+	}
 
 	function openInvestorProfile() {
 		goto('/onboarding');
@@ -463,9 +476,11 @@
 		const nextWizard = normalizeWizardData(detail.wizardData || wizardData || {});
 		wizardData = nextWizard;
 		plan = nextWizard;
-		if (detail.persistedPortfolioPlan && detail.portfolioPlan) {
+		if (detail.portfolioPlan) {
 			portfolioPlan = detail.portfolioPlan;
-			writeUserScopedJson('gycPortfolioPlan', detail.portfolioPlan);
+			if (detail.persistedPortfolioPlan) {
+				writeUserScopedJson('gycPortfolioPlan', detail.portfolioPlan);
+			}
 		}
 		hasPlan = hasCompletedPlan(nextWizard, detail.portfolioPlan || portfolioPlan);
 	}
@@ -981,6 +996,27 @@
 			valueForYear: (item) => item.cumulativeIncome
 		};
 	});
+	const roadmapPlanYears = $derived.by(() => {
+		const years = Array.isArray(printSchedule?.years) ? printSchedule.years : [];
+		let cumulativeCapital = 0;
+		return years.map((year, index) => {
+			const yearCapital = (year.slots || []).reduce((sum, slot) => sum + Number(slot.checkSize || 0), 0);
+			cumulativeCapital += yearCapital;
+			const metricValue = goalKey === 'growth'
+				? Math.round(cumulativeCapital * 1.12)
+				: goalKey === 'tax'
+					? Math.round(cumulativeCapital * 0.18)
+					: Number(year.cumulativeIncome || 0);
+			return {
+				index: year.index || index + 1,
+				year: year.year,
+				slots: year.slots || [],
+				cumulativeCapital,
+				metricValue,
+				progressPct: annualTargetAmount > 0 ? Math.min(100, Math.round((metricValue / annualTargetAmount) * 100)) : 0
+			};
+		});
+	});
 	const roadmapYears = $derived.by(() =>
 		projection.years.map((item) => {
 			const metricValue = roadmapMetricConfig.valueForYear(item);
@@ -994,9 +1030,9 @@
 		})
 	);
 	const roadmapSummary = $derived.by(() => {
-		const finalYear = roadmapYears[roadmapYears.length - 1];
+		const finalYear = roadmapPlanYears[roadmapPlanYears.length - 1];
 		if (!finalYear) return '';
-		return `${roadmapMetricConfig.describe(finalYear.metricValue)} on ${currency(finalYear.cumulativeCapital)} deployed across ${roadmapYears.length} modeled slots.`;
+		return `${roadmapMetricConfig.describe(finalYear.metricValue)} on ${currency(finalYear.cumulativeCapital)} deployed across ${printSchedule.totalSlots} modeled slots.`;
 	});
 	const nextBestMove = $derived.by(() => {
 		const nextYear = printSchedule.years.find((year) => year.slots.some((slot) => !slot.filled)) || printSchedule.years[0];
@@ -1465,23 +1501,28 @@
 								<div class="section-eyebrow">Your Investment Plan</div>
 								<div class="schedule-summary">{currentInvestmentCount} current investments · {currency(currentInvestedTotal)} deployed today</div>
 							</div>
-							<button class="inline-action green" onclick={openWizard}>Edit Plan</button>
+							<button class="inline-action green" onclick={openPlanEditor}>Edit Plan</button>
 						</div>
 						<div class="schedule-list">
-							{#each roadmapYears as item}
+							{#each roadmapPlanYears as item}
 								<div class="schedule-row">
 									<div class="schedule-row-top">
 										<div class="schedule-year">Year {item.index} <span>({item.year})</span></div>
 										<div class="schedule-income">{roadmapMetricConfig.describe(item.metricValue)} <span>{item.progressPct}%</span></div>
 									</div>
-									<div class="schedule-row-detail">
-										<span class="schedule-bullet"></span>
-										{item.profile.label} · {currency(item.checkSize)} · ~{percent(item.profile.cashYield)} · {item.matches} matches
-									</div>
+									{#each item.slots as slot, slotIndex}
+										<div class="schedule-row-detail">
+											<span class="schedule-bullet"></span>
+											{slot.assetClass} · {currency(slot.checkSize)} · ~{percent(slot.yieldPct)}
+											{#if slotIndex === 0 && item.slots.length > 1}
+												· {item.slots.length} slots
+											{/if}
+										</div>
+									{/each}
 								</div>
 							{/each}
 						</div>
-						<div class="schedule-total">{projection.years.length} modeled slots · {currency(projection.checkSize)} avg check · {roadmapSummary}</div>
+						<div class="schedule-total">{printSchedule.totalSlots} modeled slots · {currency(printSchedule.avgCheckSize)} avg check · {roadmapSummary}</div>
 					</div>
 				{/if}
 			</section>
@@ -1502,7 +1543,7 @@
 					</div>
 					<div class="next-move-actions">
 						<a href="/app/deals" class="btn-cta">Browse Matching Deals</a>
-						<button class="btn-cta secondary" onclick={openWizard}>Edit Plan</button>
+						<button class="btn-cta secondary" onclick={openPlanEditor}>Edit Plan</button>
 					</div>
 				</section>
 			{/if}

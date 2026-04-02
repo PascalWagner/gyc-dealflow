@@ -636,6 +636,46 @@ async function runPlanRowOverrideScenario(browser) {
 	await context.close();
 }
 
+async function runRoadmapEditPlanScenario(browser) {
+	const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+	const page = await context.newPage();
+	const errors = await installApiMocks(page, branchFixtures.cashflow.wizardData);
+	await seedSession(page);
+
+	await page.goto(`${BASE_URL}/app/plan`);
+	await page.waitForLoadState('networkidle');
+	await expectSummaryView(page);
+
+	const firstRoadmapRow = page.locator('.roadmap-card .schedule-row-detail').first();
+	const initialRoadmapText = ((await firstRoadmapRow.textContent()) || '').replace(/\s+/g, ' ').trim();
+	assert(initialRoadmapText.length > 0, 'roadmap edit: summary plan should render at least one roadmap row');
+
+	await page.locator('.roadmap-card .inline-action.green').click();
+	await page.waitForLoadState('networkidle');
+	await expectWizardShell(page);
+	await assertTitleIncludes(page, "Here's your plan to reach");
+
+	await page.locator('[data-testid="slot-asset-1"]').selectOption('Lending');
+	await page.waitForTimeout(300);
+	await page.getByRole('button', { name: 'Back To Plan' }).click();
+	await page.waitForLoadState('networkidle');
+	await expectSummaryView(page);
+	await page.waitForFunction(() => {
+		const row = document.querySelector('.roadmap-card .schedule-row-detail');
+		return row?.textContent?.includes('Lending');
+	});
+
+	const updatedRoadmapText = ((await page.locator('.roadmap-card .schedule-row-detail').first().textContent()) || '').replace(/\s+/g, ' ').trim();
+	assert(updatedRoadmapText.includes('Lending'), 'roadmap edit: summary roadmap should reflect step-18 edits');
+	assert.notEqual(updatedRoadmapText, initialRoadmapText, 'roadmap edit: summary roadmap row should change after editing step 18');
+
+	assert.deepEqual(errors.consoleErrors, [], 'roadmap edit: console errors');
+	assert.deepEqual(errors.pageErrors, [], 'roadmap edit: page errors');
+	assert.deepEqual(errors.requestFailures, [], 'roadmap edit: request failures');
+
+	await context.close();
+}
+
 async function main() {
 	const browser = await chromium.launch({ headless: true });
 	try {
@@ -653,9 +693,10 @@ async function main() {
 		}
 		await runPlanBuilderInteractionScenario(browser);
 		await runPlanRowOverrideScenario(browser);
+		await runRoadmapEditPlanScenario(browser);
 		await runPartialProgressScenario(browser);
 		await runSavedAnswerHydrationScenario(browser);
-		console.log('Plan wizard QA passed for cashflow, growth, tax, profile review jump scenarios, global plan controls, row overrides, drag-and-drop timing changes, partial-progress returning user scenarios, and saved-answer hydration/prefill.');
+		console.log('Plan wizard QA passed for cashflow, growth, tax, profile review jump scenarios, global plan controls, row overrides, roadmap edit sync, drag-and-drop timing changes, partial-progress returning user scenarios, and saved-answer hydration/prefill.');
 	} finally {
 		await browser.close();
 	}

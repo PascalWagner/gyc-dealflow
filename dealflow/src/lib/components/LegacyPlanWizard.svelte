@@ -219,6 +219,13 @@
 		if (autosave) scheduleSave();
 	}
 
+	function emitWizardState(detail = {}) {
+		dispatch('state', {
+			wizardData: normalizeWizardData(wizardData),
+			...detail
+		});
+	}
+
 	function activeFlowKey(step = currentStep) {
 		if (STEP_SEQUENCE.free.includes(step)) return 'free';
 		const branch = wizardData._branch || flowKeyToBranch(forcedFlowKey) || 'cashflow';
@@ -432,8 +439,9 @@
 				hasLocalEdits = false;
 				lastHydratedInitialDataKey = serializeWizardState(wizardData);
 			}
-			dispatch('state', {
-				wizardData: normalizeWizardData(wizardData)
+			emitWizardState({
+				portfolioPlan: planPreview,
+				persistedPortfolioPlan: true
 			});
 		}
 	}
@@ -556,7 +564,12 @@
 		if (overrides.planTargetYieldPct !== undefined) next.planTargetYieldPct = overrides.planTargetYieldPct === '' ? '' : String(overrides.planTargetYieldPct);
 		setWizardData(next);
 		if (browser && forceEdit) {
-			writeUserScopedJson('gycPortfolioPlan', generatePortfolioPlan(next, allDeals));
+			const nextPlanPreview = generatePortfolioPlan(next, allDeals);
+			writeUserScopedJson('gycPortfolioPlan', nextPlanPreview);
+			emitWizardState({
+				portfolioPlan: nextPlanPreview,
+				persistedPortfolioPlan: true
+			});
 		}
 	}
 
