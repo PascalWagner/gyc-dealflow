@@ -6,6 +6,13 @@ import { getAdminClient, setCors, ADMIN_EMAILS } from '../_supabase.js';
 import { resolveDealWorkflowMutation, slugify } from '../../src/lib/utils/dealWorkflow.js';
 import { normalizeDealReviewPatch } from '../../src/lib/utils/dealReviewSchema.js';
 
+const HISTORICAL_RETURN_START_YEAR = 2015;
+const HISTORICAL_RETURN_END_YEAR = new Date().getFullYear() - 1;
+const HISTORICAL_RETURN_YEARS = Array.from(
+  { length: Math.max(0, HISTORICAL_RETURN_END_YEAR - HISTORICAL_RETURN_START_YEAR + 1) },
+  (_, index) => HISTORICAL_RETURN_START_YEAR + index
+);
+
 const FIELD_MAP = {
   // camelCase (client) → snake_case (DB)
   investmentName: 'investment_name',
@@ -48,14 +55,27 @@ const FIELD_MAP = {
   sponsorName: 'sponsor_name',
   slug: 'slug',
   investingGeography: 'investing_geography',
+  investingStates: 'investing_states',
+  underlyingExposureTypes: 'underlying_exposure_types',
   debtPosition: 'debt_position',
   fundAUM: 'fund_aum',
+  managerAUM: 'fund_aum',
+  currentFundSize: 'current_fund_size',
   loanCount: 'loan_count',
   avgLoanLtv: 'avg_loan_ltv',
+  currentAvgLoanLtv: 'current_avg_loan_ltv',
+  maxAllowedLtv: 'max_allowed_ltv',
+  currentLeverage: 'current_leverage',
+  maxAllowedLeverage: 'max_allowed_leverage',
   redemption: 'redemption',
+  redemptionNotes: 'redemption_notes',
+  additionalTermNotes: 'additional_term_notes',
   sponsorCoinvest: 'sponsor_in_deal_pct',
   sponsorInDeal: 'sponsor_in_deal_pct',
   taxForm: 'tax_form',
+  fundFoundedYear: 'fund_founded_year',
+  firmFoundedYear: 'firm_founded_year',
+  snapshotAsOfDate: 'snapshot_as_of_date',
   propertyAddress: 'property_address',
   unitCount: 'unit_count',
   yearBuilt: 'year_built',
@@ -87,17 +107,23 @@ const FIELD_MAP = {
   is506b: 'is_506b',
   secVerificationState: 'sec_verification_state',
   secVerificationNotes: 'sec_verification_notes',
+  secLookupState: 'sec_lookup_state',
   secFilingId: 'sec_filing_id',
   dealBranch: 'deal_branch',
   teamContacts: 'team_contacts',
   sourceRiskFactors: 'source_risk_factors',
   highlightedRisks: 'highlighted_risks',
+  riskTags: 'risk_tags',
   // Special fields
   status: 'status',
   gpReviewedAt: 'gp_reviewed_at',
   lifecycleStatus: 'lifecycle_status',
   isVisibleToUsers: 'is_visible_to_users',
 };
+
+for (const year of HISTORICAL_RETURN_YEARS) {
+  FIELD_MAP[`historicalReturn${year}`] = `historical_return_${year}`;
+}
 
 const NUMERIC_FIELD_KEYS = new Set([
   'targetIRR',
@@ -110,6 +136,8 @@ const NUMERIC_FIELD_KEYS = new Set([
   'offeringSize',
   'purchasePrice',
   'fundAUM',
+  'managerAUM',
+  'currentFundSize',
   'sponsorCoinvest',
   'sponsorInDeal',
   'unitCount',
@@ -131,9 +159,23 @@ const NUMERIC_FIELD_KEYS = new Set([
   'constructionMgmtFeePct',
   'loanCount',
   'totalInvestors',
+  'totalAmountSold',
+  'currentAvgLoanLtv',
+  'maxAllowedLtv',
+  'currentLeverage',
+  'maxAllowedLeverage',
+  'fundFoundedYear',
+  'firmFoundedYear',
 ]);
 
-const JSON_ARRAY_FIELD_KEYS = new Set(['teamContacts', 'sourceRiskFactors', 'highlightedRisks']);
+const JSON_ARRAY_FIELD_KEYS = new Set([
+  'teamContacts',
+  'sourceRiskFactors',
+  'highlightedRisks',
+  'investingStates',
+  'underlyingExposureTypes',
+  'riskTags'
+]);
 
 function normalizeStringArray(value) {
   if (Array.isArray(value)) {
@@ -185,7 +227,7 @@ function normalizeValue(key, value) {
   if (key === 'teamContacts') {
     return normalizeTeamContacts(value);
   }
-  if (key === 'sourceRiskFactors' || key === 'highlightedRisks') {
+  if (key === 'sourceRiskFactors' || key === 'highlightedRisks' || key === 'investingStates' || key === 'underlyingExposureTypes' || key === 'riskTags') {
     return normalizeStringArray(value);
   }
   if (NUMERIC_FIELD_KEYS.has(key)) {

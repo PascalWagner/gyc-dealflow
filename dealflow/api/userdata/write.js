@@ -12,6 +12,7 @@ import {
 } from '../_validation.js';
 import { MUTATION_TYPES, TABLE_MAP, mapFields } from './constants.js';
 import { isMissingTableError, resolveWriteContext } from './identity.js';
+import { getActiveSubscription, isMissingSubscriptionsTableError, SUBSCRIPTIONS_TABLE } from '../_subscriptions.js';
 import {
   syncAutoRenewToGhl,
   syncGoalsToGhl,
@@ -122,6 +123,19 @@ export async function handleUserdataPost(req, res, supabase, user) {
       .select('auto_renew, email')
       .single();
     if (error) throw error;
+
+    try {
+      const activeSubscription = await getActiveSubscription(db, effectiveUser.id, 'academy');
+      if (activeSubscription) {
+        const { error: subscriptionError } = await db
+          .from(SUBSCRIPTIONS_TABLE)
+          .update({ renewal_date: autoRenew ? activeSubscription.end_date || null : null })
+          .eq('id', activeSubscription.id);
+        if (subscriptionError) throw subscriptionError;
+      }
+    } catch (subscriptionError) {
+      if (!isMissingSubscriptionsTableError(subscriptionError)) throw subscriptionError;
+    }
 
     syncAutoRenewToGhl(updated.email || user.email, autoRenew).catch((syncError) =>
       console.warn('GHL auto-renew sync failed:', syncError.message)

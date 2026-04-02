@@ -109,8 +109,8 @@ function finalizeReturnSeries(entries, { maxYears, referenceYear }) {
 
 function normalizePercentValue(value) {
 	const numeric = toFiniteNumber(value);
-	if (!Number.isFinite(numeric) || numeric <= 0) return null;
-	return Number((numeric <= 1 ? numeric * 100 : numeric).toFixed(1));
+	if (!Number.isFinite(numeric)) return null;
+	return Number(((Math.abs(numeric) <= 1 ? numeric * 100 : numeric)).toFixed(2));
 }
 
 function normalizeYear(value) {

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { user } from '$lib/stores/auth.js';
+	import { getFreshSessionToken, user } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
@@ -17,6 +17,9 @@
 	let location = $state('');
 	let avatarUrl = $state('');
 	let avatarInitials = $state('?');
+	let pendingAvatarFile = $state(null);
+	let pendingAvatarPreviewUrl = $state('');
+	let avatarUploadError = $state('');
 	let profileSaving = $state(false);
 	let profileSaved = $state(false);
 
@@ -28,6 +31,7 @@
 	let investableCapital = $state('$250K - $1M');
 	let investmentExperience = $state('4-10 LP investments');
 	let autoRenewSaving = $state(false);
+	let membershipSummary = $state(null);
 
 	// Notifications
 	let notifFreq = $state('weekly');
@@ -157,6 +161,12 @@
 		return ((fn[0] || '') + (ln[0] || '')).toUpperCase() || '?';
 	}
 
+	function revokePendingAvatarPreview() {
+		if (!browser || !pendingAvatarPreviewUrl) return;
+		URL.revokeObjectURL(pendingAvatarPreviewUrl);
+		pendingAvatarPreviewUrl = '';
+	}
+
 	function getMembershipKey(rawTier, adminFlag = false) {
 		const normalizedTier = String(rawTier || '').trim().toLowerCase();
 		if (adminFlag && !normalizedTier) return 'academy';
@@ -173,12 +183,27 @@
 
 	const membershipUser = $derived.by(() => getStoredUser() || $user || {});
 	const rawMembershipTier = $derived(String(membershipUser.tier || 'free').toLowerCase());
-	const activeMembershipKey = $derived(
-		getMembershipKey(rawMembershipTier, membershipUser.isAdmin === true)
+	const academyMembership = $derived.by(
+		() => membershipSummary || membershipUser.subscriptions?.academy || null
 	);
+	const membershipPhase = $derived(academyMembership?.status || 'inactive');
+	const activeMembershipKey = $derived.by(() => {
+		if (membershipUser.isAdmin === true) {
+			return getMembershipKey(rawMembershipTier, true);
+		}
+
+		if (membershipUser.accessTier === 'member') {
+			return getMembershipKey(
+				rawMembershipTier === 'free' ? academyMembership?.product_type || 'academy' : rawMembershipTier
+			);
+		}
+
+		return 'free';
+	});
 	const currentPlanMeta = $derived(getPlanMeta(activeMembershipKey));
-	const membershipStart = $derived(formatMembershipDate(membershipUser.academyStart));
-	const membershipEnd = $derived(formatMembershipDate(membershipUser.academyEnd));
+	const membershipStart = $derived(formatMembershipDate(academyMembership?.start_date));
+	const membershipEnd = $derived(formatMembershipDate(academyMembership?.end_date));
+	const membershipRenewal = $derived(formatMembershipDate(academyMembership?.renewal_date));
 	const autoRenewEnabled = $derived(membershipUser.autoRenew !== false);
 	const billingCardLabel = $derived.by(() => {
 		if (!membershipUser.cardLast4) return 'No card on file';
@@ -197,6 +222,9 @@
 		location = storedUser.location || '';
 		avatarUrl = storedUser.avatar_url || '';
 		avatarInitials = getInitials(storedUser);
+		pendingAvatarFile = null;
+		avatarUploadError = '';
+		revokePendingAvatarPreview();
 		shareActivity = storedUser.share_activity !== false;
 		accreditedStatus = storedUser.accredited_status || '';
 		investableCapital = storedUser.investable_capital || '$250K - $1M';
@@ -240,8 +268,10 @@
 				investment_experience: data.investment_experience || '',
 				onboardingRole: data.onboardingRole || null,
 				gpOnboardingComplete: data.gpOnboardingComplete || false,
-				academyStart: data.academyStart || null,
-				academyEnd: data.academyEnd || null,
+				subscriptions: {
+					...(storedUser.subscriptions || {}),
+					...(data.subscriptions || {})
+				},
 				autoRenew: data.autoRenew !== false,
 				cardLast4: data.cardLast4 || null,
 				cardBrand: data.cardBrand || null,
@@ -258,8 +288,33 @@
 		}
 	}
 
+	async function refreshMembershipSummary() {
+		const token = (await getFreshSessionToken()) || getToken();
+		if (!token) return;
+
+		try {
+			const resp = await fetch('/api/settings/membership?product_type=academy', {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			if (!resp.ok) return;
+
+			const data = await resp.json();
+			membershipSummary = data || null;
+
+			const current = getStoredUser() || {};
+			patchStoredUser({
+				subscriptions: {
+					...(current.subscriptions || {}),
+					academy: data || null
+				}
+			});
+		} catch (error) {
+			console.warn('Membership refresh failed:', error);
+		}
+	}
+
 	async function syncProfile(fields) {
-		const token = getToken();
+		const token = (await getFreshSessionToken()) || getToken();
 		if (!token) return;
 		const resp = await fetch('/api/userdata', {
 			method: 'POST',
@@ -271,43 +326,125 @@
 		}
 	}
 
-	async function saveProfile() {
-		profileSaving = true;
-		const fullName = `${firstName} ${lastName}`.trim();
-		patchStoredUser({
-			firstName,
-			lastName,
-			name: fullName || email.split('@')[0] || '',
-			fullName,
-			phone,
-			location,
-			share_activity: shareActivity,
-			avatar_url: avatarUrl,
-			accredited_status: accreditedStatus,
-			investable_capital: investableCapital,
-			investment_experience: investmentExperience
+	function readFileAsDataUrl(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result || '');
+			reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+			reader.readAsDataURL(file);
 		});
+	}
+
+	async function buildAvatarUploadPayload(file) {
+		if (!browser) throw new Error('Avatar uploads require a browser session.');
+
+		const originalDataUrl = await readFileAsDataUrl(file);
+		const imageUrl = URL.createObjectURL(file);
 
 		try {
+			const image = await new Promise((resolve, reject) => {
+				const nextImage = new Image();
+				nextImage.onload = () => resolve(nextImage);
+				nextImage.onerror = () => reject(new Error('Failed to process the selected image.'));
+				nextImage.src = imageUrl;
+			});
+
+			const maxDimension = 960;
+			const scale = Math.min(1, maxDimension / Math.max(image.width || 1, image.height || 1));
+			const width = Math.max(1, Math.round((image.width || 1) * scale));
+			const height = Math.max(1, Math.round((image.height || 1) * scale));
+			const canvas = document.createElement('canvas');
+			canvas.width = width;
+			canvas.height = height;
+
+			const context = canvas.getContext('2d');
+			if (!context) return originalDataUrl;
+
+			context.imageSmoothingEnabled = true;
+			context.imageSmoothingQuality = 'high';
+			context.fillStyle = '#ffffff';
+			context.fillRect(0, 0, width, height);
+			context.drawImage(image, 0, 0, width, height);
+
+			return canvas.toDataURL('image/jpeg', 0.82);
+		} finally {
+			URL.revokeObjectURL(imageUrl);
+		}
+	}
+
+	async function uploadPendingAvatar() {
+		if (!pendingAvatarFile) return avatarUrl;
+
+		const token = (await getFreshSessionToken()) || getToken();
+		if (!token) {
+			throw new Error('Your session expired. Please sign in again and retry.');
+		}
+
+		const imageData = await buildAvatarUploadPayload(pendingAvatarFile);
+		const resp = await fetch('/api/network?action=avatar', {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ imageData })
+		});
+		const data = await resp.json().catch(() => ({}));
+		if (!resp.ok || !data?.avatarUrl) {
+			throw new Error(data?.error || 'Photo upload failed.');
+		}
+
+		avatarUrl = data.avatarUrl;
+		patchStoredUser({ avatar_url: data.avatarUrl });
+		pendingAvatarFile = null;
+		revokePendingAvatarPreview();
+		return data.avatarUrl;
+	}
+
+	async function saveProfile() {
+		profileSaving = true;
+		profileSaved = false;
+		avatarUploadError = '';
+
+		try {
+			const fullName = `${firstName} ${lastName}`.trim();
+			const nextAvatarUrl = pendingAvatarFile ? await uploadPendingAvatar() : avatarUrl;
+
+			patchStoredUser({
+				firstName,
+				lastName,
+				name: fullName || email.split('@')[0] || '',
+				fullName,
+				phone,
+				location,
+				share_activity: shareActivity,
+				avatar_url: nextAvatarUrl,
+				accredited_status: accreditedStatus,
+				investable_capital: investableCapital,
+				investment_experience: investmentExperience
+			});
+
 			await syncProfile({
 				full_name: fullName,
 				phone,
 				location,
 				share_activity: shareActivity,
-				avatar_url: avatarUrl,
+				avatar_url: nextAvatarUrl,
 				accredited_status: accreditedStatus,
 				investable_capital: investableCapital,
 				investment_experience: investmentExperience
 			});
+
+			profileSaved = true;
+			setTimeout(() => {
+				profileSaved = false;
+			}, 2000);
 		} catch (error) {
 			console.warn('Profile save failed:', error);
+			avatarUploadError = error?.message || 'Profile save failed.';
+		} finally {
+			profileSaving = false;
 		}
-
-		profileSaving = false;
-		profileSaved = true;
-		setTimeout(() => {
-			profileSaved = false;
-		}, 2000);
 	}
 
 	function updateShareActivity(isOn) {
@@ -331,6 +468,7 @@
 		} catch (error) {
 			console.warn('Auto renew save failed:', error);
 		}
+		await refreshMembershipSummary();
 		autoRenewSaving = false;
 	}
 
@@ -407,12 +545,17 @@
 	function handleAvatarUpload(event) {
 		const file = event.target.files?.[0];
 		if (!file) return;
-		const reader = new FileReader();
-		reader.onload = (e) => {
-			avatarUrl = e.target?.result || '';
-			patchStoredUser({ avatar_url: avatarUrl });
-		};
-		reader.readAsDataURL(file);
+		if (!file.type.startsWith('image/')) {
+			avatarUploadError = 'Please choose an image file.';
+			event.target.value = '';
+			return;
+		}
+
+		avatarUploadError = '';
+		pendingAvatarFile = file;
+		revokePendingAvatarPreview();
+		pendingAvatarPreviewUrl = URL.createObjectURL(file);
+		event.target.value = '';
 	}
 
 	function logout() {
@@ -436,6 +579,7 @@
 	});
 
 	const displayName = $derived((firstName + ' ' + lastName).trim() || 'Your Name');
+	const displayAvatarUrl = $derived(pendingAvatarPreviewUrl || avatarUrl);
 
 	onMount(() => {
 		const params = new URLSearchParams(window.location.search);
@@ -450,7 +594,11 @@
 		}
 		loadProfile();
 		loadNotifPrefs();
-		refreshSessionProfile();
+		void refreshSessionProfile();
+		void refreshMembershipSummary();
+		return () => {
+			revokePendingAvatarPreview();
+		};
 	});
 </script>
 
@@ -475,8 +623,8 @@
 				<div class="settings-card-desc">This information is shown to GPs when you request an introduction.</div>
 				<div class="avatar-row profile-avatar-row">
 					<div class="avatar-preview">
-						{#if avatarUrl}
-							<img src={avatarUrl} alt="Avatar" />
+						{#if displayAvatarUrl}
+							<img src={displayAvatarUrl} alt="Avatar" />
 						{:else}
 							<span class="avatar-initials">{avatarInitials}</span>
 						{/if}
@@ -487,7 +635,14 @@
 							Choose Photo
 							<input type="file" accept="image/*" onchange={handleAvatarUpload} style="display:none;" />
 						</label>
-						<div class="avatar-help">This appears on your member profile and next to your deal activity.</div>
+						<div class="avatar-help">
+							{pendingAvatarFile
+								? 'Photo selected. Click Save Profile to upload it.'
+								: 'This appears on your member profile and next to your deal activity.'}
+						</div>
+						{#if avatarUploadError}
+							<div class="avatar-error">{avatarUploadError}</div>
+						{/if}
 					</div>
 				</div>
 				<div class="profile-row">
@@ -567,20 +722,29 @@
 			<div class="settings-page-desc">See what's included in your current plan.</div>
 
 			<div class="settings-card membership-status-card ly-surface">
-				<div class="tier-badge" class:tier-badge-free={activeMembershipKey === 'free'} style={`--tier-accent: ${currentPlanMeta.accent};`}>
-					<span class="tier-dot"></span>
-					{currentPlanMeta.label}
-				</div>
-				{#if activeMembershipKey !== 'free' && (membershipStart || membershipEnd)}
+				<div class="membership-status-row">
+					<div class="tier-badge" class:tier-badge-free={activeMembershipKey === 'free'} style={`--tier-accent: ${currentPlanMeta.accent};`}>
+						<span class="tier-dot"></span>
+						{currentPlanMeta.label}
+					</div>
 					<div class="membership-dates">
-						{#if membershipStart}
-							<div>Started <strong>{membershipStart}</strong></div>
-						{/if}
-						{#if membershipEnd}
-							<div>Renews <strong>{membershipEnd}</strong></div>
+						{#if membershipPhase === 'active'}
+							{#if membershipStart}
+								<div class="membership-date-item"><span class="membership-dates-label">Start Date:</span> <strong>{membershipStart}</strong></div>
+							{/if}
+							<div class="membership-date-item"><span class="membership-dates-label">End Date:</span> <strong>{membershipEnd || 'Lifetime access'}</strong></div>
+							{#if membershipRenewal}
+								<div class="membership-date-item"><span class="membership-dates-label">Renewal:</span> <strong>Renews on {membershipRenewal}</strong></div>
+							{/if}
+						{:else if membershipPhase === 'upcoming'}
+							<div class="membership-date-item"><span class="membership-dates-label">Starts:</span> <strong>{membershipStart || 'Pending start date'}</strong></div>
+						{:else if membershipPhase === 'expired'}
+							<div class="membership-date-item"><span class="membership-dates-label">Ended:</span> <strong>{membershipEnd || 'Membership expired'}</strong></div>
+						{:else}
+							<div class="membership-date-item membership-date-item-empty">No active membership</div>
 						{/if}
 					</div>
-				{/if}
+				</div>
 			</div>
 
 			<div class="plan-grid">
@@ -702,8 +866,8 @@
 				<div class="settings-card-desc">How other members see you in the network.</div>
 				<div class="preview-box">
 					<div class="preview-avatar">
-						{#if avatarUrl}
-							<img src={avatarUrl} alt="" />
+						{#if displayAvatarUrl}
+							<img src={displayAvatarUrl} alt="" />
 						{:else}
 							{avatarInitials}
 						{/if}
@@ -880,6 +1044,7 @@
 	.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 	.avatar-actions { display: flex; flex-direction: column; gap: 6px; }
 	.avatar-help { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+	.avatar-error { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: #B54747; line-height: 1.5; }
 	.upload-btn {
 		display: inline-flex;
 		align-items: center;
@@ -923,6 +1088,12 @@
 	.btn-cta-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
 	.membership-status-card { padding: 18px 20px; margin-bottom: 14px; }
+	.membership-status-row {
+		display: flex;
+		align-items: center;
+		gap: 18px;
+		flex-wrap: wrap;
+	}
 	.tier-badge {
 		display: inline-flex;
 		align-items: center;
@@ -942,7 +1113,25 @@
 		color: var(--text-secondary);
 	}
 	.tier-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-	.membership-dates { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 10px; font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
+	.membership-dates {
+		display: flex;
+		flex: 1;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px 20px;
+		min-width: min(100%, 320px);
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-muted);
+	}
+	.membership-date-item {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 6px;
+		white-space: nowrap;
+	}
+	.membership-date-item-empty { white-space: normal; }
+	.membership-dates-label { color: var(--text-secondary); }
 	.membership-dates strong { color: var(--text-dark); }
 
 	.plan-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -1061,7 +1250,9 @@
 		.settings-tabs::-webkit-scrollbar { display: none; }
 		.plan-grid { grid-template-columns: 1fr; }
 		.membership-status-card { padding: 16px; }
-		.membership-dates { gap: 12px; flex-direction: column; }
+		.membership-status-row { align-items: flex-start; gap: 12px; }
+		.membership-dates { gap: 8px 14px; min-width: 100%; }
+		.membership-date-item { white-space: normal; }
 		.plan-card { padding: 18px 16px 16px; }
 		.plan-action { width: 100%; box-sizing: border-box; }
 		.billing-row { align-items: flex-start; }

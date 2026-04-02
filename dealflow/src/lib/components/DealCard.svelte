@@ -93,18 +93,6 @@
 		return hasValue(value) ? value : '—';
 	}
 
-	function getManagerTier(sizeValue) {
-		const size =
-			typeof sizeValue === 'string'
-				? Number.parseFloat(String(sizeValue).replace(/[$,]/g, ''))
-				: Number(sizeValue);
-		if (!Number.isFinite(size) || size <= 0) return { range: '—' };
-		if (size >= 1000000000) return { range: '$1B+' };
-		if (size >= 100000000) return { range: '$100M-1B' };
-		if (size >= 50000000) return { range: '$50-100M' };
-		return { range: '<$50M' };
-	}
-
 	function getStrategySummary(inputDeal) {
 		const text = firstDefined(
 			inputDeal.investmentStrategy,
@@ -186,6 +174,7 @@
 	}
 
 	const heroConfig = $derived(getDealCardHeroConfig(deal));
+	const isLendingDeal = $derived(heroConfig.variant === 'lending-returns' || heroConfig.variant === 'lending-empty');
 	const titleText = $derived(
 		firstDefined(deal.investmentName, deal.investment_name, deal.name, 'Untitled Deal')
 	);
@@ -219,20 +208,25 @@
 		firstDefined(deal.distributionFrequency, deal.distributions, deal.distribution_frequency)
 	);
 	const lpGpSplitValue = $derived(firstDefined(deal.lpGpSplit, deal.lp_gp_split));
-	const equityMultipleValue = $derived(firstDefined(deal.equityMultiple, deal.equity_multiple));
-	const managerAum = $derived(
+	const auditingValue = $derived(
+		firstDefined(deal.auditing, deal.financials, deal.auditStatus, deal.audit_status)
+	);
+	const loanCountValue = $derived(firstDefined(deal.loanCount, deal.loan_count));
+	const managerAumValue = $derived(
 		firstDefined(
-			deal.fundAUM,
-			deal.offeringSize,
-			deal.offering_size,
-			deal.aum,
-			deal.managementCompanyAUM,
 			deal.managerAUM,
-			deal.manager_aum
+			deal.manager_aum,
+			deal.managementCompanyAUM,
+			deal.management_company_aum,
+			deal.fundAUM,
+			deal.fund_aum,
+			deal.aum
 		)
 	);
-	const foundedYear = $derived(firstDefined(deal.mcFoundingYear, deal.foundedYear, deal.founded_year));
-	const managerTier = $derived(getManagerTier(managerAum));
+	const fundFoundedYear = $derived(
+		firstDefined(deal.fundFoundedYear, deal.fund_founded_year, deal.foundedYear, deal.founded_year)
+	);
+	const equityMultipleValue = $derived(firstDefined(deal.equityMultiple, deal.equity_multiple));
 	const hasNoDeck = $derived(
 		!(
 			firstDefined(
@@ -330,38 +324,73 @@
 		</div>
 
 		<div class="metrics">
-			<div class="metric">
-				<div class="metric-label">Pref Return</div>
-				<div class="metric-value highlight">{fmtPct(preferredReturn)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Minimum</div>
-				<div class="metric-value">{fmtMoney(minimumInvestment)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Lockup</div>
-				<div class="metric-value">{formatHold(holdPeriod)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Distribution</div>
-				<div class="metric-value">{formatDist(distributionValue)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">LP/GP Split</div>
-				<div class="metric-value">{lpGpSplitValue && /\d+\s*\/\s*\d+/.test(lpGpSplitValue) ? lpGpSplitValue : '—'}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Equity Mult.</div>
-				<div class="metric-value">{fmtMultiple(equityMultipleValue)}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Manager AUM</div>
-				<div class="metric-value">{managerTier.range}</div>
-			</div>
-			<div class="metric">
-				<div class="metric-label">Founded</div>
-				<div class="metric-value">{foundedYear || '—'}</div>
-			</div>
+			{#if isLendingDeal}
+				<div class="metric">
+					<div class="metric-label">Minimum</div>
+					<div class="metric-value">{fmtMoney(minimumInvestment)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Lockup</div>
+					<div class="metric-value">{formatHold(holdPeriod)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Redemption</div>
+					<div class="metric-value">{formatDist(deal.redemption)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Distribution</div>
+					<div class="metric-value">{formatDist(distributionValue)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Pref Return</div>
+					<div class="metric-value highlight">{fmtPct(preferredReturn)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Loan Count</div>
+					<div class="metric-value">{hasValue(loanCountValue) ? Number(loanCountValue).toLocaleString() : '—'}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Manager AUM</div>
+					<div class="metric-value">{fmtMoney(managerAumValue)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Fund Founded</div>
+					<div class="metric-value">{fundFoundedYear || '—'}</div>
+				</div>
+			{:else}
+				<div class="metric">
+					<div class="metric-label">Pref Return</div>
+					<div class="metric-value highlight">{fmtPct(preferredReturn)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Minimum</div>
+					<div class="metric-value">{fmtMoney(minimumInvestment)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Lockup</div>
+					<div class="metric-value">{formatHold(holdPeriod)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Distribution</div>
+					<div class="metric-value">{formatDist(distributionValue)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">LP/GP Split</div>
+					<div class="metric-value">{lpGpSplitValue && /\d+\s*\/\s*\d+/.test(lpGpSplitValue) ? lpGpSplitValue : '—'}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Equity Mult.</div>
+					<div class="metric-value">{fmtMultiple(equityMultipleValue)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Manager AUM</div>
+					<div class="metric-value">{fmtMoney(managerAumValue)}</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Founded</div>
+					<div class="metric-value">{deal.mcFoundingYear || deal.foundedYear || deal.founded_year || '—'}</div>
+				</div>
+			{/if}
 		</div>
 	</div>
 

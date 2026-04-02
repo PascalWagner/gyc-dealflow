@@ -43,6 +43,18 @@ function safeJsonParse(value, fallback = null) {
 	}
 }
 
+function isInlineImageUrl(value) {
+	return typeof value === 'string' && value.startsWith('data:image/');
+}
+
+function getPersistableSessionUser(value) {
+	if (!value || typeof value !== 'object') return value;
+	if (!isInlineImageUrl(value.avatar_url)) return value;
+
+	const { avatar_url, ...rest } = value;
+	return rest;
+}
+
 function decodeBase64Url(value) {
 	if (!value) return null;
 	const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -327,10 +339,14 @@ function createUserStore() {
 		set(value) {
 			const normalized = normalizeSessionUser(value);
 			if (browser) {
-				if (normalized) {
-					localStorage.setItem('gycUser', JSON.stringify(normalized));
-				} else {
-					localStorage.removeItem('gycUser');
+				try {
+					if (normalized) {
+						localStorage.setItem('gycUser', JSON.stringify(getPersistableSessionUser(normalized)));
+					} else {
+						localStorage.removeItem('gycUser');
+					}
+				} catch (error) {
+					console.warn('Failed to persist session user:', error);
 				}
 			}
 			set(normalized);

@@ -10,6 +10,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { setCors, ADMIN_EMAILS, deriveTier, rateLimit, ghlFetch } from './_supabase.js';
+import { getMembershipSummary } from './_subscriptions.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -20,7 +21,6 @@ const PERSONA_OVERRIDES = {
   'test@test.com': { tier: 'free', isAdmin: false },
   'info@pascalwagner.com': { tier: 'academy', isAdmin: true }
 };
-const LOOKUP_PROFILE_FIELDS = 'full_name, onboarding_role, gp_onboarding_complete, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location, share_saved, share_dd, share_invested, allow_follows, share_portfolio, share_activity, avatar_url, accredited_status, investable_capital, investment_experience';
 
 function normalizeSiteOrigin(candidate) {
   try {
@@ -144,6 +144,7 @@ function buildAuthResponse({
   contactId = null,
   profile = null,
   gpInfo = null,
+  subscriptions = {},
   extra = {}
 } = {}) {
   const normalizedEmail = normalizeEmail(email);
@@ -151,6 +152,10 @@ function buildAuthResponse({
   const resolvedIsAdmin = typeof isAdmin === 'boolean' ? isAdmin : isAdminEmail(normalizedEmail);
   const resolvedTier = canonicalizeTier(tier, normalizedEmail);
   const resolvedName = name || safeProfile.full_name || displayNameFromEmail(normalizedEmail);
+  const normalizedSubscriptions =
+    subscriptions && typeof subscriptions === 'object' && !Array.isArray(subscriptions)
+      ? subscriptions
+      : {};
 
   return {
     success: true,
@@ -180,11 +185,10 @@ function buildAuthResponse({
     investment_experience: safeProfile.investment_experience || '',
     onboardingRole: safeProfile.onboarding_role || null,
     gpOnboardingComplete: safeProfile.gp_onboarding_complete || false,
-    academyStart: safeProfile.academy_start || null,
-    academyEnd: safeProfile.academy_end || null,
     autoRenew: safeProfile.auto_renew !== false,
     cardLast4: safeProfile.card_last4 || null,
     cardBrand: safeProfile.card_brand || null,
+    subscriptions: normalizedSubscriptions,
     ...(gpInfo && {
       gpType: gpInfo.gp_type,
       managementCompanyId: gpInfo.management_company_id,
@@ -240,11 +244,28 @@ async function loadUserProfile(adminSupabase, userId) {
 
   const { data } = await adminSupabase
     .from('user_profiles')
-    .select(LOOKUP_PROFILE_FIELDS)
+    .select('*')
     .eq('id', userId)
     .single();
 
   return data || null;
+}
+
+async function loadUserProfileContext(adminSupabase, userId, { email = '' } = {}) {
+  const profile = await loadUserProfile(adminSupabase, userId);
+  const academyMembership = await getMembershipSummary(adminSupabase, userId, 'academy', {
+    autoRenew: profile?.auto_renew ?? true,
+    fallbackProfile: profile,
+    email: profile?.email || email || '',
+    contactId: profile?.ghl_contact_id || ''
+  });
+
+  return {
+    profile,
+    subscriptions: {
+      academy: academyMembership
+    }
+  };
 }
 
 async function retryCreateGhlContact(adminSupabase, userId, email, fullName) {
@@ -515,7 +536,9 @@ export default async function handler(req, res) {
       }
 
       // Fetch onboarding state from profile
-      const existingProfile = await loadUserProfile(adminSupabase, user.id);
+      const { profile: existingProfile, subscriptions } = await loadUserProfileContext(adminSupabase, user.id, {
+        email: normalizedEmail
+      });
 
       return res.status(200).json(buildAuthResponse({
         email: normalizedEmail,
@@ -527,7 +550,8 @@ export default async function handler(req, res) {
         tags: ghl.tags,
         contactId: ghl.contactId,
         profile: existingProfile,
-        gpInfo
+        gpInfo,
+        subscriptions
       }));
     }
 
@@ -587,7 +611,9 @@ export default async function handler(req, res) {
       );
     }
 
-    const loginProfileData = await loadUserProfile(adminSupabase, data.user.id);
+    const { profile: loginProfileData, subscriptions } = await loadUserProfileContext(adminSupabase, data.user.id, {
+      email: normalizedEmail
+    });
 
     return res.status(200).json(buildAuthResponse({
       email: data.user.email,
@@ -599,7 +625,8 @@ export default async function handler(req, res) {
       tags: ghl.tags,
       contactId: ghl.contactId,
       profile: loginProfileData,
-      gpInfo
+      gpInfo,
+      subscriptions
     }));
   }
 
@@ -703,7 +730,9 @@ export default async function handler(req, res) {
     }
     await adminSupabase.from('user_profiles').upsert(profileData, { onConflict: 'id' });
 
-    const profile = await loadUserProfile(adminSupabase, data.user.id);
+    const { profile, subscriptions } = await loadUserProfileContext(adminSupabase, data.user.id, {
+      email: verifiedEmail
+    });
     return res.status(200).json({
       success: true,
       user: buildAuthResponse({
@@ -715,7 +744,8 @@ export default async function handler(req, res) {
         tags: ghl.tags,
         contactId: ghl.contactId,
         profile,
-        gpInfo
+        gpInfo,
+        subscriptions
       })
     });
   }

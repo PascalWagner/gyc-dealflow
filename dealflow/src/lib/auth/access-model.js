@@ -1,3 +1,9 @@
+import {
+	getSubscriptionForProduct,
+	getSubscriptionPhase,
+	normalizeSubscriptionRecord
+} from '$lib/subscriptions/subscription-model.js';
+
 export const SESSION_VERSION = 3;
 export const ACCESS_TIERS = ['public', 'free', 'member', 'admin'];
 export const ACCESS_TIER_LABELS = {
@@ -59,8 +65,21 @@ function normalizeDateValue(value) {
 
 function normalizeMembershipWindow(value = {}) {
 	const candidate = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-	const academyStart = normalizeDateValue(candidate.academyStart || candidate.academy_start);
-	const academyEnd = normalizeDateValue(candidate.academyEnd || candidate.academy_end);
+	const explicitAcademySubscription =
+		getSubscriptionForProduct(candidate.subscriptions, 'academy') ||
+		getSubscriptionForProduct(candidate.subscription, 'academy');
+	const legacyAcademyStart = normalizeDateValue(candidate.academyStart || candidate.academy_start);
+	const legacyAcademyEnd = normalizeDateValue(candidate.academyEnd || candidate.academy_end);
+	const academySubscription = explicitAcademySubscription
+		? normalizeSubscriptionRecord(explicitAcademySubscription)
+		: legacyAcademyStart || legacyAcademyEnd
+			? normalizeSubscriptionRecord({
+				product_type: 'academy',
+				status: legacyAcademyEnd && hasPastDate(legacyAcademyEnd) ? 'expired' : 'active',
+				start_date: legacyAcademyStart,
+				end_date: legacyAcademyEnd
+			})
+			: null;
 	const autoRenew =
 		candidate.autoRenew === true ||
 		candidate.autoRenew === false
@@ -70,8 +89,10 @@ function normalizeMembershipWindow(value = {}) {
 				: null;
 
 	return {
-		academyStart,
-		academyEnd,
+		hasExplicitAcademySubscription: !!explicitAcademySubscription,
+		academySubscription,
+		academyStart: academySubscription?.start_date || legacyAcademyStart,
+		academyEnd: academySubscription?.end_date || legacyAcademyEnd,
 		autoRenew
 	};
 }
@@ -81,6 +102,13 @@ function hasPastDate(value) {
 	if (!normalized) return false;
 	const timestamp = Date.parse(normalized);
 	return Number.isFinite(timestamp) && timestamp < Date.now();
+}
+
+function hasFutureDate(value) {
+	const normalized = normalizeDateValue(value);
+	if (!normalized) return false;
+	const timestamp = Date.parse(normalized);
+	return Number.isFinite(timestamp) && timestamp > Date.now();
 }
 
 export function normalizeEmail(email) {
@@ -119,15 +147,17 @@ export function resolveAccessTier(value, { email = '', tier, isAdmin = false } =
 function resolveMembershipStatus({
 	storedAccessTier = 'public',
 	effectiveAccessTier = 'public',
-	academyEnd = null
+	subscriptionPhase = 'inactive',
+	hasExplicitSubscription = false
 } = {}) {
 	if (effectiveAccessTier === 'admin') return 'active';
+	if (subscriptionPhase === 'active' && effectiveAccessTier === 'member') return 'active';
+	if (subscriptionPhase === 'upcoming') return 'upcoming';
+	if (subscriptionPhase === 'expired') return 'expired';
+	if (subscriptionPhase === 'inactive' && hasExplicitSubscription) return 'none';
 	if (storedAccessTier === 'member' || storedAccessTier === 'admin') {
 		if (storedAccessTier === 'member' && effectiveAccessTier !== 'member') return 'expired';
 		return 'active';
-	}
-	if (academyEnd && hasPastDate(academyEnd) && effectiveAccessTier === 'free') {
-		return 'expired';
 	}
 	return 'none';
 }
@@ -246,9 +276,30 @@ export function buildAccessModel(value = {}) {
 		tier: legacyTier,
 		isAdmin: roleFlags.admin
 	});
+	const academySubscriptionPhase = membershipWindow.academySubscription
+		? getSubscriptionPhase(membershipWindow.academySubscription)
+		: membershipWindow.academyEnd && hasPastDate(membershipWindow.academyEnd)
+			? 'expired'
+			: membershipWindow.academyStart && hasFutureDate(membershipWindow.academyStart)
+				? 'upcoming'
+				: 'inactive';
 	const membershipExpired =
-		storedAccessTier === 'member' && !!membershipWindow.academyEnd && hasPastDate(membershipWindow.academyEnd);
-	const accessTier = membershipExpired ? 'free' : storedAccessTier;
+		storedAccessTier === 'member' && academySubscriptionPhase === 'expired';
+	const membershipUpcoming =
+		storedAccessTier === 'member' && academySubscriptionPhase === 'upcoming';
+	const membershipInactive =
+		storedAccessTier === 'member' &&
+		membershipWindow.hasExplicitAcademySubscription &&
+		academySubscriptionPhase === 'inactive';
+	const membershipActivated =
+		(storedAccessTier === 'free' || storedAccessTier === 'public') &&
+		membershipWindow.hasExplicitAcademySubscription &&
+		academySubscriptionPhase === 'active';
+	const accessTier = membershipExpired || membershipUpcoming || membershipInactive
+		? 'free'
+		: membershipActivated
+			? 'member'
+			: storedAccessTier;
 	const capabilities = resolveCapabilities(input.capabilities, {
 		accessTier,
 		roleFlags
@@ -256,7 +307,8 @@ export function buildAccessModel(value = {}) {
 	const membershipStatus = resolveMembershipStatus({
 		storedAccessTier,
 		effectiveAccessTier: accessTier,
-		academyEnd: membershipWindow.academyEnd
+		subscriptionPhase: academySubscriptionPhase,
+		hasExplicitSubscription: membershipWindow.hasExplicitAcademySubscription
 	});
 
 	return {
@@ -268,6 +320,10 @@ export function buildAccessModel(value = {}) {
 		effectiveAccessTier: accessTier,
 		membershipStatus,
 		membershipExpired,
+		membershipUpcoming,
+		membershipInactive,
+		membershipActivated,
+		academySubscription: membershipWindow.academySubscription,
 		academyStart: membershipWindow.academyStart,
 		academyEnd: membershipWindow.academyEnd,
 		autoRenew: membershipWindow.autoRenew,

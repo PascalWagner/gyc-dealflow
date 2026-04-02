@@ -340,10 +340,13 @@
 			{/if}
 		</span>
 		<input
-			type={field?.input === 'url' ? 'url' : 'text'}
+			type={field?.input === 'url' ? 'url' : field?.input === 'date' ? 'date' : field?.input === 'number' ? 'number' : 'text'}
 			inputmode={field?.type === 'currency' || field?.type === 'percentage' || field?.type === 'number' ? 'decimal' : 'text'}
 			value={value || ''}
 			placeholder={field.placeholder || ''}
+			min={field?.min ?? undefined}
+			max={field?.max ?? undefined}
+			step={field?.step ?? undefined}
 			aria-invalid={hasFieldError}
 			oninput={(event) => emit(event.currentTarget.value)}
 			onblur={formatOnBlur}

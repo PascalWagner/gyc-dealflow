@@ -13,8 +13,15 @@
 //   - tag_added: Tag change → sync tier
 
 import { getAdminClient, setCors, deriveTier } from './_supabase.js';
+import { getActiveSubscription, isMissingSubscriptionsTableError, SUBSCRIPTIONS_TABLE } from './_subscriptions.js';
 
 const WEBHOOK_SECRET = process.env.GHL_WEBHOOK_SECRET;
+
+function addMonths(baseDate, months) {
+  const nextDate = new Date(baseDate);
+  nextDate.setMonth(nextDate.getMonth() + months);
+  return nextDate;
+}
 
 export default async function handler(req, res) {
   setCors(res);
@@ -45,7 +52,7 @@ export default async function handler(req, res) {
       // Find user in Supabase
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('id, tier, academy_start, academy_end')
+        .select('id, tier, auto_renew')
         .eq('email', email)
         .single();
 
@@ -59,33 +66,90 @@ export default async function handler(req, res) {
       const product = (body.product || body.product_name || body.name || '').toLowerCase();
 
       let updates = {};
+      let activeSubscription = null;
+
+      try {
+        activeSubscription = await getActiveSubscription(supabase, profile.id, 'academy');
+      } catch (subscriptionError) {
+        if (!isMissingSubscriptionsTableError(subscriptionError)) throw subscriptionError;
+      }
+
+      let subscriptionInsert = null;
+      let subscriptionUpdate = null;
+      const now = new Date();
+      const nowIso = now.toISOString();
 
       // Academy purchase ($5,000 first year)
       if (product.includes('academy') || product.includes('cashflow') || (amount >= 4500 && amount <= 5500)) {
         updates.tier = 'academy';
-        updates.academy_start = new Date().toISOString();
-        // First year: end date is 12 months from now
-        const endDate = new Date();
-        endDate.setFullYear(endDate.getFullYear() + 1);
-        updates.academy_end = endDate.toISOString();
         updates.auto_renew = true;
+        const endDate = new Date(now);
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        const endDateIso = endDate.toISOString();
+        if (activeSubscription) {
+          subscriptionUpdate = {
+            status: 'active',
+            end_date: endDateIso,
+            renewal_date: endDateIso
+          };
+        } else {
+          subscriptionInsert = {
+            user_id: profile.id,
+            product_type: 'academy',
+            status: 'active',
+            start_date: nowIso,
+            end_date: endDateIso,
+            renewal_date: endDateIso
+          };
+        }
       }
       // Academy renewal ($2,000/yr or $300/mo)
       else if (product.includes('renewal') || product.includes('renew') || (amount >= 1800 && amount <= 2200)) {
-        // Annual renewal: extend by 12 months from current end date
-        const currentEnd = profile.academy_end ? new Date(profile.academy_end) : new Date();
-        const newEnd = new Date(Math.max(currentEnd.getTime(), Date.now()));
-        newEnd.setFullYear(newEnd.getFullYear() + 1);
-        updates.academy_end = newEnd.toISOString();
         updates.tier = 'academy';
+        updates.auto_renew = true;
+        const baseDate = activeSubscription?.end_date ? new Date(activeSubscription.end_date) : now;
+        const newEnd = new Date(Math.max(baseDate.getTime(), Date.now()));
+        newEnd.setFullYear(newEnd.getFullYear() + 1);
+        const newEndIso = newEnd.toISOString();
+        if (activeSubscription) {
+          subscriptionUpdate = {
+            status: 'active',
+            end_date: newEndIso,
+            renewal_date: newEndIso
+          };
+        } else {
+          subscriptionInsert = {
+            user_id: profile.id,
+            product_type: 'academy',
+            status: 'active',
+            start_date: nowIso,
+            end_date: newEndIso,
+            renewal_date: newEndIso
+          };
+        }
       }
       else if (amount >= 250 && amount <= 350) {
-        // Monthly renewal: extend by 1 month
-        const currentEnd = profile.academy_end ? new Date(profile.academy_end) : new Date();
-        const newEnd = new Date(Math.max(currentEnd.getTime(), Date.now()));
-        newEnd.setMonth(newEnd.getMonth() + 1);
-        updates.academy_end = newEnd.toISOString();
         updates.tier = 'academy';
+        updates.auto_renew = true;
+        const baseDate = activeSubscription?.end_date ? new Date(activeSubscription.end_date) : now;
+        const newEnd = addMonths(new Date(Math.max(baseDate.getTime(), Date.now())), 1);
+        const newEndIso = newEnd.toISOString();
+        if (activeSubscription) {
+          subscriptionUpdate = {
+            status: 'active',
+            end_date: newEndIso,
+            renewal_date: newEndIso
+          };
+        } else {
+          subscriptionInsert = {
+            user_id: profile.id,
+            product_type: 'academy',
+            status: 'active',
+            start_date: nowIso,
+            end_date: newEndIso,
+            renewal_date: newEndIso
+          };
+        }
       }
 
       // Card info from GHL payment data (if available)
@@ -110,13 +174,39 @@ export default async function handler(req, res) {
         console.log(`[GHL Webhook] Updated ${email}:`, JSON.stringify(updates));
       }
 
-      return res.status(200).json({ ok: true, email, updates });
+      try {
+        if (subscriptionUpdate && activeSubscription?.id) {
+          const { error: subscriptionError } = await supabase
+            .from(SUBSCRIPTIONS_TABLE)
+            .update(subscriptionUpdate)
+            .eq('id', activeSubscription.id);
+          if (subscriptionError) throw subscriptionError;
+        } else if (subscriptionInsert) {
+          const { error: subscriptionError } = await supabase
+            .from(SUBSCRIPTIONS_TABLE)
+            .insert(subscriptionInsert);
+          if (subscriptionError) throw subscriptionError;
+        }
+      } catch (subscriptionError) {
+        if (!isMissingSubscriptionsTableError(subscriptionError)) {
+          console.error('[GHL Webhook] Subscription update failed:', subscriptionError.message);
+          return res.status(500).json({ error: 'Failed to update subscription' });
+        }
+      }
+
+      return res.status(200).json({ ok: true, email, updates, subscription: subscriptionUpdate || subscriptionInsert });
     }
 
     // ── Subscription Cancelled ─────────────────────────────────────
     if (eventType === 'subscription_cancelled' || eventType === 'SubscriptionCancelled') {
       const email = (body.email || body.contact_email || '').toLowerCase();
       if (!email) return res.status(400).json({ error: 'Email is required' });
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
 
       const { error } = await supabase
         .from('user_profiles')
@@ -126,6 +216,22 @@ export default async function handler(req, res) {
       if (error) {
         console.error('[GHL Webhook] Cancel update failed:', error.message);
         return res.status(500).json({ error: 'Failed to update' });
+      }
+
+      try {
+        const activeSubscription = await getActiveSubscription(supabase, profile?.id || null, 'academy');
+        if (activeSubscription?.id) {
+          const { error: subscriptionError } = await supabase
+            .from(SUBSCRIPTIONS_TABLE)
+            .update({ renewal_date: null })
+            .eq('id', activeSubscription.id);
+          if (subscriptionError) throw subscriptionError;
+        }
+      } catch (subscriptionError) {
+        if (!isMissingSubscriptionsTableError(subscriptionError)) {
+          console.error('[GHL Webhook] Subscription cancel sync failed:', subscriptionError.message);
+          return res.status(500).json({ error: 'Failed to update subscription renewal' });
+        }
       }
 
       console.log(`[GHL Webhook] Auto-renew disabled for ${email}`);

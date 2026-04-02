@@ -182,6 +182,17 @@
 		}
 	}
 
+	async function findNewRecord() {
+		await refreshMatch();
+	}
+
+	async function skipForNow() {
+		if (!String(noteDraft || '').trim()) {
+			noteDraft = 'Skipped for now while I confirm the right filing.';
+		}
+		await setManualStatus('skipped');
+	}
+
 	async function setManualStatus(status) {
 		if (!dealId || submitting) return;
 		submitting = true;
@@ -323,16 +334,16 @@
 		</div>
 
 		<div class="sec-stage__actions">
-			<button type="button" class="sec-stage__button sec-stage__button--primary" disabled={loading || submitting || !dealId} onclick={refreshMatch}>
-				{search.hasRun ? 'Refresh Form D Search' : 'Search Form D Filings'}
+			<button type="button" class="sec-stage__button sec-stage__button--primary" disabled={loading || submitting || !dealId} onclick={findNewRecord}>
+				{search.hasRun ? 'Find New Record' : 'Find New Record'}
 			</button>
 			<button
 				type="button"
 				class="sec-stage__button"
 				disabled={loading || submitting || !dealId || disableManualResolution}
-				onclick={() => setManualStatus('have_not_filed_yet')}
+				onclick={skipForNow}
 			>
-				Mark Haven't Filed Yet
+				Skip For Now
 			</button>
 			<button
 				type="button"

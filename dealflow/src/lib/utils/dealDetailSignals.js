@@ -112,6 +112,14 @@ export function buildFeeRows(deal) {
 		});
 	}
 
+	if (deal.auditing || deal.financials) {
+		rows.push({
+			label: 'Auditing',
+			value: String(deal.auditing || deal.financials),
+			verdict: String(deal.auditing || deal.financials) === 'Audited' ? 'Third-party verified' : 'Reporting quality disclosed'
+		});
+	}
+
 	if (rawFees && rows.length === 0) {
 		rows.push({ label: 'Fee Summary', value: rawFees, verdict: 'Benchmarking available for members' });
 	}
@@ -124,7 +132,8 @@ export function buildOperatorTrackRecordRows(deal) {
 	const rows = [];
 	if (deal.managementCompany) rows.push({ label: 'Management Company', value: deal.managementCompany });
 	if (deal.mcFoundingYear) rows.push({ label: 'Founded', value: String(deal.mcFoundingYear) });
-	if (deal.fundAUM) rows.push({ label: 'AUM', value: formatMetric(deal.fundAUM, 'money') });
+	if (deal.managerAUM ?? deal.fundAUM) rows.push({ label: 'Manager AUM', value: formatMetric(deal.managerAUM ?? deal.fundAUM, 'money') });
+	if (deal.loanCount ?? deal.loan_count) rows.push({ label: 'Loan Count', value: String(deal.loanCount ?? deal.loan_count) });
 	if (deal.ceo) rows.push({ label: 'Lead Operator', value: deal.ceo });
 	if (deal.sponsorInDeal) rows.push({ label: 'Sponsor Co-Invest', value: formatMetric(deal.sponsorInDeal, 'pct') });
 	return rows.slice(0, 5);

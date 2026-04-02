@@ -5,7 +5,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import DealOnboardingProgress from '$lib/components/deal-review/DealOnboardingProgress.svelte';
 	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
-	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
+	import LendingFundReviewSectionStage from '$lib/components/deal-review/LendingFundReviewSectionStage.svelte';
 	import KeyDetailsStage from '$lib/components/deal-review/stages/KeyDetailsStage.svelte';
 	import SecVerificationStage from '$lib/components/deal-review/SecVerificationStage.svelte';
 	import TeamContactsStage from '$lib/components/onboarding/TeamContactsStage.svelte';
@@ -89,7 +89,7 @@
 	}
 
 	function getStageHref(stage, { extract = false, from = '', allowSummary = false } = {}) {
-		if (stage === 'risks') {
+		if (stage === 'risks' && branchInfo.branch !== 'lending_fund') {
 			return getRiskRedesignHref({ from });
 		}
 		const params = new URLSearchParams({ id: dealId });
@@ -101,7 +101,389 @@
 		return `/deal-review?${params.toString()}`;
 	}
 
+	const LENDING_STAGE_ORDER = [
+		'intake',
+		'sec',
+		'classification',
+		'static_terms',
+		'fees',
+		'historical_performance',
+		'portfolio_snapshot',
+		'sponsor_trust',
+		'team',
+		'risks',
+		'summary'
+	];
+
+	const HISTORICAL_RETURN_YEARS = Array.from(
+		{ length: Math.max(0, new Date().getFullYear() - 1 - 2015 + 1) },
+		(_, index) => 2015 + index
+	);
+
+	const LENDING_STAGE_CONFIGS = {
+		intake: {
+			id: 'intake',
+			label: 'Source Package',
+			title: 'Set the deal up, then upload the source files',
+			description: 'Capture the investment name, management company, website, and source documents first.',
+			sections: [
+				{
+					label: 'Draft setup',
+					description: 'Start with the exact deal name, sponsor linkage, and a stable slug.',
+					fieldKeys: ['investmentName', 'sponsor', 'companyWebsite', 'slug']
+				}
+			]
+		},
+		sec: {
+			id: 'sec',
+			label: 'SEC',
+			title: 'Confirm the SEC filing and offering structure',
+			description: 'Resolve the issuer, match the filing, or intentionally skip with a reviewer note before you move on.',
+			sections: []
+		},
+		classification: {
+			id: 'classification',
+			label: 'Classification',
+			title: 'Classify the lending fund',
+			description: 'Lock the lending strategy, offering structure, exposure types, and investing geography before you refine terms.',
+			sections: [
+				{
+					label: 'Offering setup',
+					description: 'Set the legal offering structure and who can invest.',
+					fieldKeys: ['dealType', 'offeringType', 'offeringStatus', 'availableTo']
+				},
+				{
+					label: 'Strategy and exposure',
+					description: 'Capture the lending strategy, the exposure types, and the states the fund invests in.',
+					fieldKeys: ['investmentStrategy', 'underlyingExposureTypes', 'investingStates']
+				},
+				{
+					label: 'Narrative',
+					description: 'Write the short summary that will anchor the card and deal page.',
+					fieldKeys: ['shortSummary']
+				}
+			]
+		},
+		static_terms: {
+			id: 'static_terms',
+			label: 'Static Terms',
+			title: 'Capture the durable fund terms',
+			description: 'Keep the durable LP terms in one place, then tuck the extra nuance into an additional details row.',
+			sections: [
+				{
+					label: 'Row 1',
+					description: 'These are the LP-facing terms that matter first.',
+					fieldKeys: ['investmentMinimum', 'holdPeriod', 'redemption', 'distributions']
+				},
+				{
+					label: 'Row 2',
+					description: 'Capture the static economics and reporting quality that show trust and structure.',
+					fieldKeys: ['preferredReturn', 'financials']
+				},
+				{
+					label: 'Row 3: Additional Details',
+					description: 'Keep the structural nuance visible without forcing it onto the card.',
+					fieldKeys: ['lpGpSplit', 'redemptionNotes', 'taxForm', 'additionalTermNotes']
+				}
+			]
+		},
+		fees: {
+			id: 'fees',
+			label: 'Fees',
+			title: 'Capture the fee structure',
+			description: 'Use this page to capture the actual fee language the sponsor disclosed.',
+			sections: [
+				{
+					label: 'Fees',
+					description: 'Document the management, incentive, servicing, redemption, and other fee lines cleanly.',
+					fieldKeys: ['fees']
+				}
+			]
+		},
+		historical_performance: {
+			id: 'historical_performance',
+			label: 'Historical Performance',
+			title: 'Review annual net returns to LPs',
+			description: 'Capture the completed annual return series. The current year stays out until it is complete.',
+			sections: [
+				{
+					label: 'Completed years',
+					description: 'Enter the net annual return to LPs for each completed year. Negative values are allowed.',
+					fieldKeys: HISTORICAL_RETURN_YEARS.map((year) => `historicalReturn${year}`)
+				}
+			]
+		},
+		portfolio_snapshot: {
+			id: 'portfolio_snapshot',
+			label: 'Snapshot',
+			title: 'Capture the current portfolio snapshot',
+			description: 'Record the latest dated operating snapshot so the live metrics are understandable.',
+			sections: [
+				{
+					label: 'Snapshot timing',
+					description: 'Every changing portfolio metric should have an as-of date.',
+					fieldKeys: ['snapshotAsOfDate']
+				},
+				{
+					label: 'Snapshot scale',
+					description: 'Capture current size, max size, diversification, and manager scale at this point in time.',
+					fieldKeys: ['fundAUM', 'currentFundSize', 'offeringSize', 'loanCount']
+				},
+				{
+					label: 'Snapshot risk metrics',
+					description: 'These are the point-in-time leverage and LTV metrics the reviewer should confirm.',
+					fieldKeys: ['currentAvgLoanLtv', 'maxAllowedLtv', 'currentLeverage', 'maxAllowedLeverage']
+				}
+			]
+		},
+		sponsor_trust: {
+			id: 'sponsor_trust',
+			label: 'Sponsor Trust',
+			title: 'Capture firm-level trust context',
+			description: 'Capture the firm and fund founding years that help the LP understand sponsor maturity.',
+			sections: [
+				{
+					label: 'Founding years',
+					description: 'Track the firm and fund separately so the card and page can show the right history.',
+					fieldKeys: ['firmFoundedYear', 'fundFoundedYear']
+				}
+			]
+		},
+		team: {
+			id: 'team',
+			label: 'Contacts',
+			title: 'Add the two contacts an LP will actually use',
+			description: 'Confirm the operator lead and the investor relations contact before you publish.',
+			sections: []
+		},
+		risks: {
+			id: 'risks',
+			label: 'Risks',
+			title: 'Review the risk profile',
+			description: 'Keep the risk capture taxonomy-first, then add supporting notes only when they help.',
+			sections: [
+				{
+					label: 'Risk tags',
+					description: 'Select the standardized risks this fund presents.',
+					fieldKeys: ['riskTags']
+				},
+				{
+					label: 'Risk notes',
+					description: 'Add supporting context only when the taxonomy needs extra explanation.',
+					fieldKeys: ['riskNotes', 'downsideNotes']
+				}
+			]
+		},
+		summary: {
+			id: 'summary',
+			label: 'Summary',
+			title: 'Review, edit, and publish',
+			description: 'See the whole record in one place before publishing or sending a validation email.',
+			sections: []
+		}
+	};
+
+	function getLendingStageConfig(stageId) {
+		return LENDING_STAGE_CONFIGS[stageId] || null;
+	}
+
+	function getLendingStages() {
+		return LENDING_STAGE_ORDER
+			.map((stageId, index) => {
+				const config = getLendingStageConfig(stageId);
+				if (!config) return null;
+				return {
+					...config,
+					index,
+					fieldGroups: (config.sections || []).map((section) => ({
+						id: `${stageId}:${section.label}`,
+						label: section.label,
+						description: section.description,
+						fieldKeys: [...(section.fieldKeys || [])]
+					})),
+					rules: []
+				};
+			})
+			.filter(Boolean);
+	}
+
+	function getReviewStages(branch) {
+		if (branch === 'lending_fund') {
+			return getLendingStages();
+		}
+		return getDealOnboardingStages({ branch, source: onboardingSource });
+	}
+
+	function getReviewStageById(stageId, branch) {
+		if (branch === 'lending_fund') {
+			return getLendingStageConfig(stageId) || null;
+		}
+		return getDealOnboardingStageById(stageId, { branch, source: onboardingSource });
+	}
+
+	function getReviewPreviousStage(stageId, branch, stages = reviewStages) {
+		const index = stages.findIndex((stage) => stage.id === stageId);
+		if (index <= 0) return '';
+		return stages[index - 1]?.id || '';
+	}
+
+	function getReviewNextStage(stageId, branch, stages = reviewStages) {
+		const index = stages.findIndex((stage) => stage.id === stageId);
+		if (index < 0 || index >= stages.length - 1) return '';
+		return stages[index + 1]?.id || '';
+	}
+
+	function hasMeaningfulReviewValue(value) {
+		if (value === null || value === undefined) return false;
+		if (Array.isArray(value)) return value.length > 0;
+		if (typeof value === 'object') {
+			return Object.values(value).some((entry) => hasMeaningfulReviewValue(entry));
+		}
+		return String(value).trim() !== '';
+	}
+
+	function getLendingHistoricalReturnFieldKeys() {
+		return HISTORICAL_RETURN_YEARS.map((year) => `historicalReturn${year}`);
+	}
+
+	function getMissingFieldKeys(fieldKeys = []) {
+		return fieldKeys.filter((fieldKey) => !hasMeaningfulReviewValue(form[fieldKey]));
+	}
+
+	function getLendingPublishRules() {
+		const classificationFields = ['dealType', 'offeringType', 'offeringStatus', 'availableTo', 'investmentStrategy', 'underlyingExposureTypes', 'investingStates', 'shortSummary'];
+		const staticTermFields = ['investmentMinimum', 'holdPeriod', 'redemption', 'distributions', 'financials', 'lpGpSplit'];
+		const feeFields = ['fees'];
+		const snapshotFields = ['snapshotAsOfDate', 'fundAUM', 'currentFundSize', 'offeringSize', 'loanCount', 'currentAvgLoanLtv', 'maxAllowedLtv', 'currentLeverage', 'maxAllowedLeverage'];
+		const sponsorTrustFields = ['firmFoundedYear', 'fundFoundedYear'];
+		const riskFields = ['riskTags'];
+		const historicalReturnFields = getLendingHistoricalReturnFieldKeys();
+		const hasHistoricalReturns = historicalReturnFields.some((fieldKey) => hasMeaningfulReviewValue(form[fieldKey]));
+
+		return [
+			{
+				id: 'lending_classification',
+				label: 'Classification is complete',
+				stageId: 'classification',
+				fieldKeys: classificationFields,
+				satisfied: getMissingFieldKeys(classificationFields).length === 0,
+				missingFieldKeys: getMissingFieldKeys(classificationFields)
+			},
+			{
+				id: 'lending_static_terms',
+				label: 'Static terms are defined',
+				stageId: 'static_terms',
+				fieldKeys: staticTermFields,
+				satisfied: getMissingFieldKeys(staticTermFields).length === 0,
+				missingFieldKeys: getMissingFieldKeys(staticTermFields)
+			},
+			{
+				id: 'lending_fees',
+				label: 'Fees are captured',
+				stageId: 'fees',
+				fieldKeys: feeFields,
+				satisfied: getMissingFieldKeys(feeFields).length === 0,
+				missingFieldKeys: getMissingFieldKeys(feeFields)
+			},
+			{
+				id: 'lending_historical_returns',
+				label: 'Historical returns are loaded',
+				stageId: 'historical_performance',
+				fieldKeys: historicalReturnFields,
+				satisfied: hasHistoricalReturns,
+				missingFieldKeys: hasHistoricalReturns ? [] : historicalReturnFields
+			},
+			{
+				id: 'lending_snapshot',
+				label: 'Snapshot metrics are dated and complete',
+				stageId: 'portfolio_snapshot',
+				fieldKeys: snapshotFields,
+				satisfied: getMissingFieldKeys(snapshotFields).length === 0,
+				missingFieldKeys: getMissingFieldKeys(snapshotFields)
+			},
+			{
+				id: 'lending_sponsor_trust',
+				label: 'Sponsor trust details are complete',
+				stageId: 'sponsor_trust',
+				fieldKeys: sponsorTrustFields,
+				satisfied: getMissingFieldKeys(sponsorTrustFields).length === 0,
+				missingFieldKeys: getMissingFieldKeys(sponsorTrustFields)
+			},
+			{
+				id: 'lending_risks',
+				label: 'Risk taxonomy is captured',
+				stageId: 'risks',
+				fieldKeys: riskFields,
+				satisfied: getMissingFieldKeys(riskFields).length === 0,
+				missingFieldKeys: getMissingFieldKeys(riskFields)
+			}
+		];
+	}
+
+	function isReviewStageComplete(stage) {
+		if (!stage) return false;
+		if (branchInfo.branch !== 'lending_fund') {
+			if (stage.id === 'intake') return hasSourceDocuments;
+			if (stage.id === 'sec') return secGateResolved;
+			if (stage.id === 'team') return teamContactsValidation.valid;
+			return (stage.rules || []).every((rule) => rule.satisfied);
+		}
+
+		switch (stage.id) {
+			case 'intake':
+				return hasSourceDocuments
+					&& hasMeaningfulReviewValue(form.investmentName)
+					&& hasMeaningfulReviewValue(form.sponsor?.name)
+					&& hasMeaningfulReviewValue(form.companyWebsite);
+			case 'sec':
+				return secCanAdvance;
+			case 'classification':
+				return hasMeaningfulReviewValue(form.dealType)
+					&& hasMeaningfulReviewValue(form.offeringType)
+					&& hasMeaningfulReviewValue(form.offeringStatus)
+					&& hasMeaningfulReviewValue(form.availableTo)
+					&& hasMeaningfulReviewValue(form.investmentStrategy)
+					&& hasMeaningfulReviewValue(form.underlyingExposureTypes)
+					&& hasMeaningfulReviewValue(form.investingStates)
+					&& hasMeaningfulReviewValue(form.shortSummary);
+			case 'static_terms':
+				return hasMeaningfulReviewValue(form.investmentMinimum)
+					&& hasMeaningfulReviewValue(form.holdPeriod)
+					&& hasMeaningfulReviewValue(form.redemption)
+					&& hasMeaningfulReviewValue(form.distributions)
+					&& hasMeaningfulReviewValue(form.financials)
+					&& hasMeaningfulReviewValue(form.lpGpSplit);
+			case 'fees':
+				return hasMeaningfulReviewValue(form.fees);
+			case 'historical_performance':
+				return HISTORICAL_RETURN_YEARS.some((year) => hasMeaningfulReviewValue(form[`historicalReturn${year}`]));
+			case 'portfolio_snapshot':
+				return hasMeaningfulReviewValue(form.snapshotAsOfDate)
+					&& hasMeaningfulReviewValue(form.fundAUM)
+					&& hasMeaningfulReviewValue(form.currentFundSize)
+					&& hasMeaningfulReviewValue(form.offeringSize)
+					&& hasMeaningfulReviewValue(form.loanCount)
+					&& hasMeaningfulReviewValue(form.currentAvgLoanLtv)
+					&& hasMeaningfulReviewValue(form.maxAllowedLtv)
+					&& hasMeaningfulReviewValue(form.currentLeverage)
+					&& hasMeaningfulReviewValue(form.maxAllowedLeverage);
+			case 'sponsor_trust':
+				return hasMeaningfulReviewValue(form.firmFoundedYear) && hasMeaningfulReviewValue(form.fundFoundedYear);
+			case 'team':
+				return teamContactsValidation.valid;
+			case 'risks':
+				return hasMeaningfulReviewValue(form.riskTags);
+			case 'summary':
+				return secCanAdvance && teamContactsValidation.valid;
+			default:
+				return true;
+		}
+	}
+
 	function getStageFieldGroups(stage) {
+		if (branchInfo.branch === 'lending_fund') {
+			return getLendingStageConfig(stage)?.sections || [];
+		}
 		return getDealOnboardingFieldGroups(stage, { branch: branchInfo.branch, source: onboardingSource });
 	}
 
@@ -191,43 +573,63 @@
 		dealBranch: manualBranch || deal?.deal_branch || deal?.dealBranch || ''
 	});
 	const branchInfo = $derived(resolveDealOnboardingBranch(onboardingSource));
-	const onboardingStages = $derived(getDealOnboardingStages({ branch: branchInfo.branch, source: onboardingSource }));
-	const onboardingFlow = $derived(buildDealOnboardingFlow(onboardingSource, { branch: branchInfo.branch }));
+	const reviewStages = $derived(branchInfo.branch === 'lending_fund'
+		? getLendingStages()
+		: getDealOnboardingStages({ branch: branchInfo.branch, source: onboardingSource }));
+	const onboardingStages = $derived.by(() => reviewStages);
+	const onboardingFlow = $derived(branchInfo.branch === 'lending_fund'
+		? {
+			isPublishReady: reviewStages.filter((stage) => stage.id !== 'summary').every((stage) => isReviewStageComplete(stage)),
+			publishRules: getLendingPublishRules()
+		}
+		: buildDealOnboardingFlow(onboardingSource, { branch: branchInfo.branch }));
 	const teamContactsValidation = $derived(validateTeamContacts(teamContacts));
 	const primaryTeamContact = $derived(pickPrimaryTeamContact(teamContacts));
 	const irTeamContact = $derived(pickInvestorRelationsContact(teamContacts));
 	const secStatus = $derived(secVerificationContext?.view?.currentStatus || 'pending');
 	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
+	const secCanAdvance = $derived(secGateResolved || secStatus === 'skipped');
 	const hasSourceDocuments = $derived(
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
 	);
 	const canOpenSummaryPreview = $derived(
-		allowSummaryPreview && hasSourceDocuments && secGateResolved && teamContactsValidation.valid
+		allowSummaryPreview && hasSourceDocuments && secCanAdvance && teamContactsValidation.valid
 	);
-	const summaryPublishReady = $derived(onboardingFlow.isPublishReady && teamContactsValidation.valid && secGateResolved);
-	function isStageComplete(stage) {
-		if (!stage) return false;
-		if (stage.id === 'intake') return hasSourceDocuments;
-		if (stage.id === 'sec') return secGateResolved;
-		if (stage.id === 'team') return teamContactsValidation.valid;
-		return (stage.rules || []).every((rule) => rule.satisfied);
-	}
+	const summaryPublishReady = $derived(
+		(branchInfo.branch === 'lending_fund'
+			? reviewStages.filter((stage) => stage.id !== 'summary').every((stage) => isReviewStageComplete(stage))
+			: onboardingFlow.isPublishReady)
+		&& teamContactsValidation.valid
+		&& secGateResolved
+	);
 	const firstIncompleteStage = $derived.by(() => {
-		const incompleteStage = onboardingStages.find((stage) => stage.id !== 'summary' && !isStageComplete(stage));
+		const incompleteStage = reviewStages.find((stage) => stage.id !== 'summary' && !isReviewStageComplete(stage));
 		return incompleteStage?.id || 'summary';
 	});
 	const furthestUnlockedStage = $derived.by(() => {
 		if (!deal) return reviewStep === 'intake' ? 'intake' : 'sec';
+		if (branchInfo.branch === 'lending_fund') return firstIncompleteStage;
 		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) return 'risks';
 		return firstIncompleteStage;
 	});
 	const unlockedStageIds = $derived.by(() => {
 		if (!deal) return reviewStep === 'intake' ? ['intake'] : ['sec'];
 		if (firstIncompleteStage === 'summary') {
-			return onboardingStages.map((stage) => stage.id);
+			return reviewStages.map((stage) => stage.id);
+		}
+		if (branchInfo.branch === 'lending_fund') {
+			const unlockedIndex = reviewStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
+			if (unlockedIndex < 0) return ['intake'];
+			const unlockedIds = reviewStages
+				.filter((stage, index) => index <= unlockedIndex)
+				.map((stage) => stage.id);
+			if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
+				return [...unlockedIds, 'summary'];
+			}
+			return unlockedIds;
 		}
 		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) {
-			const unlockedIds = onboardingStages
+			const unlockedIds = reviewStages
 				.filter((stage) => stage.id !== 'summary')
 				.map((stage) => stage.id);
 			if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
@@ -235,9 +637,9 @@
 			}
 			return unlockedIds;
 		}
-		const unlockedIndex = onboardingStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
+		const unlockedIndex = reviewStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
 		if (unlockedIndex < 0) return ['intake'];
-		const unlockedIds = onboardingStages
+		const unlockedIds = reviewStages
 			.filter((stage, index) => index <= unlockedIndex)
 			.map((stage) => stage.id);
 		if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
@@ -248,17 +650,30 @@
 	const activeStage = $derived.by(() => {
 		if (reviewStep === 'intake') return 'intake';
 		if (requestedStage === 'summary' && canOpenSummaryPreview) return 'summary';
-		if (!isValidOnboardingStage(requestedStage)) return firstIncompleteStage;
+		if (branchInfo.branch !== 'lending_fund' && !isValidOnboardingStage(requestedStage)) return firstIncompleteStage;
+		if (branchInfo.branch === 'lending_fund' && !reviewStages.some((stage) => stage.id === requestedStage)) return firstIncompleteStage;
 		return unlockedStageIds.includes(requestedStage) ? requestedStage : firstIncompleteStage;
 	});
-	const activeStageConfig = $derived(getDealOnboardingStageById(activeStage, { branch: branchInfo.branch, source: onboardingSource }));
-	const previousStage = $derived(getPreviousOnboardingStage(activeStage, branchInfo.branch));
-	const nextStage = $derived(getNextOnboardingStage(activeStage, branchInfo.branch));
+	const activeStageConfig = $derived(
+		branchInfo.branch === 'lending_fund'
+			? getReviewStageById(activeStage, branchInfo.branch)
+			: getDealOnboardingStageById(activeStage, { branch: branchInfo.branch, source: onboardingSource })
+	);
+	const previousStage = $derived(
+		branchInfo.branch === 'lending_fund'
+			? getReviewPreviousStage(activeStage, branchInfo.branch, reviewStages)
+			: getPreviousOnboardingStage(activeStage, branchInfo.branch)
+	);
+	const nextStage = $derived(
+		branchInfo.branch === 'lending_fund'
+			? getReviewNextStage(activeStage, branchInfo.branch, reviewStages)
+			: getNextOnboardingStage(activeStage, branchInfo.branch)
+	);
 	const completedStageIds = $derived(
-		onboardingStages
+		reviewStages
 			.filter((stage) =>
-				stage.index < onboardingStages.findIndex((candidate) => candidate.id === activeStage)
-				&& isStageComplete(stage)
+				stage.index < reviewStages.findIndex((candidate) => candidate.id === activeStage)
+				&& isReviewStageComplete(stage)
 			)
 			.map((stage) => stage.id)
 	);
@@ -273,10 +688,10 @@
 			? 'Upload the source documents first, then review and clean up the extracted deal details.'
 			: activeStageConfig?.description || 'Fix missing fields, tighten source context, and move the deal toward publishing with confidence.'
 	);
-	const stageMetaById = $derived.by(() => new Map(onboardingStages.map((stage) => [stage.id, stage])));
+	const stageMetaById = $derived.by(() => new Map(reviewStages.map((stage) => [stage.id, stage])));
 	const fieldStageLabels = $derived.by(() => {
 		const labels = new Map();
-		for (const stage of onboardingStages) {
+		for (const stage of reviewStages) {
 			for (const group of stage.fieldGroups || []) {
 				for (const fieldKey of group.fieldKeys || []) {
 					if (!labels.has(fieldKey)) {
@@ -289,7 +704,7 @@
 	});
 	const fieldStageIds = $derived.by(() => {
 		const ids = new Map();
-		for (const stage of onboardingStages) {
+		for (const stage of reviewStages) {
 			for (const group of stage.fieldGroups || []) {
 				for (const fieldKey of group.fieldKeys || []) {
 					if (!ids.has(fieldKey)) {
@@ -302,7 +717,7 @@
 	});
 	const summaryRelevantWarningFieldKeys = $derived.by(() => {
 		const keys = new Set();
-		for (const stage of onboardingStages) {
+		for (const stage of reviewStages) {
 			for (const group of stage.fieldGroups || []) {
 				for (const fieldKey of group.fieldKeys || []) {
 					keys.add(fieldKey);
@@ -380,10 +795,22 @@
 	}
 
 	function updateField(fieldKey, nextValue) {
-		form = {
+		const nextForm = {
 			...form,
 			[fieldKey]: nextValue
 		};
+		if (branchInfo.branch === 'lending_fund' && fieldKey === 'offeringType') {
+			const normalizedOfferingType = String(nextValue || '').trim().toLowerCase();
+			if (normalizedOfferingType === '506(c)') {
+				nextForm.availableTo = 'Accredited Investors';
+			} else if (normalizedOfferingType === '506(b)') {
+				nextForm.availableTo = 'Both';
+			}
+		}
+		if (branchInfo.branch === 'lending_fund' && !hasMeaningfulReviewValue(nextForm.assetClass)) {
+			nextForm.assetClass = 'Private Debt / Credit';
+		}
+		form = nextForm;
 		fieldErrors = {
 			...fieldErrors,
 			[fieldKey]: ''
@@ -1016,6 +1443,9 @@
 
 	function getSaveFieldKeysForStage(stage = activeStage) {
 		if (!stage || stage === 'summary') return null;
+		if (branchInfo.branch === 'lending_fund') {
+			return getStageFieldGroups(stage).flatMap((group) => Array.isArray(group?.fieldKeys) ? group.fieldKeys : []);
+		}
 		return getOnboardingStageFieldKeys(stage, branchInfo.branch);
 	}
 
@@ -1243,8 +1673,8 @@
 			return await saveTeamContacts({ quiet: true, requireComplete: true });
 		}
 		if (stage === 'sec') {
-			if (!secGateResolved) {
-				saveError = `Resolve SEC issuer verification first. Current state: ${SEC_VERIFICATION_LABELS[secStatus] || 'Pending'}.`;
+			if (!secCanAdvance) {
+				saveError = `Finish the SEC review first by verifying the filing or intentionally skipping it. Current state: ${SEC_VERIFICATION_LABELS[secStatus] || 'Pending'}.`;
 				return false;
 			}
 			return true;
@@ -1710,23 +2140,98 @@
 								}}
 								onback={() => navigateToStage(previousStage)}
 								oncontinue={() => navigateToStage(nextStage, { allowAdvance: true })}
-							/>
+								/>
 						{/key}
-					{:else if activeStage === 'details'}
-						<KeyDetailsStage
-							source={{ ...deal, branch: manualBranch || branchInfo.branch }}
-							form={{ ...form, branch: manualBranch || branchInfo.branch }}
-							branch={manualBranch || branchInfo.branch}
+					{:else if activeStage === 'historical_performance'}
+						<LendingFundReviewSectionStage
+							eyebrow={activeStageConfig?.label || 'Review'}
+							title={activeStageConfig?.title || 'Historical performance'}
+							description={activeStageConfig?.description || ''}
+							sections={activeStageConfig?.sections || []}
+							form={form}
 							fieldErrors={fieldErrors}
 							fieldWarnings={fieldWarnings}
 							onupdate={updateField}
-							onaction={generateSlug}
+							labelOverrides={{}}
 						/>
+						{:else if ['classification', 'static_terms', 'fees', 'portfolio_snapshot', 'sponsor_trust'].includes(activeStage)}
+							{#if branchInfo.branch === 'lending_fund'}
+								<LendingFundReviewSectionStage
+									eyebrow={activeStageConfig?.label || 'Review'}
+									title={activeStageConfig?.title || 'Review the deal'}
+									description={activeStageConfig?.description || ''}
+									sections={activeStageConfig?.sections || []}
+									form={form}
+									fieldErrors={fieldErrors}
+									fieldWarnings={fieldWarnings}
+									variant="lending_fund"
+									labelOverrides={activeStage === 'static_terms'
+										? {
+											preferredReturn: 'Preferred Return',
+											financials: 'Auditing',
+											lpGpSplit: 'LP Share',
+											redemptionNotes: 'Redemption Notes',
+											taxForm: 'Tax Form',
+											additionalTermNotes: 'Additional Details'
+										}
+										: activeStage === 'portfolio_snapshot'
+											? {
+												snapshotAsOfDate: 'Snapshot As Of',
+												fundAUM: 'Manager AUM',
+												currentFundSize: 'Current Fund Size',
+												offeringSize: 'Max Fund Size',
+												loanCount: 'Loan Count',
+												currentAvgLoanLtv: 'Current Avg LTV',
+												maxAllowedLtv: 'Max Allowed LTV',
+												currentLeverage: 'Current Leverage',
+												maxAllowedLeverage: 'Max Allowed Leverage'
+											}
+											: activeStage === 'fees'
+												? { fees: 'Fees' }
+												: activeStage === 'sponsor_trust'
+													? { firmFoundedYear: 'Firm Founded', fundFoundedYear: 'Fund Founded' }
+													: activeStage === 'classification'
+														? {
+															offeringStatus: 'Offering Status',
+															investmentStrategy: 'Strategy',
+															investingStates: 'Investing Geography',
+															underlyingExposureTypes: 'Underlying Exposure'
+														}
+														: {}}
+									onupdate={updateField}
+									onaction={null}
+								/>
+						{:else}
+							<KeyDetailsStage
+								source={{ ...deal, branch: manualBranch || branchInfo.branch }}
+								form={{ ...form, branch: manualBranch || branchInfo.branch }}
+								branch={manualBranch || branchInfo.branch}
+								fieldErrors={fieldErrors}
+								fieldWarnings={fieldWarnings}
+								onupdate={updateField}
+								onaction={generateSlug}
+							/>
+						{/if}
 					{:else if activeStage === 'risks'}
-						<section class="state-card">
-							<strong>Opening the redesigned risk review...</strong>
-							<p>This stage now lives in the split risk-review flow.</p>
-						</section>
+						{#if branchInfo.branch === 'lending_fund'}
+							<LendingFundReviewSectionStage
+								eyebrow={activeStageConfig?.label || 'Review'}
+								title={activeStageConfig?.title || 'Review the risk profile'}
+								description={activeStageConfig?.description || ''}
+								sections={activeStageConfig?.sections || []}
+								form={form}
+								fieldErrors={fieldErrors}
+								fieldWarnings={fieldWarnings}
+								variant="lending_fund"
+								labelOverrides={{ riskTags: 'Risks', riskNotes: 'Risk Notes', downsideNotes: 'Downside Notes' }}
+								onupdate={updateField}
+							/>
+						{:else}
+							<section class="state-card">
+								<strong>Opening the redesigned risk review...</strong>
+								<p>This stage now lives in the split risk-review flow.</p>
+							</section>
+						{/if}
 					{:else if activeStage === 'summary'}
 						<section class="editor-card">
 							<div class="card-heading">
@@ -1785,11 +2290,11 @@
 										onclick={() => navigateToStage('sec')}
 									>
 										<div class="check-row__copy">
-											<strong>SEC / issuer verification resolved</strong>
-											<span>{secGateResolved ? 'Resolved' : 'Resolve the SEC stage first'}</span>
+											<strong>SEC / issuer review completed</strong>
+											<span>{secGateResolved ? 'Resolved' : (secStatus === 'skipped' ? 'Skipped for now still blocks publishing' : 'Resolve the SEC stage first')}</span>
 										</div>
 										<div class="check-row__meta">
-											<span class="check-row__status">{secGateResolved ? 'Resolved' : 'Needs review'}</span>
+											<span class="check-row__status">{secGateResolved ? 'Resolved' : (secStatus === 'skipped' ? 'Still blocked' : 'Needs review')}</span>
 											<span class="check-row__action">Open SEC</span>
 										</div>
 									</button>
@@ -1826,13 +2331,16 @@
 								</div>
 							</section>
 
-							{#if buildOperatorValidationHref()}
-								<div class="summary-actions">
+							<div class="summary-actions">
+								<a class="ghost-btn" href={`/deal/${dealId}`} target="_blank" rel="noopener">
+									Open Deal Page
+								</a>
+								{#if buildOperatorValidationHref()}
 									<a class="ghost-btn" href={buildOperatorValidationHref()}>
 										Send operator validation email
 									</a>
-								</div>
-							{/if}
+								{/if}
+							</div>
 						</section>
 					{:else}
 						{#if activeStage === 'overview'}
@@ -1883,7 +2391,7 @@
 						{/each}
 					{/if}
 
-					{#if activeStage !== 'team' && activeStage !== 'risks'}
+					{#if activeStage !== 'team'}
 						<div class="form-footer wizard-footer">
 							<div class="wizard-footer__left">
 								{#if activeStage !== 'intake' && previousStage && previousStage !== activeStage}

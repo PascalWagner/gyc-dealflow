@@ -3,6 +3,7 @@ import { normalizeOfferingType } from '../utils/dealflow-contract.js';
 export const SEC_VERIFICATION_STATUSES = [
 	'pending',
 	'needs_review',
+	'skipped',
 	'verified',
 	'have_not_filed_yet',
 	'not_applicable'
@@ -17,6 +18,7 @@ export const SEC_VERIFICATION_RESOLVED_STATUSES = [
 export const SEC_VERIFICATION_LABELS = {
 	pending: 'Pending',
 	needs_review: 'Needs review',
+	skipped: 'Skipped',
 	verified: 'Verified',
 	have_not_filed_yet: "Haven't filed yet",
 	not_applicable: 'Not applicable'
@@ -25,6 +27,7 @@ export const SEC_VERIFICATION_LABELS = {
 export const SEC_VERIFICATION_TONES = {
 	pending: 'pending',
 	needs_review: 'review',
+	skipped: 'pending',
 	verified: 'verified',
 	have_not_filed_yet: 'waiting',
 	not_applicable: 'neutral'
@@ -66,6 +69,7 @@ export function normalizeSecVerificationStatus(value, fallback = 'pending') {
 	if (SEC_VERIFICATION_STATUSES.includes(normalized)) return normalized;
 	if (normalized === 'verified_match') return 'verified';
 	if (normalized === 'notapplicable') return 'not_applicable';
+	if (normalized === 'skip' || normalized === 'skipped') return 'skipped';
 	if (normalized === 'have_not_filed' || normalized === 'havent_filed_yet' || normalized === 'have_not_filed_yet') {
 		return 'have_not_filed_yet';
 	}
@@ -227,6 +231,8 @@ export function buildSecVerificationView({
 			: 'Matched to a confirmed SEC filing.';
 	} else if (currentStatus === 'have_not_filed_yet') {
 		description = record?.reason_note || 'The issuer has not filed yet, so publishing can continue once the rest of the review is complete.';
+	} else if (currentStatus === 'skipped') {
+		description = record?.reason_note || 'SEC review was skipped for now. You can continue the workflow, but publishing should stay blocked until this is resolved.';
 	} else if (currentStatus === 'not_applicable') {
 		description = record?.reason_note || applicability.reason;
 	} else if (currentStatus === 'needs_review') {

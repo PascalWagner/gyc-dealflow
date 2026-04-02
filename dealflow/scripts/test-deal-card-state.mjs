@@ -98,7 +98,7 @@ test('lending deals use the returns hero when history is present', () => {
 	assert.equal(hero.headlineLabel, 'Target Income');
 });
 
-test('lending deals fall back cleanly to image and generic heroes when returns are missing', () => {
+test('lending deals use the empty-state hero when returns are missing', () => {
 	const imageHero = getDealCardHeroConfig({
 		id: 'deal-lending-image',
 		assetClass: 'Debt',
@@ -113,8 +113,8 @@ test('lending deals fall back cleanly to image and generic heroes when returns a
 		investmentName: 'Debt Fund III'
 	});
 
-	assert.equal(imageHero.variant, 'standard-image');
-	assert.equal(fallbackHero.variant, 'fallback');
+	assert.equal(imageHero.variant, 'lending-empty');
+	assert.equal(fallbackHero.variant, 'lending-empty');
 });
 
 test('standard deals still use the shared image hero path', () => {

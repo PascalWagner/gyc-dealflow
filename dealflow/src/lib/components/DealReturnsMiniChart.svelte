@@ -57,7 +57,7 @@
 		const maxValue = Math.max(...values);
 		const spread = maxValue - minValue;
 		const padding = Math.max(0.9, spread * 0.32 || 1.2);
-		const min = Math.max(0, minValue - padding);
+		const min = minValue - padding;
 		const max = maxValue + padding;
 
 		return {
@@ -88,7 +88,7 @@
 				((point.value - domain.min) / domain.span) * plotHeight
 			);
 			const y = layout.plotBottom - height;
-			const label = `${point.value.toFixed(1)}%`;
+			const label = `${point.value.toFixed(2)}%`;
 			const labelCharacterWidth = variant === 'inset' ? 5.4 : 5.9;
 			const pillWidth = Math.max(layout.pillMinWidth, (label.length * labelCharacterWidth) + layout.pillPadding);
 			const pillY = Math.max(4, y - layout.pillYOffset);

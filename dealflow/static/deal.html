@@ -7330,7 +7330,6 @@ async function renderDeal() {
       var cached = sessionStorage.getItem('gycDealsCache');
       if (cached) allDeals = JSON.parse(cached);
     } catch(e) {}
-    if (allDeals.length < 2) return;
 
     // Score each deal by similarity to current deal
     var scored = allDeals
@@ -7355,8 +7354,6 @@ async function renderDeal() {
       .filter(function(s) { return s.score >= 3; })
       .sort(function(a, b) { return b.score - a.score; })
       .slice(0, 8);
-
-    if (scored.length === 0) return;
 
     // Compute averages from peers for color coding
     var peers = scored.map(function(s) { return s.deal; });
@@ -7424,28 +7421,37 @@ async function renderDeal() {
     tableHtml += '</tr>';
 
     // Peer rows
-    scored.forEach(function(s) {
-      var d = s.deal;
-      var stageLabel = getStageLabel(d);
-      tableHtml += '<tr style="transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'">';
-      tableHtml += '<td style="' + tdStyle + 'text-align:left;cursor:pointer;" onclick="window.location.href=\'deal.html?id=' + d.id + '\'"><div style="color:var(--text-dark);">' + esc(d.investmentName) + '</div><div style="font-size:11px;font-weight:500;color:var(--text-muted);">' + esc(d.managementCompany || '') + '</div>' + stageLabel + '</td>';
-      tableHtml += '<td style="' + tdStyle + cellColor(d.targetIRR, avgIRR, true) + '">' + (d.targetIRR ? (d.targetIRR * 100).toFixed(1) + '%' : '—') + '</td>';
-      tableHtml += '<td style="' + tdStyle + cellColor(d.preferredReturn, avgPref, true) + '">' + (d.preferredReturn ? (d.preferredReturn * 100).toFixed(1) + '%' : '—') + '</td>';
-      tableHtml += '<td style="' + tdStyle + cellColor(d.equityMultiple, avgEM, true) + '">' + (d.equityMultiple ? d.equityMultiple.toFixed(2) + 'x' : '—') + '</td>';
-      tableHtml += '<td style="' + tdStyle + cellColor(d.investmentMinimum, avgMin, false) + '">' + (d.investmentMinimum ? '$' + d.investmentMinimum.toLocaleString() : '—') + '</td>';
-      tableHtml += '<td style="' + tdStyle + cellColor(d.holdPeriod, avgHold, false) + '">' + (d.holdPeriod ? d.holdPeriod + ' Yrs' : '—') + '</td>';
-      tableHtml += '<td style="' + tdStyle + '">' + (d.offeringSize ? '$' + (d.offeringSize >= 1000000 ? (d.offeringSize / 1000000).toFixed(0) + 'mm' : d.offeringSize.toLocaleString()) : '—') + '</td>';
-      tableHtml += '</tr>';
-    });
+    if (scored.length === 0) {
+      tableHtml += '<tr><td colspan="7" style="padding:16px 12px;text-align:center;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border-light);">We haven&apos;t matched this deal to comparable opportunities yet.</td></tr>';
+    } else {
+      scored.forEach(function(s) {
+        var d = s.deal;
+        var stageLabel = getStageLabel(d);
+        tableHtml += '<tr style="transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'">';
+        tableHtml += '<td style="' + tdStyle + 'text-align:left;cursor:pointer;" onclick="window.location.href=\'deal.html?id=' + d.id + '\'"><div style="color:var(--text-dark);">' + esc(d.investmentName) + '</div><div style="font-size:11px;font-weight:500;color:var(--text-muted);">' + esc(d.managementCompany || '') + '</div>' + stageLabel + '</td>';
+        tableHtml += '<td style="' + tdStyle + cellColor(d.targetIRR, avgIRR, true) + '">' + (d.targetIRR ? (d.targetIRR * 100).toFixed(1) + '%' : '—') + '</td>';
+        tableHtml += '<td style="' + tdStyle + cellColor(d.preferredReturn, avgPref, true) + '">' + (d.preferredReturn ? (d.preferredReturn * 100).toFixed(1) + '%' : '—') + '</td>';
+        tableHtml += '<td style="' + tdStyle + cellColor(d.equityMultiple, avgEM, true) + '">' + (d.equityMultiple ? d.equityMultiple.toFixed(2) + 'x' : '—') + '</td>';
+        tableHtml += '<td style="' + tdStyle + cellColor(d.investmentMinimum, avgMin, false) + '">' + (d.investmentMinimum ? '$' + d.investmentMinimum.toLocaleString() : '—') + '</td>';
+        tableHtml += '<td style="' + tdStyle + cellColor(d.holdPeriod, avgHold, false) + '">' + (d.holdPeriod ? d.holdPeriod + ' Yrs' : '—') + '</td>';
+        tableHtml += '<td style="' + tdStyle + '">' + (d.offeringSize ? '$' + (d.offeringSize >= 1000000 ? (d.offeringSize / 1000000).toFixed(0) + 'mm' : d.offeringSize.toLocaleString()) : '—') + '</td>';
+        tableHtml += '</tr>';
+      });
+    }
     tableHtml += '</tbody></table></div>';
 
-    var legendHtml = '<div style="display:flex;gap:16px;margin-top:12px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">'
-      + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:rgba(74,222,128,0.2);"></span>Better than average</span>'
-      + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.2);"></span>Below average</span>'
-      + '</div>';
+    var legendHtml = scored.length > 0
+      ? '<div style="display:flex;gap:16px;margin-top:12px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">'
+        + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:rgba(74,222,128,0.2);"></span>Better than average</span>'
+        + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.2);"></span>Below average</span>'
+        + '</div>'
+      : '<div style="margin-top:12px;font-family:var(--font-body);font-size:13px;line-height:1.5;color:var(--text-secondary);">This table stays pinned on the deal page and will fill in automatically once comparable opportunities are available.</div>';
+    var similarCountLabel = scored.length > 0
+      ? scored.length + ' comparable ' + esc(isCreditFund(deal) ? 'Lending' : (deal.assetClass || '')) + ' deals'
+      : 'No comparable deals yet';
 
     similarHtml = '<div class="section">'
-      + '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">Similar Deals</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">' + scored.length + ' comparable ' + esc(isCreditFund(deal) ? 'Lending' : (deal.assetClass || '')) + ' deals</span></div>'
+      + '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">Similar Deals</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">' + similarCountLabel + '</span></div>'
       + '<div class="section-body">' + tableHtml + legendHtml + '</div>'
       + '</div>';
   })();
@@ -7471,12 +7477,73 @@ async function renderDeal() {
     return (parseFloat(s) || 0) * mult;
   }
   var dealFitHtml = '';
+  function buildDealFitSection(options) {
+    var verdictColor = options.verdictColor || '#3b82f6';
+    var verdictIcon = options.verdictIcon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:20px;height:20px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    var verdictText = options.verdictText || 'Deal fit overview';
+    var subtitle = options.subtitle || '';
+    var fits = options.fits || [];
+    var misses = options.misses || [];
+    var insights = options.insights || [];
+    var html = '<div class="section">';
+    html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div>';
+    html += '<div class="section-body">';
+    html += '<div style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:' + verdictColor + '0a;border:1px solid ' + verdictColor + '20;border-radius:10px;margin-bottom:20px;">';
+    html += '<div style="flex-shrink:0;color:' + verdictColor + ';">' + verdictIcon + '</div>';
+    html += '<div>';
+    html += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:' + verdictColor + ';">' + verdictText + '</div>';
+    if (subtitle) {
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">' + subtitle + '</div>';
+    }
+    html += '</div></div>';
+    if (fits.length > 0) {
+      html += '<div style="margin-bottom:16px;">';
+      html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">What works</div>';
+      fits.forEach(function(f) {
+        html += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"/></svg>'
+          + '<span>' + f + '</span></div>';
+      });
+      html += '</div>';
+    }
+    if (misses.length > 0) {
+      html += '<div style="margin-bottom:16px;">';
+      html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ef4444;margin-bottom:8px;">Watch out</div>';
+      misses.forEach(function(m) {
+        html += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+          + '<span>' + m + '</span></div>';
+      });
+      html += '</div>';
+    }
+    if (insights.length > 0) {
+      html += '<div>';
+      html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#3b82f6;margin-bottom:8px;">Context</div>';
+      insights.forEach(function(ins) {
+        html += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+          + '<span>' + ins + '</span></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div></div>';
+    return html;
+  }
   (function buildDealFit() {
     var bb = null;
     try { bb = JSON.parse(localStorage.getItem('gycBuyBox') || 'null'); } catch(e) {}
     var wd = null;
     try { wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || 'null'); } catch(e) {}
-    if (!bb && !wd) return; // no buy box = can't personalize
+    if (!bb && !wd) {
+      dealFitHtml = buildDealFitSection({
+        verdictColor: '#3b82f6',
+        verdictText: 'Investor profile not added yet',
+        subtitle: 'Add your investor profile to personalize this summary for your goals.',
+        fits: ['The section is still available on every deal page so you can review returns, structure, and sponsor context.'],
+        insights: ['Save your buy box to compare this deal against your check size, hold period, and distribution preferences.']
+      });
+      return;
+    }
 
     var branch = (wd && wd._branch) || (bb && bb._branch) || 'cashflow';
     var fits = [];
@@ -7589,7 +7656,9 @@ async function renderDeal() {
       misses.push('Newer operator — only <strong>' + _operatorYears + ' year' + (_operatorYears !== 1 ? 's' : '') + '</strong> of track record');
     }
 
-    if (fits.length === 0 && misses.length === 0 && insights.length === 0) return;
+    if (fits.length === 0 && misses.length === 0 && insights.length === 0) {
+      insights.push('We\'ll expand this fit summary as more deal data and investor preferences become available.');
+    }
 
     // --- Verdict ---
     var fitScore = fits.length - misses.length;
@@ -7608,55 +7677,15 @@ async function renderDeal() {
       verdictText = 'May not match what you\'re looking for';
     }
 
-    dealFitHtml = '<div class="section">';
-    dealFitHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div>';
-    dealFitHtml += '<div class="section-body">';
-
-    // Verdict banner
-    dealFitHtml += '<div style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:' + verdictColor + '0a;border:1px solid ' + verdictColor + '20;border-radius:10px;margin-bottom:20px;">';
-    dealFitHtml += '<div style="flex-shrink:0;color:' + verdictColor + ';">' + verdictIcon + '</div>';
-    dealFitHtml += '<div>';
-    dealFitHtml += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:' + verdictColor + ';">' + verdictText + '</div>';
-    dealFitHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">Based on your investor profile and ' + _peersFit.length + ' comparable deals</div>';
-    dealFitHtml += '</div></div>';
-
-    // Fits
-    if (fits.length > 0) {
-      dealFitHtml += '<div style="margin-bottom:16px;">';
-      dealFitHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">What works</div>';
-      fits.forEach(function(f) {
-        dealFitHtml += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
-          + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"/></svg>'
-          + '<span>' + f + '</span></div>';
-      });
-      dealFitHtml += '</div>';
-    }
-
-    // Misses
-    if (misses.length > 0) {
-      dealFitHtml += '<div style="margin-bottom:16px;">';
-      dealFitHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ef4444;margin-bottom:8px;">Watch out</div>';
-      misses.forEach(function(m) {
-        dealFitHtml += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
-          + '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
-          + '<span>' + m + '</span></div>';
-      });
-      dealFitHtml += '</div>';
-    }
-
-    // Insights
-    if (insights.length > 0) {
-      dealFitHtml += '<div>';
-      dealFitHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#3b82f6;margin-bottom:8px;">Context</div>';
-      insights.forEach(function(ins) {
-        dealFitHtml += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
-          + '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
-          + '<span>' + ins + '</span></div>';
-      });
-      dealFitHtml += '</div>';
-    }
-
-    dealFitHtml += '</div></div>';
+    dealFitHtml = buildDealFitSection({
+      verdictColor: verdictColor,
+      verdictIcon: verdictIcon,
+      verdictText: verdictText,
+      subtitle: 'Based on your investor profile and ' + _peersFit.length + ' comparable deals',
+      fits: fits,
+      misses: misses,
+      insights: insights
+    });
   })();
 
   // --- Sticky action bar ---
@@ -8884,4 +8913,3 @@ function shareDealText(dealName) {
 </body>
 
 </html>
-

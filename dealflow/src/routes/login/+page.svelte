@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { SESSION_VERSION, buildAccessModel, normalizeEmail } from '$lib/auth/access-model.js';
+	import { setStoredSessionUser } from '$lib/stores/auth.js';
 	import { normalizePrivacyProfile } from '$lib/utils/dealflow-contract.js';
 
 	const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
@@ -105,8 +106,7 @@
 			capabilities: data?.capabilities,
 			gpType: data?.gpType || data?.gp_type || null,
 			managementCompany: managementCompanySeed,
-			academyStart: data?.academyStart || data?.academy_start || null,
-			academyEnd: data?.academyEnd || data?.academy_end || null,
+			subscriptions: data?.subscriptions || {},
 			autoRenew: data?.autoRenew ?? data?.auto_renew ?? true
 		});
 		const privacy = normalizePrivacyProfile({
@@ -151,8 +151,7 @@
 			investment_experience: data?.investment_experience || '',
 			onboardingRole: data?.onboardingRole || null,
 			gpOnboardingComplete: data?.gpOnboardingComplete || false,
-			academyStart: data?.academyStart || data?.academy_start || null,
-			academyEnd: data?.academyEnd || data?.academy_end || null,
+			subscriptions: data?.subscriptions || {},
 			autoRenew: data?.autoRenew ?? data?.auto_renew ?? true,
 			cardLast4: data?.cardLast4 || data?.card_last4 || null,
 			cardBrand: data?.cardBrand || data?.card_brand || null
@@ -164,8 +163,7 @@
 		const userData = buildStoredSessionUser(data);
 		if (!userData) return null;
 		localStorage.removeItem(ADMIN_REAL_USER_KEY);
-		localStorage.setItem('gycUser', JSON.stringify(userData));
-		return userData;
+		return setStoredSessionUser(userData);
 	}
 
 	// ── Magic link callback handler ──

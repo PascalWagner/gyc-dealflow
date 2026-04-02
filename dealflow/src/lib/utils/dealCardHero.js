@@ -105,7 +105,7 @@ function buildHeroBadges({ deal, isLendingDeal, assetClass, dealType, strategyBa
 	if (hasValue(primaryBadge)) badges.push(primaryBadge);
 	if (hasValue(dealType)) badges.push(dealType);
 	if (hasValue(strategyBadge)) badges.push(strategyBadge);
-	if (firstDefined(deal.financials, deal.auditStatus, deal.audit_status) === 'Audited') {
+	if (firstDefined(deal.auditing, deal.financials, deal.auditStatus, deal.audit_status) === 'Audited') {
 		badges.push('Audited');
 	}
 

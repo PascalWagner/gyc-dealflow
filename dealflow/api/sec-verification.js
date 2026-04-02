@@ -516,8 +516,8 @@ async function handleSetStatus(req, res, supabase, viewerContext) {
 	const note = String(req.body?.note || '').trim();
 
 	if (!isUuid(dealId)) return res.status(400).json({ error: 'dealId is required' });
-	if (!['have_not_filed_yet', 'not_applicable'].includes(requestedStatus)) {
-		return res.status(400).json({ error: 'status must be have_not_filed_yet or not_applicable' });
+	if (!['have_not_filed_yet', 'not_applicable', 'skipped'].includes(requestedStatus)) {
+		return res.status(400).json({ error: 'status must be have_not_filed_yet, not_applicable, or skipped' });
 	}
 
 	const context = await loadDealContext(supabase, dealId, viewerContext);
@@ -531,7 +531,12 @@ async function handleSetStatus(req, res, supabase, viewerContext) {
 	const nextRecord = await upsertVerificationRecord(supabase, {
 		opportunity_id: dealId,
 		status: requestedStatus,
-		reason_code: requestedStatus === 'not_applicable' ? 'manual_not_applicable' : 'manual_have_not_filed_yet',
+		reason_code:
+			requestedStatus === 'not_applicable'
+				? 'manual_not_applicable'
+				: requestedStatus === 'skipped'
+					? 'manual_skipped'
+					: 'manual_have_not_filed_yet',
 		reason_note: reasonNote,
 		determination_source: 'manual',
 		sec_filing_id: null,

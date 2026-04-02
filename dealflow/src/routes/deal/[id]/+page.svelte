@@ -202,6 +202,14 @@
 	function writeScopedDealString(prefix, value) {
 		writeUserScopedString(scopedDealKey(prefix), value);
 	}
+	function firstDefined(...values) {
+		for (const value of values) {
+			if (value === undefined || value === null) continue;
+			if (typeof value === 'string' && !value.trim()) continue;
+			return value;
+		}
+		return null;
+	}
 	const inviteUserName = $derived(currentSessionUser().name || 'Someone');
 	const inviteSharePayload = $derived.by(() =>
 		buildDealInviteSharePayload({ deal, viewerName: inviteUserName, inviteUrl })
@@ -264,6 +272,34 @@
 	const heroClass = $derived(isCredit ? 'hero-lending' : 'hero-equity');
 	const completeness = $derived(deal ? getDealCompleteness(deal) : 0);
 	const isStale = $derived(deal ? isDealStale(deal) : false);
+	const auditingValue = $derived.by(() => firstDefined(
+		deal?.auditing,
+		deal?.financials,
+		deal?.auditStatus,
+		deal?.audit_status
+	));
+	const loanCountValue = $derived.by(() => firstDefined(deal?.loanCount, deal?.loan_count));
+	const managerAumValue = $derived.by(() => firstDefined(
+		deal?.managerAUM,
+		deal?.manager_aum,
+		deal?.managementCompanyAUM,
+		deal?.management_company_aum,
+		deal?.fundAUM,
+		deal?.fund_aum
+	));
+	const fundFoundedYearValue = $derived.by(() => firstDefined(
+		deal?.fundFoundedYear,
+		deal?.fund_founded_year,
+		deal?.foundedYear,
+		deal?.founded_year
+	));
+	const currentFundSizeValue = $derived.by(() => firstDefined(deal?.currentFundSize, deal?.current_fund_size));
+	const maxFundSizeValue = $derived.by(() => firstDefined(deal?.maxFundSize, deal?.max_fund_size, deal?.offeringSize, deal?.offering_size));
+	const currentAvgLoanLtvValue = $derived.by(() => firstDefined(deal?.currentAvgLoanLtv, deal?.current_avg_loan_ltv, deal?.avgLoanLtv, deal?.avg_loan_ltv));
+	const maxAllowedLtvValue = $derived.by(() => firstDefined(deal?.maxAllowedLtv, deal?.max_allowed_ltv));
+	const currentLeverageValue = $derived.by(() => firstDefined(deal?.currentLeverage, deal?.current_leverage));
+	const maxAllowedLeverageValue = $derived.by(() => firstDefined(deal?.maxAllowedLeverage, deal?.max_allowed_leverage));
+	const snapshotAsOfDateValue = $derived.by(() => firstDefined(deal?.snapshotAsOfDate, deal?.snapshot_as_of_date, deal?.asOfDate, deal?.as_of_date));
 
 	// Share Classes
 	const sortedShareClasses = $derived(deal?.shareClasses?.length > 0
@@ -1225,7 +1261,7 @@
 									{#if deal.targetIRR}<div class="hero-metric"><div class="hero-metric-value highlight">{fmt(deal.targetIRR, 'pct')}</div><div class="hero-metric-label">Target Yield</div></div>{/if}
 									{#if deal.investmentMinimum}<div class="hero-metric"><div class="hero-metric-value">{fmt(deal.investmentMinimum, 'money')}</div><div class="hero-metric-label">Min Investment</div></div>{/if}
 									{#if deal.holdPeriod}<div class="hero-metric"><div class="hero-metric-value">{formatHold(deal.holdPeriod)}</div><div class="hero-metric-label">Lockup</div></div>{/if}
-									{#if deal.fundAUM}<div class="hero-metric"><div class="hero-metric-value">{fmt(deal.fundAUM, 'money')}</div><div class="hero-metric-label">Fund AUM</div></div>{/if}
+									{#if managerAumValue}<div class="hero-metric"><div class="hero-metric-value">{fmt(managerAumValue, 'money')}</div><div class="hero-metric-label">Manager AUM</div></div>{/if}
 								{:else}
 									{#if deal.targetIRR}<div class="hero-metric"><div class="hero-metric-value highlight">{fmt(deal.targetIRR, 'pct')}</div><div class="hero-metric-label">Target IRR</div></div>{/if}
 									{#if deal.equityMultiple}<div class="hero-metric"><div class="hero-metric-value">{fmt(deal.equityMultiple, 'multiple')}</div><div class="hero-metric-label">Equity Multiple</div></div>{/if}
@@ -1427,6 +1463,9 @@
 								{/if}
 								<div class="detail-item"><div class="detail-label">Min Investment</div><div class="detail-value">{fmt(displayMinInvestment, 'money')}</div></div>
 								<div class="detail-item"><div class="detail-label">Lockup</div><div class="detail-value">{formatHold(deal.holdPeriod)}</div></div>
+								{#if deal.redemption}
+									<div class="detail-item"><div class="detail-label">Redemption</div><div class="detail-value">{deal.redemption}</div></div>
+								{/if}
 								<div class="detail-item"><div class="detail-label">Distributions</div><div class="detail-value">{deal.distributions || '---'}</div></div>
 								<div class="detail-item"><div class="detail-label">Offering Type</div><div class="detail-value">{deal.offeringType || '---'}</div></div>
 								{#if displayEquityMultiple}
@@ -1438,14 +1477,41 @@
 								<div class="detail-item"><div class="detail-label">Available To</div><div class="detail-value">{deal.availableTo || '---'}</div></div>
 								<div class="detail-item"><div class="detail-label">Offering Size</div><div class="detail-value">{fmt(deal.offeringSize, 'money')}</div></div>
 								<div class="detail-item"><div class="detail-label">Strategy</div><div class="detail-value">{deal.strategy || '---'}</div></div>
+								{#if auditingValue}
+									<div class="detail-item"><div class="detail-label">Auditing</div><div class="detail-value">{auditingValue}</div></div>
+								{/if}
+								{#if loanCountValue != null}
+									<div class="detail-item"><div class="detail-label">Loan Count</div><div class="detail-value">{Number(loanCountValue).toLocaleString()}</div></div>
+								{/if}
+								{#if managerAumValue}
+									<div class="detail-item"><div class="detail-label">Manager AUM</div><div class="detail-value">{fmt(managerAumValue, 'money')}</div></div>
+								{/if}
+								{#if fundFoundedYearValue}
+									<div class="detail-item"><div class="detail-label">Fund Founded</div><div class="detail-value">{fundFoundedYearValue}</div></div>
+								{/if}
 								{#if deal.debtPosition}
 									<div class="detail-item"><div class="detail-label">Debt Position</div><div class="detail-value">{deal.debtPosition}</div></div>
 								{/if}
-								{#if deal.fundAUM}
-									<div class="detail-item"><div class="detail-label">Fund AUM</div><div class="detail-value">{fmt(deal.fundAUM, 'money')}</div></div>
+								{#if currentFundSizeValue}
+									<div class="detail-item"><div class="detail-label">Current Fund Size</div><div class="detail-value">{fmt(currentFundSizeValue, 'money')}</div></div>
 								{/if}
-								{#if deal.financials}
-									<div class="detail-item detail-item-wide"><div class="detail-label">Financials</div><div class="detail-value">{deal.financials}</div></div>
+								{#if maxFundSizeValue}
+									<div class="detail-item"><div class="detail-label">Max Fund Size</div><div class="detail-value">{fmt(maxFundSizeValue, 'money')}</div></div>
+								{/if}
+								{#if currentAvgLoanLtvValue}
+									<div class="detail-item"><div class="detail-label">Current Avg LTV</div><div class="detail-value">{fmt(currentAvgLoanLtvValue, 'pct')}</div></div>
+								{/if}
+								{#if maxAllowedLtvValue}
+									<div class="detail-item"><div class="detail-label">Max Allowed LTV</div><div class="detail-value">{fmt(maxAllowedLtvValue, 'pct')}</div></div>
+								{/if}
+								{#if currentLeverageValue}
+									<div class="detail-item"><div class="detail-label">Current Leverage</div><div class="detail-value">{fmt(currentLeverageValue, 'multiple')}</div></div>
+								{/if}
+								{#if maxAllowedLeverageValue}
+									<div class="detail-item"><div class="detail-label">Max Allowed Leverage</div><div class="detail-value">{fmt(maxAllowedLeverageValue, 'multiple')}</div></div>
+								{/if}
+								{#if snapshotAsOfDateValue}
+									<div class="detail-item detail-item-wide"><div class="detail-label">Snapshot As Of</div><div class="detail-value">{formatReviewDate(snapshotAsOfDateValue)}</div></div>
 								{/if}
 							</div>
 						</div>
@@ -1476,8 +1542,8 @@
 										{#if dealOperator.foundingYear}
 											<div class="rail-fact"><span>Track Record</span><strong>{new Date().getFullYear() - dealOperator.foundingYear}+ years</strong></div>
 										{/if}
-										{#if deal.fundAUM}
-											<div class="rail-fact"><span>AUM</span><strong>{fmt(deal.fundAUM, 'money')}</strong></div>
+										{#if managerAumValue}
+											<div class="rail-fact"><span>Manager AUM</span><strong>{fmt(managerAumValue, 'money')}</strong></div>
 										{/if}
 									</div>
 									<a href={dealOperatorHref} class="operator-link">View Sponsor Profile &rarr;</a>
@@ -1844,36 +1910,41 @@
 				{/if}
 
 				<!-- ==================== SIMILAR DEALS ==================== -->
-				{#if similarDeals.length > 0 || !hasMemberAccess}
-					<div class="section flow-order-60">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-							<span class="section-title">Similar Deals</span>
-							<span class="peer-count-label">{similarDeals.length} comparable {isCredit ? 'Lending' : (deal.assetClass || '')} deals</span>
-						</div>
-						<div class="section-body" style="position:relative;min-height:140px;">
-							{#if !hasMemberAccess}
-								<div class="gate-overlay">
-									<div class="gate-content">
-										<div class="gate-icon">
-											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-										</div>
-										<div class="gate-title">Become a Member</div>
-										<div class="gate-text">
-											{#if nativeCompanionMode}
-												Available to members on web.
-											{:else}
-												Unlock comparable deal analysis and positioning context.
-											{/if}
-										</div>
-										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Become a Member</a>
+				<div class="section flow-order-60">
+					<div class="section-header">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+						<span class="section-title">Similar Deals</span>
+						<span class="peer-count-label">
+							{#if similarDeals.length > 0}
+								{similarDeals.length} comparable {isCredit ? 'Lending' : (deal.assetClass || '')} deals
+							{:else}
+								No comparable deals yet
+							{/if}
+						</span>
+					</div>
+					<div class="section-body" style="position:relative;min-height:140px;">
+						{#if !hasMemberAccess}
+							<div class="gate-overlay">
+								<div class="gate-content">
+									<div class="gate-icon">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+									</div>
+									<div class="gate-title">Become a Member</div>
+									<div class="gate-text">
+										{#if nativeCompanionMode}
+											Available to members on web.
+										{:else}
+											Unlock comparable deal analysis and positioning context.
 										{/if}
 									</div>
+									{#if !nativeCompanionMode}
+										<a href={academyHref} class="gate-cta">Become a Member</a>
+									{/if}
 								</div>
-							{/if}
-							<div class:blurred={!hasMemberAccess}>
-								<div class="similar-table-wrap ly-table-scroll ly-desktop-only">
+							</div>
+						{/if}
+						<div class:blurred={!hasMemberAccess}>
+							<div class="similar-table-wrap ly-table-scroll ly-desktop-only">
 								<table class="similar-table">
 									<thead>
 										<tr>
@@ -1898,20 +1969,26 @@
 											<td class="sim-td">{deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '---'}</td>
 											<td class="sim-td">{deal.holdPeriod ? deal.holdPeriod + ' Yrs' : '---'}</td>
 										</tr>
-										{#each similarDeals as sd}
-											{@const similarDealOperator = getDealOperator(sd)}
-											<tr class="sim-peer-row">
-												<td class="sim-td left">
-													<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
-													<div class="sim-deal-company">{similarDealOperator.name || ''}</div>
-												</td>
-												<td class="sim-td">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</td>
-												<td class="sim-td">{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</td>
-												<td class="sim-td">{sd.equityMultiple ? fmt(sd.equityMultiple, 'multiple') : '---'}</td>
-												<td class="sim-td">{sd.investmentMinimum ? fmt(sd.investmentMinimum, 'money') : '---'}</td>
-												<td class="sim-td">{sd.holdPeriod ? sd.holdPeriod + ' Yrs' : '---'}</td>
+										{#if similarDeals.length > 0}
+											{#each similarDeals as sd}
+												{@const similarDealOperator = getDealOperator(sd)}
+												<tr class="sim-peer-row">
+													<td class="sim-td left">
+														<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
+														<div class="sim-deal-company">{similarDealOperator.name || ''}</div>
+													</td>
+													<td class="sim-td">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</td>
+													<td class="sim-td">{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</td>
+													<td class="sim-td">{sd.equityMultiple ? fmt(sd.equityMultiple, 'multiple') : '---'}</td>
+													<td class="sim-td">{sd.investmentMinimum ? fmt(sd.investmentMinimum, 'money') : '---'}</td>
+													<td class="sim-td">{sd.holdPeriod ? sd.holdPeriod + ' Yrs' : '---'}</td>
+												</tr>
+											{/each}
+										{:else}
+											<tr>
+												<td class="sim-empty-row" colspan="6">We haven&apos;t matched this deal to comparable opportunities yet.</td>
 											</tr>
-										{/each}
+										{/if}
 									</tbody>
 								</table>
 							</div>
@@ -1946,45 +2023,128 @@
 										</div>
 									</details>
 								</article>
-								{#each similarDeals as sd}
-									{@const similarDealOperator = getDealOperator(sd)}
-									<article class="similar-mobile-card">
-										<div class="similar-mobile-header">
-											<div class="similar-mobile-copy">
-												<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
-												<div class="sim-deal-company">{similarDealOperator.name || ''}</div>
+								{#if similarDeals.length > 0}
+									{#each similarDeals as sd}
+										{@const similarDealOperator = getDealOperator(sd)}
+										<article class="similar-mobile-card">
+											<div class="similar-mobile-header">
+												<div class="similar-mobile-copy">
+													<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
+													<div class="sim-deal-company">{similarDealOperator.name || ''}</div>
+												</div>
 											</div>
-										</div>
-										<div class="similar-mobile-primary">
-											<div class="similar-mobile-stat">
-												<span class="similar-mobile-stat-label">Target IRR</span>
-												<strong class="similar-mobile-stat-value">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</strong>
+											<div class="similar-mobile-primary">
+												<div class="similar-mobile-stat">
+													<span class="similar-mobile-stat-label">Target IRR</span>
+													<strong class="similar-mobile-stat-value">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</strong>
+												</div>
+												<div class="similar-mobile-stat">
+													<span class="similar-mobile-stat-label">Minimum</span>
+													<strong class="similar-mobile-stat-value">{sd.investmentMinimum ? fmt(sd.investmentMinimum, 'money') : '---'}</strong>
+												</div>
+												<div class="similar-mobile-stat">
+													<span class="similar-mobile-stat-label">Hold</span>
+													<strong class="similar-mobile-stat-value">{sd.holdPeriod ? sd.holdPeriod + ' Yrs' : '---'}</strong>
+												</div>
 											</div>
-											<div class="similar-mobile-stat">
-												<span class="similar-mobile-stat-label">Minimum</span>
-												<strong class="similar-mobile-stat-value">{sd.investmentMinimum ? fmt(sd.investmentMinimum, 'money') : '---'}</strong>
-											</div>
-											<div class="similar-mobile-stat">
-												<span class="similar-mobile-stat-label">Hold</span>
-												<strong class="similar-mobile-stat-value">{sd.holdPeriod ? sd.holdPeriod + ' Yrs' : '---'}</strong>
-											</div>
-										</div>
-										<details class="similar-mobile-details">
-											<summary>More metrics</summary>
-											<div class="similar-mobile-secondary">
-												<div class="similar-mobile-detail"><span>Pref Return</span><strong>{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</strong></div>
-												<div class="similar-mobile-detail"><span>Eq Multiple</span><strong>{sd.equityMultiple ? fmt(sd.equityMultiple, 'multiple') : '---'}</strong></div>
-											</div>
-										</details>
+											<details class="similar-mobile-details">
+												<summary>More metrics</summary>
+												<div class="similar-mobile-secondary">
+													<div class="similar-mobile-detail"><span>Pref Return</span><strong>{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</strong></div>
+													<div class="similar-mobile-detail"><span>Eq Multiple</span><strong>{sd.equityMultiple ? fmt(sd.equityMultiple, 'multiple') : '---'}</strong></div>
+												</div>
+											</details>
+										</article>
+									{/each}
+								{:else}
+									<article class="similar-mobile-card similar-empty-card">
+										<div class="similar-empty-title">Comparable deals are still being matched.</div>
+										<div class="similar-empty-copy">This section will populate automatically once we find other opportunities that line up with this deal&apos;s profile.</div>
 									</article>
-								{/each}
-							</div>
+								{/if}
 							</div>
 						</div>
 					</div>
-				{/if}
+				</div>
 
-				<!-- Deal Fit Summary now in Analysis Dashboard Fit layer -->
+				<!-- ==================== DEAL FIT SUMMARY ==================== -->
+				<div class="section flow-order-70">
+					<div class="section-header">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+						<span class="section-title">Deal Fit Summary</span>
+					</div>
+					<div class="section-body deal-fit-body" class:gated={!hasMemberAccess}>
+						{#if !hasMemberAccess}
+							<div class="gate-overlay">
+								<div class="gate-content">
+									<div class="gate-icon">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+									</div>
+									<div class="gate-title">Become a Member</div>
+									<div class="gate-text">
+										{#if nativeCompanionMode}
+											Available to members on web.
+										{:else}
+											Unlock a faster read on strengths, tradeoffs, and risk signals for this deal.
+										{/if}
+									</div>
+									{#if !nativeCompanionMode}
+										<a href={academyHref} class="gate-cta">Become a Member</a>
+									{/if}
+								</div>
+							</div>
+						{/if}
+						<div class:blurred={!hasMemberAccess}>
+							<div class="fit-verdict" style={`--verdict-color: ${fitSummary.verdictColor};`}>
+								<div class="fit-verdict-icon" aria-hidden="true">
+									{#if fitSummary.score >= 3}
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+									{:else if fitSummary.score >= 1}
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+									{:else if fitSummary.score >= -1}
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+									{:else}
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+									{/if}
+								</div>
+								<div>
+									<div class="fit-verdict-text">{fitSummary.verdict}</div>
+									<div class="fit-verdict-sub">
+										{#if dealFit}
+											Based on target returns, fee load, distributions, and operator history.
+										{:else}
+											We&apos;ll sharpen this read as more deal and investor profile data becomes available.
+										{/if}
+									</div>
+								</div>
+							</div>
+
+							{#if fitSummary.fits.length > 0}
+								<div class="fit-list-section">
+									<div class="fit-list-label fit-label-good">What works</div>
+									{#each fitSummary.fits as item}
+										<div class="fit-list-item">
+											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+											<span>{item}</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
+
+							{#if fitSummary.warnings.length > 0}
+								<div class="fit-list-section">
+									<div class="fit-list-label fit-label-warn">Watch out</div>
+									{#each fitSummary.warnings as item}
+										<div class="fit-list-item">
+											<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+											<span>{item}</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</div>
+				</div>
 
 				<!-- ==================== INVEST CLEARLY REVIEWS (admin preview) ==================== -->
 				{#if investClearlyPreview}
@@ -3377,6 +3537,15 @@
 	.sim-badge.current { background: var(--primary); color: #fff; }
 	.sim-peer-row { transition: background 0.1s; }
 	.sim-peer-row:hover { background: var(--bg-cream, #f8f8f6); }
+	.sim-empty-row {
+		padding: 16px 12px;
+		text-align: center;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-muted);
+		border-bottom: 1px solid var(--border-light);
+	}
 	.similar-mobile-list { display: grid; gap: 12px; }
 	.similar-mobile-list.ly-mobile-only { display: grid !important; }
 	.similar-mobile-card {
@@ -3388,6 +3557,9 @@
 	.similar-mobile-card.current {
 		border-color: rgba(81,190,123,0.25);
 		background: linear-gradient(180deg, rgba(81,190,123,0.06) 0%, rgba(255,255,255,0.98) 100%);
+	}
+	.similar-empty-card {
+		background: linear-gradient(180deg, rgba(248,248,246,0.9) 0%, rgba(255,255,255,0.98) 100%);
 	}
 	.similar-mobile-header {
 		display: flex;
@@ -3460,6 +3632,19 @@
 		color: var(--text-dark);
 		font-weight: 700;
 		text-align: right;
+	}
+	.similar-empty-title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.similar-empty-copy {
+		margin-top: 6px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--text-secondary);
 	}
 
 	/* ===== Responsive for new sections ===== */

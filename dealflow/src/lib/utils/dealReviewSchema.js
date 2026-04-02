@@ -30,18 +30,62 @@ export const OFFERING_STATUS_OPTIONS = [
 	'Closed',
 	'Completed'
 ];
+export const LENDING_FUND_OFFERING_STATUS_OPTIONS = ['Currently Open', 'Evergreen', 'Full', 'Full Cycle'];
 export const AVAILABLE_TO_OPTIONS = ['Accredited Investors', 'Non-Accredited Investors', 'Both'];
 export const DISTRIBUTIONS_OPTIONS = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'At Exit', 'None'];
 export const FINANCIALS_OPTIONS = ['Audited', 'Reviewed', 'Unaudited', 'Unknown'];
 export const INSTRUMENT_OPTIONS = ['Debt', 'Equity', 'Preferred Equity', 'Hybrid', 'Fund'];
 export const DEBT_POSITION_OPTIONS = ['Senior', 'First Lien', 'Second Lien', 'Mezzanine', 'Preferred Equity', 'Other'];
 export const TAX_FORM_OPTIONS = ['K-1', '1099-DIV', '1099-INT', '1099-B', 'Other'];
+export const UNDERLYING_EXPOSURE_TYPE_OPTIONS = [
+	'Multifamily',
+	'Single Family',
+	'Commercial Real Estate',
+	'Industrial',
+	'Retail',
+	'Office',
+	'Hospitality',
+	'Self Storage',
+	'Land',
+	'Medical Receivables',
+	'Aviation',
+	'Education',
+	'Consumer',
+	'Small Business',
+	'Equipment',
+	'Mixed Portfolio',
+	'Other'
+];
+export const RISK_TAG_OPTIONS = [
+	'Leverage',
+	'Liquidity',
+	'Credit Loss',
+	'Concentration',
+	'Refinancing',
+	'Interest Rate',
+	'Sponsor',
+	'Underwriting',
+	'Execution',
+	'Regulatory',
+	'Valuation',
+	'Counterparty',
+	'Tax',
+	'Operational',
+	'Reporting',
+	'Other'
+];
 export const COUNTRY_OPTIONS = ['United States', 'Canada', 'Mexico', 'Other'];
 export const STATE_OPTIONS = [
 	'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
 	'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
 	'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'
 ];
+const HISTORICAL_RETURN_START_YEAR = 2015;
+const HISTORICAL_RETURN_END_YEAR = new Date().getFullYear() - 1;
+export const HISTORICAL_RETURN_YEARS = Array.from(
+	{ length: Math.max(0, HISTORICAL_RETURN_END_YEAR - HISTORICAL_RETURN_START_YEAR + 1) },
+	(_, index) => HISTORICAL_RETURN_START_YEAR + index
+);
 
 const ASSET_CLASS_ALIASES = {
 	'multi family': 'Multi-Family',
@@ -86,17 +130,21 @@ const DEAL_TYPE_ALIASES = {
 const OFFERING_STATUS_ALIASES = {
 	open: 'Open to invest',
 	'open to invest': 'Open to invest',
+	'open to invest now': 'Open to invest',
+	'currently open': 'Open to invest',
 	live: 'Open to invest',
 	active: 'Open to invest',
-	evergreen: 'Evergreen',
-	rolling: 'Evergreen',
 	'coming soon': 'Coming Soon',
 	upcoming: 'Coming Soon',
-	paused: 'Paused',
+	evergreen: 'Evergreen',
+	rolling: 'Evergreen',
+	full: 'Fully Funded',
 	'fully funded': 'Fully Funded',
 	funded: 'Fully Funded',
+	paused: 'Paused',
 	closed: 'Closed',
-	completed: 'Completed'
+	completed: 'Completed',
+	'full cycle': 'Completed'
 };
 
 const AVAILABLE_TO_ALIASES = {
@@ -168,14 +216,100 @@ const TAX_FORM_ALIASES = {
 	other: 'Other'
 };
 
+function buildHistoricalReturnFieldConfig(year) {
+	return {
+		key: `historicalReturn${year}`,
+		label: String(year),
+		type: 'percentage',
+		input: 'number',
+		step: 0.01,
+		section: 'historicalPerformance',
+		requiredForPublish: false,
+		placeholder: '0.00',
+		helperText: 'Enter the net annual return to LPs for this completed year. Negative values are allowed.',
+		readFrom: [
+			`historicalReturn${year}`,
+			`historical_return_${year}`,
+			`annualReturn${year}`,
+			`annual_return_${year}`,
+			`netReturn${year}`,
+			`net_return_${year}`
+		]
+	};
+}
+
+function parseLpShareInput(value) {
+	if (value === null || value === undefined || value === '') return null;
+	if (typeof value === 'string' && value.includes('/')) {
+		const [lpShare] = value.split('/');
+		const numericValue = parseLooseNumber(lpShare);
+		if (numericValue === null) return null;
+		return Math.abs(numericValue) > 1 ? numericValue / 100 : numericValue;
+	}
+	const numericValue = parseLooseNumber(value);
+	if (numericValue === null) return null;
+	return Math.abs(numericValue) > 1 ? numericValue / 100 : numericValue;
+}
+
+function formatLpShareDisplay(value) {
+	const parsed = parseLpShareInput(value);
+	if (parsed === null) return '';
+	return formatPercentDisplay(parsed);
+}
+
+function normalizeReturnFieldKey(fieldKey) {
+	return /^historicalReturn20\d{2}$/i.test(fieldKey);
+}
+
 const ENUM_CONFIG = {
 	assetClass: { options: DEAL_ASSET_CLASS_OPTIONS, aliases: ASSET_CLASS_ALIASES },
 	dealType: { options: DEAL_TYPE_OPTIONS, aliases: DEAL_TYPE_ALIASES },
 	offeringType: { options: CANONICAL_OFFERING_TYPES, aliases: null },
 	offeringStatus: { options: OFFERING_STATUS_OPTIONS, aliases: OFFERING_STATUS_ALIASES },
+	secVerificationState: {
+		options: ['Verified', 'Pending', "Haven't Filed Yet", 'Not Applicable', 'Skipped'],
+		aliases: {
+			verified: 'Verified',
+			pending: 'Pending',
+			'have not filed yet': "Haven't Filed Yet",
+			'haven t filed yet': "Haven't Filed Yet",
+			'not applicable': 'Not Applicable',
+			skipped: 'Skipped'
+		}
+	},
+	secLookupState: {
+		options: ['Matched', 'Need New Record', 'Skip For Now', 'No Match', 'Not Applicable'],
+		aliases: {
+			matched: 'Matched',
+			'find new record': 'Need New Record',
+			'find a new record': 'Need New Record',
+			'new record': 'Need New Record',
+			'skip for now': 'Skip For Now',
+			skipped: 'Skip For Now',
+			'no match': 'No Match',
+			'not applicable': 'Not Applicable'
+		}
+	},
 	availableTo: { options: AVAILABLE_TO_OPTIONS, aliases: AVAILABLE_TO_ALIASES },
 	distributions: { options: DISTRIBUTIONS_OPTIONS, aliases: DISTRIBUTIONS_ALIASES },
 	financials: { options: FINANCIALS_OPTIONS, aliases: FINANCIALS_ALIASES },
+	redemption: {
+		options: ['Monthly', 'Quarterly', 'Annual', 'At Exit'],
+		aliases: {
+			monthly: 'Monthly',
+			quarterly: 'Quarterly',
+			annual: 'Annual',
+			yearly: 'Annual',
+			'annually': 'Annual',
+			'once a year': 'Annual',
+			'exit only': 'At Exit',
+			'at exit': 'At Exit',
+			'liquidity window monthly': 'Monthly',
+			'liquidity window quarterly': 'Quarterly'
+		}
+	},
+	underlyingExposureTypes: { options: UNDERLYING_EXPOSURE_TYPE_OPTIONS, aliases: null },
+	riskTags: { options: RISK_TAG_OPTIONS, aliases: null },
 	instrument: { options: INSTRUMENT_OPTIONS, aliases: INSTRUMENT_ALIASES },
 	debtPosition: { options: DEBT_POSITION_OPTIONS, aliases: DEBT_POSITION_ALIASES },
 	taxForm: { options: TAX_FORM_OPTIONS, aliases: TAX_FORM_ALIASES }
@@ -211,6 +345,24 @@ function ensureArray(value) {
 		.split(',')
 		.map((item) => item.trim())
 		.filter(Boolean);
+}
+
+function normalizeTeamContacts(value) {
+	if (!Array.isArray(value)) return [];
+	return value
+		.map((entry, index) => ({
+			firstName: String(entry?.firstName || '').trim(),
+			lastName: String(entry?.lastName || '').trim(),
+			email: String(entry?.email || '').trim(),
+			phone: String(entry?.phone || '').trim(),
+			role: String(entry?.role || '').trim(),
+			linkedinUrl: String(entry?.linkedinUrl || '').trim(),
+			calendarUrl: String(entry?.calendarUrl || '').trim(),
+			isPrimary: entry?.isPrimary === true,
+			isInvestorRelations: entry?.isInvestorRelations === true,
+			displayOrder: Number.isFinite(entry?.displayOrder) ? entry.displayOrder : index
+		}))
+		.filter((entry) => entry.firstName || entry.lastName || entry.email || entry.role);
 }
 
 function parseLooseNumber(value) {
@@ -317,6 +469,7 @@ export function normalizeEnumValue(fieldKey, value, { allowUnknown = false } = {
 }
 
 function coercePrimitiveField(field, rawValue) {
+	if (field?.key === 'lpGpSplit') return formatLpShareDisplay(rawValue);
 	if (field.type === 'currency') return formatNumber(rawValue, { maximumFractionDigits: 0 });
 	if (field.type === 'percentage') return formatPercentDisplay(rawValue);
 	if (field.type === 'number') return formatNumber(rawValue);
@@ -415,6 +568,145 @@ export const dealFieldConfig = {
 		helperText: 'This is the deal’s live fundraising status, not the QA lifecycle status.',
 		readFrom: ['offeringStatus', 'offering_status', 'status']
 	},
+	secVerificationState: {
+		key: 'secVerificationState',
+		label: 'SEC verification state',
+		type: 'string_enum',
+		section: 'core',
+		options: ['Verified', 'Pending', "Haven't Filed Yet", 'Not Applicable', 'Skipped'],
+		requiredForPublish: false,
+		helperText: 'Track whether the SEC match was verified, skipped, or explicitly marked not applicable.',
+		readFrom: ['secVerificationState', 'sec_verification_state']
+	},
+	secLookupState: {
+		key: 'secLookupState',
+		label: 'SEC lookup status',
+		type: 'string_enum',
+		section: 'core',
+		options: ['Matched', 'Need New Record', 'Skip For Now', 'No Match', 'Not Applicable'],
+		requiredForPublish: false,
+		helperText: 'Capture whether the SEC lookup matched, needs a new record, or should be skipped for now.',
+		readFrom: ['secLookupState', 'sec_lookup_state']
+	},
+	secVerificationNotes: {
+		key: 'secVerificationNotes',
+		label: 'SEC notes',
+		type: 'string_free',
+		input: 'textarea',
+		rows: 3,
+		section: 'core',
+		span: 2,
+		requiredForPublish: false,
+		placeholder: 'Why was this filing accepted, skipped, or marked as not applicable?',
+		helperText: 'Use this for reviewer context and SEC override notes.',
+		readFrom: ['secVerificationNotes', 'sec_verification_notes']
+	},
+	secEntityName: {
+		key: 'secEntityName',
+		label: 'SEC entity name',
+		type: 'string_free',
+		input: 'text',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: 'Issuer legal entity name',
+		helperText: 'Use the exact filing entity name if available.',
+		readFrom: ['secEntityName', 'sec_entity_name']
+	},
+	secFilingId: {
+		key: 'secFilingId',
+		label: 'SEC filing ID',
+		type: 'string_free',
+		input: 'text',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: 'Accession number or filing identifier',
+		helperText: 'Store the matched filing accession or internal identifier.',
+		readFrom: ['secFilingId', 'sec_filing_id']
+	},
+	secCik: {
+		key: 'secCik',
+		label: 'CIK',
+		type: 'string_free',
+		input: 'text',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: '0001234567',
+		helperText: 'Central Index Key for the issuer if available.',
+		readFrom: ['secCik', 'sec_cik']
+	},
+	issuerEntity: {
+		key: 'issuerEntity',
+		label: 'Issuer entity',
+		type: 'string_free',
+		input: 'text',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: 'Issuer legal entity name',
+		helperText: 'Capture the operating issuer or fund entity exactly as filed.',
+		readFrom: ['issuerEntity', 'issuer_entity']
+	},
+	gpEntity: {
+		key: 'gpEntity',
+		label: 'GP entity',
+		type: 'string_free',
+		input: 'text',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: 'General partner legal name',
+		helperText: 'Capture the general partner entity if it is disclosed.',
+		readFrom: ['gpEntity', 'gp_entity']
+	},
+	sponsorEntity: {
+		key: 'sponsorEntity',
+		label: 'Sponsor entity',
+		type: 'string_free',
+		input: 'text',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: 'Sponsor / manager legal name',
+		helperText: 'Capture the sponsor or manager legal entity if disclosed.',
+		readFrom: ['sponsorEntity', 'sponsor_entity']
+	},
+	teamContacts: {
+		key: 'teamContacts',
+		label: 'Contacts',
+		type: 'team_contacts',
+		section: 'contacts',
+		span: 2,
+		requiredForPublish: false,
+		helperText: 'Add the CEO, operator, and investor relations contacts for the deal.',
+		readFrom: ['teamContacts', 'team_contacts']
+	},
+	dateOfFirstSale: {
+		key: 'dateOfFirstSale',
+		label: 'Date of first sale',
+		type: 'string_free',
+		input: 'date',
+		section: 'core',
+		requiredForPublish: false,
+		helperText: 'First sale date from the filing if it is available.',
+		readFrom: ['dateOfFirstSale', 'date_of_first_sale']
+	},
+	totalAmountSold: {
+		key: 'totalAmountSold',
+		label: 'Total amount sold',
+		type: 'currency',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: '1,000,000',
+		helperText: 'The amount sold to date in the filing.',
+		readFrom: ['totalAmountSold', 'total_amount_sold']
+	},
+	totalInvestors: {
+		key: 'totalInvestors',
+		label: 'Total investors',
+		type: 'number',
+		section: 'core',
+		requiredForPublish: false,
+		placeholder: '25',
+		helperText: 'Total number of investors if disclosed.',
+		readFrom: ['totalInvestors', 'total_investors']
+	},
 	availableTo: {
 		key: 'availableTo',
 		label: 'Available to',
@@ -444,6 +736,26 @@ export const dealFieldConfig = {
 		helperText: 'Capture this as city / state / country instead of a raw market string.',
 		readFrom: ['investingGeography', 'investing_geography', 'location']
 	},
+	investingStates: {
+		key: 'investingStates',
+		label: 'Investing states',
+		type: 'multi_select',
+		section: 'core',
+		options: STATE_OPTIONS,
+		requiredForPublish: false,
+		helperText: 'Select every state the lending fund targets. Choose All States if it is nationwide.',
+		readFrom: ['investingStates', 'investing_states']
+	},
+	underlyingExposureTypes: {
+		key: 'underlyingExposureTypes',
+		label: 'Underlying exposure types',
+		type: 'multi_select',
+		section: 'core',
+		options: UNDERLYING_EXPOSURE_TYPE_OPTIONS,
+		requiredForPublish: false,
+		helperText: 'Select the asset or receivable types this fund lends against.',
+		readFrom: ['underlyingExposureTypes', 'underlying_exposure_types']
+	},
 	shortSummary: {
 		key: 'shortSummary',
 		label: 'Short summary',
@@ -472,12 +784,12 @@ export const dealFieldConfig = {
 	},
 	offeringSize: {
 		key: 'offeringSize',
-		label: 'Offering size',
+		label: 'Max fund size',
 		type: 'currency',
 		section: 'returns',
 		requiredForPublish: false,
 		placeholder: '10,000,000',
-		helperText: 'Total raise size or offering amount in whole dollars.',
+		helperText: 'Use the fund maximum or total raise size if disclosed.',
 		readFrom: ['offeringSize', 'offering_size']
 	},
 	instrument: {
@@ -560,20 +872,59 @@ export const dealFieldConfig = {
 		helperText: 'How often LPs are expected to receive distributions.',
 		readFrom: ['distributions', 'distributionFrequency', 'distribution_frequency']
 	},
+	redemption: {
+		key: 'redemption',
+		label: 'Redemption frequency',
+		type: 'string_enum',
+		section: 'returns',
+		options: ['Monthly', 'Quarterly', 'Annual', 'At Exit'],
+		requiredForPublish: false,
+		helperText: 'How often LPs can redeem or exit capital.',
+		readFrom: ['redemption', 'redemptionFrequency', 'redemption_frequency']
+	},
+	redemptionNotes: {
+		key: 'redemptionNotes',
+		label: 'Redemption notes',
+		type: 'string_free',
+		input: 'textarea',
+		rows: 3,
+		section: 'returns',
+		span: 2,
+		requiredForPublish: false,
+		placeholder: 'Lockup, notice periods, gates, or any special liquidity nuance...',
+		helperText: 'Use this for the nuance behind the frequency dropdown.',
+		readFrom: ['redemptionNotes', 'redemption_notes']
+	},
 	lpGpSplit: {
 		key: 'lpGpSplit',
-		label: 'LP / GP split',
-		type: 'string_free',
-		input: 'text',
+		label: 'LP share (%)',
+		type: 'percentage',
+		input: 'number',
+		min: 0,
+		max: 100,
+		step: 1,
 		section: 'returns',
 		requiredForPublish: false,
-		placeholder: '80/20 after pref',
-		helperText: 'Keep the carry structure in one concise line.',
-		readFrom: ['lpGpSplit', 'lp_gp_split']
+		placeholder: '80',
+		helperText: 'Enter the LP share as a percentage. For an 80/20 split, enter 80.',
+		readFrom: ['lpGpSplit', 'lp_gp_split', 'lpSharePct', 'lp_share_pct']
+	},
+	fees: {
+		key: 'fees',
+		label: 'Fees',
+		type: 'string_free',
+		input: 'textarea',
+		rows: 4,
+		section: 'returns',
+		span: 2,
+		requiredForPublish: false,
+		placeholder: 'Management fee, incentive fee, servicing fee, redemption fee...',
+		helperText: 'Use one line per fee or a short structured summary of the fee stack.',
+		readFrom: ['fees', 'feeSummary', 'fee_summary']
 	},
 	feeSummary: {
 		key: 'feeSummary',
-		label: 'Fee summary',
+		label: 'Fee summary (legacy)',
 		type: 'string_free',
 		input: 'textarea',
 		rows: 3,
@@ -583,18 +934,6 @@ export const dealFieldConfig = {
 		placeholder: 'Acquisition, asset management, disposition, promote...',
 		helperText: 'Capture the relevant fees in one concise summary.',
 		readFrom: ['feeSummary', 'fee_summary']
-	},
-	redemption: {
-		key: 'redemption',
-		label: 'Liquidity / redemption terms',
-		type: 'string_free',
-		input: 'textarea',
-		rows: 3,
-		section: 'returns',
-		requiredForPublish: false,
-		placeholder: 'Lockup, redemption windows, gates...',
-		helperText: 'This is still long-form because terms are often nuanced.',
-		readFrom: ['redemption']
 	},
 	debtPosition: {
 		key: 'debtPosition',
@@ -608,13 +947,23 @@ export const dealFieldConfig = {
 	},
 	fundAUM: {
 		key: 'fundAUM',
-		label: 'Fund AUM',
+		label: 'Manager AUM',
 		type: 'currency',
 		section: 'returns',
 		requiredForPublish: false,
 		placeholder: '100,000,000',
-		helperText: 'Use current AUM if the sponsor or fund discloses it.',
-		readFrom: ['fundAUM', 'fund_aum']
+		helperText: 'Use the manager or sponsor AUM if it is disclosed.',
+		readFrom: ['fundAUM', 'fund_aum', 'managerAUM', 'manager_aum']
+	},
+	currentFundSize: {
+		key: 'currentFundSize',
+		label: 'Current fund size',
+		type: 'currency',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '100,000,000',
+		helperText: 'Use the current fund size or NAV-style snapshot if disclosed.',
+		readFrom: ['currentFundSize', 'current_fund_size']
 	},
 	loanCount: {
 		key: 'loanCount',
@@ -636,15 +985,86 @@ export const dealFieldConfig = {
 		helperText: 'Average LTV across the portfolio or credit book if disclosed.',
 		readFrom: ['avgLoanLtv', 'avg_loan_ltv']
 	},
+	currentAvgLoanLtv: {
+		key: 'currentAvgLoanLtv',
+		label: 'Current average loan LTV',
+		type: 'percentage',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '65',
+		helperText: 'The current portfolio average LTV as of the snapshot date.',
+		readFrom: ['currentAvgLoanLtv', 'current_avg_loan_ltv']
+	},
+	maxAllowedLtv: {
+		key: 'maxAllowedLtv',
+		label: 'Max allowed LTV',
+		type: 'percentage',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '75',
+		helperText: 'Maximum LTV the fund is allowed to hold under its current strategy or policy.',
+		readFrom: ['maxAllowedLtv', 'max_allowed_ltv']
+	},
+	currentLeverage: {
+		key: 'currentLeverage',
+		label: 'Current leverage',
+		type: 'number',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '1.5',
+		helperText: 'Use debt-to-equity leverage as a ratio, for example 1.5x.',
+		readFrom: ['currentLeverage', 'current_leverage']
+	},
+	maxAllowedLeverage: {
+		key: 'maxAllowedLeverage',
+		label: 'Max allowed leverage',
+		type: 'number',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '2.0',
+		helperText: 'The maximum leverage the fund is allowed to use.',
+		readFrom: ['maxAllowedLeverage', 'max_allowed_leverage']
+	},
+	snapshotAsOfDate: {
+		key: 'snapshotAsOfDate',
+		label: 'Snapshot as of',
+		type: 'string_free',
+		input: 'date',
+		section: 'returns',
+		requiredForPublish: true,
+		helperText: 'Use the date the current portfolio snapshot was captured.',
+		readFrom: ['snapshotAsOfDate', 'snapshot_as_of_date']
+	},
+	fundFoundedYear: {
+		key: 'fundFoundedYear',
+		label: 'Fund founded year',
+		type: 'number',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '2022',
+		helperText: 'Use the fund inception year, not the firm inception year.',
+		readFrom: ['fundFoundedYear', 'fund_founded_year']
+	},
+	firmFoundedYear: {
+		key: 'firmFoundedYear',
+		label: 'Firm founded year',
+		type: 'number',
+		section: 'trust',
+		requiredForPublish: false,
+		placeholder: '2018',
+		helperText: 'Use the management company or sponsor founding year.',
+		readFrom: ['firmFoundedYear', 'firm_founded_year', 'mcFoundingYear']
+	},
+	...Object.fromEntries(HISTORICAL_RETURN_YEARS.map((year) => [buildHistoricalReturnFieldConfig(year).key, buildHistoricalReturnFieldConfig(year)])),
 	financials: {
 		key: 'financials',
-		label: 'Audited / financials',
+		label: 'Auditing',
 		type: 'string_enum',
 		section: 'returns',
 		options: FINANCIALS_OPTIONS,
 		requiredForPublish: false,
 		helperText: 'Use a structured financial reporting status.',
-		readFrom: ['financials']
+		readFrom: ['financials', 'auditing', 'auditStatus', 'audit_status']
 	},
 	taxForm: {
 		key: 'taxForm',
@@ -668,6 +1088,29 @@ export const dealFieldConfig = {
 		placeholder: 'K-1 timing, depreciation profile, 1099, state filing considerations...',
 		helperText: 'Keep tax nuance in long-form text until there is a dedicated tax schema.',
 		readFrom: ['taxCharacteristics', 'tax_characteristics']
+	},
+	additionalTermNotes: {
+		key: 'additionalTermNotes',
+		label: 'Additional term notes',
+		type: 'string_free',
+		input: 'textarea',
+		rows: 3,
+		section: 'returns',
+		span: 2,
+		requiredForPublish: false,
+		placeholder: 'Anything else the reviewer should know about the static terms?',
+		helperText: 'Use this for carry nuances, side letters, or one-off term details.',
+		readFrom: ['additionalTermNotes', 'additional_term_notes']
+	},
+	riskTags: {
+		key: 'riskTags',
+		label: 'Risk tags',
+		type: 'multi_select',
+		section: 'risk',
+		options: RISK_TAG_OPTIONS,
+		requiredForPublish: false,
+		helperText: 'Select the standard risk categories that apply to this deal.',
+		readFrom: ['riskTags', 'risk_tags']
 	},
 	riskNotes: {
 		key: 'riskNotes',
@@ -701,7 +1144,7 @@ export const dealFieldConfig = {
 		type: 'string_free',
 		input: 'textarea',
 		rows: 4,
-		section: 'risk',
+		section: 'trust',
 		span: 2,
 		requiredForPublish: false,
 		placeholder: 'Track record, team credibility, prior exits, and relevant context...',
@@ -870,7 +1313,7 @@ export const dealFieldConfig = {
 		type: 'string_free',
 		input: 'url',
 		section: 'media',
-		requiredForPublish: true,
+		requiredForPublish: false,
 		placeholder: 'https://...',
 		helperText: 'Use a direct asset URL for the primary image.',
 		readFrom: ['coverImageUrl', 'cover_image_url', 'property_image_url', 'image_url']
@@ -936,8 +1379,8 @@ export const dealFieldConfig = {
 export const dealReviewSections = [
 	{
 		id: 'core',
-		title: 'Core deal profile',
-		description: 'These fields define the structured identity of the deal and should not rely on ad hoc free text.',
+		title: 'Source package and classification',
+		description: 'These fields define the structured identity and lending-fund taxonomy for the deal.',
 		fields: [
 			'investmentName',
 			'sponsor',
@@ -948,35 +1391,90 @@ export const dealReviewSections = [
 			'offeringType',
 			'offeringStatus',
 			'availableTo',
-			'investmentMinimum',
 			'investingGeography',
+			'investingStates',
+			'underlyingExposureTypes',
 			'shortSummary',
 			'investmentStrategy'
 		]
 	},
 	{
-		id: 'returns',
-		title: 'Returns and economics',
-		description: 'Capture payout profile, terms, and economics with structured inputs wherever possible.',
+		id: 'sec',
+		title: 'SEC and issuer details',
+		description: 'Capture filing status, issuer identity, and the legal record that validates the deal.',
 		fields: [
-			'targetIRR',
-			'cashYield',
-			'preferredReturn',
-			'equityMultiple',
+			'secLookupState',
+			'secVerificationState',
+			'secVerificationNotes',
+			'secEntityName',
+			'secFilingId',
+			'secCik',
+			'issuerEntity',
+			'gpEntity',
+			'sponsorEntity',
+			'dateOfFirstSale',
+			'totalAmountSold',
+			'totalInvestors'
+		]
+	},
+	{
+		id: 'returns',
+		title: 'Static terms',
+		description: 'Capture the fixed lending-fund terms that shape the LP experience.',
+		fields: [
+			'investmentMinimum',
 			'holdPeriod',
-			'distributions',
-			'lpGpSplit',
-			'feeSummary',
 			'redemption',
+			'redemptionNotes',
+			'distributions',
+			'preferredReturn',
+			'lpGpSplit',
+			'fees',
+			'feeSummary',
+			'additionalTermNotes',
 			'financials',
-			'taxCharacteristics'
+			'fundFoundedYear'
+		]
+	},
+	{
+		id: 'historicalPerformance',
+		title: 'Historical performance',
+		description: 'Enter completed-year net returns to LPs as percentage values.',
+		fields: HISTORICAL_RETURN_YEARS.map((year) => `historicalReturn${year}`)
+	},
+	{
+		id: 'trust',
+		title: 'Sponsor trust',
+		description: 'Capture the durable firm-level trust signals that help an LP understand the manager.',
+		fields: ['firmFoundedYear', 'operatorBackground']
+	},
+	{
+		id: 'contacts',
+		title: 'Contacts',
+		description: 'Capture the operator, CEO, and investor relations contacts for the deal.',
+		fields: ['teamContacts']
+	},
+	{
+		id: 'snapshot',
+		title: 'Current portfolio snapshot',
+		description: 'Capture the latest dated operating metrics for the fund.',
+		fields: [
+			'snapshotAsOfDate',
+			'offeringSize',
+			'currentFundSize',
+			'fundAUM',
+			'loanCount',
+			'currentAvgLoanLtv',
+			'maxAllowedLtv',
+			'currentLeverage',
+			'maxAllowedLeverage'
 		]
 	},
 	{
 		id: 'risk',
 		title: 'Risk and diligence notes',
-		description: 'These fields are intentionally long-form because they capture editorial judgment, not categorical metadata.',
-		fields: ['riskNotes', 'downsideNotes', 'operatorBackground', 'keyDates']
+		description: 'Use standardized tags plus concise notes to capture the risks and context.',
+		fields: ['riskTags', 'riskNotes', 'downsideNotes', 'keyDates', 'taxCharacteristics']
 	},
 	{
 		id: 'media',
@@ -993,6 +1491,8 @@ function getEmptyValue(field) {
 		case 'location':
 			return { ...DEFAULT_LOCATION };
 		case 'multi_select':
+			return [];
+		case 'team_contacts':
 			return [];
 		default:
 			return '';
@@ -1031,6 +1531,11 @@ export function createDealReviewFormFromDeal(source) {
 			continue;
 		}
 
+		if (field.type === 'team_contacts') {
+			form[field.key] = normalizeTeamContacts(readField(source, field.readFrom));
+			continue;
+		}
+
 		if (field.type === 'string_enum') {
 			const normalized = normalizeEnumValue(field.key, readField(source, field.readFrom), {
 				allowUnknown: true
@@ -1053,9 +1558,11 @@ export function createDealReviewFormFromDeal(source) {
 export function formatDealReviewFieldDisplay(fieldKey, value) {
 	const field = dealFieldConfig[fieldKey];
 	if (!field) return value;
+	if (field.key === 'lpGpSplit') return formatLpShareDisplay(value);
 	if (field.type === 'currency') return formatNumber(value, { maximumFractionDigits: 0 });
 	if (field.type === 'percentage') return formatPercentDisplay(value);
 	if (field.type === 'number') return formatNumber(value);
+	if (field.type === 'team_contacts') return Array.isArray(value) ? value : [];
 	return value;
 }
 
@@ -1144,6 +1651,19 @@ export function buildDealReviewPayload(form, options = {}) {
 			continue;
 		}
 
+		if (field.type === 'team_contacts') {
+			payload[field.key] = normalizeTeamContacts(rawValue);
+			continue;
+		}
+
+		if (field.key === 'lpGpSplit') {
+			payload[field.key] = parseLpShareInput(rawValue);
+			if (String(rawValue || '').trim() && payload[field.key] === null) {
+				errors[field.key] = 'Enter a valid LP share percentage.';
+			}
+			continue;
+		}
+
 		if (field.type === 'currency' || field.type === 'number') {
 			payload[field.key] = parseLooseNumber(rawValue);
 			if (String(rawValue || '').trim() && payload[field.key] === null) {
@@ -1196,6 +1716,20 @@ export function normalizeDealReviewPatch(body = {}) {
 
 		if (field.type === 'multi_select') {
 			normalized[field.key] = ensureArray(value);
+			continue;
+		}
+
+		if (field.type === 'team_contacts') {
+			normalized[field.key] = normalizeTeamContacts(value);
+			continue;
+		}
+
+		if (field.key === 'lpGpSplit') {
+			const parsed = parseLpShareInput(value);
+			normalized[field.key] = parsed;
+			if (value !== null && value !== '' && parsed === null) {
+				errors[field.key] = 'Enter a valid LP share percentage.';
+			}
 			continue;
 		}
 
@@ -1265,12 +1799,31 @@ export function buildDealReviewCompletenessModel(form, existingDeal) {
 		shortSummary: form.shortSummary,
 		investmentMinimum: parseLooseNumber(form.investmentMinimum),
 		status: form.offeringStatus,
+		offeringSize: parseLooseNumber(form.offeringSize),
+		currentFundSize: parseLooseNumber(form.currentFundSize),
+		fundAUM: parseLooseNumber(form.fundAUM),
+		loanCount: parseLooseNumber(form.loanCount),
+		currentAvgLoanLtv: parsePercentInput(form.currentAvgLoanLtv),
+		maxAllowedLtv: parsePercentInput(form.maxAllowedLtv),
+		currentLeverage: parseLooseNumber(form.currentLeverage),
+		maxAllowedLeverage: parseLooseNumber(form.maxAllowedLeverage),
+		snapshotAsOfDate: form.snapshotAsOfDate,
+		fundFoundedYear: parseLooseNumber(form.fundFoundedYear),
+		firmFoundedYear: parseLooseNumber(form.firmFoundedYear),
+		secLookupState: form.secLookupState,
 		coverImageUrl: form.coverImageUrl,
 		heroMediaUrl: form.heroMediaUrl,
 		targetIRR: parsePercentInput(form.targetIRR),
 		cashYield: parsePercentInput(form.cashYield),
 		preferredReturn: parsePercentInput(form.preferredReturn),
 		equityMultiple: parseLooseNumber(form.equityMultiple),
+		redemption: form.redemption,
+		redemptionNotes: form.redemptionNotes,
+		lpGpSplit: parseLpShareInput(form.lpGpSplit),
+		fees: form.fees,
+		feeSummary: form.feeSummary,
+		additionalTermNotes: form.additionalTermNotes,
+		riskTags: ensureArray(form.riskTags),
 		riskNotes: form.riskNotes,
 		downsideNotes: form.downsideNotes,
 		deckUrl: form.deckUrl,
@@ -1278,12 +1831,28 @@ export function buildDealReviewCompletenessModel(form, existingDeal) {
 		primarySourceContext: form.primarySourceContext,
 		holdPeriod: parseLooseNumber(form.holdPeriod),
 		investingGeography: formatLocationValue(form.investingGeography),
-		feeSummary: form.feeSummary,
-		redemption: form.redemption,
 		financials: form.financials,
 		taxCharacteristics: form.taxCharacteristics,
 		tags: ensureArray(form.tags),
 		investmentStrategy: form.investmentStrategy,
+		investingStates: ensureArray(form.investingStates),
+		underlyingExposureTypes: ensureArray(form.underlyingExposureTypes),
+		teamContacts: Array.isArray(form.teamContacts) ? form.teamContacts : [],
+		secVerificationState: form.secVerificationState,
+		secVerificationNotes: form.secVerificationNotes,
+		secEntityName: form.secEntityName,
+		secFilingId: form.secFilingId,
+		secCik: form.secCik,
+		issuerEntity: form.issuerEntity,
+		gpEntity: form.gpEntity,
+		sponsorEntity: form.sponsorEntity,
+		dateOfFirstSale: form.dateOfFirstSale,
+		totalAmountSold: parseLooseNumber(form.totalAmountSold),
+		totalInvestors: parseLooseNumber(form.totalInvestors),
+		...Object.fromEntries(HISTORICAL_RETURN_YEARS.map((year) => [
+			`historicalReturn${year}`,
+			parsePercentInput(form[`historicalReturn${year}`])
+		])),
 		operatorBackground: form.operatorBackground,
 		keyDates: form.keyDates,
 		updatedAt: existingDeal?.updatedAt || existingDeal?.updated_at || null
