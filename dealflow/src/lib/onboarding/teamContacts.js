@@ -514,7 +514,8 @@ function scoreNameMatch(existingContact = {}, candidateContact = {}) {
 	return score;
 }
 
-export function mergeSuggestedTeamContacts(existingContacts = [], suggestedContacts = []) {
+export function mergeSuggestedTeamContacts(existingContacts = [], suggestedContacts = [], options = {}) {
+	const appendUnmatched = String(options?.appendUnmatched || 'all').trim().toLowerCase() || 'all';
 	const contacts = normalizeTeamContacts(existingContacts, {
 		ensureOne: false,
 		preserveEmpty: true
@@ -595,6 +596,20 @@ export function mergeSuggestedTeamContacts(existingContacts = [], suggestedConta
 			if (merged.confidence === null && suggestion.confidence !== null) merged.confidence = suggestion.confidence;
 			merged.isSuggested = merged.isSuggested || suggestion.isSuggested;
 			contacts[existingIndex] = merged;
+			continue;
+		}
+
+		const shouldAppend =
+			appendUnmatched === 'all'
+			|| (appendUnmatched === 'required_roles_only' && (suggestion.isPrimary || suggestion.isInvestorRelations));
+		if (!shouldAppend) {
+			decisions.push({
+				contactId: suggestion.id,
+				field: 'contact',
+				sourceType: suggestion.sourceType || 'suggestion',
+				skipped: true,
+				reason: 'suppressed_unmatched_suggestion'
+			});
 			continue;
 		}
 

@@ -1,6 +1,7 @@
 <script>
 	import {
 		buildReviewFieldEvidenceHref,
+		fieldRequiresSourceCitation,
 		formatReviewFieldEvidenceAnchor,
 		getReviewFieldEvidenceTone,
 		normalizeReviewFieldEvidenceMap
@@ -27,7 +28,11 @@
 
 	function fallbackCopy() {
 		if (loading) return 'Looking up source citation from the attached documents...';
-		if (hasMeaningfulValue(value)) return 'No supporting citation is saved for this value yet.';
+		if (hasMeaningfulValue(value)) {
+			return fieldRequiresSourceCitation(fieldKey)
+				? 'This saved value is still missing a supporting citation. Treat it as unresolved until a source is linked.'
+				: 'No supporting citation is saved for this value yet.';
+		}
 		return 'No source citation is saved for this field yet.';
 	}
 </script>

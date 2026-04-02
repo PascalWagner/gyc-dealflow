@@ -27,6 +27,33 @@ const SEC_EVIDENCE_FIELD_KEYS = new Set([
 	'totalInvestors'
 ]);
 
+const SOURCE_REQUIRED_FIELD_KEYS = new Set([
+	'offeringType',
+	'availableTo',
+	'investmentStrategy',
+	'underlyingExposureTypes',
+	'investingStates',
+	'shortSummary',
+	'investmentMinimum',
+	'holdPeriod',
+	'redemption',
+	'distributions',
+	'financials',
+	'lpGpSplit',
+	'fees',
+	'snapshotAsOfDate',
+	'fundAUM',
+	'currentFundSize',
+	'offeringSize',
+	'loanCount',
+	'currentAvgLoanLtv',
+	'maxAllowedLtv',
+	'currentLeverage',
+	'maxAllowedLeverage',
+	'fundFoundedYear',
+	'firmFoundedYear'
+]);
+
 function normalizeWhitespace(value = '') {
 	return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -205,6 +232,50 @@ function formatNumberTerms(value) {
 	]);
 }
 
+function formatRatioTerms(value) {
+	const numericValue = typeof value === 'number' ? value : Number(String(value || '').replace(/[x,]/gi, '').trim());
+	if (!Number.isFinite(numericValue)) return [];
+	const precise = Number(numericValue.toFixed(2));
+	const rounded = Number(numericValue.toFixed(1));
+	return uniqTerms([
+		String(precise),
+		String(rounded),
+		`${precise}x`,
+		`${rounded}x`,
+		`${Number(numericValue.toFixed(0))}x`
+	]);
+}
+
+function formatDateTerms(value) {
+	const normalized = normalizeWhitespace(value);
+	if (!normalized) return [];
+
+	const parsed = /^\d{4}-\d{2}-\d{2}$/.test(normalized)
+		? new Date(`${normalized}T00:00:00Z`)
+		: new Date(normalized);
+	if (!Number.isFinite(parsed.getTime())) return uniqTerms([normalized]);
+
+	const year = parsed.getUTCFullYear();
+	const monthIndex = parsed.getUTCMonth();
+	const day = parsed.getUTCDate();
+	const shortMonth = parsed.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+	const longMonth = parsed.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+	const monthNumber = String(monthIndex + 1);
+	const paddedMonth = String(monthIndex + 1).padStart(2, '0');
+	const paddedDay = String(day).padStart(2, '0');
+
+	return uniqTerms([
+		normalized,
+		`${longMonth} ${day}, ${year}`,
+		`${shortMonth} ${day}, ${year}`,
+		`${shortMonth}. ${day}, ${year}`,
+		`${monthNumber}/${day}/${year}`,
+		`${paddedMonth}/${paddedDay}/${year}`,
+		`${monthNumber}-${day}-${year}`,
+		`${paddedMonth}-${paddedDay}-${year}`
+	]);
+}
+
 function buildNarrativeTerms(value = '') {
 	return uniqTerms(
 		normalizeWhitespace(value)
@@ -295,8 +366,6 @@ function getFieldSearchTerms(fieldKey, value) {
 			return formatCurrencyTerms(value).concat(formatNumberTerms(value));
 		case 'currentAvgLoanLtv':
 		case 'maxAllowedLtv':
-		case 'currentLeverage':
-		case 'maxAllowedLeverage':
 		case 'preferredReturn':
 		case 'targetIRR':
 		case 'cashOnCash':
@@ -313,8 +382,14 @@ function getFieldSearchTerms(fieldKey, value) {
 		case 'historicalReturn2024':
 		case 'historicalReturn2025':
 			return formatPercentTerms(value);
+		case 'currentLeverage':
+		case 'maxAllowedLeverage':
+			return formatRatioTerms(value).concat(formatNumberTerms(value));
 		case 'lpGpSplit':
 			return getLpShareTerms(value);
+		case 'snapshotAsOfDate':
+		case 'dateOfFirstSale':
+			return formatDateTerms(value);
 		case 'holdPeriod':
 		case 'fundFoundedYear':
 		case 'firmFoundedYear':
@@ -610,6 +685,25 @@ export function buildReviewFieldEvidenceMap({
 	}
 
 	return evidence;
+}
+
+export function fieldRequiresSourceCitation(fieldKey = '') {
+	return SOURCE_REQUIRED_FIELD_KEYS.has(fieldKey) || /^historicalReturn20\d{2}$/i.test(String(fieldKey || ''));
+}
+
+export function getMissingRequiredEvidenceFieldKeys({
+	fieldKeys = [],
+	source = {},
+	evidence = {}
+} = {}) {
+	const normalizedFieldKeys = Array.from(new Set((fieldKeys || []).filter(Boolean)));
+	const normalizedEvidence = normalizeReviewFieldEvidenceMap(evidence);
+
+	return normalizedFieldKeys.filter((fieldKey) => {
+		if (!fieldRequiresSourceCitation(fieldKey)) return false;
+		if (!isMeaningfulValue(readReviewFieldValue(source, fieldKey))) return false;
+		return (normalizedEvidence[fieldKey] || []).length === 0;
+	});
 }
 
 export function buildReviewFieldEvidenceHref(entry = {}, documentUrls = {}) {

@@ -62,6 +62,8 @@
 		STATE_NAME_BY_CODE
 	} from '$lib/utils/investing-geography.js';
 	import {
+		fieldRequiresSourceCitation,
+		getMissingRequiredEvidenceFieldKeys,
 		normalizeReviewFieldEvidenceMap
 	} from '$lib/utils/reviewFieldEvidence.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
@@ -119,7 +121,6 @@
 		}
 		const params = new URLSearchParams({ id: dealId });
 		params.set('stage', stage);
-		if (stage === 'intake') params.set('step', 'intake');
 		if (from) params.set('from', from);
 		if (extract) params.set('extract', '1');
 		if (stage === 'summary' && allowSummary) params.set('allowSummary', '1');
@@ -375,6 +376,37 @@
 		return fieldKeys.filter((fieldKey) => !hasMeaningfulReviewValue(form[fieldKey]));
 	}
 
+	function hasSourceCitationInputs() {
+		return Boolean(
+			getDocumentUrl('deck')
+			|| getDocumentUrl('ppm')
+			|| deal?.sec_filing_id
+			|| deal?.secFilingId
+		);
+	}
+
+	function getStageMissingEvidenceFieldKeys(stageId, { requireLoadedEvidence = false, source = onboardingSource } = {}) {
+		if (!hasSourceCitationInputs()) return [];
+
+		let fieldKeys = getEvidenceFieldKeysForStage(stageId).filter((fieldKey) => fieldRequiresSourceCitation(fieldKey));
+		if (requireLoadedEvidence) {
+			fieldKeys = fieldKeys.filter((fieldKey) => reviewFieldEvidenceKnownKeys.has(fieldKey));
+		}
+		if (fieldKeys.length === 0) return [];
+
+		return getMissingRequiredEvidenceFieldKeys({
+			fieldKeys,
+			source,
+			evidence: reviewFieldEvidence
+		});
+	}
+
+	function summarizeFieldLabels(fieldKeys = []) {
+		const labels = fieldKeys.map((fieldKey) => dealFieldConfig[fieldKey]?.label || fieldKey);
+		if (labels.length <= 3) return labels.join(', ');
+		return `${labels.slice(0, 2).join(', ')}, +${labels.length - 2} more`;
+	}
+
 	function getLendingPublishRules() {
 		const classificationFields = ['dealType', 'offeringType', 'offeringStatus', 'availableTo', 'investmentStrategy', 'underlyingExposureTypes', 'investingStates', 'shortSummary'];
 		const staticTermFields = ['investmentMinimum', 'holdPeriod', 'redemption', 'distributions', 'financials', 'lpGpSplit'];
@@ -447,23 +479,33 @@
 
 	function isReviewStageComplete(stage) {
 		if (!stage) return false;
+		let baseComplete = false;
 		if (branchInfo.branch !== 'lending_fund') {
-			if (stage.id === 'intake') return hasSourceDocuments;
-			if (stage.id === 'sec') return secGateResolved;
-			if (stage.id === 'team') return teamContactsValidation.valid;
-			return (stage.rules || []).every((rule) => rule.satisfied);
+			if (stage.id === 'intake') {
+				baseComplete = hasSourceDocuments;
+			} else if (stage.id === 'sec') {
+				baseComplete = secGateResolved;
+			} else if (stage.id === 'team') {
+				baseComplete = teamContactsValidation.valid;
+			} else {
+				baseComplete = (stage.rules || []).every((rule) => rule.satisfied);
+			}
+			if (!baseComplete) return false;
+			return getStageMissingEvidenceFieldKeys(stage.id, { requireLoadedEvidence: true }).length === 0;
 		}
 
 		switch (stage.id) {
 			case 'intake':
-				return hasSourceDocuments
+				baseComplete = hasSourceDocuments
 					&& hasMeaningfulReviewValue(form.investmentName)
 					&& hasMeaningfulReviewValue(form.sponsor?.name)
 					&& hasMeaningfulReviewValue(form.companyWebsite);
+				break;
 			case 'sec':
-				return secCanAdvance;
+				baseComplete = secCanAdvance;
+				break;
 			case 'classification':
-				return hasMeaningfulReviewValue(form.dealType)
+				baseComplete = hasMeaningfulReviewValue(form.dealType)
 					&& hasMeaningfulReviewValue(form.offeringType)
 					&& hasMeaningfulReviewValue(form.offeringStatus)
 					&& hasMeaningfulReviewValue(form.availableTo)
@@ -471,19 +513,23 @@
 					&& hasMeaningfulReviewValue(form.underlyingExposureTypes)
 					&& hasMeaningfulReviewValue(form.investingStates)
 					&& hasMeaningfulReviewValue(form.shortSummary);
+				break;
 			case 'static_terms':
-				return hasMeaningfulReviewValue(form.investmentMinimum)
+				baseComplete = hasMeaningfulReviewValue(form.investmentMinimum)
 					&& hasMeaningfulReviewValue(form.holdPeriod)
 					&& hasMeaningfulReviewValue(form.redemption)
 					&& hasMeaningfulReviewValue(form.distributions)
 					&& hasMeaningfulReviewValue(form.financials)
 					&& hasMeaningfulReviewValue(form.lpGpSplit);
+				break;
 			case 'fees':
-				return hasMeaningfulReviewValue(form.fees);
+				baseComplete = hasMeaningfulReviewValue(form.fees);
+				break;
 			case 'historical_performance':
-				return HISTORICAL_RETURN_YEARS.some((year) => hasMeaningfulReviewValue(form[`historicalReturn${year}`]));
+				baseComplete = HISTORICAL_RETURN_YEARS.some((year) => hasMeaningfulReviewValue(form[`historicalReturn${year}`]));
+				break;
 			case 'portfolio_snapshot':
-				return hasMeaningfulReviewValue(form.snapshotAsOfDate)
+				baseComplete = hasMeaningfulReviewValue(form.snapshotAsOfDate)
 					&& hasMeaningfulReviewValue(form.fundAUM)
 					&& hasMeaningfulReviewValue(form.currentFundSize)
 					&& hasMeaningfulReviewValue(form.offeringSize)
@@ -492,17 +538,26 @@
 					&& hasMeaningfulReviewValue(form.maxAllowedLtv)
 					&& hasMeaningfulReviewValue(form.currentLeverage)
 					&& hasMeaningfulReviewValue(form.maxAllowedLeverage);
+				break;
 			case 'sponsor_trust':
-				return hasMeaningfulReviewValue(form.firmFoundedYear) && hasMeaningfulReviewValue(form.fundFoundedYear);
+				baseComplete = hasMeaningfulReviewValue(form.firmFoundedYear) && hasMeaningfulReviewValue(form.fundFoundedYear);
+				break;
 			case 'team':
-				return teamContactsValidation.valid;
+				baseComplete = teamContactsValidation.valid;
+				break;
 			case 'risks':
-				return hasMeaningfulReviewValue(form.riskTags);
+				baseComplete = hasMeaningfulReviewValue(form.riskTags);
+				break;
 			case 'summary':
-				return secCanAdvance && teamContactsValidation.valid;
+				baseComplete = secCanAdvance && teamContactsValidation.valid;
+				break;
 			default:
-				return true;
+				baseComplete = true;
+				break;
 		}
+
+		if (!baseComplete) return false;
+		return getStageMissingEvidenceFieldKeys(stage.id, { requireLoadedEvidence: true }).length === 0;
 	}
 
 	function getStageFieldGroups(stage) {
@@ -595,7 +650,6 @@
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
 	const requestedStage = $derived($page.url.searchParams.get('stage') || '');
-	const reviewStep = $derived($page.url.searchParams.get('step') === 'intake' ? 'intake' : 'review');
 	const shouldAutoExtract = $derived($page.url.searchParams.get('extract') === '1');
 	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
 	const cameFromQueue = $derived($page.url.searchParams.get('from') === 'queue');
@@ -664,13 +718,13 @@
 		return incompleteStage?.id || 'summary';
 	});
 	const furthestUnlockedStage = $derived.by(() => {
-		if (!deal) return reviewStep === 'intake' ? 'intake' : 'sec';
+		if (!deal) return requestedStage || 'intake';
 		if (branchInfo.branch === 'lending_fund') return firstIncompleteStage;
 		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) return 'risks';
 		return firstIncompleteStage;
 	});
 	const unlockedStageIds = $derived.by(() => {
-		if (!deal) return reviewStep === 'intake' ? ['intake'] : ['sec'];
+		if (!deal) return requestedStage ? [requestedStage] : ['intake'];
 		if (firstIncompleteStage === 'summary') {
 			return reviewStages.map((stage) => stage.id);
 		}
@@ -705,8 +759,8 @@
 		return unlockedIds;
 	});
 	const activeStage = $derived.by(() => {
-		if (reviewStep === 'intake') return 'intake';
 		if (requestedStage === 'summary' && canOpenSummaryPreview) return 'summary';
+		if (!requestedStage) return firstIncompleteStage;
 		if (branchInfo.branch !== 'lending_fund' && !isValidOnboardingStage(requestedStage)) return firstIncompleteStage;
 		if (branchInfo.branch === 'lending_fund' && !reviewStages.some((stage) => stage.id === requestedStage)) return firstIncompleteStage;
 		return unlockedStageIds.includes(requestedStage) ? requestedStage : firstIncompleteStage;
@@ -740,9 +794,9 @@
 			)
 			.map((stage) => stage.id)
 	);
-	const sidebarCurrentStage = $derived(reviewStep === 'intake' ? 'intake' : activeStage);
-	const sidebarCompletedStages = $derived(reviewStep === 'intake' ? [] : completedStageIds);
-	const sidebarAccessibleStages = $derived(reviewStep === 'intake' ? ['intake'] : unlockedStageIds);
+	const sidebarCurrentStage = $derived(activeStage);
+	const sidebarCompletedStages = $derived(completedStageIds);
+	const sidebarAccessibleStages = $derived(unlockedStageIds);
 	const reviewWorkspaceTitle = $derived(activeStageConfig?.title || 'Review extracted deal details');
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
@@ -785,6 +839,12 @@
 	});
 	const reviewFieldEvidence = $derived(
 		normalizeReviewFieldEvidenceMap(deal?.reviewFieldEvidence || deal?.review_field_evidence || {})
+	);
+	const reviewFieldEvidenceKnownKeys = $derived.by(() =>
+		new Set([
+			...reviewFieldEvidenceLoadedKeys,
+			...Object.keys(reviewFieldEvidence)
+		])
 	);
 	const summaryRelevantWarningFieldKeys = $derived.by(() => {
 		const keys = new Set();
@@ -1076,7 +1136,6 @@
 		const params = new URLSearchParams({ id: dealId });
 		params.set('stage', stage);
 		if (from) params.set('from', from);
-		if (stage === 'intake') params.set('step', 'intake');
 		if (extract) params.set('extract', '1');
 		return `/deal-review?${params.toString()}`;
 	}
@@ -1377,7 +1436,9 @@
 			}
 
 			suggestionWarnings = Array.isArray(suggestionPayload?.warnings) ? suggestionPayload.warnings : [];
-			const mergedState = mergeSuggestedTeamContacts(teamContacts, suggestionPayload?.contacts || []);
+			const mergedState = mergeSuggestedTeamContacts(teamContacts, suggestionPayload?.contacts || [], {
+				appendUnmatched: 'required_roles_only'
+			});
 			teamContacts = normalizeTeamContacts(mergedState.contacts, {
 				ensureOne: false,
 				preserveEmpty: true
@@ -1543,7 +1604,7 @@
 	}
 
 	async function loadSecVerificationSummary({ force = false } = {}) {
-		if (!dealId || reviewStep === 'intake') return;
+		if (!dealId) return;
 		if (!force && secVerificationLoadState === 'running') return;
 		secVerificationLoadState = 'running';
 		try {
@@ -1636,8 +1697,33 @@
 		)));
 	}
 
+	function buildMissingCitationValidation(stage = activeStage) {
+		const missingFieldKeys = getStageMissingEvidenceFieldKeys(stage, {
+			requireLoadedEvidence: false
+		});
+		if (missingFieldKeys.length === 0) return null;
+		return {
+			fieldKeys: missingFieldKeys,
+			message: `Save supporting citations for ${summarizeFieldLabels(missingFieldKeys)} before this stage counts as complete.`
+		};
+	}
+
+	function applyMissingCitationErrors(stage, missingFieldKeys = []) {
+		const stageFieldKeys = getEvidenceFieldKeysForStage(stage);
+		fieldErrors = {
+			...fieldErrors,
+			...Object.fromEntries(stageFieldKeys.map((fieldKey) => [fieldKey, ''])),
+			...Object.fromEntries(
+				missingFieldKeys.map((fieldKey) => [
+					fieldKey,
+					'Add a saved supporting citation for this value or clear it before continuing.'
+				])
+			)
+		};
+	}
+
 	async function loadReviewFieldEvidence({ fieldKeys = [], force = false } = {}) {
-		if (!dealId || !deal || reviewFieldEvidenceState === 'running') return;
+		if (!dealId || !deal || (reviewFieldEvidenceState === 'running' && !force)) return;
 		if (!getDocumentUrl('deck') && !getDocumentUrl('ppm') && !deal?.sec_filing_id && !deal?.secFilingId) return;
 
 		const requestedFieldKeys = Array.from(new Set((fieldKeys || []).filter(Boolean)));
@@ -1722,7 +1808,7 @@
 		}
 	}
 
-	async function saveDeal({ quiet = false, stage = activeStage } = {}) {
+	async function saveDeal({ quiet = false, stage = activeStage, enforceEvidence = false } = {}) {
 		if (!dealId || saving) return false;
 
 		const scopedFieldKeys = getSaveFieldKeysForStage(stage);
@@ -1815,6 +1901,16 @@
 					fieldKeys: scopedFieldKeys,
 					force: true
 				});
+				const missingCitationValidation = buildMissingCitationValidation(stage);
+				if (missingCitationValidation) {
+					applyMissingCitationErrors(stage, missingCitationValidation.fieldKeys);
+					saveError = missingCitationValidation.message;
+					saveMessage = quiet
+						? ''
+						: 'Deal saved, but this stage still needs supporting citations before it can be marked complete.';
+					revealReviewFeedback();
+					return !enforceEvidence;
+				}
 			}
 			if (!quiet) {
 				saveMessage = 'Deal saved.';
@@ -2011,7 +2107,7 @@
 			}
 			return true;
 		}
-		return await saveDeal({ quiet: true, stage });
+		return await saveDeal({ quiet: true, stage, enforceEvidence: true });
 	}
 
 	async function saveActiveReviewStage() {
@@ -2027,7 +2123,7 @@
 		if (activeStage === 'team') {
 			return await saveTeamContacts({ quiet: false, requireComplete: false });
 		}
-		return await saveDeal({ stage: activeStage });
+		return await saveDeal({ stage: activeStage, enforceEvidence: false });
 	}
 
 	async function continueToNextStage() {
@@ -2146,7 +2242,17 @@
 	});
 
 	$effect(() => {
-		if (!browser || loading || !dealId || loadError) return;
+		if (loading || !deal || activeStage !== 'summary') return;
+		const allEvidenceFieldKeys = Array.from(new Set(
+			reviewStages.flatMap((stage) => getEvidenceFieldKeysForStage(stage.id))
+		));
+		if (allEvidenceFieldKeys.length === 0) return;
+		if (allEvidenceFieldKeys.every((fieldKey) => reviewFieldEvidenceLoadedKeys.includes(fieldKey))) return;
+		void loadReviewFieldEvidence({ fieldKeys: allEvidenceFieldKeys });
+	});
+
+	$effect(() => {
+		if (!browser || loading || !dealId || !deal || loadError) return;
 		const targetHref = getStageHref(activeStage, {
 			from: cameFromQueue ? 'queue' : cameFromIntake ? 'intake' : '',
 			extract: shouldAutoExtract && !autoExtractionHandled,
@@ -2162,7 +2268,7 @@
 	});
 
 	$effect(() => {
-		if (!dealId || loading || activeStage !== 'sec' || reviewStep === 'intake') return;
+		if (!dealId || loading || activeStage !== 'sec') return;
 		if (secVerificationContext || secVerificationLoadState === 'running') return;
 		void loadSecVerificationSummary();
 	});

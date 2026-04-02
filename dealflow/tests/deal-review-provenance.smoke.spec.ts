@@ -313,7 +313,9 @@ test.describe('deal review provenance smoke', () => {
 		);
 		await expect(page.getByText('80% of Company Net Cash Flow shall be distributed to the Class A Members and 20% to the Class B Member.')).toBeVisible();
 		await expect(page.getByText('No source citation is saved for this field yet.').first()).toBeVisible();
-		await expect(page.getByText('No supporting citation is saved for this value yet.').first()).toBeVisible();
+		await expect(
+			page.getByText('This saved value is still missing a supporting citation. Treat it as unresolved until a source is linked.').first()
+		).toBeVisible();
 	});
 
 	test('summary save no longer throws failed-to-save when it should approve the deal', async ({ page }) => {
