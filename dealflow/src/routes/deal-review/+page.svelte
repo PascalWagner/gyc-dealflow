@@ -2371,6 +2371,7 @@
 			</div>
 		{:else}
 			<div class={`review-layout ${activeStage === 'team' ? 'review-layout--wide' : ''}`}>
+				{#key `${dealId}:${activeStage}`}
 				<form class="editor-stack" onsubmit={(event) => { event.preventDefault(); saveActiveReviewStage(); }}>
 					{#if cameFromQueue || hasSourceDocuments}
 						<div class="review-stage-controls">
@@ -2771,6 +2772,7 @@
 						{/key}
 					{/if}
 				</form>
+				{/key}
 
 				<DealReviewSidebar
 					stages={onboardingStages}
