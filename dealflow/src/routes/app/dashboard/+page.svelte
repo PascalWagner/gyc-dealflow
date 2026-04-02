@@ -2,17 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import CompareView from '$lib/components/CompareView.svelte';
-	import {
-		deals,
-		dealStages,
-		stageCounts,
-		compareDealIds,
-		dealFlowViewMode,
-		fetchDeals,
-		queryMemberDeals,
-		MAX_COMPARE_DEALS
-	} from '$lib/stores/deals.js';
+	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
 	import { user, getFreshSessionToken, canBuildFullPlan } from '$lib/stores/auth.js';
 	import AddDealModal from '$lib/components/AddDealModal.svelte';
 	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
@@ -20,7 +10,6 @@
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { getUserScopedCacheSnapshot } from '$lib/utils/userScopedState.js';
 	import { buildInvestedPortfolio, normalizePortfolioRecord } from '$lib/utils/investedPortfolio.js';
-	import { getUiStage } from '$lib/utils/dealflow-contract.js';
 
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
@@ -31,9 +20,6 @@
 	let distributions = $state([]);
 	let portfolioPlan = $state(null);
 	let showAddDealModal = $state(false);
-	let dashboardCompareDeals = $state([]);
-	let dashboardCompareLoading = $state(false);
-	let dashboardCompareRequestId = 0;
 	const portfolioView = $derived.by(() =>
 		buildInvestedPortfolio({
 			stageMap: $dealStages || {},
@@ -228,47 +214,6 @@
 				? [...actionItems.slice(1), ...standardActionItems]
 				: standardActionItems.slice(1)
 	);
-	const dashboardAutoCompareIds = $derived.by(() => {
-		const grouped = { decide: [], connect: [], review: [] };
-		for (const [dealId, stage] of Object.entries($dealStages || {})) {
-			const uiStage = getUiStage(stage);
-			if (grouped[uiStage]) grouped[uiStage].push(dealId);
-		}
-
-		return ['decide', 'connect', 'review']
-			.flatMap((stage) => grouped[stage])
-			.slice(0, MAX_COMPARE_DEALS);
-	});
-	const dashboardCompareIds = $derived.by(() => {
-		const pinned = Array.isArray($compareDealIds) ? $compareDealIds.slice(0, MAX_COMPARE_DEALS) : [];
-		const pinnedSet = new Set(pinned);
-		const fallback = dashboardAutoCompareIds.filter((dealId) => !pinnedSet.has(dealId));
-		return [...pinned, ...fallback].slice(0, MAX_COMPARE_DEALS);
-	});
-	const showDashboardCompare = $derived.by(() => {
-		const activePipelineCount = ($stageCounts.review || 0) + ($stageCounts.connect || 0) + ($stageCounts.decide || 0);
-		return dashboardCompareIds.length > 0 || activePipelineCount >= 2;
-	});
-	const dashboardCompareTitle = $derived('Deal Comparison');
-	const dashboardCompareSubtitle = $derived.by(() => {
-		if (($compareDealIds || []).length > 0) {
-			return 'Pinned deals first, plus the next-most-ready opportunities from your live pipeline.';
-		}
-		if (dashboardCompareIds.length > 0) {
-			return 'A live shortlist pulled from Review, Connect, and Decide so you can pressure-test it quickly.';
-		}
-		return 'Side by side on fees, returns, minimums, and hold period.';
-	});
-	const dashboardCompareNote = $derived.by(() => {
-		if (($compareDealIds || []).length > 0) {
-			return 'Open the compare view to edit the set, swap deals in or out, and keep the shortlist pinned.';
-		}
-		if (dashboardCompareIds.length > 0) {
-			return 'Until you pin specific deals in Deal Flow, Home keeps a live comparison ready from the deals closest to a decision.';
-		}
-		return 'Once you shortlist deals in Review, Connect, or Decide, Home will keep the comparison ready here.';
-	});
-	const dashboardCompareButtonLabel = $derived(dashboardCompareIds.length > 0 ? 'Open Compare View' : 'Start Comparing');
 
 	// First name
 	const firstName = $derived.by(() => {
@@ -293,14 +238,6 @@
 
 	function openAddDealModal() {
 		showAddDealModal = true;
-	}
-
-	function openDashboardCompare() {
-		if (dashboardCompareIds.length > 0) {
-			compareDealIds.set(dashboardCompareIds);
-		}
-		dealFlowViewMode.set('compare');
-		goto('/app/deals');
 	}
 
 	async function syncDashboardState() {
@@ -337,7 +274,6 @@
 	onMount(() => {
 		if (!browser) return;
 		void syncDashboardState();
-		compareDealIds.syncFromSession();
 		const handleScopedStateUpdate = () => {
 			void syncDashboardState();
 		};
@@ -349,42 +285,6 @@
 
 	onMount(() => {
 		fetchDeals().catch(() => {});
-	});
-
-	$effect(() => {
-		if (!browser) return;
-
-		const compareIds = dashboardCompareIds;
-		const catalogDeals = $deals;
-		if (compareIds.length === 0) {
-			dashboardCompareDeals = [];
-			dashboardCompareLoading = false;
-			return;
-		}
-
-		const requestId = ++dashboardCompareRequestId;
-		dashboardCompareLoading = true;
-
-		queryMemberDeals({
-			scope: 'ids',
-			ids: compareIds,
-			limit: MAX_COMPARE_DEALS
-		})
-			.then((data) => {
-				if (requestId !== dashboardCompareRequestId) return;
-				const byId = new Map((data?.deals || []).map((deal) => [deal.id, deal]));
-				dashboardCompareDeals = compareIds.map((dealId) => byId.get(dealId)).filter(Boolean);
-			})
-			.catch(() => {
-				if (requestId !== dashboardCompareRequestId) return;
-				const byId = new Map((catalogDeals || []).map((deal) => [deal.id, deal]));
-				dashboardCompareDeals = compareIds.map((dealId) => byId.get(dealId)).filter(Boolean);
-			})
-			.finally(() => {
-				if (requestId === dashboardCompareRequestId) {
-					dashboardCompareLoading = false;
-				}
-			});
 	});
 </script>
 
@@ -412,63 +312,63 @@
 					<a href="/app/deals" class="dashboard-onboarding-link">Browse deals first</a>
 				</div>
 			</div>
-		{:else}
-		<div class="coach-card ly-surface ly-surface--accent ly-surface--strong">
-			<div class="coach-copy">
-				<div class="coach-eyebrow">Your Investing Coach</div>
-				<h2 class="coach-title">{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h2>
-				<p class="coach-text coach-text--support">{coachTargetCopy}</p>
-				<p class="coach-text coach-text--meta">{coachProgressCopy}</p>
-			</div>
-		</div>
-
-		{#if hasGoalContext}
-			<div class="dash-hero ly-surface ly-surface--strong">
-				<div class="dash-hero-label">{goalLabel}</div>
-				<div class="dash-hero-bar" aria-hidden="true">
-					<div class="dash-hero-fill" style={`width:${goalProgress}%;${goalProgress > 0 ? 'min-width:10px;' : ''}`}></div>
-				</div>
-				<div class="dash-hero-value-row">
-					<div class="dash-hero-value">{goalValueText}</div>
-					<div class="dash-hero-pct">{goalProgress}%</div>
-				</div>
-				<div class="dash-hero-stats">{statsLine}</div>
-			</div>
-		{/if}
-
-		{#if hasGoalContext && needsPlanSetup}
-			<div class="plan-cta-card ly-surface ly-surface--muted">
-				<div>
-					<div class="plan-cta-eyebrow">Your Plan</div>
-					<div class="plan-cta-title">{$canBuildFullPlan ? 'Turn your goal into a roadmap.' : 'Review the investor profile driving your deal feed.'}</div>
-					<div class="plan-cta-copy">{$canBuildFullPlan ? 'Build out your thesis, roadmap, and next best move without leaving the app shell.' : 'See your saved goal, preferences, and the upgrade path into a full plan.'}</div>
-				</div>
-				<a href="/app/plan" class="btn-primary plan-cta-btn">{$canBuildFullPlan ? 'Open My Plan →' : 'Review My Profile →'}</a>
-			</div>
-		{/if}
-
-		<div class="dashboard-stack" data-dashboard-version="overview-cleanup-2">
-			{#if primaryAction}
-				<div class="action-card ly-surface">
-					<div class="action-header">What To Do Next</div>
-					<div class="next-action-panel">
-						<div class="next-action-copy">
-							<div class="next-action-title">{primaryAction.headline}</div>
-							<p class="next-action-copy-text">{primaryAction.copy}</p>
-						</div>
-						<a href={primaryAction.href || `/app/${primaryAction.page}`} class="btn-primary next-action-btn">{primaryAction.link} →</a>
+			{:else}
+				<div class="coach-card ly-surface ly-surface--accent ly-surface--strong">
+					<div class="coach-copy">
+						<div class="coach-eyebrow">Your Investing Coach</div>
+						<h2 class="coach-title">{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h2>
+						<p class="coach-text coach-text--support">{coachTargetCopy}</p>
+						<p class="coach-text coach-text--meta">{coachProgressCopy}</p>
 					</div>
-					{#if secondaryActionItems.length > 0}
-						<div class="secondary-actions-label">Also On Deck</div>
-					{/if}
-					{#each secondaryActionItems as item}
-						<svelte:element
-							this={item.action === 'modal' ? 'button' : 'a'}
-							type={item.action === 'modal' ? 'button' : undefined}
-							href={item.action === 'modal' ? undefined : item.href || `/app/${item.page}`}
-							class={`action-row${item.action === 'modal' ? ' action-row--button' : ''}`}
-							onclick={item.action === 'modal' ? openAddDealModal : undefined}
-						>
+				</div>
+
+				{#if hasGoalContext}
+					<div class="dash-hero ly-surface ly-surface--strong">
+						<div class="dash-hero-label">{goalLabel}</div>
+						<div class="dash-hero-bar" aria-hidden="true">
+							<div class="dash-hero-fill" style={`width:${goalProgress}%;${goalProgress > 0 ? 'min-width:10px;' : ''}`}></div>
+						</div>
+						<div class="dash-hero-value-row">
+							<div class="dash-hero-value">{goalValueText}</div>
+							<div class="dash-hero-pct">{goalProgress}%</div>
+						</div>
+						<div class="dash-hero-stats">{statsLine}</div>
+					</div>
+				{/if}
+
+				{#if hasGoalContext && needsPlanSetup}
+					<div class="plan-cta-card ly-surface ly-surface--muted">
+						<div>
+							<div class="plan-cta-eyebrow">Your Plan</div>
+							<div class="plan-cta-title">{$canBuildFullPlan ? 'Turn your goal into a roadmap.' : 'Review the investor profile driving your deal feed.'}</div>
+							<div class="plan-cta-copy">{$canBuildFullPlan ? 'Build out your thesis, roadmap, and next best move without leaving the app shell.' : 'See your saved goal, preferences, and the upgrade path into a full plan.'}</div>
+						</div>
+						<a href="/app/plan" class="btn-primary plan-cta-btn">{$canBuildFullPlan ? 'Open My Plan →' : 'Review My Profile →'}</a>
+					</div>
+				{/if}
+
+				<div class="dashboard-stack" data-dashboard-version="overview-cleanup-2">
+					{#if primaryAction}
+						<div class="action-card ly-surface">
+							<div class="action-header">What To Do Next</div>
+							<div class="next-action-panel">
+								<div class="next-action-copy">
+									<div class="next-action-title">{primaryAction.headline}</div>
+									<p class="next-action-copy-text">{primaryAction.copy}</p>
+								</div>
+								<a href={primaryAction.href || `/app/${primaryAction.page}`} class="btn-primary next-action-btn">{primaryAction.link} →</a>
+							</div>
+							{#if secondaryActionItems.length > 0}
+								<div class="secondary-actions-label">Also On Deck</div>
+							{/if}
+							{#each secondaryActionItems as item}
+								<svelte:element
+									this={item.action === 'modal' ? 'button' : 'a'}
+									type={item.action === 'modal' ? 'button' : undefined}
+									href={item.action === 'modal' ? undefined : item.href || `/app/${item.page}`}
+									class={`action-row${item.action === 'modal' ? ' action-row--button' : ''}`}
+									onclick={item.action === 'modal' ? openAddDealModal : undefined}
+								>
 							<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
 								{#if item.icon === 'plan'}
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -530,35 +430,13 @@
 								<div class="action-row-copy">{item.copy}</div>
 							</div>
 							<span class="action-link">{item.link} →</span>
-						</svelte:element>
-					{/each}
-				</div>
-			{/if}
-
-			{#if showDashboardCompare}
-				<div class="dashboard-compare-stack">
-					<CompareView
-						deals={dashboardCompareDeals}
-						loading={dashboardCompareLoading}
-						maxDeals={MAX_COMPARE_DEALS}
-						title={dashboardCompareTitle}
-						subtitle={dashboardCompareSubtitle}
-						emptyTitle="Shortlist a couple of deals"
-						emptySubtitle="Move deals into Review, Connect, or Decide, or use Compare in Deal Flow and Home will keep the side-by-side view here."
-						showRemove={false}
-						onremove={() => {}}
-					/>
-					<div class="dashboard-compare-footer ly-surface ly-surface--muted">
-						<p class="dashboard-compare-note">{dashboardCompareNote}</p>
-						<button type="button" class="btn-primary dashboard-compare-btn" onclick={openDashboardCompare}>
-							{dashboardCompareButtonLabel} →
-						</button>
-					</div>
+								</svelte:element>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
-	{/if}
-	</div>
 </PageContainer>
 
 {#if showAddDealModal}
@@ -624,56 +502,57 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 18px;
-		padding: 28px 32px 26px;
-		margin-bottom: 20px;
+		padding: 24px 28px 22px;
+		margin-bottom: 18px;
 	}
 	.coach-copy {
-		max-width: 820px;
+		max-width: 760px;
 	}
 	.coach-eyebrow {
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 700;
-		letter-spacing: 0.6px;
+		letter-spacing: 0.5px;
 		text-transform: none;
 		color: var(--text-muted);
 	}
 	.coach-title {
-		margin: 8px 0 0;
-		font-family: var(--font-headline);
-		font-size: clamp(36px, 4vw, 46px);
-		line-height: 1.02;
-		letter-spacing: -0.4px;
+		margin: 10px 0 0;
+		font-family: var(--font-ui);
+		font-size: clamp(24px, 2.6vw, 30px);
+		font-weight: 700;
+		line-height: 1.12;
+		letter-spacing: -0.3px;
 		color: var(--text-dark);
 	}
 	.coach-text {
-		margin: 12px 0 0;
+		margin: 10px 0 0;
 		line-height: 1.6;
 	}
 	.coach-text--support {
-		font-family: var(--font-ui);
-		font-size: 19px;
+		font-family: var(--font-body);
+		font-size: 16px;
 		font-weight: 600;
 		color: var(--text-dark);
-		line-height: 1.45;
+		line-height: 1.55;
 	}
 	.coach-text--meta {
 		font-family: var(--font-body);
-		font-size: 17px;
+		font-size: 14px;
 		color: var(--text-secondary);
 	}
 	.dash-hero {
-		padding: 30px 32px 24px;
-		margin-bottom: 22px;
+		padding: 24px 28px 20px;
+		margin-bottom: 20px;
 	}
 	.dash-hero-label {
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 700;
-		letter-spacing: 0.6px;
+		letter-spacing: 0.5px;
 		text-transform: none;
 		color: var(--text-muted);
-		margin-bottom: 18px;
+		margin-bottom: 16px;
 	}
 	.dash-hero-bar {
 		height: 12px;
@@ -691,31 +570,31 @@
 		display: flex;
 		align-items: baseline;
 		flex-wrap: wrap;
-		gap: 16px;
-		margin-top: 16px;
+		gap: 12px;
+		margin-top: 14px;
 	}
 	.dash-hero-value {
 		font-family: var(--font-ui);
-		font-size: clamp(34px, 3.4vw, 44px);
+		font-size: clamp(24px, 2.8vw, 32px);
 		font-weight: 800;
-		line-height: 1;
-		letter-spacing: -0.7px;
+		line-height: 1.05;
+		letter-spacing: -0.5px;
 		color: var(--text-dark);
 	}
 	.dash-hero-pct {
 		font-family: var(--font-ui);
-		font-size: 18px;
+		font-size: 16px;
 		font-weight: 800;
 		color: var(--primary);
 	}
 	.dash-hero-stats {
 		font-family: var(--font-body);
-		font-size: 15px;
+		font-size: 14px;
 		color: var(--text-muted);
 		margin-bottom: 0;
-		padding-top: 18px;
+		padding-top: 16px;
 		border-top: 1px solid var(--border-light);
-		margin-top: 18px;
+		margin-top: 16px;
 	}
 
 	.plan-cta-card {
@@ -732,15 +611,15 @@
 	.plan-cta-eyebrow,
 	.action-header {
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 700;
 		text-transform: none;
-		letter-spacing: 0.6px;
+		letter-spacing: 0.5px;
 		color: var(--text-muted);
 	}
 	.plan-cta-title {
 		font-family: var(--font-ui);
-		font-size: 18px;
+		font-size: 17px;
 		font-weight: 700;
 		color: var(--text-dark);
 		margin-top: 8px;
@@ -776,45 +655,21 @@
 		flex-direction: column;
 		gap: 18px;
 	}
-	.dashboard-compare-stack {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-	}
-	.dashboard-compare-footer {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		padding: 18px 20px;
-		flex-wrap: wrap;
-	}
-	.dashboard-compare-note {
-		margin: 0;
-		max-width: 760px;
-		font-family: var(--font-body);
-		font-size: 14px;
-		line-height: 1.6;
-		color: var(--text-secondary);
-	}
-	.dashboard-compare-btn {
-		white-space: nowrap;
-	}
 
 	/* ── Action Items ── */
 	.action-card {
 		overflow: hidden;
 	}
 	.action-header {
-		padding: 18px 16px 0;
-		margin-bottom: 10px;
+		padding: 16px 16px 0;
+		margin-bottom: 8px;
 	}
 	.next-action-panel {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 18px;
-		padding: 0 16px 18px;
+		padding: 0 16px 16px;
 		flex-wrap: wrap;
 	}
 	.next-action-copy {
@@ -823,25 +678,25 @@
 	}
 	.secondary-actions-label {
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: 700;
 		text-transform: none;
-		letter-spacing: 0.6px;
+		letter-spacing: 0.5px;
 		color: var(--text-muted);
 	}
 	.next-action-title {
 		font-family: var(--font-ui);
-		font-size: clamp(28px, 3vw, 38px);
+		font-size: clamp(24px, 2.8vw, 32px);
 		font-weight: 800;
-		line-height: 1.08;
-		letter-spacing: -0.4px;
+		line-height: 1.12;
+		letter-spacing: -0.3px;
 		color: var(--text-dark);
 	}
 	.next-action-copy-text {
-		margin: 10px 0 0;
-		max-width: 760px;
+		margin: 8px 0 0;
+		max-width: 620px;
 		font-family: var(--font-body);
-		font-size: 17px;
+		font-size: 15px;
 		line-height: 1.6;
 		color: var(--text-secondary);
 	}
@@ -897,7 +752,7 @@
 	}
 	.action-row-title {
 		font-family: var(--font-ui);
-		font-size: 16px;
+		font-size: 15px;
 		font-weight: 700;
 		color: var(--text-dark);
 		line-height: 1.4;
@@ -905,7 +760,7 @@
 	.action-row-copy {
 		margin-top: 4px;
 		font-family: var(--font-body);
-		font-size: 15px;
+		font-size: 14px;
 		color: var(--text-secondary);
 		line-height: 1.5;
 	}
@@ -945,10 +800,10 @@
 	}
 
 	/* ── Mobile Responsive ── */
-		@media (max-width: 768px) {
-			.content-area {
-				padding-bottom: 0;
-			}
+	@media (max-width: 768px) {
+		.content-area {
+			padding-bottom: 0;
+		}
 
 		.coach-card {
 			flex-direction: column;
@@ -956,7 +811,7 @@
 			margin-bottom: 16px;
 		}
 		.coach-title {
-			font-size: 32px;
+			font-size: 26px;
 		}
 		.dashboard-onboarding-card {
 			margin-top: 20px;
@@ -969,28 +824,23 @@
 			padding: 24px 18px 18px;
 		}
 		.dash-hero-value {
-			font-size: 30px;
+			font-size: 28px;
 		}
 		.dash-hero-stats {
 			font-size: 14px;
 		}
-		.plan-cta-card { padding: 18px 16px; }
+		.plan-cta-card {
+			padding: 18px 16px;
+		}
 		.next-action-panel {
 			align-items: flex-start;
 		}
-		.dashboard-compare-footer {
-			padding: 16px;
-		}
-		.dashboard-compare-btn {
-			width: 100%;
-			text-align: center;
-		}
 		.next-action-title {
-			font-size: 24px;
+			font-size: 22px;
 		}
 		.next-action-copy-text,
 		.action-row-copy {
-			font-size: 15px;
+			font-size: 14px;
 		}
 		.next-action-btn {
 			width: 100%;
