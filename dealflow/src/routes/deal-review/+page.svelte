@@ -95,6 +95,14 @@
 		markDirty();
 	}
 
+	function revealReviewFeedback() {
+		if (!browser) return;
+		window.scrollTo({
+			top: 0,
+			behavior: 'smooth'
+		});
+	}
+
 	function getRiskRedesignHref({ from = '' } = {}) {
 		const params = new URLSearchParams({ id: dealId });
 		params.set('view', 'extract');
@@ -566,6 +574,7 @@
 	let teamContactsSaveState = $state('idle');
 	let lifecycleSyncState = $state('idle');
 	let secVerificationContext = $state(null);
+	let secVerificationLoadState = $state('idle');
 	let classificationSignals = $state(null);
 	let classificationSignalsState = $state('idle');
 	let classificationSignalsError = $state('');
@@ -631,6 +640,9 @@
 	const hasSourceDocuments = $derived(
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
 	);
+	const intakeHasAttachedSources = $derived(
+		Boolean(deckFile || ppmFile || hasSourceDocuments)
+	);
 	const canOpenSummaryPreview = $derived(
 		allowSummaryPreview && hasSourceDocuments && secCanAdvance && teamContactsValidation.valid
 	);
@@ -692,6 +704,12 @@
 		if (branchInfo.branch !== 'lending_fund' && !isValidOnboardingStage(requestedStage)) return firstIncompleteStage;
 		if (branchInfo.branch === 'lending_fund' && !reviewStages.some((stage) => stage.id === requestedStage)) return firstIncompleteStage;
 		return unlockedStageIds.includes(requestedStage) ? requestedStage : firstIncompleteStage;
+	});
+	const reviewFooterBusy = $derived.by(() => {
+		if (saving) return true;
+		if (activeStage === 'sec' && secVerificationLoadState === 'running') return true;
+		if (activeStage === 'classification' && classificationSignalsState === 'running') return true;
+		return false;
 	});
 	const activeStageConfig = $derived(
 		branchInfo.branch === 'lending_fund'
@@ -1158,7 +1176,7 @@
 
 		const hasExistingSource = Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url);
 		if (autoExtract && !deckFile && !ppmFile && !hasExistingSource) {
-			uploadError = 'Upload a deck or PPM before starting extraction, or continue to review manually.';
+			uploadError = 'Upload a deck or PPM before continuing with extraction, or skip extraction.';
 			return;
 		}
 
@@ -1503,20 +1521,30 @@
 		}
 	}
 
-	async function loadSecVerificationSummary() {
+	async function loadSecVerificationSummary({ force = false } = {}) {
 		if (!dealId || reviewStep === 'intake') return;
+		if (!force && secVerificationLoadState === 'running') return;
+		secVerificationLoadState = 'running';
 		try {
 			const token = await getFreshSessionToken();
-			if (!token) return;
+			if (!token) {
+				secVerificationLoadState = 'idle';
+				return;
+			}
 			const response = await fetch(`/api/sec-verification?dealId=${encodeURIComponent(dealId)}`, {
 				headers: {
 					Authorization: `Bearer ${token}`
 				}
 			});
 			const payload = await response.json().catch(() => ({}));
-			if (!response.ok) return;
+			if (!response.ok) {
+				secVerificationLoadState = 'error';
+				return;
+			}
 			secVerificationContext = payload;
+			secVerificationLoadState = 'success';
 		} catch {
+			secVerificationLoadState = 'error';
 			// Keep the stage non-blocking if the SEC summary cannot be prefetched.
 		}
 	}
@@ -1641,6 +1669,7 @@
 				: errors;
 			saveError = `Fix these fields before saving: ${errorSummary}.`;
 			saveMessage = '';
+			revealReviewFeedback();
 			console.warn('[deal-review] stage save blocked by validation', {
 				dealId,
 				stage,
@@ -1709,6 +1738,7 @@
 			return true;
 		} catch (error) {
 			saveError = error?.message || 'Failed to save deal.';
+			revealReviewFeedback();
 			return false;
 		} finally {
 			saving = false;
@@ -1867,8 +1897,14 @@
 			return await saveTeamContacts({ quiet: true, requireComplete: true });
 		}
 		if (stage === 'sec') {
+			if (!secVerificationContext && secVerificationLoadState === 'running') {
+				saveError = 'SEC verification is still loading. Wait a moment, then continue.';
+				revealReviewFeedback();
+				return false;
+			}
 			if (!secCanAdvance) {
 				saveError = `Finish the SEC review first by verifying the filing or intentionally skipping it. Current state: ${SEC_VERIFICATION_LABELS[secStatus] || 'Pending'}.`;
+				revealReviewFeedback();
 				return false;
 			}
 			return true;
@@ -1887,9 +1923,9 @@
 	}
 
 	async function navigateToStage(stage, { from = '', allowAdvance = false } = {}) {
-		if (!dealId) return;
+		if (!dealId) return false;
 		const targetStage = stage;
-		if (!targetStage || targetStage === activeStage) return;
+		if (!targetStage || targetStage === activeStage) return false;
 
 		const currentIndex = onboardingStages.findIndex((candidate) => candidate.id === activeStage);
 		const targetIndex = onboardingStages.findIndex((candidate) => candidate.id === targetStage);
@@ -1903,7 +1939,7 @@
 			&& currentIndex === unlockedIndex
 			&& targetIndex === unlockedIndex + 1;
 
-		if (targetIndex < 0) return;
+		if (targetIndex < 0) return false;
 		if (targetIndex > unlockedIndex && !isAdvancingIntoNextNewStage && !allowImmediateAdvance) {
 			console.warn('[deal-review] navigation blocked', {
 				dealId,
@@ -1914,19 +1950,23 @@
 				unlockedIndex,
 				furthestUnlockedStage
 			});
-			return;
+			revealReviewFeedback();
+			return false;
 		}
 
 		if (movingForward) {
 			const shouldSaveBeforeAdvance = dirty || ['intake', 'team', 'sec'].includes(activeStage);
 			const ok = shouldSaveBeforeAdvance ? await saveCurrentStage(activeStage) : true;
-			if (!ok) return;
+			if (!ok) return false;
 			if (targetStage === 'summary') {
 				const lifecycleOk = await syncReviewLifecycleStatus({
 					quiet: true,
 					targetLifecycle: summaryPublishReady ? 'approved' : 'in_review'
 				});
-				if (!lifecycleOk) return;
+				if (!lifecycleOk) {
+					revealReviewFeedback();
+					return false;
+				}
 			}
 		}
 
@@ -1936,6 +1976,7 @@
 			noScroll: true,
 			keepFocus: true
 		});
+		return true;
 	}
 
 	onMount(async () => {
@@ -1952,6 +1993,8 @@
 		if (!dealId || dealId === previousDealId) return;
 		previousDealId = dealId;
 		autoExtractionHandled = false;
+		secVerificationContext = null;
+		secVerificationLoadState = 'idle';
 		classificationSignals = null;
 		classificationSignalsState = 'idle';
 		classificationSignalsError = '';
@@ -1988,6 +2031,12 @@
 			noScroll: true,
 			keepFocus: true
 		}).catch(() => {});
+	});
+
+	$effect(() => {
+		if (!dealId || loading || activeStage !== 'sec' || reviewStep === 'intake') return;
+		if (secVerificationContext || secVerificationLoadState === 'running') return;
+		void loadSecVerificationSummary();
 	});
 
 	$effect(() => {
@@ -2288,15 +2337,15 @@
 								onclick={() => continueFromIntake({ autoExtract: false })}
 								disabled={uploadState === 'running'}
 							>
-								{uploadState === 'running' ? 'Working...' : 'Review Manually'}
+								{uploadState === 'running' ? 'Working...' : 'Skip Extraction'}
 							</button>
 							<button
 								type="button"
 								class="primary-btn"
 								onclick={() => continueFromIntake({ autoExtract: true })}
-								disabled={uploadState === 'running'}
+								disabled={uploadState === 'running' || !intakeHasAttachedSources}
 							>
-								{uploadState === 'running' ? 'Uploading...' : 'Upload & Extract'}
+								{uploadState === 'running' ? 'Continuing...' : 'Continue'}
 							</button>
 						</div>
 					</section>
@@ -2697,19 +2746,19 @@
 										Back
 									</button>
 								{/if}
-							</div>
-							<div class="wizard-footer__right">
-									<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || saving}>
-										Reset unsaved changes
-									</button>
-									<button type="submit" class="ghost-btn" disabled={saving}>
-										{saving ? 'Saving...' : 'Save changes'}
-									</button>
-									{#if activeStage !== 'summary' && nextStage && nextStage !== activeStage}
-										<button type="button" class="primary-btn" disabled={saving} onclick={() => navigateToStage(nextStage, { allowAdvance: true })}>
-											Save & Continue
+								</div>
+								<div class="wizard-footer__right">
+										<button type="button" class="ghost-btn" onclick={resetForm} disabled={!dirty || reviewFooterBusy}>
+											Reset unsaved changes
 										</button>
-									{/if}
+										<button type="submit" class="ghost-btn" disabled={reviewFooterBusy}>
+											{reviewFooterBusy ? 'Loading...' : 'Save changes'}
+										</button>
+										{#if activeStage !== 'summary' && nextStage && nextStage !== activeStage}
+											<button type="button" class="primary-btn" disabled={reviewFooterBusy} onclick={() => navigateToStage(nextStage, { allowAdvance: true })}>
+												Save & Continue
+											</button>
+										{/if}
 								</div>
 							</div>
 					{/if}
