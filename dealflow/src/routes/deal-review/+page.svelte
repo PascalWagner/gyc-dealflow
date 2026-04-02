@@ -2590,7 +2590,7 @@
 					currentStage={sidebarCurrentStage}
 					completedStages={sidebarCompletedStages}
 					accessibleStages={sidebarAccessibleStages}
-					onselect={() => {}}
+					onselect={(stageId) => navigateToStage(stageId)}
 					deckUrl={getDocumentUrl('deck') || form.deckUrl}
 					ppmUrl={getDocumentUrl('ppm') || form.ppmUrl}
 					subAgreementUrl={deal?.subAgreementUrl || deal?.sub_agreement_url || ''}
