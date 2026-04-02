@@ -64,17 +64,39 @@
 	let saveMessage = '';
 	let saveTimer = null;
 
-	$: sequence =
-		forcedFlowKey && STEP_SEQUENCE[forcedFlowKey]
+	function sequenceSourceData() {
+		const inferredBranch = wizardData._branch || forcedBranch || flowKeyToBranch(forcedFlowKey);
+		if (!inferredBranch || wizardData._branch === inferredBranch) return wizardData;
+		return normalizeWizardData({
+			...wizardData,
+			_branch: inferredBranch,
+			branch: inferredBranch
+		});
+	}
+
+	$: sequence = fullPlanMode
+		? getStepSequence(sequenceSourceData(), { editing: forceEdit, includePaidFlow: true })
+		: forcedFlowKey && STEP_SEQUENCE[forcedFlowKey]
 			? [...STEP_SEQUENCE[forcedFlowKey]]
-			: getStepSequence(wizardData, { editing: forceEdit, includePaidFlow: fullPlanMode });
+			: getStepSequence(wizardData, { editing: forceEdit, includePaidFlow: false });
 	$: if (sequence.length && wizardStepIndex > sequence.length - 1) wizardStepIndex = sequence.length - 1;
 	$: currentStep = sequence[wizardStepIndex] || sequence[0] || STEP.GOAL;
 	$: currentPhase = phaseForStep(currentStep);
+	$: currentTitle = stepTitleFor(currentStep);
+	$: currentSubtitle = stepSubtitleFor(currentStep);
+	$: currentFlowKey = activeFlowKey(currentStep);
 	$: reviewRows = wizardSummaryRows(wizardData);
 	$: planPreview = generatePortfolioPlan(wizardData, allDeals);
 	$: heroCopy = planHeroCopy(wizardData, planPreview);
-	$: if (browser && initialized) syncReviewUrl();
+	$: phaseItems = PHASE_NAMES.map((label, index) => buildPhaseItem(label, index));
+	$: if (browser && initialized && currentStep) {
+		syncReviewUrl({
+			step: currentStep,
+			flowKey: currentFlowKey,
+			branch: wizardData._branch,
+			editMode: forceEdit
+		});
+	}
 
 	onMount(async () => {
 		initializeWizard();
@@ -129,23 +151,49 @@
 		if (autosave) scheduleSave();
 	}
 
-	function activeFlowKey() {
-		if (STEP_SEQUENCE.free.includes(currentStep)) return 'free';
+	function activeFlowKey(step = currentStep) {
+		if (STEP_SEQUENCE.free.includes(step)) return 'free';
 		const branch = wizardData._branch || flowKeyToBranch(forcedFlowKey) || 'cashflow';
 		return `paid_${branch}`;
 	}
 
-	function syncReviewUrl() {
-		const stage = stageSlugForStep(currentStep);
+	function syncReviewUrl({ step = currentStep, flowKey = activeFlowKey(step), branch = wizardData._branch, editMode = forceEdit } = {}) {
+		const stage = stageSlugForStep(step);
 		if (!stage) return;
 		const url = new URL(window.location.href);
 		url.searchParams.set('stage', stage);
-		url.searchParams.set('flow', activeFlowKey());
-		if (wizardData._branch) url.searchParams.set('branch', wizardData._branch);
+		url.searchParams.set('flow', flowKey);
+		if (branch) url.searchParams.set('branch', branch);
 		else url.searchParams.delete('branch');
-		if (forceEdit) url.searchParams.set('edit', '1');
+		if (editMode) url.searchParams.set('edit', '1');
 		else url.searchParams.delete('edit');
 		window.history.replaceState(window.history.state, '', `${url.pathname}?${url.searchParams.toString()}${url.hash}`);
+	}
+
+	function buildPhaseItem(label, phaseIndex) {
+		if (!forceEdit) return { label };
+		if (phaseIndex === PHASE_NAMES.length - 1) {
+			return {
+				label,
+				onClick: () => void exitToPlan()
+			};
+		}
+		return {
+			label,
+			onClick: () => jumpToPhase(phaseIndex)
+		};
+	}
+
+	function jumpToPhase(phaseIndex) {
+		const nextIndex = sequence.findIndex((step) => phaseForStep(step) === phaseIndex);
+		if (nextIndex < 0 || nextIndex === wizardStepIndex) return;
+		validationError = '';
+		wizardStepIndex = nextIndex;
+	}
+
+	async function exitToPlan() {
+		if (!browser) return;
+		window.location.assign('/app/plan');
 	}
 
 	function updateField(key, value, { autosave = true } = {}) {
@@ -427,8 +475,8 @@
 		return true;
 	}
 
-	function stepTitle() {
-		switch (currentStep) {
+	function stepTitleFor(step) {
+		switch (step) {
 			case STEP.GOAL:
 				return 'What do you want your money to do for you?';
 			case STEP.EXPERIENCE:
@@ -484,8 +532,8 @@
 		}
 	}
 
-	function stepSubtitle() {
-		switch (currentStep) {
+	function stepSubtitleFor(step) {
+		switch (step) {
 			case STEP.GOAL:
 				return 'Whether you are evaluating your first deal or your fifteenth, this takes 3 minutes and shapes everything you see.';
 			case STEP.EXPERIENCE:
@@ -545,14 +593,15 @@
 </script>
 
 <div class="wizard-shell">
-	<div class="wizard-card ob-surface">
-		<OnboardingProgress
-			phaseNames={PHASE_NAMES}
-			currentPhase={currentPhase}
-			currentStep={wizardStepIndex + 1}
-			totalSteps={sequence.length}
-			title={stepTitle()}
-			subtitle={stepSubtitle()}
+	<div class="wizard-card">
+			<OnboardingProgress
+				phaseNames={PHASE_NAMES}
+				{phaseItems}
+				currentPhase={currentPhase}
+				currentStep={wizardStepIndex + 1}
+				totalSteps={sequence.length}
+			title={currentTitle}
+			subtitle={currentSubtitle}
 		/>
 
 		{#if currentStep === STEP.GOAL}

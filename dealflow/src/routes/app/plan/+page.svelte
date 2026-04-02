@@ -20,7 +20,12 @@
 	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
-	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
+	import {
+		hasCompletedPlan,
+		hasSavedWizardProgress,
+		normalizeWizardData,
+		parseDollar
+	} from '$lib/onboarding/planWizard.js';
 	import { buildInvestedPortfolio } from '$lib/utils/investedPortfolio.js';
 
 	let hasPlan = $state(false);
@@ -39,8 +44,11 @@
 	let reportUser = $state(null);
 	let portfolioPlan = $state(null);
 	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
+	let wizardStep = $state(0);
+	let wizardData = $state(normalizeWizardData({}));
 	const nativeCompanionMode = browser && isNativeApp();
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
+	const hasSavedPlanProgress = $derived.by(() => hasSavedWizardProgress(wizardData, portfolioPlan));
 	const portfolioView = $derived.by(() =>
 		buildInvestedPortfolio({
 			stageMap: $dealStages || {},
@@ -63,10 +71,13 @@
 			(wizardData.strategies || []).length > 0
 		)
 	);
-	const showInlineWizard = $derived(canViewFullPlan && (showWizard || !hasPlan));
+	const showInlineWizard = $derived(canViewFullPlan && (showWizard || !hasSavedPlanProgress));
 
-	let wizardStep = $state(0);
-	let wizardData = $state(normalizeWizardData({}));
+	const goalLabels = {
+		cashflow: 'Build Passive Income',
+		growth: 'Build Long-Term Wealth',
+		tax: 'Reduce Taxable Income'
+	};
 
 	const assetClassOptions = [
 		'Single Family',
@@ -91,12 +102,6 @@
 		'Business / Other',
 		'RV/Mobile Home Parks'
 	];
-
-	const goalLabels = {
-		cashflow: 'Build Passive Income',
-		growth: 'Build Long-Term Wealth',
-		tax: 'Reduce Taxable Income'
-	};
 
 	const stepTitles = [
 		'What is your primary goal?',
@@ -437,14 +442,14 @@
 		);
 	}
 
-	function openWizard(editMode = hasPlan) {
-		if (!canViewFullPlan) {
-			goto('/onboarding');
-			return;
+		function openWizard(editMode = hasSavedPlanProgress) {
+			if (!canViewFullPlan) {
+				goto('/onboarding');
+				return;
+			}
+			wizardForceEdit = Boolean(editMode);
+			showWizard = true;
 		}
-		wizardForceEdit = Boolean(editMode && hasPlan);
-		showWizard = true;
-	}
 
 	function openInvestorProfile() {
 		goto('/onboarding');
@@ -1193,7 +1198,7 @@
 		wizardFlowKey = params.get('flow') || '';
 		wizardForceEdit = ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase());
 		syncPlanState();
-		fetchDeals().catch(() => {});
+			fetchDeals().catch(() => {});
 
 		const handleScopedStateUpdate = () => {
 			syncPlanState();
@@ -1203,13 +1208,13 @@
 		void (async () => {
 			try {
 				const stored = getStoredSessionUser();
-				if (!stored?.token) {
-					loading = false;
-					if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasPlan)) {
-						openWizard(wizardForceEdit && hasPlan);
+					if (!stored?.token) {
+						loading = false;
+						if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasSavedPlanProgress)) {
+							openWizard(wizardForceEdit && hasSavedPlanProgress);
+						}
+						return;
 					}
-					return;
-				}
 				const realUser = currentAdminRealUser();
 				const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== stored.email.toLowerCase();
 				const buyBoxUrl = new URL('/api/buybox', window.location.origin);
@@ -1224,23 +1229,25 @@
 				});
 				window.clearTimeout(timeout);
 
-				if (response.ok) {
-					const data = await response.json();
-					if (data?.buyBox && Object.keys(data.buyBox).length > 0) {
-						wizardData = normalizeWizardData(data.buyBox);
-						plan = wizardData;
-						hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
+					if (response.ok) {
+						const data = await response.json();
+						if (data?.buyBox && Object.keys(data.buyBox).length > 0) {
+							const fetchedWizardData = normalizeWizardData(data.buyBox);
+							wizardData = fetchedWizardData;
+							plan = fetchedWizardData;
+							writeUserScopedJson('gycBuyBoxWizard', fetchedWizardData);
+							hasPlan = hasCompletedPlan(fetchedWizardData, portfolioPlan);
+						}
+					}
+				} catch (error) {
+					console.warn('Failed to load plan:', error);
+				} finally {
+					loading = false;
+					if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasSavedPlanProgress) && !showWizard) {
+						openWizard(wizardForceEdit && hasSavedPlanProgress);
 					}
 				}
-			} catch (error) {
-				console.warn('Failed to load plan:', error);
-			} finally {
-				loading = false;
-				if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasPlan) && !showWizard) {
-					openWizard(wizardForceEdit && hasPlan);
-				}
-			}
-		})();
+			})();
 
 		return () => {
 			window.removeEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
@@ -1275,19 +1282,19 @@
 			<section class="plan-card plan-setup-card ly-surface ly-surface--strong">
 				<div class="plan-card-top">
 					<div class="section-eyebrow">Build Your Plan</div>
-					{#if hasPlan}
-						<button class="inline-action" onclick={closeWizard}>Back To Plan</button>
-					{/if}
+						{#if hasSavedPlanProgress}
+							<button class="inline-action" onclick={closeWizard}>Back To Plan</button>
+						{/if}
 				</div>
 				<div class="section-subcopy">
 					Complete your thesis, roadmap, and next-best-move setup without leaving the app shell.
 				</div>
-				<LegacyPlanWizard
-					initialData={wizardData}
-					forceEdit={wizardForceEdit && hasPlan}
-					forcedStage={wizardStage}
-					forcedBranch={wizardBranch}
-					forcedFlowKey={wizardFlowKey}
+					<LegacyPlanWizard
+						initialData={wizardData}
+						forceEdit={wizardForceEdit}
+						forcedStage={wizardStage}
+						forcedBranch={wizardBranch}
+						forcedFlowKey={wizardFlowKey}
 					fullPlanMode={true}
 					paidCompleteRedirectTo="/app/plan"
 					on:state={handleWizardState}

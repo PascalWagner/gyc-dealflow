@@ -441,6 +441,11 @@ export function stageSlugForStep(step) {
 	return STEP_TO_STAGE[step] || '';
 }
 
+export function stageSlugForPhase(sequence = [], phaseIndex = 0) {
+	const step = (sequence || []).find((candidate) => phaseForStep(candidate) === phaseIndex);
+	return step ? stageSlugForStep(step) : '';
+}
+
 export function normalizeWizardData(input = {}) {
 	const next = { ...input };
 	if (!next._branch && typeof next.branch === 'string') next._branch = next.branch;
@@ -527,6 +532,34 @@ export function hasCompletedPlan(wizardData = {}, portfolioPlan = null) {
 	return isPaidFlowComplete(data);
 }
 
+export function hasSavedWizardProgress(wizardData = {}, portfolioPlan = null) {
+	const data = normalizeWizardData(wizardData);
+	if (hasCompletedPlan(data, portfolioPlan)) return true;
+	return Boolean(
+		data._branch ||
+		data.goal ||
+		(data.dealExperience !== undefined && data.dealExperience !== null && data.dealExperience !== '') ||
+		data.reProfessional ||
+		(data.baselineIncome !== undefined && data.baselineIncome !== null && data.baselineIncome !== '') ||
+		data.assetClasses.length > 0 ||
+		data.strategies.length > 0 ||
+		data.maxOperatorPct ||
+		data.accreditation.length > 0 ||
+		parseDollar(data.targetCashFlow) > 0 ||
+		parseDollar(data.growthCapital) > 0 ||
+		parseDollar(data.taxableIncome) > 0 ||
+		parseDollar(data.taxableIncomeBaseline) > 0 ||
+		parseDollar(data.netWorth) > 0 ||
+		data.capital12mo ||
+		data.triggerEvent ||
+		data.capitalReadiness ||
+		data.diversificationPref ||
+		data.operatorFocus ||
+		data.lockup ||
+		data.distributions
+	);
+}
+
 export function getStepSequence(wizardData = {}, { editing = false, includePaidFlow = false } = {}) {
 	const data = normalizeWizardData(wizardData);
 	const branch = data._branch || 'cashflow';
@@ -544,6 +577,7 @@ export function getStepSequence(wizardData = {}, { editing = false, includePaidF
 	if (editing) {
 		return [
 			STEP.GOAL,
+			STEP.EXPERIENCE,
 			STEP.RE_PRO,
 			STEP.BASELINE,
 			STEP.ASSETS,
