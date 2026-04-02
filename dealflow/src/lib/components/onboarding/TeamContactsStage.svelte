@@ -146,9 +146,17 @@
 		pickerRole = '';
 	}
 
-	function handleContinue() {
+	function handleContinue(event) {
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
 		submitAttempted = true;
 		oncontinue();
+	}
+
+	function handleBack(event) {
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
+		onback();
 	}
 
 	function findContactIndex(contactId) {
@@ -499,8 +507,8 @@
 	{/if}
 
 	<div class="team-stage__footer">
-		<button class="ghost-btn" onclick={onback}>Back</button>
-		<button class="primary-btn" onclick={handleContinue}>Continue</button>
+		<button type="button" class="ghost-btn" onclick={handleBack}>Back</button>
+		<button type="button" class="primary-btn" onclick={handleContinue}>Continue</button>
 	</div>
 </section>
 
