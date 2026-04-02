@@ -10,6 +10,7 @@
 	import DealModalLayer from '$lib/components/deal/DealModalLayer.svelte';
 	import {
 		canViewAdvancedDealAnalysis,
+		getFreshSessionToken,
 		getStoredSessionUser,
 		user,
 		isLoggedIn,
@@ -1100,7 +1101,10 @@
 	// ===== Lifecycle =====
 	onMount(async () => {
 		const storedUser = currentSessionUser();
-		const token = storedUser.token || '';
+		let token = '';
+		try {
+			token = await getFreshSessionToken();
+		} catch {}
 		const userEmail = storedUser.email || '';
 		const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
@@ -1117,11 +1121,20 @@
 						error = null;
 						loading = false;
 					}
+				} else {
+					error = 'Failed to load deal';
+					loading = false;
 				}
-			} catch {}
+			} catch (err) {
+				error = err?.message || 'Failed to load deal';
+				loading = false;
+			}
 		}
 
-		if (!deal) return;
+		if (!deal) {
+			loading = false;
+			return;
+		}
 		// Load DD answers from scoped browser state
 		try {
 			const stored = readScopedDealJson('gycDDChecklist', {});
