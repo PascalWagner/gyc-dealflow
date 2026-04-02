@@ -5,6 +5,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import DealOnboardingProgress from '$lib/components/deal-review/DealOnboardingProgress.svelte';
 	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
+	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import LendingFundReviewSectionStage from '$lib/components/deal-review/LendingFundReviewSectionStage.svelte';
 	import KeyDetailsStage from '$lib/components/deal-review/stages/KeyDetailsStage.svelte';
 	import SecVerificationStage from '$lib/components/deal-review/SecVerificationStage.svelte';
@@ -1367,36 +1368,51 @@
 			});
 			teamContacts = persistedContacts;
 
-			try {
-				const dealSnapshotResponse = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
-					method: 'PATCH',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`
-					},
-					body: JSON.stringify({
-						teamContacts: serializeTeamContactsForApi(persistedContacts)
-					})
-				});
-				const dealSnapshotPayload = await dealSnapshotResponse.json().catch(() => ({}));
-				if (dealSnapshotResponse.ok && dealSnapshotPayload?.deal) {
-					syncDealState(
-						{
+			const dealSupportsTeamSnapshot =
+				Boolean(deal)
+				&& (
+					Object.prototype.hasOwnProperty.call(deal, 'team_contacts')
+					|| Object.prototype.hasOwnProperty.call(deal, 'teamContacts')
+				);
+
+			if (dealSupportsTeamSnapshot) {
+				try {
+					const dealSnapshotResponse = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
+						method: 'PATCH',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${token}`
+						},
+						body: JSON.stringify({
+							teamContacts: serializeTeamContactsForApi(persistedContacts)
+						})
+					});
+					const dealSnapshotPayload = await dealSnapshotResponse.json().catch(() => ({}));
+					if (dealSnapshotResponse.ok && dealSnapshotPayload?.deal) {
+						syncDealState(
+							{
+								...(deal || {}),
+								...dealSnapshotPayload.deal,
+								team_contacts: persistedContacts,
+								teamContacts: persistedContacts
+							},
+							{ clearSaveMessage: true }
+						);
+					} else {
+						deal = {
 							...(deal || {}),
-							...dealSnapshotPayload.deal,
 							team_contacts: persistedContacts,
 							teamContacts: persistedContacts
-						},
-						{ clearSaveMessage: true }
-					);
-				} else {
+						};
+					}
+				} catch {
 					deal = {
 						...(deal || {}),
 						team_contacts: persistedContacts,
 						teamContacts: persistedContacts
 					};
 				}
-			} catch {
+			} else {
 				deal = {
 					...(deal || {}),
 					team_contacts: persistedContacts,
@@ -2132,12 +2148,14 @@
 							<TeamContactsStage
 								contacts={teamContacts}
 								error={teamContactsError}
+								saving={teamContactsSaveState === 'running'}
 								onchange={(nextContacts) => {
 									teamContacts = nextContacts;
 									teamContactsError = '';
 									dirty = true;
 									saveMessage = '';
 								}}
+								ondone={() => saveTeamContacts({ quiet: false, requireComplete: false })}
 								onback={() => navigateToStage(previousStage)}
 								oncontinue={() => navigateToStage(nextStage, { allowAdvance: true })}
 								/>

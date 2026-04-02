@@ -22,9 +22,22 @@ const CONTACT_SELECT = `
 	updated_at
 `;
 
+const LEGACY_CONTACT_SELECT = `
+	id,
+	management_company_id,
+	full_name,
+	email,
+	phone,
+	role,
+	linkedin,
+	is_primary,
+	created_at,
+	updated_at
+`;
+
 function isMissingContactsTable(error) {
 	const message = String(error?.message || '').toLowerCase();
-	return error?.code === '42P01' || message.includes('management_company_contacts');
+	return error?.code === '42P01' || message.includes('relation "management_company_contacts" does not exist');
 }
 
 function isMissingSnapshotColumn(error) {
@@ -32,7 +45,27 @@ function isMissingSnapshotColumn(error) {
 	return error?.code === '42703' || message.includes('team_contacts');
 }
 
-function toDatabaseRows(managementCompanyId, contacts) {
+function isMissingContactsColumn(error, columnName = '') {
+	const message = String(error?.message || '').toLowerCase();
+	const normalizedColumnName = String(columnName || '').trim().toLowerCase();
+	return error?.code === '42703'
+		|| error?.code === 'PGRST204'
+		|| (normalizedColumnName && message.includes(normalizedColumnName));
+}
+
+function toDatabaseRows(managementCompanyId, contacts, { legacy = false } = {}) {
+	if (legacy) {
+		return contacts.map((contact) => ({
+			management_company_id: managementCompanyId,
+			full_name: [contact.firstName, contact.lastName].filter(Boolean).join(' ').trim(),
+			email: contact.email,
+			phone: contact.phone || null,
+			role: contact.role || null,
+			linkedin: contact.linkedinUrl || null,
+			is_primary: contact.isPrimary === true
+		}));
+	}
+
 	return contacts.map((contact, index) => ({
 		management_company_id: managementCompanyId,
 		first_name: contact.firstName,
@@ -123,19 +156,39 @@ export async function loadManagementCompanyTeamContacts(
 	const fallbackContacts = buildFallbackTeamContacts({ company, user });
 	if (!managementCompanyId) return { contacts: fallbackContacts, storageMode: 'legacy' };
 
-	const { data, error } = await supabase
+	let legacyTableMode = false;
+	let query = supabase
 		.from('management_company_contacts')
 		.select(CONTACT_SELECT)
 		.eq('management_company_id', managementCompanyId)
 		.order('display_order', { ascending: true })
 		.order('created_at', { ascending: true });
 
+	let { data, error } = await query;
+
 	if (error) {
 		if (isMissingContactsTable(error)) {
 			const snapshotContacts = await loadCompanySnapshotContacts(supabase, managementCompanyId, fallbackContacts);
 			return { contacts: snapshotContacts, storageMode: 'legacy' };
 		}
-		throw error;
+		if (
+			isMissingContactsColumn(error, 'first_name')
+			|| isMissingContactsColumn(error, 'last_name')
+			|| isMissingContactsColumn(error, 'linkedin_url')
+			|| isMissingContactsColumn(error, 'is_investor_relations')
+			|| isMissingContactsColumn(error, 'calendar_url')
+			|| isMissingContactsColumn(error, 'display_order')
+		) {
+			legacyTableMode = true;
+			({ data, error } = await supabase
+				.from('management_company_contacts')
+				.select(LEGACY_CONTACT_SELECT)
+				.eq('management_company_id', managementCompanyId)
+				.order('created_at', { ascending: true }));
+			if (error) throw error;
+		} else {
+			throw error;
+		}
 	}
 
 	if (!data?.length) {
@@ -155,7 +208,7 @@ export async function loadManagementCompanyTeamContacts(
 
 	return {
 		contacts: normalized,
-		storageMode: data?.length ? 'table' : 'legacy'
+		storageMode: data?.length ? (legacyTableMode ? 'table-legacy' : 'table') : 'legacy'
 	};
 }
 
@@ -202,7 +255,7 @@ export async function saveManagementCompanyTeamContacts(
 		throw deleteError;
 	}
 
-	const rows = toDatabaseRows(managementCompanyId, normalizedContacts);
+	let rows = toDatabaseRows(managementCompanyId, normalizedContacts);
 	if (rows.length === 0) {
 		return {
 			contacts: normalizedContacts,
@@ -211,7 +264,8 @@ export async function saveManagementCompanyTeamContacts(
 		};
 	}
 
-	const { error: insertError } = await supabase
+	let insertLegacyTableMode = false;
+	let { error: insertError } = await supabase
 		.from('management_company_contacts')
 		.insert(rows);
 
@@ -223,12 +277,28 @@ export async function saveManagementCompanyTeamContacts(
 				storageMode: 'legacy'
 			};
 		}
-		throw insertError;
+		if (
+			isMissingContactsColumn(insertError, 'first_name')
+			|| isMissingContactsColumn(insertError, 'last_name')
+			|| isMissingContactsColumn(insertError, 'linkedin_url')
+			|| isMissingContactsColumn(insertError, 'is_investor_relations')
+			|| isMissingContactsColumn(insertError, 'calendar_url')
+			|| isMissingContactsColumn(insertError, 'display_order')
+		) {
+			insertLegacyTableMode = true;
+			rows = toDatabaseRows(managementCompanyId, normalizedContacts, { legacy: true });
+			({ error: insertError } = await supabase
+				.from('management_company_contacts')
+				.insert(rows));
+			if (insertError) throw insertError;
+		} else {
+			throw insertError;
+		}
 	}
 
 	return {
 		contacts: normalizedContacts,
 		legacyFields,
-		storageMode: 'table'
+		storageMode: insertLegacyTableMode ? 'table-legacy' : 'table'
 	};
 }

@@ -13,7 +13,9 @@
 	let {
 		contacts = [],
 		error = '',
+		saving = false,
 		onchange = () => {},
+		ondone = async () => true,
 		onback = () => {},
 		oncontinue = () => {}
 	} = $props();
@@ -149,6 +151,7 @@
 	function handleContinue(event) {
 		event?.preventDefault?.();
 		event?.stopPropagation?.();
+		if (saving) return;
 		submitAttempted = true;
 		oncontinue();
 	}
@@ -156,7 +159,18 @@
 	function handleBack(event) {
 		event?.preventDefault?.();
 		event?.stopPropagation?.();
+		if (saving) return;
 		onback();
+	}
+
+	async function handleDone(event) {
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
+		if (saving || !editingContactId) return;
+		const shouldClose = await ondone(editingContactId);
+		if (shouldClose !== false) {
+			editingContactId = '';
+		}
 	}
 
 	function findContactIndex(contactId) {
@@ -497,7 +511,9 @@
 						Remove contact
 					</button>
 				{/if}
-				<button type="button" class="primary-btn" onclick={() => editingContactId = ''}>Done</button>
+				<button type="button" class="primary-btn" onclick={handleDone} disabled={saving}>
+					{saving ? 'Saving...' : 'Done'}
+				</button>
 			</div>
 		</section>
 	{/if}
@@ -507,8 +523,10 @@
 	{/if}
 
 	<div class="team-stage__footer">
-		<button type="button" class="ghost-btn" onclick={handleBack}>Back</button>
-		<button type="button" class="primary-btn" onclick={handleContinue}>Continue</button>
+		<button type="button" class="ghost-btn" onclick={handleBack} disabled={saving}>Back</button>
+		<button type="button" class="primary-btn" onclick={handleContinue} disabled={saving}>
+			{saving ? 'Saving...' : 'Continue'}
+		</button>
 	</div>
 </section>
 

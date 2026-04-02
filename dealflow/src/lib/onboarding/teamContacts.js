@@ -71,19 +71,24 @@ export function createEmptyTeamContact(overrides = {}) {
 }
 
 export function normalizeTeamContact(contact = {}, index = 0) {
+	const splitName = splitFullName(contact.fullName || contact.full_name || '');
+	const normalizedFirstName = String(contact.firstName || contact.first_name || '').trim() || splitName.firstName;
+	const normalizedLastName = String(contact.lastName || contact.last_name || '').trim() || splitName.lastName;
+	const normalizedRole = String(contact.role || contact.title || '').trim();
 	return {
 		id: String(contact.id || contact.clientId || '').trim() || createTeamContactId(),
-		firstName: String(contact.firstName || contact.first_name || '').trim(),
-		lastName: String(contact.lastName || contact.last_name || '').trim(),
+		firstName: normalizedFirstName,
+		lastName: normalizedLastName,
 		email: String(contact.email || '').trim().toLowerCase(),
 		phone: String(contact.phone || '').trim(),
-		role: String(contact.role || contact.title || '').trim(),
+		role: normalizedRole,
 		company: String(contact.company || contact.company_name || '').trim(),
-		linkedinUrl: String(contact.linkedinUrl || contact.linkedin_url || '').trim(),
+		linkedinUrl: String(contact.linkedinUrl || contact.linkedin_url || contact.linkedin || '').trim(),
 		isPrimary: contact.isPrimary === true || contact.is_primary === true,
 		isInvestorRelations:
 			contact.isInvestorRelations === true ||
 			contact.is_investor_relations === true ||
+			INVESTOR_RELATIONS_ROLE_PATTERN.test(normalizedRole) ||
 			false,
 		calendarUrl: String(contact.calendarUrl || contact.calendar_url || '').trim(),
 		confidence:
@@ -465,11 +470,48 @@ function normalizeNameKey(value = '') {
 		.replace(/[^a-z0-9]+/g, ' ');
 }
 
+function getContactNameKey(contact = {}) {
+	return normalizeNameKey(teamContactFullName(contact));
+}
+
 function getContactMatchKey(contact = {}) {
 	const email = String(contact.email || '').trim().toLowerCase();
 	if (email) return `email:${email}`;
-	const name = normalizeNameKey(teamContactFullName(contact));
+	const name = getContactNameKey(contact);
 	return name ? `name:${name}` : '';
+}
+
+function getContactRoleBucket(contact = {}) {
+	const role = String(contact.role || '').trim().toLowerCase();
+	if (contact.isInvestorRelations || INVESTOR_RELATIONS_ROLE_PATTERN.test(role)) return 'ir';
+	if (contact.isPrimary || OPERATOR_ROLE_PATTERN.test(role)) return 'operator';
+	return role || '';
+}
+
+function scoreNameMatch(existingContact = {}, candidateContact = {}) {
+	let score = 0;
+	if (candidateContact.isPrimary === existingContact.isPrimary) score += 4;
+	if (candidateContact.isInvestorRelations === existingContact.isInvestorRelations) score += 4;
+
+	const existingRoleBucket = getContactRoleBucket(existingContact);
+	const candidateRoleBucket = getContactRoleBucket(candidateContact);
+	if (existingRoleBucket && candidateRoleBucket && existingRoleBucket === candidateRoleBucket) {
+		score += 3;
+	}
+
+	const existingRole = String(existingContact.role || '').trim().toLowerCase();
+	const candidateRole = String(candidateContact.role || '').trim().toLowerCase();
+	if (existingRole && candidateRole && existingRole === candidateRole) {
+		score += 2;
+	}
+
+	const existingPhone = String(existingContact.phone || '').trim();
+	const candidatePhone = String(candidateContact.phone || '').trim();
+	if (existingPhone && candidatePhone && existingPhone === candidatePhone) {
+		score += 1;
+	}
+
+	return score;
 }
 
 export function mergeSuggestedTeamContacts(existingContacts = [], suggestedContacts = []) {
@@ -486,7 +528,23 @@ export function mergeSuggestedTeamContacts(existingContacts = [], suggestedConta
 	const findContactIndex = (candidate) => {
 		const candidateKey = getContactMatchKey(candidate);
 		if (!candidateKey) return -1;
-		return contacts.findIndex((contact) => getContactMatchKey(contact) === candidateKey);
+		const exactIndex = contacts.findIndex((contact) => getContactMatchKey(contact) === candidateKey);
+		if (exactIndex >= 0) return exactIndex;
+
+		const candidateNameKey = getContactNameKey(candidate);
+		if (!candidateNameKey) return -1;
+
+		const nameMatches = contacts
+			.map((contact, index) => ({ contact, index }))
+			.filter(({ contact }) => getContactNameKey(contact) === candidateNameKey);
+
+		if (nameMatches.length === 0) return -1;
+		if (nameMatches.length === 1) return nameMatches[0].index;
+
+		nameMatches.sort(
+			(left, right) => scoreNameMatch(right.contact, candidate) - scoreNameMatch(left.contact, candidate)
+		);
+		return nameMatches[0]?.index ?? -1;
 	};
 
 	const fillField = (target, suggestion, key, value, sourceType) => {
