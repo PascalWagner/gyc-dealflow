@@ -79,11 +79,11 @@
 	});
 	const goalProgress = $derived(hasGoals ? Math.min(100, Math.round((currentIncome / targetIncome) * 100)) : 0);
 	const goalLabel = $derived.by(() => {
-		if (hasGoals) return 'Passive Income Goal';
-		if (branch === 'cashflow') return 'Passive Income Goal';
-		if (branch === 'tax') return 'Tax Offset Goal';
-		if (branch === 'growth') return 'Wealth Growth Goal';
-		return 'Passive Income Goal';
+		if (hasGoals) return 'YOUR PASSIVE INCOME GOAL';
+		if (branch === 'cashflow') return 'PASSIVE INCOME GOAL';
+		if (branch === 'tax') return 'TAX OFFSET GOAL';
+		if (branch === 'growth') return 'WEALTH GROWTH GOAL';
+		return 'YOUR PASSIVE INCOME GOAL';
 	});
 	const goalValueText = $derived.by(() => {
 		if (hasGoals) return `$${currentIncome.toLocaleString()} / $${targetIncome.toLocaleString()} per year`;
@@ -129,6 +129,10 @@
 		}
 		return `You haven't started deploying yet, and the fastest way to make progress is to browse deals that fit your plan.`;
 	});
+	const coachPrimaryLabel = $derived(needsPlanSetup ? 'Finish Plan' : 'Browse Deals');
+	const coachPrimaryHref = $derived(needsPlanSetup ? '/app/plan' : '/app/deals');
+	const coachSecondaryLabel = $derived(needsPlanSetup ? 'Browse Deals First' : 'Review Plan');
+	const coachSecondaryHref = $derived(needsPlanSetup ? '/app/deals' : '/app/plan');
 	const statsLine = $derived(
 		activeInvestments > 0
 			? `${activeInvestments} active investment${activeInvestments !== 1 ? 's' : ''} · $${totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(2) + 'M' : totalInvested.toLocaleString()} deployed`
@@ -144,8 +148,7 @@
 		if (connect > 0) {
 			items.push({
 				icon: 'connect',
-				headline: `${connect} deal${connect !== 1 ? 's' : ''} ready to connect`,
-				copy: 'Request an intro with the operator.',
+				text: `<strong>${connect} deal${connect !== 1 ? 's' : ''} ready to connect</strong> — request an intro with the operator`,
 				link: 'Connect Now',
 				page: 'deals',
 				href: '/app/deals?tab=connect'
@@ -154,8 +157,7 @@
 		if (review > 0) {
 			items.push({
 				icon: 'bookmark',
-				headline: `You have ${review} deal${review !== 1 ? 's' : ''} to review`,
-				copy: 'Pick one and work through the checklist.',
+				text: `You have <strong>${review} deal${review !== 1 ? 's' : ''} to review</strong> — pick one and work through the checklist`,
 				link: 'Review Deals',
 				page: 'deals',
 				href: '/app/deals?tab=review'
@@ -168,16 +170,14 @@
 		if (!needsPlanSetup) {
 			items.push({
 				icon: 'plan',
-				headline: 'Review your plan',
-				copy: 'Keep your roadmap and next move aligned with what you are actually targeting.',
+				text: 'Review your plan so your roadmap and next move stay aligned with what you are actually targeting',
 				link: 'Review Plan',
 				href: '/app/plan'
 			});
 		}
 		items.push({
 			icon: 'plus',
-			headline: 'Add a deal you are evaluating or already invested in',
-			copy: 'Make sure it lands in the right place right away.',
+			text: 'Add a deal you are evaluating or already invested in so it lands in the right place right away',
 			link: 'Add Deal',
 			action: 'modal'
 		});
@@ -187,8 +187,7 @@
 		if (needsPlanSetup) {
 			return {
 				icon: 'search',
-				headline: 'Browse deals that fit your plan',
-				copy: 'Start building your pipeline now while you refine the details of your plan.',
+				text: 'Browse deals now and start building your pipeline while you refine your plan',
 				link: 'Browse Deals',
 				page: 'deals',
 				href: '/app/deals'
@@ -201,8 +200,7 @@
 			? [
 				{
 					icon: 'plan',
-					headline: 'Finish your plan',
-					copy: 'So your dashboard, deal flow, and portfolio reflect what you are actually trying to buy.',
+					text: 'Finish your plan so your dashboard, deal flow, and portfolio reflect what you are actually trying to buy',
 					link: 'Finish Plan',
 					page: 'plan',
 					href: '/app/plan'
@@ -312,63 +310,63 @@
 					<a href="/app/deals" class="dashboard-onboarding-link">Browse deals first</a>
 				</div>
 			</div>
-			{:else}
-				<div class="coach-card ly-surface ly-surface--accent ly-surface--strong">
-					<div class="coach-copy">
-						<div class="coach-eyebrow">Your Investing Coach</div>
-						<h2 class="coach-title">{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h2>
-						<p class="coach-text coach-text--support">{coachTargetCopy}</p>
-						<p class="coach-text coach-text--meta">{coachProgressCopy}</p>
-					</div>
+		{:else}
+		<div class="coach-card ly-surface ly-surface--accent ly-surface--strong">
+			<div class="coach-copy">
+				<div class="coach-eyebrow">Your investing coach</div>
+				<h2 class="coach-title">{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h2>
+				<p class="coach-text">{coachTargetCopy}</p>
+				<p class="coach-text coach-text--muted">{coachProgressCopy}</p>
+			</div>
+		</div>
+
+		{#if hasGoalContext}
+			<div class="dash-hero ly-surface ly-surface--strong">
+				<div class="dash-hero-label">{goalLabel}</div>
+				<div class="dash-hero-bar" aria-hidden="true">
+					<div class="dash-hero-fill" style={`width:${goalProgress}%;${goalProgress > 0 ? 'min-width:10px;' : ''}`}></div>
 				</div>
+				<div class="dash-hero-value-row">
+					<div class="dash-hero-value">{goalValueText}</div>
+					<div class="dash-hero-pct">{goalProgress}%</div>
+				</div>
+				<div class="dash-hero-stats">{statsLine}</div>
+			</div>
+		{/if}
 
-				{#if hasGoalContext}
-					<div class="dash-hero ly-surface ly-surface--strong">
-						<div class="dash-hero-label">{goalLabel}</div>
-						<div class="dash-hero-bar" aria-hidden="true">
-							<div class="dash-hero-fill" style={`width:${goalProgress}%;${goalProgress > 0 ? 'min-width:10px;' : ''}`}></div>
+		{#if hasGoalContext && needsPlanSetup}
+			<div class="plan-cta-card ly-surface ly-surface--muted">
+				<div>
+					<div class="plan-cta-eyebrow">Your Plan</div>
+					<div class="plan-cta-title">{$canBuildFullPlan ? 'Turn your goal into a roadmap.' : 'Review the investor profile driving your deal feed.'}</div>
+					<div class="plan-cta-copy">{$canBuildFullPlan ? 'Build out your thesis, roadmap, and next best move without leaving the app shell.' : 'See your saved goal, preferences, and the upgrade path into a full plan.'}</div>
+				</div>
+				<a href="/app/plan" class="btn-primary plan-cta-btn">{$canBuildFullPlan ? 'Open My Plan →' : 'Review My Profile →'}</a>
+			</div>
+		{/if}
+
+		<div class="dashboard-stack" data-dashboard-version="overview-cleanup-2">
+			{#if primaryAction}
+				<div class="action-card ly-surface">
+					<div class="action-header">What To Do Next</div>
+					<div class="next-action-panel">
+						<div class="next-action-copy">
+							<div class="next-action-kicker">Next Best Action</div>
+							<div class="next-action-text">{@html primaryAction.text}</div>
 						</div>
-						<div class="dash-hero-value-row">
-							<div class="dash-hero-value">{goalValueText}</div>
-							<div class="dash-hero-pct">{goalProgress}%</div>
-						</div>
-						<div class="dash-hero-stats">{statsLine}</div>
+						<a href={primaryAction.href || `/app/${primaryAction.page}`} class="btn-primary next-action-btn">{primaryAction.link} →</a>
 					</div>
-				{/if}
-
-				{#if hasGoalContext && needsPlanSetup}
-					<div class="plan-cta-card ly-surface ly-surface--muted">
-						<div>
-							<div class="plan-cta-eyebrow">Your Plan</div>
-							<div class="plan-cta-title">{$canBuildFullPlan ? 'Turn your goal into a roadmap.' : 'Review the investor profile driving your deal feed.'}</div>
-							<div class="plan-cta-copy">{$canBuildFullPlan ? 'Build out your thesis, roadmap, and next best move without leaving the app shell.' : 'See your saved goal, preferences, and the upgrade path into a full plan.'}</div>
-						</div>
-						<a href="/app/plan" class="btn-primary plan-cta-btn">{$canBuildFullPlan ? 'Open My Plan →' : 'Review My Profile →'}</a>
-					</div>
-				{/if}
-
-				<div class="dashboard-stack" data-dashboard-version="overview-cleanup-2">
-					{#if primaryAction}
-						<div class="action-card ly-surface">
-							<div class="action-header">What To Do Next</div>
-							<div class="next-action-panel">
-								<div class="next-action-copy">
-									<div class="next-action-title">{primaryAction.headline}</div>
-									<p class="next-action-copy-text">{primaryAction.copy}</p>
-								</div>
-								<a href={primaryAction.href || `/app/${primaryAction.page}`} class="btn-primary next-action-btn">{primaryAction.link} →</a>
-							</div>
-							{#if secondaryActionItems.length > 0}
-								<div class="secondary-actions-label">Also On Deck</div>
-							{/if}
-							{#each secondaryActionItems as item}
-								<svelte:element
-									this={item.action === 'modal' ? 'button' : 'a'}
-									type={item.action === 'modal' ? 'button' : undefined}
-									href={item.action === 'modal' ? undefined : item.href || `/app/${item.page}`}
-									class={`action-row${item.action === 'modal' ? ' action-row--button' : ''}`}
-									onclick={item.action === 'modal' ? openAddDealModal : undefined}
-								>
+					{#if secondaryActionItems.length > 0}
+						<div class="secondary-actions-label">Also On Deck</div>
+					{/if}
+					{#each secondaryActionItems as item}
+						<svelte:element
+							this={item.action === 'modal' ? 'button' : 'a'}
+							type={item.action === 'modal' ? 'button' : undefined}
+							href={item.action === 'modal' ? undefined : item.href || `/app/${item.page}`}
+							class={`action-row${item.action === 'modal' ? ' action-row--button' : ''}`}
+							onclick={item.action === 'modal' ? openAddDealModal : undefined}
+						>
 							<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
 								{#if item.icon === 'plan'}
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -386,10 +384,7 @@
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 								{/if}
 							</div>
-							<div class="action-text">
-								<div class="action-row-title">{item.headline}</div>
-								<div class="action-row-copy">{item.copy}</div>
-							</div>
+							<div class="action-text">{@html item.text}</div>
 							<span class="action-link">{item.link} →</span>
 						</svelte:element>
 					{/each}
@@ -425,18 +420,15 @@
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 								{/if}
 							</div>
-							<div class="action-text">
-								<div class="action-row-title">{item.headline}</div>
-								<div class="action-row-copy">{item.copy}</div>
-							</div>
+							<div class="action-text">{@html item.text}</div>
 							<span class="action-link">{item.link} →</span>
-								</svelte:element>
-							{/each}
-						</div>
-					{/if}
+						</svelte:element>
+					{/each}
 				</div>
 			{/if}
 		</div>
+	{/if}
+	</div>
 </PageContainer>
 
 {#if showAddDealModal}
@@ -502,7 +494,7 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 18px;
-		padding: 24px 28px 22px;
+		padding: 22px 24px;
 		margin-bottom: 18px;
 	}
 	.coach-copy {
@@ -512,47 +504,39 @@
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 700;
-		letter-spacing: 0.5px;
-		text-transform: none;
-		color: var(--text-muted);
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: var(--primary);
 	}
 	.coach-title {
 		margin: 10px 0 0;
-		font-family: var(--font-ui);
-		font-size: clamp(24px, 2.6vw, 30px);
-		font-weight: 700;
+		font-family: var(--font-headline);
+		font-size: 30px;
 		line-height: 1.12;
-		letter-spacing: -0.3px;
 		color: var(--text-dark);
 	}
 	.coach-text {
-		margin: 10px 0 0;
-		line-height: 1.6;
-	}
-	.coach-text--support {
+		margin: 12px 0 0;
 		font-family: var(--font-body);
-		font-size: 16px;
-		font-weight: 600;
+		font-size: 15px;
+		line-height: 1.7;
 		color: var(--text-dark);
-		line-height: 1.55;
 	}
-	.coach-text--meta {
-		font-family: var(--font-body);
-		font-size: 14px;
+	.coach-text--muted {
 		color: var(--text-secondary);
 	}
 	.dash-hero {
-		padding: 24px 28px 20px;
-		margin-bottom: 20px;
+		padding: 34px 36px 24px;
+		margin-bottom: 22px;
 	}
 	.dash-hero-label {
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 700;
-		letter-spacing: 0.5px;
-		text-transform: none;
+		letter-spacing: 1.6px;
+		text-transform: uppercase;
 		color: var(--text-muted);
-		margin-bottom: 16px;
+		margin-bottom: 20px;
 	}
 	.dash-hero-bar {
 		height: 12px;
@@ -571,30 +555,29 @@
 		align-items: baseline;
 		flex-wrap: wrap;
 		gap: 12px;
-		margin-top: 14px;
+		margin-top: 12px;
 	}
 	.dash-hero-value {
 		font-family: var(--font-ui);
-		font-size: clamp(24px, 2.8vw, 32px);
+		font-size: 18px;
 		font-weight: 800;
-		line-height: 1.05;
-		letter-spacing: -0.5px;
+		line-height: 1.2;
 		color: var(--text-dark);
 	}
 	.dash-hero-pct {
 		font-family: var(--font-ui);
-		font-size: 16px;
-		font-weight: 800;
+		font-size: 14px;
+		font-weight: 700;
 		color: var(--primary);
 	}
 	.dash-hero-stats {
 		font-family: var(--font-body);
-		font-size: 14px;
+		font-size: 13px;
 		color: var(--text-muted);
 		margin-bottom: 0;
-		padding-top: 16px;
+		padding-top: 18px;
 		border-top: 1px solid var(--border-light);
-		margin-top: 16px;
+		margin-top: 18px;
 	}
 
 	.plan-cta-card {
@@ -613,13 +596,13 @@
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 700;
-		text-transform: none;
+		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		color: var(--text-muted);
 	}
 	.plan-cta-title {
 		font-family: var(--font-ui);
-		font-size: 17px;
+		font-size: 18px;
 		font-weight: 700;
 		color: var(--text-dark);
 		margin-top: 8px;
@@ -662,7 +645,7 @@
 	}
 	.action-header {
 		padding: 16px 16px 0;
-		margin-bottom: 8px;
+		margin-bottom: 12px;
 	}
 	.next-action-panel {
 		display: flex;
@@ -676,44 +659,39 @@
 		flex: 1;
 		min-width: 220px;
 	}
+	.next-action-kicker,
 	.secondary-actions-label {
 		font-family: var(--font-ui);
 		font-size: 10px;
 		font-weight: 700;
-		text-transform: none;
+		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		color: var(--text-muted);
 	}
-	.next-action-title {
-		font-family: var(--font-ui);
-		font-size: clamp(24px, 2.8vw, 32px);
-		font-weight: 800;
-		line-height: 1.12;
-		letter-spacing: -0.3px;
-		color: var(--text-dark);
-	}
-	.next-action-copy-text {
-		margin: 8px 0 0;
-		max-width: 620px;
+	.next-action-text {
+		margin-top: 8px;
 		font-family: var(--font-body);
 		font-size: 15px;
 		line-height: 1.6;
-		color: var(--text-secondary);
+		color: var(--text-dark);
+	}
+	.next-action-text :global(strong) {
+		font-weight: 700;
 	}
 	.next-action-btn {
 		flex-shrink: 0;
 	}
 	.secondary-actions-label {
-		padding: 4px 16px 10px;
+		padding: 0 16px 8px;
 	}
 	.secondary-actions-label--standalone {
 		padding-top: 18px;
 	}
 	.action-row {
 		display: flex;
-		align-items: flex-start;
+		align-items: center;
 		gap: 12px;
-		padding: 16px;
+		padding: 13px 16px;
 		border-bottom: 1px solid var(--border);
 		cursor: pointer;
 		transition: background var(--transition);
@@ -748,31 +726,16 @@
 	}
 	.action-text {
 		flex: 1;
-		min-width: 0;
-	}
-	.action-row-title {
-		font-family: var(--font-ui);
-		font-size: 15px;
-		font-weight: 700;
-		color: var(--text-dark);
-		line-height: 1.4;
-	}
-	.action-row-copy {
-		margin-top: 4px;
 		font-family: var(--font-body);
-		font-size: 14px;
+		font-size: 13px;
 		color: var(--text-secondary);
 		line-height: 1.5;
 	}
-	.action-link {
-		flex-shrink: 0;
-		align-self: center;
-		font-family: var(--font-ui);
-		font-size: 13px;
+	.action-text :global(strong) {
+		color: var(--text-dark);
 		font-weight: 700;
-		color: var(--primary);
-		white-space: nowrap;
 	}
+	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
 	.empty-dashboard-card {
 		padding: 0 0 18px;
 	}
@@ -800,18 +763,18 @@
 	}
 
 	/* ── Mobile Responsive ── */
-	@media (max-width: 768px) {
-		.content-area {
-			padding-bottom: 0;
-		}
+		@media (max-width: 768px) {
+			.content-area {
+				padding-bottom: 0;
+			}
 
-		.coach-card {
-			flex-direction: column;
-			padding: 22px 18px;
-			margin-bottom: 16px;
+			.coach-card {
+				flex-direction: column;
+				padding: 20px 18px;
+				margin-bottom: 16px;
 		}
 		.coach-title {
-			font-size: 26px;
+			font-size: 24px;
 		}
 		.dashboard-onboarding-card {
 			margin-top: 20px;
@@ -824,23 +787,14 @@
 			padding: 24px 18px 18px;
 		}
 		.dash-hero-value {
-			font-size: 28px;
+			font-size: 16px;
 		}
 		.dash-hero-stats {
-			font-size: 14px;
+			font-size: 12px;
 		}
-		.plan-cta-card {
-			padding: 18px 16px;
-		}
+		.plan-cta-card { padding: 18px 16px; }
 		.next-action-panel {
 			align-items: flex-start;
-		}
-		.next-action-title {
-			font-size: 22px;
-		}
-		.next-action-copy-text,
-		.action-row-copy {
-			font-size: 14px;
 		}
 		.next-action-btn {
 			width: 100%;
