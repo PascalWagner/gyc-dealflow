@@ -15,6 +15,11 @@ import {
   formatStateCodesAsGeographyValue,
   mergeStateCodeLists
 } from '../src/lib/utils/investing-geography.js';
+import {
+  buildReviewFieldEvidenceMap,
+  normalizeReviewFieldEvidenceMap
+} from '../src/lib/utils/reviewFieldEvidence.js';
+import { dealFieldConfig } from '../src/lib/utils/dealReviewSchema.js';
 
 const EXTRACTION_TEXT_LIMIT = 120000;
 const require = createRequire(import.meta.url);
@@ -198,7 +203,7 @@ function buildPdfPageLines(textItems = []) {
     .filter(Boolean);
 }
 
-async function extractTextFromPdfBufferWithPdfJs(buffer) {
+async function extractPdfSnapshotFromBufferWithPdfJs(buffer) {
   ensurePdfNodePrimitives();
   await ensurePdfJsWorkerGlobal();
 
@@ -213,19 +218,32 @@ async function extractTextFromPdfBufferWithPdfJs(buffer) {
 
   const pdf = await loadingTask.promise;
   const pageChunks = [];
+  const pages = [];
 
   try {
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
       const content = await page.getTextContent();
-      const pageText = buildPdfPageLines(content?.items || []).join('\n');
+      const pageLines = buildPdfPageLines(content?.items || []);
+      const pageText = pageLines.join('\n');
       if (pageText) pageChunks.push(pageText);
+      pages.push({
+        pageNumber,
+        lines: pageLines.map((text, index) => ({
+          lineNumber: index + 1,
+          text
+        })),
+        text: pageText
+      });
     }
   } finally {
     await pdf.destroy();
   }
 
-  return pageChunks.join('\n\n');
+  return {
+    text: pageChunks.join('\n\n'),
+    pages
+  };
 }
 
 function mergeDocumentText(...values) {
@@ -249,19 +267,27 @@ function mergeDocumentText(...values) {
   return lines.join('\n').slice(0, EXTRACTION_TEXT_LIMIT);
 }
 
-async function extractTextFromPdfBuffer(buffer) {
+async function extractPdfSnapshotFromBuffer(buffer) {
   const heuristicText = extractTextFromPdfBufferHeuristic(buffer);
-  let parsedText = '';
+  let parsedSnapshot = { text: '', pages: [] };
 
   try {
-    parsedText = await extractTextFromPdfBufferWithPdfJs(buffer);
+    parsedSnapshot = await extractPdfSnapshotFromBufferWithPdfJs(buffer);
   } catch (error) {
     console.warn('[deal-cleanup] pdfjs extraction failed', {
       message: error?.message || 'unknown_error'
     });
   }
 
-  return mergeDocumentText(parsedText, heuristicText);
+  return {
+    text: mergeDocumentText(parsedSnapshot.text, heuristicText),
+    pages: parsedSnapshot.pages || []
+  };
+}
+
+async function extractTextFromPdfBuffer(buffer) {
+  const snapshot = await extractPdfSnapshotFromBuffer(buffer);
+  return snapshot.text;
 }
 
 function parseSupabaseStorageLocation(url = '') {
@@ -687,20 +713,77 @@ async function downloadPdf(supabase, url) {
 async function loadDealSourceTexts(supabase, deal) {
   const sourceTexts = {
     ppmText: '',
-    deckText: ''
+    ppmPages: [],
+    deckText: '',
+    deckPages: []
   };
 
   if (deal?.ppm_url) {
     const ppmBuffer = await downloadPdf(supabase, deal.ppm_url);
-    sourceTexts.ppmText = await extractTextFromPdfBuffer(ppmBuffer);
+    const ppmSnapshot = await extractPdfSnapshotFromBuffer(ppmBuffer);
+    sourceTexts.ppmText = ppmSnapshot.text;
+    sourceTexts.ppmPages = ppmSnapshot.pages;
   }
 
   if (deal?.deck_url) {
     const deckBuffer = await downloadPdf(supabase, deal.deck_url);
-    sourceTexts.deckText = await extractTextFromPdfBuffer(deckBuffer);
+    const deckSnapshot = await extractPdfSnapshotFromBuffer(deckBuffer);
+    sourceTexts.deckText = deckSnapshot.text;
+    sourceTexts.deckPages = deckSnapshot.pages;
   }
 
   return sourceTexts;
+}
+
+async function loadDealLinkedSecFiling(supabase, dealId) {
+  const { data: verificationRecord, error: verificationError } = await supabase
+    .from('deal_sec_verification')
+    .select('sec_filing:sec_filings(*)')
+    .eq('opportunity_id', dealId)
+    .maybeSingle();
+
+  if (verificationError && !['PGRST116', '42P01', 'PGRST205'].includes(verificationError.code)) {
+    throw verificationError;
+  }
+
+  if (verificationRecord?.sec_filing) return verificationRecord.sec_filing;
+
+  const { data: filing, error: filingError } = await supabase
+    .from('sec_filings')
+    .select('*')
+    .eq('opportunity_id', dealId)
+    .order('is_latest_amendment', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (filingError && !['PGRST116', '42P01', 'PGRST205'].includes(filingError.code)) {
+    throw filingError;
+  }
+
+  return filing || null;
+}
+
+function getReviewEvidenceFieldKeys(fieldKeys = []) {
+  const requestedFieldKeys = Array.isArray(fieldKeys) ? fieldKeys.filter(Boolean) : [];
+  if (requestedFieldKeys.length > 0) return [...new Set(requestedFieldKeys)];
+
+  return Object.keys(dealFieldConfig).filter((fieldKey) => fieldKey !== 'teamContacts');
+}
+
+function buildReviewEvidenceDocuments(deal, sourceTexts = {}) {
+  return {
+    ppm: {
+      text: sourceTexts.ppmText || '',
+      pages: sourceTexts.ppmPages || [],
+      url: deal?.ppm_url || deal?.ppmUrl || ''
+    },
+    deck: {
+      text: sourceTexts.deckText || '',
+      pages: sourceTexts.deckPages || [],
+      url: deal?.deck_url || deal?.deckUrl || ''
+    }
+  };
 }
 
 function buildClassificationSignals(deal, { ppmText = '', deckText = '' } = {}) {
@@ -1156,6 +1239,83 @@ export default async function handler(req, res) {
       });
     }
 
+    if (action === 'review-field-evidence') {
+      const { dealId, fieldKeys, persist = true } = req.body || {};
+      if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
+
+      const { data: deal, error: dealErr } = await supabase
+        .from('opportunities')
+        .select('*')
+        .eq('id', dealId)
+        .single();
+
+      if (dealErr) {
+        console.error('[deal-cleanup/review-field-evidence] deal lookup failed', {
+          dealId,
+          message: dealErr.message
+        });
+        return res.status(500).json({ error: 'Failed to inspect the deal record' });
+      }
+
+      if (!deal) {
+        return res.status(404).json({ error: 'Deal not found' });
+      }
+
+      const reviewFieldKeys = getReviewEvidenceFieldKeys(fieldKeys);
+      const sourceTexts = await loadDealSourceTexts(supabase, deal);
+      const filing = await loadDealLinkedSecFiling(supabase, dealId);
+      const nextEvidence = buildReviewFieldEvidenceMap({
+        deal,
+        fieldKeys: reviewFieldKeys,
+        documents: buildReviewEvidenceDocuments(deal, sourceTexts),
+        filing
+      });
+
+      const existingEvidence = normalizeReviewFieldEvidenceMap(deal.review_field_evidence || {});
+      const mergedEvidence = { ...existingEvidence };
+      for (const fieldKey of reviewFieldKeys) {
+        delete mergedEvidence[fieldKey];
+      }
+      Object.assign(mergedEvidence, normalizeReviewFieldEvidenceMap(nextEvidence));
+
+      let updatedDeal = deal;
+      if (persist === true && 'review_field_evidence' in deal) {
+        const { data: persistedDeal, error: persistError } = await supabase
+          .from('opportunities')
+          .update({
+            review_field_evidence: mergedEvidence,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', dealId)
+          .select('*')
+          .single();
+
+        if (persistError) {
+          console.error('[deal-cleanup/review-field-evidence] persist failed', {
+            dealId,
+            message: persistError.message
+          });
+          return res.status(500).json({ error: 'Failed to persist review field evidence' });
+        }
+
+        updatedDeal = persistedDeal || deal;
+      } else {
+        updatedDeal = {
+          ...deal,
+          review_field_evidence: mergedEvidence
+        };
+      }
+
+      return res.status(200).json({
+        success: true,
+        deal_id: dealId,
+        field_keys: reviewFieldKeys,
+        field_evidence: nextEvidence,
+        review_field_evidence: mergedEvidence,
+        deal: updatedDeal
+      });
+    }
+
     // Action: enrich a single deal via multi-step pipeline
     if (action === 'enrich-deal') {
       const { dealId } = req.body;
@@ -1467,7 +1627,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, data, field_updated: field });
     }
 
-    return res.status(400).json({ error: 'Unknown action. Valid: get-queue, enrich-deal, apply-enrichment, deck-audit, attach-deck, search-gdrive, clear-deck' });
+    return res.status(400).json({ error: 'Unknown action. Valid: get-queue, classification-signals, review-field-evidence, enrich-deal, apply-enrichment, deck-audit, attach-deck, search-gdrive, clear-deck' });
 
   } catch (err) {
     console.error('Deal cleanup error:', err);

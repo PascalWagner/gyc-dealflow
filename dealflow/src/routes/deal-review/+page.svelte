@@ -61,6 +61,9 @@
 		mergeStateCodeLists,
 		STATE_NAME_BY_CODE
 	} from '$lib/utils/investing-geography.js';
+	import {
+		normalizeReviewFieldEvidenceMap
+	} from '$lib/utils/reviewFieldEvidence.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
 
 	function listFromValue(value) {
@@ -581,6 +584,9 @@
 	let classificationSignalsDealId = $state('');
 	let classificationSignalsAppliedKey = $state('');
 	let classificationSignalsAppliedMessage = $state('');
+	let reviewFieldEvidenceState = $state('idle');
+	let reviewFieldEvidenceLoadedKeys = $state([]);
+	let reviewFieldEvidenceError = $state('');
 	let sourceRiskFactors = $state([]);
 	let highlightedRisks = $state([]);
 	let riskFactorDraft = $state('');
@@ -772,6 +778,14 @@
 		}
 		return ids;
 	});
+	const reviewDocumentUrls = $derived({
+		deckUrl: getDocumentUrl('deck') || form.deckUrl,
+		ppmUrl: getDocumentUrl('ppm') || form.ppmUrl,
+		subAgreementUrl: deal?.subAgreementUrl || deal?.sub_agreement_url || ''
+	});
+	const reviewFieldEvidence = $derived(
+		normalizeReviewFieldEvidenceMap(deal?.reviewFieldEvidence || deal?.review_field_evidence || {})
+	);
 	const summaryRelevantWarningFieldKeys = $derived.by(() => {
 		const keys = new Set();
 		for (const stage of reviewStages) {
@@ -1036,6 +1050,10 @@
 		manualBranch = nextDeal?.deal_branch || nextDeal?.dealBranch || manualBranch || '';
 		sourceRiskFactors = listFromDealValue(nextDeal, 'source_risk_factors', 'sourceRiskFactors');
 		highlightedRisks = listFromDealValue(nextDeal, 'highlighted_risks', 'highlightedRisks');
+		reviewFieldEvidenceLoadedKeys = Object.keys(
+			normalizeReviewFieldEvidenceMap(nextDeal?.reviewFieldEvidence || nextDeal?.review_field_evidence || {})
+		);
+		reviewFieldEvidenceError = '';
 		dirty = false;
 		saveError = '';
 		if (clearSaveMessage) {
@@ -1611,6 +1629,63 @@
 		return getOnboardingStageFieldKeys(stage, branchInfo.branch);
 	}
 
+	function getEvidenceFieldKeysForStage(stage = activeStage) {
+		if (!stage || ['intake', 'summary', 'team', 'sec'].includes(stage)) return [];
+		return Array.from(new Set(getStageFieldGroups(stage).flatMap((group) =>
+			Array.isArray(group?.fieldKeys) ? group.fieldKeys : []
+		)));
+	}
+
+	async function loadReviewFieldEvidence({ fieldKeys = [], force = false } = {}) {
+		if (!dealId || !deal || reviewFieldEvidenceState === 'running') return;
+		if (!getDocumentUrl('deck') && !getDocumentUrl('ppm') && !deal?.sec_filing_id && !deal?.secFilingId) return;
+
+		const requestedFieldKeys = Array.from(new Set((fieldKeys || []).filter(Boolean)));
+		if (requestedFieldKeys.length === 0) return;
+		if (!force && requestedFieldKeys.every((fieldKey) => reviewFieldEvidenceLoadedKeys.includes(fieldKey))) return;
+
+		reviewFieldEvidenceState = 'running';
+		reviewFieldEvidenceError = '';
+
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active session to inspect source citations.');
+
+			const response = await fetch('/api/deal-cleanup', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					action: 'review-field-evidence',
+					dealId,
+					fieldKeys: requestedFieldKeys,
+					persist: true
+				})
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || !payload?.success) {
+				throw new Error(payload?.error || 'Could not load field-level source citations.');
+			}
+
+			deal = {
+				...(deal || {}),
+				...(payload?.deal || {}),
+				reviewFieldEvidence: payload?.review_field_evidence || payload?.field_evidence || deal?.reviewFieldEvidence || {},
+				review_field_evidence: payload?.review_field_evidence || deal?.review_field_evidence || {}
+			};
+			reviewFieldEvidenceLoadedKeys = Array.from(new Set([
+				...reviewFieldEvidenceLoadedKeys,
+				...requestedFieldKeys
+			]));
+			reviewFieldEvidenceState = 'success';
+		} catch (error) {
+			reviewFieldEvidenceState = 'error';
+			reviewFieldEvidenceError = error?.message || 'Could not load field-level source citations.';
+		}
+	}
+
 	async function loadDeal() {
 		if (!dealId) {
 			loadError = 'Pick a deal from Manage Data to start review.';
@@ -1735,6 +1810,12 @@
 				},
 				{ clearSaveMessage: true }
 			);
+			if (Array.isArray(scopedFieldKeys) && scopedFieldKeys.length > 0) {
+				await loadReviewFieldEvidence({
+					fieldKeys: scopedFieldKeys,
+					force: true
+				});
+			}
 			if (!quiet) {
 				saveMessage = 'Deal saved.';
 			}
@@ -1756,7 +1837,15 @@
 
 		const desiredLifecycle =
 			targetLifecycle || (summaryPublishReady ? 'approved' : 'in_review');
-		if (!desiredLifecycle || desiredLifecycle === currentLifecycle) return true;
+		if (!desiredLifecycle) return true;
+		if (desiredLifecycle === currentLifecycle) {
+			if (!quiet) {
+				saveMessage = desiredLifecycle === 'approved'
+					? 'Deal is already approved and ready for publishing.'
+					: 'Deal is already marked In Review.';
+			}
+			return true;
+		}
 
 		lifecycleSyncState = 'running';
 		try {
@@ -1867,6 +1956,10 @@
 						...(deal || {}),
 						...applyPayload.data
 					});
+					await loadReviewFieldEvidence({
+						fieldKeys: Object.keys(updates),
+						force: true
+					});
 				}
 			}
 
@@ -1896,6 +1989,12 @@
 			await saveIntakeDetails();
 			return true;
 		}
+		if (stage === 'summary') {
+			return await syncReviewLifecycleStatus({
+				quiet: false,
+				targetLifecycle: summaryPublishReady ? 'approved' : 'in_review'
+			});
+		}
 		if (stage === 'team') {
 			return await saveTeamContacts({ quiet: true, requireComplete: true });
 		}
@@ -1918,6 +2017,12 @@
 	async function saveActiveReviewStage() {
 		if (activeStage === 'intake') {
 			return await saveIntakeDetails();
+		}
+		if (activeStage === 'summary') {
+			return await syncReviewLifecycleStatus({
+				quiet: false,
+				targetLifecycle: summaryPublishReady ? 'approved' : 'in_review'
+			});
 		}
 		if (activeStage === 'team') {
 			return await saveTeamContacts({ quiet: false, requireComplete: false });
@@ -2013,6 +2118,9 @@
 		classificationSignalsDealId = '';
 		classificationSignalsAppliedKey = '';
 		classificationSignalsAppliedMessage = '';
+		reviewFieldEvidenceState = 'idle';
+		reviewFieldEvidenceLoadedKeys = [];
+		reviewFieldEvidenceError = '';
 		void loadDeal();
 	});
 
@@ -2027,6 +2135,14 @@
 			return;
 		}
 		void runExtraction();
+	});
+
+	$effect(() => {
+		if (loading || !deal || activeStage === 'summary') return;
+		const stageFieldKeys = getEvidenceFieldKeysForStage(activeStage);
+		if (stageFieldKeys.length === 0) return;
+		if (stageFieldKeys.every((fieldKey) => reviewFieldEvidenceLoadedKeys.includes(fieldKey))) return;
+		void loadReviewFieldEvidence({ fieldKeys: stageFieldKeys });
 	});
 
 	$effect(() => {
@@ -2402,6 +2518,12 @@
 						</div>
 					{/if}
 
+					{#if reviewFieldEvidenceError}
+						<div class="message-banner message-banner--warning">
+							{reviewFieldEvidenceError}
+						</div>
+					{/if}
+
 					<div class="review-stage-progress-mobile">
 						<DealOnboardingProgress
 							stages={onboardingStages}
@@ -2441,17 +2563,20 @@
 								/>
 						{/key}
 					{:else if activeStage === 'historical_performance'}
-						<LendingFundReviewSectionStage
-							eyebrow={activeStageConfig?.label || 'Review'}
-							title={activeStageConfig?.title || 'Historical performance'}
-							description={activeStageConfig?.description || ''}
-							sections={activeStageConfig?.sections || []}
-							form={form}
-							fieldErrors={fieldErrors}
-							fieldWarnings={fieldWarnings}
-							onupdate={updateField}
-							labelOverrides={{}}
-						/>
+							<LendingFundReviewSectionStage
+								eyebrow={activeStageConfig?.label || 'Review'}
+								title={activeStageConfig?.title || 'Historical performance'}
+								description={activeStageConfig?.description || ''}
+								sections={activeStageConfig?.sections || []}
+								form={form}
+								fieldErrors={fieldErrors}
+								fieldWarnings={fieldWarnings}
+								fieldEvidence={reviewFieldEvidence}
+								documentUrls={reviewDocumentUrls}
+								evidenceLoading={reviewFieldEvidenceState === 'running'}
+								onupdate={updateField}
+								labelOverrides={{}}
+							/>
 					{:else if ['classification', 'static_terms', 'fees', 'portfolio_snapshot', 'sponsor_trust'].includes(activeStage)}
 							{#if branchInfo.branch === 'lending_fund'}
 								{#if activeStage === 'classification'}
@@ -2524,6 +2649,9 @@
 									form={form}
 									fieldErrors={fieldErrors}
 									fieldWarnings={fieldWarnings}
+									fieldEvidence={reviewFieldEvidence}
+									documentUrls={reviewDocumentUrls}
+									evidenceLoading={reviewFieldEvidenceState === 'running'}
 									variant="lending_fund"
 									labelOverrides={activeStage === 'static_terms'
 										? {
@@ -2568,6 +2696,9 @@
 								branch={manualBranch || branchInfo.branch}
 								fieldErrors={fieldErrors}
 								fieldWarnings={fieldWarnings}
+								fieldEvidence={reviewFieldEvidence}
+								documentUrls={reviewDocumentUrls}
+								evidenceLoading={reviewFieldEvidenceState === 'running'}
 								onupdate={updateField}
 								onaction={generateSlug}
 							/>
@@ -2582,6 +2713,9 @@
 								form={form}
 								fieldErrors={fieldErrors}
 								fieldWarnings={fieldWarnings}
+								fieldEvidence={reviewFieldEvidence}
+								documentUrls={reviewDocumentUrls}
+								evidenceLoading={reviewFieldEvidenceState === 'running'}
 								variant="lending_fund"
 								labelOverrides={{ riskTags: 'Risks', riskNotes: 'Risk Notes', downsideNotes: 'Downside Notes' }}
 								onupdate={updateField}
@@ -2742,6 +2876,9 @@
 											value={form[fieldKey]}
 											error={fieldErrors[fieldKey] || ''}
 											warning={fieldWarnings[fieldKey] || ''}
+											evidence={reviewFieldEvidence[fieldKey] || []}
+											documentUrls={reviewDocumentUrls}
+											evidenceLoading={reviewFieldEvidenceState === 'running'}
 											onupdate={(nextValue) => updateField(fieldKey, nextValue)}
 											onaction={fieldKey === 'slug' ? generateSlug : null}
 										/>

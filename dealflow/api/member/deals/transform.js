@@ -2,6 +2,7 @@ import { getDealHistoricalReturns } from '../../../src/lib/utils/dealReturns.js'
 import { getDealOperator } from '../../../src/lib/utils/dealSponsors.js';
 import { normalizeString } from './query.js';
 import { getDealResolvedSlug, resolveDealLifecycleStatus, resolveDealVisibility } from '../../../src/lib/utils/dealWorkflow.js';
+import { extractExplicitStateCodes } from '../../../src/lib/utils/investing-geography.js';
 
 const HISTORICAL_RETURN_START_YEAR = 2015;
 const HISTORICAL_RETURN_END_YEAR = new Date().getFullYear() - 1;
@@ -83,7 +84,7 @@ function computeStaleness(deal) {
 }
 
 function inferStateCodesFromText(text) {
-	const matches = new Set();
+	const matches = new Set(extractExplicitStateCodes(text));
 	for (const match of String(text || '').matchAll(STATE_CODE_PATTERN)) {
 		matches.add(match[1].toUpperCase());
 	}
@@ -291,6 +292,7 @@ export function transformDeals(parentDeals, childShareClasses, sponsorRows) {
 			submittedByEmail: deal.submitted_by_email || '',
 			slug: getDealResolvedSlug(deal),
 			offeringType: deal.offering_type,
+			offeringStatus: deal.offering_status,
 			offeringSize: deal.offering_size,
 			purchasePrice: deal.purchase_price,
 			investingGeography: deal.investing_geography,
@@ -348,6 +350,7 @@ export function transformDeals(parentDeals, childShareClasses, sponsorRows) {
 			deckUrl: deal.deck_url,
 			ppmUrl: deal.ppm_url,
 			subAgreementUrl: deal.sub_agreement_url,
+			reviewFieldEvidence: deal.review_field_evidence || {},
 			primarySourceContext: deal.primary_source_context || '',
 			primarySourceUrl: deal.primary_source_url || '',
 			cashYield: deal.cash_yield,

@@ -13,6 +13,9 @@
 		branch = '',
 		fieldErrors = {},
 		fieldWarnings = {},
+		fieldEvidence = {},
+		documentUrls = {},
+		evidenceLoading = false,
 		onupdate = () => {},
 		onaction = null
 	} = $props();
@@ -61,6 +64,9 @@
 							value={fieldValues[fieldKey]}
 							error={fieldErrors[fieldKey] || ''}
 							warning={fieldWarnings[fieldKey] || ''}
+							evidence={fieldEvidence[fieldKey] || []}
+							documentUrls={documentUrls}
+							evidenceLoading={evidenceLoading}
 							onupdate={(nextValue) => onupdate(fieldKey, nextValue)}
 							onaction={fieldKey === 'slug' ? onaction : null}
 						/>

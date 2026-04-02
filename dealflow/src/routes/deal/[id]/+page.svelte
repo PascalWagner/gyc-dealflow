@@ -72,6 +72,7 @@
 		hasRequestedDealIntroduction,
 		submitDealIntroductionRequest
 	} from '$lib/utils/dealIntroRequests.js';
+	import { buildDealCashFlowProjection } from '$lib/utils/dealCashFlowProjection.js';
 	import { buildInvestmentReportHtml } from '$lib/utils/dealReport.js';
 	import { getDealOperator } from '$lib/utils/dealSponsors.js';
 	import { isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
@@ -569,14 +570,30 @@
 	function hasUpvoted(qid) { if (!browser) return false; return readUserScopedJson('gycQAUpvoted', []).includes(qid); }
 
 	// ===== Cash Flow Projection (derived) =====
-	const cfYieldRate = $derived.by(() => { if (!deal) return 0; let r = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0; if (r > 1) r = r / 100; return r; });
-	const cfInvestment = $derived(deal?.investmentMinimum || 100000);
-	const cfHold = $derived.by(() => { if (!deal) return 5; let h = deal.holdPeriod || 5; if (h < 1) h = 1; if ((deal.status || '').toLowerCase() === 'evergreen') return 5; return Math.min(Math.ceil(h), 10); });
-	const cfIsEvergreen = $derived(deal ? (deal.status || '').toLowerCase() === 'evergreen' : false);
-	const cfRows = $derived.by(() => { const yr = cfYieldRate; if (!yr || yr <= 0) return []; const inv = cfInvestment; const yrs = cfHold; const em = deal?.equityMultiple || 0; const cr = isCredit; const ev = cfIsEvergreen; let rows = []; let td = 0; for (let y = 1; y <= yrs; y++) { let d, c = 0, n = ''; if (cr) { d = inv * yr; if (!ev && y === yrs) { c = inv; n = 'Capital returned'; } } else { if (y === 1) { d = inv * yr * 0.5; n = 'Partial year (ramp-up)'; } else { d = inv * yr; } if (y === yrs && em > 0) { const tp = inv * em; c = tp - td - d; if (c < 0) c = 0; n = 'Sale / capital event'; } else if (y === yrs && !ev) { c = inv; n = 'Capital returned'; } } td += d; rows.push({ year: y, dist: d, capReturn: c, cumDist: td, note: n }); } return rows; });
-	const cfTotalCash = $derived.by(() => { const r = cfRows; if (!r.length) return 0; return r[r.length-1].cumDist + r[r.length-1].capReturn; });
-	const cfAvgCoC = $derived.by(() => { const r = cfRows; const y = cfHold; const i = cfInvestment; if (!r.length||!y||!i) return 0; return (r[r.length-1].cumDist/y/i)*100; });
-	const cfMaxBar = $derived.by(() => { const r = cfRows; let m = 0; for (const x of r) { const t = x.dist+x.capReturn; if (t>m) m=t; } return m||1; });
+	const cashFlowProjection = $derived.by(() => buildDealCashFlowProjection(deal));
+	const cfYieldRate = $derived(cashFlowProjection?.basis?.rate || 0);
+	const cfYieldLabel = $derived(cashFlowProjection?.basis?.label || (isCredit ? 'yield' : 'pref return'));
+	const cfInvestment = $derived(cashFlowProjection?.investment || 0);
+	const cfHold = $derived(cashFlowProjection?.holdYears || 0);
+	const cfIsEvergreen = $derived(cashFlowProjection?.isEvergreen === true);
+	const cfRows = $derived(cashFlowProjection?.rows || []);
+	const cfTotalCash = $derived(cashFlowProjection?.totalCash || 0);
+	const cfAvgCoC = $derived(cashFlowProjection?.avgCashOnCashPct || 0);
+	const cfMaxBar = $derived(cashFlowProjection?.maxBar || 1);
+	const cfUnavailableReason = $derived.by(() => {
+			switch (cashFlowProjection?.reason) {
+				case 'missing_explicit_yield':
+					return 'No explicit cash-yield assumption is saved for this lending fund yet, so the LP cash flow projection is hidden.';
+				case 'missing_projection_metric':
+					return 'No forward-looking return assumption is saved for this deal yet, so the LP cash flow projection is hidden.';
+				case 'missing_investment_minimum':
+					return 'Add an investment minimum before showing a projected LP cash flow table.';
+				case 'missing_hold_period':
+					return 'Add an explicit projection horizon before showing a projected LP cash flow table.';
+				default:
+					return '';
+			}
+		});
 	// ===== Stress Test derived =====
 	const stBaseIRR = $derived.by(() => { const v = deal?.targetIRR || 0.15; return v > 1 ? v/100 : v; });
 	const stBaseCoC = $derived.by(() => { const v = deal?.cashOnCash || 0.08; return v > 1 ? v/100 : v; });
@@ -1721,13 +1738,19 @@
 					{/if}
 
 				<!-- ==================== PROJECTED LP CASH FLOW ==================== -->
-				{#if cfRows.length > 0}
+				{#if cfRows.length > 0 || cfUnavailableReason}
 					<div class="section flow-order-50">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
 							<span class="section-title">Projected LP Cash Flow</span>
 						</div>
 						<div class="section-body" style="position:relative;min-height:120px;">
+							{#if cfUnavailableReason}
+								<div class="empty-detail-card">
+									<strong>Projection hidden until the assumptions are trustworthy.</strong>
+									<p>{cfUnavailableReason}</p>
+								</div>
+							{:else}
 							{#if !isPaid}
 								<div class="gate-overlay">
 									<div class="gate-content">
@@ -1750,7 +1773,7 @@
 							{/if}
 							<div class:blurred={!isPaid}>
 								<div class="cf-assumptions">
-									Based on {fmt(cfInvestment, 'money')} invested at {fmt(cfYieldRate, 'pct')} {isCredit ? 'yield' : 'pref return'} over {cfHold}{cfIsEvergreen ? '+ years' : ' years'}. Projections are illustrative only.
+									Based on {fmt(cfInvestment, 'money')} invested at {fmt(cfYieldRate, 'pct')} {cfYieldLabel} over {cfHold}{cfIsEvergreen && cfHold === 5 ? '+ years' : ' years'}. Projections are illustrative only.
 								</div>
 
 								<div class="cf-toggle">
@@ -1824,6 +1847,7 @@
 									</div>
 								{/if}
 							</div>
+							{/if}
 						</div>
 					</div>
 				{/if}

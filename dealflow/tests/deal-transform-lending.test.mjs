@@ -126,3 +126,30 @@ test('single-deal transform derives lending review values from legacy columns wh
 	assert.equal(deal.historicalReturn2025, 0.0913);
 	assert.equal(deal.teamContactsSnapshotSupported, false);
 });
+
+test('single-deal transform infers investing states from spelled-out geography names', () => {
+	const [deal] = transformDeals(
+		[
+			{
+				id: 'legacy-lending-geography-text',
+				investment_name: 'Capital Fund 2',
+				asset_class: 'Private Debt / Credit',
+				deal_branch: 'lending_fund',
+				deal_type: 'Fund',
+				status: 'Evergreen',
+				investing_geography: 'Arizona, Colorado, Nevada, California, Oregon, Washington, Texas, United States',
+				management_company: {
+					id: 'cad0d99d-675a-4abf-94be-c98902c915f0',
+					operator_name: 'Capital Fund',
+					website: 'https://capitalfund1.com',
+					founding_year: 2009,
+					authorized_emails: []
+				}
+			}
+		],
+		[],
+		[]
+	);
+
+	assert.deepEqual(deal.investingStates, ['AZ', 'CO', 'NV', 'CA', 'OR', 'WA', 'TX']);
+});

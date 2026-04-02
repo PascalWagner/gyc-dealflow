@@ -286,12 +286,21 @@ export function formatStateCodesAsGeographyValue(stateCodes, { includeCountry = 
 export function getDealStateCodes(deal) {
 	if (!deal) return [];
 
+	const explicitStates = mergeStateCodeLists(
+		Array.isArray(deal.investingStates) ? deal.investingStates : [],
+		Array.isArray(deal.investing_states) ? deal.investing_states : []
+	);
+	if (explicitStates.length > 0) {
+		return explicitStates;
+	}
+
 	const matches = [];
 	const seen = new Set();
 	const geographyText = [
 		deal.state,
 		deal.regionState,
 		deal.investingGeography,
+		deal.investing_geography,
 		deal.location,
 		deal.address,
 		deal.propertyAddress
@@ -301,6 +310,12 @@ export function getDealStateCodes(deal) {
 
 	appendState(matches, seen, normalizeStateCode(deal.state));
 	appendState(matches, seen, normalizeStateCode(deal.regionState));
+
+	const explicitTextStates = extractExplicitStateCodes(geographyText);
+	if (explicitTextStates.length > 0) {
+		for (const stateCode of explicitTextStates) appendState(matches, seen, stateCode);
+		return matches;
+	}
 
 	const lowerText = geographyText.toLowerCase();
 	for (const [regionLabel, regionStates] of Object.entries(REGION_STATE_GROUPS)) {
