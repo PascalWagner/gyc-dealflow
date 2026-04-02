@@ -54,6 +54,7 @@
 		resolveDealOnboardingBranch
 	} from '$lib/utils/dealOnboardingFlow.js';
 	import {
+		resolveDealLifecycleStatus,
 		slugify
 	} from '$lib/utils/dealWorkflow.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
@@ -551,6 +552,7 @@
 	let teamContacts = $state([]);
 	let teamContactsError = $state('');
 	let teamContactsSaveState = $state('idle');
+	let lifecycleSyncState = $state('idle');
 	let secVerificationContext = $state(null);
 	let sourceRiskFactors = $state([]);
 	let highlightedRisks = $state([]);
@@ -1596,6 +1598,65 @@
 		}
 	}
 
+	async function syncReviewLifecycleStatus({ quiet = true, targetLifecycle = '' } = {}) {
+		if (!dealId || lifecycleSyncState === 'running') return false;
+
+		const currentLifecycle = resolveDealLifecycleStatus(deal || {});
+		if (currentLifecycle === 'published' || currentLifecycle === 'do_not_publish') return true;
+
+		const desiredLifecycle =
+			targetLifecycle || (summaryPublishReady ? 'approved' : 'in_review');
+		if (!desiredLifecycle || desiredLifecycle === currentLifecycle) return true;
+
+		lifecycleSyncState = 'running';
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active session to update deal workflow.');
+
+			const response = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					lifecycleStatus: desiredLifecycle
+				})
+			});
+			const payload = await response.json().catch(() => ({}));
+
+			if (!response.ok || !payload?.deal) {
+				throw new Error(payload?.error || 'Failed to update the deal workflow status.');
+			}
+
+			syncDealState(
+				{
+					...(deal || {}),
+					...payload.deal
+				},
+				{ clearSaveMessage: true }
+			);
+			if (!quiet) {
+				saveMessage = desiredLifecycle === 'approved'
+					? 'Deal approved and ready for publishing.'
+					: 'Deal moved back to In Review until the blockers are resolved.';
+			}
+			return true;
+		} catch (error) {
+			console.error('[deal-review] lifecycle sync failed', {
+				dealId,
+				targetLifecycle: desiredLifecycle,
+				message: error?.message || 'unknown_error'
+			});
+			if (!quiet) {
+				saveError = error?.message || 'Failed to update the deal workflow status.';
+			}
+			return false;
+		} finally {
+			lifecycleSyncState = 'idle';
+		}
+	}
+
 	async function runExtraction() {
 		if (!dealId || extractionState === 'running') return;
 
@@ -1743,6 +1804,13 @@
 			const shouldSaveBeforeAdvance = dirty || ['intake', 'team', 'sec'].includes(activeStage);
 			const ok = shouldSaveBeforeAdvance ? await saveCurrentStage(activeStage) : true;
 			if (!ok) return;
+			if (targetStage === 'summary') {
+				const lifecycleOk = await syncReviewLifecycleStatus({
+					quiet: true,
+					targetLifecycle: summaryPublishReady ? 'approved' : 'in_review'
+				});
+				if (!lifecycleOk) return;
+			}
 		}
 
 		saveError = '';
@@ -1797,6 +1865,15 @@
 			noScroll: true,
 			keepFocus: true
 		}).catch(() => {});
+	});
+
+	$effect(() => {
+		if (!dealId || loading || activeStage !== 'summary' || lifecycleSyncState === 'running') return;
+		const currentLifecycle = resolveDealLifecycleStatus(deal || {});
+		if (currentLifecycle === 'published' || currentLifecycle === 'do_not_publish') return;
+		const desiredLifecycle = summaryPublishReady ? 'approved' : 'in_review';
+		if (desiredLifecycle === currentLifecycle) return;
+		void syncReviewLifecycleStatus({ quiet: true, targetLifecycle: desiredLifecycle });
 	});
 </script>
 

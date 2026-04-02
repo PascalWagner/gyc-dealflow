@@ -117,12 +117,14 @@
 		});
 	}
 
-	function syncPayload(nextPayload, { resetNote = false } = {}) {
+	function syncPayload(nextPayload, { resetNote = false, emit = true } = {}) {
 		payload = nextPayload;
 		if (resetNote || !noteDraft) {
 			noteDraft = String(nextPayload?.view?.note || '');
 		}
-		emitChange(nextPayload);
+		if (emit) {
+			emitChange(nextPayload);
+		}
 	}
 
 	async function request(url, options = {}) {
@@ -260,7 +262,7 @@
 		lastLoadedDealId = dealId;
 		lastRefreshKey = refreshKey;
 		if (initialPayload) {
-			syncPayload(initialPayload, { resetNote: true });
+			syncPayload(initialPayload, { resetNote: true, emit: false });
 			return;
 		}
 		if (autoload) {
@@ -282,7 +284,7 @@
 		if (!dealId || !initialPayload) return;
 		if (loading) return;
 		if (dealId !== lastLoadedDealId) return;
-		syncPayload(initialPayload, { resetNote: true });
+		syncPayload(initialPayload, { resetNote: true, emit: false });
 	});
 
 	$effect(() => {
