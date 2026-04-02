@@ -134,6 +134,12 @@
 		return String(parseDollar(value));
 	}
 
+	function completionCtaLabel() {
+		if (paidCompleteRedirectTo === '/app/plan') return 'View My Full Plan →';
+		if (paidCompleteRedirectTo === '/app/deals') return 'Browse My Matches →';
+		return 'Continue →';
+	}
+
 	$: sequence = sequenceForData(wizardData);
 	$: if (sequence.length && wizardStepIndex > sequence.length - 1) wizardStepIndex = sequence.length - 1;
 	$: currentStep = sequence[wizardStepIndex] || sequence[0] || STEP.GOAL;
@@ -1390,7 +1396,7 @@
 					{:else if currentStep === STEP.PROFILE_REVIEW}
 						Looks Good →
 					{:else if currentStep === STEP.COMPLETION}
-						Browse My Matches →
+						{completionCtaLabel()}
 					{:else}
 						Next
 					{/if}

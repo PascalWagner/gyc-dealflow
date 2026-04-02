@@ -574,6 +574,17 @@ async function runPlanBuilderInteractionScenario(browser) {
 	await page.getByRole('button', { name: 'Build My Plan →' }).click();
 	await page.waitForLoadState('networkidle');
 	await assertTitle(page, 'Your Investment Profile');
+	await page.getByRole('button', { name: 'Looks Good →' }).click();
+	await page.waitForLoadState('networkidle');
+	await assertTitle(page, 'Your plan is ready.');
+	assert.equal(
+		await page.getByRole('button', { name: 'View My Full Plan →' }).count(),
+		1,
+		'cashflow: completion CTA should point to the full plan'
+	);
+	await page.getByRole('button', { name: 'View My Full Plan →' }).click();
+	await page.waitForLoadState('networkidle');
+	await expectSummaryView(page);
 
 	assert.deepEqual(errors.consoleErrors, [], 'plan builder: console errors');
 	assert.deepEqual(errors.pageErrors, [], 'plan builder: page errors');
