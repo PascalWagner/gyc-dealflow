@@ -1964,6 +1964,9 @@
 			const shouldSaveBeforeAdvance = dirty || ['intake', 'team', 'sec'].includes(activeStage);
 			const ok = shouldSaveBeforeAdvance ? await saveCurrentStage(activeStage) : true;
 			if (!ok) return false;
+			if (targetStage === 'classification' && branchInfo.branch === 'lending_fund') {
+				await loadClassificationSignals();
+			}
 			if (targetStage === 'summary') {
 				const lifecycleOk = await syncReviewLifecycleStatus({
 					quiet: true,
