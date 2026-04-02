@@ -1277,7 +1277,10 @@
 			throw new Error(payload?.error || 'Could not save the intake details.');
 		}
 
-		syncDealState(payload.deal);
+		syncDealState({
+			...(deal || {}),
+			...payload.deal
+		});
 	}
 
 	function getManagementCompanyId() {
