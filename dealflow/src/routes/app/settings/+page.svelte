@@ -5,7 +5,11 @@
 	import { getFreshSessionToken, user } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
-	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
+	import {
+		applyAdminImpersonationToUrl,
+		readUserScopedJson,
+		writeUserScopedJson
+	} from '$lib/utils/userScopedState.js';
 
 	let activeTab = $state('plan');
 
@@ -30,8 +34,8 @@
 	let accreditedStatus = $state('');
 	let investableCapital = $state('$250K - $1M');
 	let investmentExperience = $state('4-10 LP investments');
-	let autoRenewSaving = $state(false);
 	let membershipSummary = $state(null);
+	let showRenewalChooser = $state(false);
 
 	// Notifications
 	let notifFreq = $state('weekly');
@@ -69,9 +73,9 @@
 				'Private investor community'
 			]
 		},
-		{
-			key: 'concierge',
-			label: 'Concierge',
+			{
+				key: 'concierge',
+				label: 'Concierge',
 			accent: 'var(--teal-deep)',
 			priceNote: '$25,000',
 			features: [
@@ -80,45 +84,30 @@
 				'10 x 90-min 1:1 calls',
 				'3hrs strategy sessions',
 				'Free live event ticket',
-				'Co-underwriting on deals'
-			]
-		},
-		{
-			key: 'vip',
-			label: 'VIP Retreat',
-			accent: '#C5963A',
-			priceNote: '$50,000',
-			features: [
-				'Everything in Concierge',
-				'Fly-out retreat experience',
-				'Multi-day immersive program',
-				'Direct portfolio construction',
-				'Tax & entity structuring',
-				'Priority GP access'
-			]
-		}
-	];
+					'Co-underwriting on deals'
+				]
+			}
+		];
 
-	const membershipKeyMap = {
-		explorer: 'free',
-		free: 'free',
+		const membershipKeyMap = {
+			explorer: 'free',
+			free: 'free',
 		academy: 'academy',
 		alumni: 'academy',
-		investor: 'academy',
-		founding: 'academy',
-		'inner-circle': 'concierge',
-		family_office: 'concierge',
-		concierge: 'concierge',
-		vip: 'vip',
-		vip_retreat: 'vip'
-	};
+			investor: 'academy',
+			founding: 'academy',
+			'inner-circle': 'concierge',
+			family_office: 'concierge',
+			concierge: 'concierge',
+			vip: 'concierge',
+			vip_retreat: 'concierge'
+		};
 
-	const planOrder = {
-		free: 0,
-		academy: 1,
-		concierge: 2,
-		vip: 3
-	};
+		const planOrder = {
+			free: 0,
+			academy: 1,
+			concierge: 2
+		};
 
 	function getStoredUser() {
 		if (!browser) return null;
@@ -204,13 +193,67 @@
 	const membershipStart = $derived(formatMembershipDate(academyMembership?.start_date));
 	const membershipEnd = $derived(formatMembershipDate(academyMembership?.end_date));
 	const membershipRenewal = $derived(formatMembershipDate(academyMembership?.renewal_date));
-	const autoRenewEnabled = $derived(membershipUser.autoRenew !== false);
-	const billingCardLabel = $derived.by(() => {
-		if (!membershipUser.cardLast4) return 'No card on file';
-		const brand = membershipUser.cardBrand
-			? membershipUser.cardBrand.charAt(0).toUpperCase() + membershipUser.cardBrand.slice(1)
-			: 'Card';
-		return `${brand} ending in ${membershipUser.cardLast4}`;
+	const isLifetimeMembership = $derived(academyMembership?.is_lifetime === true);
+	const membershipEndLabel = $derived.by(() => {
+		if (isLifetimeMembership) return 'Lifetime access';
+		return membershipEnd || (membershipPhase === 'active' ? 'Active membership' : '');
+	});
+	const renewalOptions = $derived.by(() =>
+		Array.isArray(academyMembership?.renewal_options) ? academyMembership.renewal_options : []
+	);
+	const annualRenewalOption = $derived.by(
+		() => renewalOptions.find((option) => option.key === 'annual') || null
+	);
+	const monthlyRenewalOption = $derived.by(
+		() => renewalOptions.find((option) => option.key === 'monthly') || null
+	);
+	const annualRenewalLabel = $derived(annualRenewalOption?.amount_label || '$250/yr');
+	const monthlyRenewalLabel = $derived(monthlyRenewalOption?.amount_label || '$29/mo');
+	const billingState = $derived.by(() => {
+		if (activeMembershipKey === 'free' || membershipPhase === 'inactive') return 'hidden';
+		if (isLifetimeMembership) return 'lifetime';
+		if (academyMembership?.billing_state === 'manage') return 'manage';
+		if (academyMembership?.external_subscription_id) return 'subscription';
+		return 'renewal';
+	});
+	const billingPrimaryLabel = $derived.by(() => {
+		if (billingState === 'manage') return 'Update Card';
+		if (billingState === 'renewal') return 'Choose Renewal Plan';
+		if (billingState === 'subscription') return 'Managed in GHL';
+		if (billingState === 'lifetime') return 'Not Needed';
+		return 'Billing Unavailable';
+	});
+	const billingPrimaryDisabled = $derived.by(
+		() => billingState === 'lifetime' || billingState === 'subscription' || billingState === 'hidden'
+	);
+	const billingMethodLabel = $derived.by(() => {
+		if (billingState === 'lifetime') return 'No recurring billing for this membership';
+		if (billingState === 'manage') return 'Managed securely in GoHighLevel';
+		if (billingState === 'subscription') return 'Recurring renewal is active in GoHighLevel';
+		if (billingState === 'renewal') return 'No recurring renewal plan is active yet';
+		return 'Billing details unavailable';
+	});
+	const renewalStatusLabel = $derived.by(() => {
+		if (billingState === 'lifetime') return 'Lifetime membership';
+		if (billingState === 'manage') return 'Recurring renewal active';
+		if (billingState === 'subscription') return 'Recurring renewal active';
+		if (billingState === 'renewal') return 'Renewal plan not started';
+		return 'No active billing';
+	});
+	const renewalStatusDetail = $derived.by(() => {
+		if (billingState === 'lifetime') {
+			return 'This membership does not require a renewal plan or payment method.';
+		}
+		if (billingState === 'manage') {
+			return 'Use Update Card to manage the payment method attached to your recurring Deal Flow Membership renewal.';
+		}
+		if (billingState === 'subscription') {
+			return 'Recurring renewal is active, but this account does not yet have a secure update link stored for in-app card management.';
+		}
+		if (billingState === 'renewal') {
+			return `Choose ${annualRenewalLabel} or ${monthlyRenewalLabel} to continue through Deal Flow Membership after your first year.`;
+		}
+		return 'Billing is not available for this account.';
 	});
 
 	function loadProfile() {
@@ -293,7 +336,11 @@
 		if (!token) return;
 
 		try {
-			const resp = await fetch('/api/settings/membership?product_type=academy', {
+			const url = new URL('/api/settings/membership', window.location.origin);
+			url.searchParams.set('product_type', 'academy');
+			applyAdminImpersonationToUrl(url, { sessionUser: getStoredUser() || $user || {} });
+
+			const resp = await fetch(url.toString(), {
 				headers: { Authorization: `Bearer ${token}` }
 			});
 			if (!resp.ok) return;
@@ -453,30 +500,26 @@
 		syncProfile({ share_activity: isOn }).catch(() => {});
 	}
 
-	async function toggleAutoRenew(nextValue) {
-		autoRenewSaving = true;
-		patchStoredUser({ autoRenew: nextValue });
-		try {
-			const token = getToken();
-			if (token) {
-				await fetch('/api/userdata', {
-					method: 'POST',
-					headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ type: 'autoRenew', data: { autoRenew: nextValue } })
-				});
-			}
-		} catch (error) {
-			console.warn('Auto renew save failed:', error);
-		}
-		await refreshMembershipSummary();
-		autoRenewSaving = false;
+	function closeRenewalChooser() {
+		showRenewalChooser = false;
+	}
+
+	function openRenewalCheckout(option) {
+		if (!browser) return;
+		if (!option?.checkout_url) return;
+		showRenewalChooser = false;
+		window.open(option.checkout_url, '_blank', 'noopener');
 	}
 
 	function openBillingPortal() {
 		if (!browser) return;
-		const currentUser = getStoredUser() || {};
-		const url = `https://growyourcashflow.io/billing?email=${encodeURIComponent(currentUser.email || email || '')}`;
-		window.open(url, '_blank', 'noopener');
+		if (billingState === 'manage' && academyMembership?.billing_management_url) {
+			window.open(academyMembership.billing_management_url, '_blank', 'noopener');
+			return;
+		}
+		if (billingState === 'renewal') {
+			showRenewalChooser = true;
+		}
 	}
 
 	async function saveNotifPrefs() {
@@ -732,7 +775,7 @@
 							{#if membershipStart}
 								<div class="membership-date-item"><span class="membership-dates-label">Start Date:</span> <strong>{membershipStart}</strong></div>
 							{/if}
-							<div class="membership-date-item"><span class="membership-dates-label">End Date:</span> <strong>{membershipEnd || 'Lifetime access'}</strong></div>
+								<div class="membership-date-item"><span class="membership-dates-label">End Date:</span> <strong>{membershipEndLabel}</strong></div>
 							{#if membershipRenewal}
 								<div class="membership-date-item"><span class="membership-dates-label">Renewal:</span> <strong>Renews on {membershipRenewal}</strong></div>
 							{/if}
@@ -786,46 +829,68 @@
 				{/each}
 			</div>
 
-			{#if activeMembershipKey === 'academy'}
-				<div class="settings-card alumni-note-card ly-surface ly-surface--accent ly-surface--strong">
+				{#if activeMembershipKey === 'academy' && !isLifetimeMembership}
+					<div class="settings-card alumni-note-card ly-surface ly-surface--accent ly-surface--strong">
 					<div class="alumni-note-header">
 						<span>After your first year</span>
 						<span class="alumni-pill">Alumni</span>
 					</div>
 					<div class="alumni-note-copy">
-						Stay connected for <strong>$2,000/yr</strong> or <strong>$300/mo</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.
+							Stay connected for <strong>{annualRenewalLabel}</strong> or <strong>{monthlyRenewalLabel}</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.
+						</div>
 					</div>
-				</div>
-			{/if}
+				{/if}
 
-			{#if activeMembershipKey !== 'free'}
-				<div class="settings-card billing-card ly-surface">
-					<div class="settings-card-title billing-title">Billing</div>
-					<div class="billing-row">
-						<div>
-							<div class="billing-label">Payment Method</div>
-							<div class="billing-value">{billingCardLabel}</div>
+				{#if activeMembershipKey !== 'free'}
+					<div class="settings-card billing-card ly-surface">
+						<div class="settings-card-title billing-title">Billing</div>
+						<div class="billing-row">
+							<div>
+								<div class="billing-label">Payment Method</div>
+								<div class="billing-value">{billingMethodLabel}</div>
+							</div>
+							<button class="billing-btn" onclick={openBillingPortal} disabled={billingPrimaryDisabled}>{billingPrimaryLabel}</button>
 						</div>
-						<button class="billing-btn" onclick={openBillingPortal}>{membershipUser.cardLast4 ? 'Update' : 'Add Card'}</button>
+						<div class="billing-row no-border">
+							<div>
+								<div class="billing-label">Renewal Status</div>
+								<div class="billing-value">{renewalStatusLabel}</div>
+								<div class="billing-value billing-value-subtle">{renewalStatusDetail}</div>
+							</div>
+							<div class="billing-provider-tag">{academyMembership?.billing_provider || 'GHL'}</div>
+						</div>
 					</div>
-					<div class="billing-row no-border">
-						<div>
-							<div class="billing-label">Auto-Renew Membership</div>
-							<div class="billing-value">Automatically renew at $2,000/yr or $300/mo when your membership ends.</div>
-						</div>
-						<div class="billing-toggle-wrap">
-							<button class="toggle-track" class:on={autoRenewEnabled} aria-label="Toggle auto-renew membership" aria-pressed={autoRenewEnabled} disabled={autoRenewSaving} onclick={() => toggleAutoRenew(!autoRenewEnabled)}>
-								<div class="toggle-thumb"></div>
-							</button>
-							{#if autoRenewSaving}
-								<span class="billing-saving">Saving...</span>
+				{/if}
+				{#if showRenewalChooser}
+					<div class="billing-modal-backdrop" onclick={closeRenewalChooser}>
+						<div class="billing-modal ly-surface ly-surface--strong" role="dialog" aria-modal="true" aria-labelledby="renewal-modal-title" onclick={(event) => event.stopPropagation()}>
+							<div class="billing-modal-header">
+								<div>
+									<div class="billing-modal-title" id="renewal-modal-title">Choose Your Renewal Plan</div>
+									<div class="billing-modal-copy">Renew through Deal Flow Membership. Secure checkout opens in a new tab.</div>
+								</div>
+								<button class="billing-modal-close" aria-label="Close renewal plan chooser" onclick={closeRenewalChooser}>×</button>
+							</div>
+							<div class="billing-modal-grid">
+								{#each renewalOptions as option}
+									<div class="billing-option-card">
+										<div class="billing-option-name">{option.label}</div>
+										<div class="billing-option-price">{option.amount_label}</div>
+										<div class="billing-option-copy">{option.description}</div>
+										<button class="billing-option-btn" disabled={!option.available} onclick={() => openRenewalCheckout(option)}>
+											{option.available ? 'Open Checkout' : 'Link Pending'}
+										</button>
+									</div>
+								{/each}
+							</div>
+							{#if !renewalOptions.some((option) => option.available)}
+								<div class="billing-modal-note">Renewal checkout links have not been configured yet for this environment.</div>
 							{/if}
 						</div>
 					</div>
-				</div>
-			{/if}
-		</div>
-	{/if}
+				{/if}
+			</div>
+		{/if}
 
 	{#if activeTab === 'privacy'}
 		<div class="settings-panel">
@@ -1134,7 +1199,7 @@
 	.membership-dates-label { color: var(--text-secondary); }
 	.membership-dates strong { color: var(--text-dark); }
 
-	.plan-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+		.plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
 	.plan-card {
 		position: relative;
 		display: flex;
@@ -1192,9 +1257,24 @@
 	.billing-row.no-border { border-bottom: none; padding-bottom: 0; }
 	.billing-label { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); }
 	.billing-value { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+	.billing-value-subtle { font-size: 12px; color: var(--text-secondary); }
 	.billing-btn { padding: 8px 16px; background: transparent; border: 1px solid var(--surface-border); border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark); cursor: pointer; }
-	.billing-toggle-wrap { display: flex; align-items: center; gap: 10px; }
-	.billing-saving { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); }
+	.billing-btn:disabled { opacity: 0.58; cursor: not-allowed; }
+	.billing-provider-tag { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; padding: 6px 10px; border-radius: 999px; background: rgba(81,190,123,0.12); color: var(--primary); font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; }
+	.billing-modal-backdrop { position: fixed; inset: 0; background: rgba(12, 18, 28, 0.48); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 70; }
+	.billing-modal { width: min(640px, 100%); padding: 22px; border-radius: 18px; box-shadow: 0 28px 80px rgba(12, 18, 28, 0.18); }
+	.billing-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+	.billing-modal-title { font-family: var(--font-ui); font-size: 20px; font-weight: 800; color: var(--text-dark); }
+	.billing-modal-copy { margin-top: 6px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+	.billing-modal-close { border: none; background: transparent; color: var(--text-muted); font-size: 28px; line-height: 1; cursor: pointer; padding: 0; }
+	.billing-modal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+	.billing-option-card { padding: 18px; border: 1px solid var(--surface-border); border-radius: 14px; background: var(--surface-2); }
+	.billing-option-name { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); }
+	.billing-option-price { margin-top: 6px; font-family: var(--font-ui); font-size: 20px; font-weight: 800; color: var(--primary); }
+	.billing-option-copy { margin-top: 10px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.5; min-height: 38px; }
+	.billing-option-btn { width: 100%; margin-top: 16px; padding: 11px 14px; border: 1px solid var(--surface-border); border-radius: 10px; background: #fff; font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); cursor: pointer; }
+	.billing-option-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+	.billing-modal-note { margin-top: 16px; font-family: var(--font-body); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
 	.toggle-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--surface-2); border: 1px solid var(--surface-border); border-radius: var(--radius-sm); }
 	.toggle-track { position: relative; width: 48px; height: 26px; flex-shrink: 0; cursor: pointer; border: none; background: var(--surface-border-strong); border-radius: 13px; transition: background 0.2s; padding: 0; }
@@ -1257,7 +1337,8 @@
 		.plan-action { width: 100%; box-sizing: border-box; }
 		.billing-row { align-items: flex-start; }
 		.billing-btn { width: 100%; }
-		.billing-toggle-wrap { width: 100%; justify-content: flex-end; }
+		.billing-provider-tag { width: 100%; justify-content: flex-start; }
+		.billing-modal-grid { grid-template-columns: 1fr; }
 		.toggle-row { align-items: flex-start; }
 		.preview-box { flex-direction: column; align-items: flex-start; }
 		.notif-btns { flex-direction: column; }
@@ -1275,6 +1356,6 @@
 		.membership-status-card { padding: 14px; }
 		.plan-current { font-size: 9px; top: -9px; }
 		.alumni-note-header { align-items: flex-start; flex-wrap: wrap; }
-		.billing-saving { min-width: 56px; text-align: right; }
+		.billing-modal { padding: 18px; }
 	}
 </style>

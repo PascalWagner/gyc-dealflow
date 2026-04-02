@@ -8,7 +8,23 @@ import { optionalServerEnv } from './_env.js';
 import { deriveTier, ghlFetch } from './_supabase.js';
 
 export const SUBSCRIPTIONS_TABLE = 'subscriptions';
-const PRODUCT_FIELDS = 'id, user_id, product_type, status, start_date, end_date, renewal_date, created_at, updated_at';
+const PRODUCT_FIELDS = [
+	'id',
+	'user_id',
+	'product_type',
+	'status',
+	'start_date',
+	'end_date',
+	'renewal_date',
+	'is_lifetime',
+	'billing_provider',
+	'external_subscription_id',
+	'external_product_id',
+	'external_price_id',
+	'billing_management_url',
+	'created_at',
+	'updated_at'
+].join(', ');
 const ACADEMY_GHL_FALLBACK_END_DATE = optionalServerEnv(
 	'ACADEMY_GHL_FALLBACK_END_DATE',
 	'2026-12-31T23:59:59.000Z'
@@ -217,13 +233,15 @@ export async function buildGhlSubscriptionFromContact(contact, productType, {
 
 	const startDate =
 		findCustomFieldValue(hydratedFields, config.startFieldMatchers) ||
-		fallbackProfile?.created_at ||
-		fallbackProfile?.createdAt ||
-		contact.dateAdded ||
-		contact.date_added ||
+		fallbackProfile?.academy_start ||
+		fallbackProfile?.academyStart ||
 		null;
 	const endDate =
-		findCustomFieldValue(hydratedFields, config.endFieldMatchers) || config.defaultEndDate || null;
+		findCustomFieldValue(hydratedFields, config.endFieldMatchers) ||
+		fallbackProfile?.academy_end ||
+		fallbackProfile?.academyEnd ||
+		config.defaultEndDate ||
+		null;
 	const renewalDate =
 		findCustomFieldValue(hydratedFields, config.renewalFieldMatchers) || endDate || null;
 
@@ -260,18 +278,15 @@ export function isMissingSubscriptionsTableError(error) {
 export function buildLegacySubscriptionFromProfile(profile, productType = 'academy') {
 	const candidate = isPlainObject(profile) ? profile : {};
 	const normalizedProductType = normalizeProductType(productType);
-	const normalizedTier = normalizeTier(candidate.tier);
-	const legacyStart = candidate.academy_start || candidate.academyStart || candidate.created_at || candidate.createdAt || null;
+	const legacyStart = candidate.academy_start || candidate.academyStart || null;
 	const legacyEnd = candidate.academy_end || candidate.academyEnd || null;
-	const hasLegacyWindow = Boolean(legacyStart || legacyEnd);
-	const hasLegacyTier = normalizedProductType === 'academy' && LEGACY_ACADEMY_TIERS.has(normalizedTier);
-
-	if (!hasLegacyWindow && !hasLegacyTier) return null;
+	if (normalizedProductType !== 'academy') return null;
+	if (!legacyStart && !legacyEnd) return null;
 
 	return normalizeSubscriptionRecord({
 		product_type: normalizedProductType,
 		status: legacyEnd && Date.parse(legacyEnd) < Date.now() ? 'expired' : 'active',
-		start_date: legacyStart || candidate.created_at || candidate.createdAt || new Date().toISOString(),
+		start_date: legacyStart || null,
 		end_date: legacyEnd,
 		renewal_date:
 			(candidate.auto_renew ?? candidate.autoRenew ?? true) && legacyEnd ? legacyEnd : null,
