@@ -273,6 +273,19 @@ export default async function handler(req, res) {
   }
 
   const availableColumns = new Set(Object.keys(deal || {}));
+  let currentManagementCompany = null;
+
+  if (deal.management_company_id) {
+    const { data: linkedCompany, error: linkedCompanyLookupError } = await supabase
+      .from('management_companies')
+      .select('id, operator_name, website, authorized_emails')
+      .eq('id', deal.management_company_id)
+      .single();
+
+    if (!linkedCompanyLookupError) {
+      currentManagementCompany = linkedCompany || null;
+    }
+  }
 
   // Verify: user must be in authorized_emails for this deal's company, or be admin
   const isAdmin = ADMIN_EMAILS.includes(user.email.toLowerCase());
@@ -282,13 +295,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Deal has no linked company' });
     }
 
-    const { data: company } = await supabase
-      .from('management_companies')
-      .select('authorized_emails')
-      .eq('id', deal.management_company_id)
-      .single();
-
-    const authorizedEmails = (company?.authorized_emails || []).map(e => e.toLowerCase());
+    const authorizedEmails = (currentManagementCompany?.authorized_emails || []).map(e => e.toLowerCase());
     if (!authorizedEmails.includes(user.email.toLowerCase())) {
       return res.status(403).json({ error: 'Not authorized for this deal' });
     }
@@ -312,7 +319,7 @@ export default async function handler(req, res) {
   const requestedCompanyWebsite =
     'companyWebsite' in candidateBody ? String(candidateBody.companyWebsite || '').trim() : undefined;
   let touchedManagementCompany = false;
-  let resolvedCompanyWebsite = deal.management_company?.website || '';
+  let resolvedCompanyWebsite = currentManagementCompany?.website || '';
 
   if (candidateBody.createManagementCompany === true && !candidateBody.managementCompanyId && requestedSponsorName) {
     const { data: createdCompany, error: createCompanyError } = await supabase
@@ -333,16 +340,26 @@ export default async function handler(req, res) {
     touchedManagementCompany = true;
     resolvedCompanyWebsite = requestedCompanyWebsite || '';
 
-    await supabase
+    const operatorPermissionUpsert = await supabase
       .from('operator_permissions')
-      .upsert({ management_company_id: createdCompany.id }, { onConflict: 'management_company_id' })
-      .catch(() => {});
+      .upsert({ management_company_id: createdCompany.id }, { onConflict: 'management_company_id' });
+
+    if (operatorPermissionUpsert.error) {
+      console.warn('Operator permissions upsert failed:', operatorPermissionUpsert.error);
+    }
   } else if (candidateBody.managementCompanyId) {
-    const { data: linkedCompany, error: linkedCompanyError } = await supabase
-      .from('management_companies')
-      .select('id, operator_name, website')
-      .eq('id', candidateBody.managementCompanyId)
-      .single();
+    let linkedCompany = currentManagementCompany;
+    let linkedCompanyError = null;
+
+    if (!linkedCompany || linkedCompany.id !== candidateBody.managementCompanyId) {
+      const linkedCompanyResponse = await supabase
+        .from('management_companies')
+        .select('id, operator_name, website')
+        .eq('id', candidateBody.managementCompanyId)
+        .single();
+      linkedCompany = linkedCompanyResponse.data;
+      linkedCompanyError = linkedCompanyResponse.error;
+    }
 
     if (linkedCompanyError || !linkedCompany) {
       return res.status(400).json({ error: 'Selected sponsor record was not found' });
@@ -375,6 +392,10 @@ export default async function handler(req, res) {
 
     candidateBody.sponsorName = nextCompany.operator_name;
     resolvedCompanyWebsite = nextCompany.website || '';
+    currentManagementCompany = {
+      ...(currentManagementCompany || {}),
+      ...nextCompany
+    };
   }
 
   const updates = {};
@@ -428,15 +449,22 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to save deal' });
   }
 
+  const responseDeal = {
+    ...updatedDeal,
+    slug: updatedDeal?.slug || slugify(updatedDeal?.investment_name || ''),
+    mcWebsite: resolvedCompanyWebsite,
+    companyWebsite: resolvedCompanyWebsite
+  };
+
+  for (const camelKey of omitted) {
+    if (!(camelKey in candidateBody)) continue;
+    responseDeal[camelKey] = normalizeValue(camelKey, candidateBody[camelKey]);
+  }
+
   return res.status(200).json({
     success: true,
     updated,
     omitted,
-    deal: {
-      ...updatedDeal,
-      slug: updatedDeal?.slug || slugify(updatedDeal?.investment_name || ''),
-      mcWebsite: resolvedCompanyWebsite,
-      companyWebsite: resolvedCompanyWebsite
-    }
+    deal: responseDeal
   });
 }

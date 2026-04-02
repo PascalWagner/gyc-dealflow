@@ -1369,11 +1369,7 @@
 			teamContacts = persistedContacts;
 
 			const dealSupportsTeamSnapshot =
-				Boolean(deal)
-				&& (
-					Object.prototype.hasOwnProperty.call(deal, 'team_contacts')
-					|| Object.prototype.hasOwnProperty.call(deal, 'teamContacts')
-				);
+				deal?.teamContactsSnapshotSupported === true;
 
 			if (dealSupportsTeamSnapshot) {
 				try {
@@ -1393,6 +1389,7 @@
 							{
 								...(deal || {}),
 								...dealSnapshotPayload.deal,
+								teamContactsSnapshotSupported: true,
 								team_contacts: persistedContacts,
 								teamContacts: persistedContacts
 							},
@@ -1401,6 +1398,7 @@
 					} else {
 						deal = {
 							...(deal || {}),
+							teamContactsSnapshotSupported: deal?.teamContactsSnapshotSupported === true,
 							team_contacts: persistedContacts,
 							teamContacts: persistedContacts
 						};
@@ -1408,6 +1406,7 @@
 				} catch {
 					deal = {
 						...(deal || {}),
+						teamContactsSnapshotSupported: deal?.teamContactsSnapshotSupported === true,
 						team_contacts: persistedContacts,
 						teamContacts: persistedContacts
 					};
@@ -1415,6 +1414,7 @@
 			} else {
 				deal = {
 					...(deal || {}),
+					teamContactsSnapshotSupported: false,
 					team_contacts: persistedContacts,
 					teamContacts: persistedContacts
 				};

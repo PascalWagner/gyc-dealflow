@@ -625,7 +625,19 @@
 
 	function formatReviewDate(ds) {
 		if (!ds) return '';
-		return new Date(ds).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+		const raw = String(ds).trim();
+		const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+		if (dateOnlyMatch) {
+			const [, year, month, day] = dateOnlyMatch;
+			return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric'
+			});
+		}
+		const parsed = new Date(raw);
+		if (Number.isNaN(parsed.getTime())) return raw;
+		return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 	}
 
 	function statusBadgeClass(status) {
