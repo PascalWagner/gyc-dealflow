@@ -57,6 +57,32 @@ function formatOfferingTypeFromFiling(filing) {
 	return '';
 }
 
+function readDealIssuerIdentity(deal = {}) {
+	const issuerEntity = String(deal?.issuer_entity || deal?.issuerEntity || '').trim();
+	const secEntityName = String(deal?.sec_entity_name || deal?.secEntityName || '').trim();
+	return {
+		issuerEntity,
+		secEntityName,
+		expectedIssuer: issuerEntity || secEntityName || '',
+		expectedIssuerLabel: issuerEntity ? 'PPM says' : 'Deal says'
+	};
+}
+
+function shouldSyncVerifiedDealIdentity(deal = {}, filing = null) {
+	if (!deal?.id || !filing?.id) return false;
+
+	const expectedSecCik = String(deal?.sec_cik || deal?.secCik || '').trim();
+	const expectedSecEntityName = String(deal?.sec_entity_name || deal?.secEntityName || '').trim();
+	const { issuerEntity } = readDealIssuerIdentity(deal);
+
+	return (
+		!issuerEntity
+		|| !expectedSecEntityName
+		|| normalizeText(expectedSecEntityName) !== normalizeText(filing.entity_name || '')
+		|| normalizeText(expectedSecCik) !== normalizeText(filing.cik || '')
+	);
+}
+
 function buildSearchContextSummary(searchContext = {}) {
 	const legalEntities = searchContext?.legalEntities || {};
 	return {
@@ -84,7 +110,8 @@ function buildSecDiscrepancies({ deal = {}, filing = null, searchContext = {} } 
 	if (!filing) return [];
 
 	const discrepancies = [];
-	const expectedIssuer = searchContext?.legalEntities?.issuerEntity || '';
+	const expectedIssuerState = readDealIssuerIdentity(deal);
+	const expectedIssuer = expectedIssuerState.expectedIssuer || searchContext?.legalEntities?.issuerEntity || '';
 	const expectedOfferingType = String(deal?.offering_type || deal?.offeringType || '').trim();
 	const expectedAvailableTo = String(deal?.available_to || deal?.availableTo || '').trim().toLowerCase();
 	const expectedMinimum = toNumber(deal?.investment_minimum ?? deal?.investmentMinimum);
@@ -96,7 +123,7 @@ function buildSecDiscrepancies({ deal = {}, filing = null, searchContext = {} } 
 	if (expectedIssuer && filing.entity_name && normalizeText(expectedIssuer) !== normalizeText(filing.entity_name)) {
 		discrepancies.push({
 			label: 'Issuer name differs',
-			detail: `PPM/deal says ${expectedIssuer}; SEC filing says ${filing.entity_name}.`
+			detail: `${expectedIssuerState.expectedIssuerLabel} ${expectedIssuer}; SEC filing says ${filing.entity_name}.`
 		});
 	}
 
@@ -454,8 +481,24 @@ async function handleGet(req, res, supabase, viewerContext) {
 	const dealId = String(req.query?.dealId || '').trim();
 	if (!isUuid(dealId)) return res.status(400).json({ error: 'dealId is required' });
 
-	const context = await loadDealContext(supabase, dealId, viewerContext);
+	let context = await loadDealContext(supabase, dealId, viewerContext);
 	if (!context.deal) return res.status(404).json({ error: 'Deal not found' });
+
+	if (
+		normalizeSecVerificationStatus(context.record?.status) === 'verified'
+		&& context.record?.sec_filing_id
+		&& context.filing?.id
+		&& shouldSyncVerifiedDealIdentity(context.deal, context.filing)
+	) {
+		await applySecFilingToDeal({
+			supabase,
+			deal: context.deal,
+			secFilingId: context.record.sec_filing_id,
+			filing: context.filing,
+			options: { forceIdentitySync: true }
+		});
+		context = await loadDealContext(supabase, dealId, viewerContext);
+	}
 
 	return res.status(200).json(await buildResponsePayload({
 		supabase,
@@ -618,7 +661,8 @@ async function handleConfirmMatch(req, res, supabase, viewerContext) {
 		supabase,
 		deal: context.deal,
 		secFilingId: filingId,
-		filing
+		filing,
+		options: { forceIdentitySync: true }
 	});
 
 	const nextRecord = await upsertVerificationRecord(supabase, {

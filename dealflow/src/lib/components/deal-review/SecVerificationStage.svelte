@@ -11,6 +11,7 @@
 	let {
 		dealId = '',
 		deal = null,
+		initialPayload = null,
 		autoload = true,
 		refreshKey = 0,
 		onchange = () => {}
@@ -255,9 +256,14 @@
 	}
 
 	onMount(() => {
-		if (autoload && dealId) {
-			lastLoadedDealId = dealId;
-			lastRefreshKey = refreshKey;
+		if (!dealId) return;
+		lastLoadedDealId = dealId;
+		lastRefreshKey = refreshKey;
+		if (initialPayload) {
+			syncPayload(initialPayload, { resetNote: true });
+			return;
+		}
+		if (autoload) {
 			void load();
 		}
 	});
@@ -270,6 +276,13 @@
 		noteDraft = '';
 		lastLoadedDealId = dealId;
 		void load();
+	});
+
+	$effect(() => {
+		if (!dealId || !initialPayload) return;
+		if (loading) return;
+		if (dealId !== lastLoadedDealId) return;
+		syncPayload(initialPayload, { resetNote: true });
 	});
 
 	$effect(() => {

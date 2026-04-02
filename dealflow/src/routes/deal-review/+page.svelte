@@ -2138,6 +2138,7 @@
 						<SecVerificationStage
 							dealId={dealId}
 							deal={deal}
+							initialPayload={secVerificationContext}
 							refreshKey={secStageRefreshKey}
 							onchange={(nextContext) => {
 								secVerificationContext = nextContext;

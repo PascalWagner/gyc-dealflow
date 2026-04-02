@@ -668,7 +668,16 @@ export async function fetchAndStoreSecFiling({
 	});
 }
 
-export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}) {
+function normalizeComparableText(value) {
+	return String(value || '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}, options = {}) {
+	const forceIdentitySync = options?.forceIdentitySync === true;
 	const federalExemptions = Array.isArray(filing.federal_exemptions)
 		? filing.federal_exemptions
 		: [];
@@ -685,8 +694,22 @@ export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}) {
 	if (filing.total_amount_sold) updates.total_amount_sold = filing.total_amount_sold;
 	if (filing.total_investors) updates.total_investors = filing.total_investors;
 	if (filing.cik) updates.sec_cik = filing.cik;
-	if ('issuer_entity' in deal && !deal.issuer_entity && filing.entity_name) updates.issuer_entity = filing.entity_name;
-	if ('sec_entity_name' in deal && !deal.sec_entity_name && filing.entity_name) updates.sec_entity_name = filing.entity_name;
+	if (filing.entity_name) {
+		const currentIssuerEntity = String(deal.issuer_entity || '').trim();
+		const currentSecEntityName = String(deal.sec_entity_name || '').trim();
+		const issuerMatchesCurrentSecEntity =
+			currentIssuerEntity
+			&& currentSecEntityName
+			&& normalizeComparableText(currentIssuerEntity) === normalizeComparableText(currentSecEntityName);
+
+		if ('issuer_entity' in deal && (!currentIssuerEntity || (forceIdentitySync && issuerMatchesCurrentSecEntity))) {
+			updates.issuer_entity = filing.entity_name;
+		}
+
+		if ('sec_entity_name' in deal && (forceIdentitySync || !currentSecEntityName)) {
+			updates.sec_entity_name = filing.entity_name;
+		}
+	}
 
 	if (!deal.investment_name && filing.entity_name) updates.investment_name = filing.entity_name;
 	if (!deal.instrument) {
@@ -702,13 +725,14 @@ export async function applySecFilingToDeal({
 	supabase,
 	deal,
 	secFilingId,
-	filing
+	filing,
+	options = {}
 }) {
 	if (!deal?.id) throw new Error('Deal is required');
 	if (!secFilingId) throw new Error('SEC filing ID is required');
 	if (!filing) throw new Error('SEC filing payload is required');
 
-	const { updates, is506b } = buildDealUpdatesFromSecFiling(deal, filing);
+	const { updates, is506b } = buildDealUpdatesFromSecFiling(deal, filing, options);
 
 	await supabase.from('sec_filings').update({ opportunity_id: deal.id }).eq('id', secFilingId);
 
