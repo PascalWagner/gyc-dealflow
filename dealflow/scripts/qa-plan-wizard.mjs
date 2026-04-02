@@ -162,6 +162,15 @@ const partialProgressFixture = {
 	targetCashFlow: '24000'
 };
 
+const zeroBaselineFixture = {
+	_branch: 'cashflow',
+	branch: 'cashflow',
+	goal: 'Cash Flow (income now)',
+	dealExperience: 1,
+	lpDealsCount: 1,
+	baselineIncome: '0'
+};
+
 async function installApiMocks(page, fixture) {
 	const requestFailures = [];
 	const consoleErrors = [];
@@ -409,6 +418,46 @@ async function runPartialProgressScenario(browser) {
 	await context.close();
 }
 
+async function runSavedAnswerHydrationScenario(browser) {
+	const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+	const page = await context.newPage();
+	const errors = await installApiMocks(page, {});
+	await seedSession(page);
+
+	await page.goto(`${BASE_URL}/app/plan?stage=starting-point&edit=1&branch=cashflow&flow=free`);
+	await page.waitForLoadState('networkidle');
+	await page.waitForSelector('.plan-setup-card');
+	assert.equal(
+		await page.locator('.plan-setup-card .wizard-card.ob-surface').count(),
+		0,
+		'hydration: wizard should not render an inner surfaced card'
+	);
+	await assertTitle(page, 'Where are you starting from?');
+	assert.equal(await page.locator('.money-input').inputValue(), '', 'hydration: baseline input should start empty before saved data is pushed in');
+
+	await page.evaluate(({ fixture }) => {
+		localStorage.setItem(
+			'__gycScoped__member%40example.com__gycBuyBoxWizard',
+			JSON.stringify(fixture)
+		);
+		window.dispatchEvent(new CustomEvent('gyc:user-scoped-state-updated'));
+	}, { fixture: zeroBaselineFixture });
+
+	await page.waitForFunction(() => document.querySelector('.money-input')?.value === '0');
+	assert.equal(await page.locator('.money-input').inputValue(), '0', 'hydration: saved zero baseline should render in the input');
+	assert.equal(
+		await page.locator('.pill-chip.selected').first().textContent(),
+		'$0',
+		'hydration: saved zero baseline should keep the preset selected'
+	);
+
+	assert.deepEqual(errors.consoleErrors, [], 'hydration: console errors');
+	assert.deepEqual(errors.pageErrors, [], 'hydration: page errors');
+	assert.deepEqual(errors.requestFailures, [], 'hydration: request failures');
+
+	await context.close();
+}
+
 async function assertTitle(page, expected) {
 	await page.waitForFunction((title) => {
 		const el = document.querySelector('.ob-title');
@@ -594,7 +643,8 @@ async function main() {
 		await runPlanBuilderInteractionScenario(browser);
 		await runPlanRowOverrideScenario(browser);
 		await runPartialProgressScenario(browser);
-		console.log('Plan wizard QA passed for cashflow, growth, tax, profile review jump scenarios, global plan controls, row overrides, drag-and-drop timing changes, and partial-progress returning user scenarios.');
+		await runSavedAnswerHydrationScenario(browser);
+		console.log('Plan wizard QA passed for cashflow, growth, tax, profile review jump scenarios, global plan controls, row overrides, drag-and-drop timing changes, partial-progress returning user scenarios, and saved-answer hydration/prefill.');
 	} finally {
 		await browser.close();
 	}

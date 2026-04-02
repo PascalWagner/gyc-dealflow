@@ -69,22 +69,72 @@
 	let planDropYear = null;
 	let planDropBeforeSlotId = null;
 	let planFieldState = {};
+	let hasLocalEdits = false;
+	let lastHydratedInitialDataKey = '';
 
-	function sequenceSourceData() {
-		const inferredBranch = wizardData._branch || forcedBranch || flowKeyToBranch(forcedFlowKey);
-		if (!inferredBranch || wizardData._branch === inferredBranch) return wizardData;
+	function sequenceSourceData(data = wizardData) {
+		const normalized = normalizeWizardData(data);
+		const inferredBranch = normalized._branch || forcedBranch || flowKeyToBranch(forcedFlowKey);
+		if (!inferredBranch || normalized._branch === inferredBranch) return normalized;
 		return normalizeWizardData({
-			...wizardData,
+			...normalized,
 			_branch: inferredBranch,
 			branch: inferredBranch
 		});
 	}
 
-	$: sequence = fullPlanMode
-		? getStepSequence(sequenceSourceData(), { editing: forceEdit, includePaidFlow: true })
-		: forcedFlowKey && STEP_SEQUENCE[forcedFlowKey]
-			? [...STEP_SEQUENCE[forcedFlowKey]]
-			: getStepSequence(wizardData, { editing: forceEdit, includePaidFlow: false });
+	function sequenceForData(data = wizardData) {
+		const source = sequenceSourceData(data);
+		return fullPlanMode
+			? getStepSequence(source, { editing: forceEdit, includePaidFlow: true })
+			: forcedFlowKey && STEP_SEQUENCE[forcedFlowKey]
+				? [...STEP_SEQUENCE[forcedFlowKey]]
+				: getStepSequence(source, { editing: forceEdit, includePaidFlow: false });
+	}
+
+	function serializeWizardState(data = {}) {
+		return JSON.stringify(normalizeWizardData(data));
+	}
+
+	function hydrateWizardDataFromProps({ preserveCurrentStep = true } = {}) {
+		let nextWizardData = normalizeWizardData(initialData);
+		const inferredBranch = forcedBranch || flowKeyToBranch(forcedFlowKey);
+		if (inferredBranch && !nextWizardData._branch) {
+			nextWizardData = applyGoalDefaults(nextWizardData, inferredBranch);
+		}
+		if (forceEdit) {
+			nextWizardData = { ...nextWizardData, _isEditing: true };
+		}
+
+		const nextSequence = sequenceForData(nextWizardData);
+		const currentStage = preserveCurrentStep ? currentStep : '';
+		let nextIndex = currentStage ? nextSequence.indexOf(currentStage) : -1;
+		if (nextIndex < 0) nextIndex = stepIndexForStage(nextSequence, forcedStage);
+		if (nextIndex < 0) nextIndex = 0;
+		if (!preserveCurrentStep && !forcedStage) {
+			while (
+				nextIndex < nextSequence.length - 1 &&
+				shouldSkipPrefilledStep(nextSequence[nextIndex], nextWizardData, {
+					editing: forceEdit,
+					forcedStage: Boolean(forcedStage)
+				})
+			) {
+				nextIndex += 1;
+			}
+		}
+
+		wizardData = nextWizardData;
+		wizardStepIndex = nextIndex;
+		lastHydratedInitialDataKey = serializeWizardState(nextWizardData);
+		hasLocalEdits = false;
+	}
+
+	function moneyInputValue(value) {
+		if (value === undefined || value === null || value === '') return '';
+		return String(parseDollar(value));
+	}
+
+	$: sequence = sequenceForData(wizardData);
 	$: if (sequence.length && wizardStepIndex > sequence.length - 1) wizardStepIndex = sequence.length - 1;
 	$: currentStep = sequence[wizardStepIndex] || sequence[0] || STEP.GOAL;
 	$: currentPhase = phaseForStep(currentStep);
@@ -118,6 +168,10 @@
 			editMode: forceEdit
 		});
 	}
+	$: initialDataKey = serializeWizardState(initialData);
+	$: if (initialized && !hasLocalEdits && initialDataKey !== lastHydratedInitialDataKey) {
+		hydrateWizardDataFromProps({ preserveCurrentStep: true });
+	}
 
 	onMount(async () => {
 		initializeWizard();
@@ -126,21 +180,7 @@
 
 	function initializeWizard() {
 		if (initialized) return;
-		wizardData = normalizeWizardData(initialData);
-		const inferredBranch = forcedBranch || flowKeyToBranch(forcedFlowKey);
-		if (inferredBranch && !wizardData._branch) {
-			wizardData = applyGoalDefaults(wizardData, inferredBranch);
-		}
-		if (forceEdit) {
-			wizardData = { ...wizardData, _isEditing: true };
-		}
-
-		let nextIndex = stepIndexForStage(sequence, forcedStage);
-		if (nextIndex < 0) nextIndex = 0;
-		wizardStepIndex = nextIndex;
-		if (!forcedStage) {
-			skipAnsweredSteps();
-		}
+		hydrateWizardDataFromProps({ preserveCurrentStep: false });
 		initialized = true;
 	}
 
@@ -163,9 +203,10 @@
 		}
 	}
 
-	function setWizardData(next, { autosave = true } = {}) {
+	function setWizardData(next, { autosave = true, markDirty = true } = {}) {
 		wizardData = normalizeWizardData(next);
 		validationError = '';
+		if (markDirty) hasLocalEdits = true;
 		if (browser) {
 			writeUserScopedJson('gycBuyBoxWizard', wizardData);
 		}
@@ -357,12 +398,13 @@
 		if (!sessionUser?.email) return;
 
 		saving = true;
+		let saveSucceeded = false;
 		try {
 			const realUser = currentAdminRealUser();
 			const isAdminImpersonation =
 				!!realUser?.email &&
 				realUser.email.toLowerCase() !== String(sessionUser.email || '').toLowerCase();
-			await fetch('/api/buybox', {
+			const response = await fetch('/api/buybox', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -374,11 +416,16 @@
 					...(isAdminImpersonation ? { admin: true } : {})
 				})
 			});
-			saveMessage = markComplete ? 'Plan saved' : 'Progress saved';
+			saveSucceeded = response.ok;
+			saveMessage = response.ok ? (markComplete ? 'Plan saved' : 'Progress saved') : 'Saved locally';
 		} catch {
 			saveMessage = 'Saved locally';
 		} finally {
 			saving = false;
+			if (saveSucceeded) {
+				hasLocalEdits = false;
+				lastHydratedInitialDataKey = serializeWizardState(wizardData);
+			}
 			dispatch('state', {
 				wizardData: normalizeWizardData(wizardData)
 			});
@@ -843,7 +890,7 @@
 					min="0"
 					step="1000"
 					class="money-input"
-					value={parseDollar(wizardData.baselineIncome) || ''}
+					value={moneyInputValue(wizardData.baselineIncome)}
 					oninput={(event) => updateField('baselineIncome', event.currentTarget.value)}
 				/>
 				<div class="preset-row">
@@ -947,7 +994,7 @@
 					min="0"
 					step="1000"
 					class="money-input"
-					value={parseDollar(wizardData.targetCashFlow) || ''}
+					value={moneyInputValue(wizardData.targetCashFlow)}
 					oninput={(event) => updateField('targetCashFlow', event.currentTarget.value)}
 				/>
 				<div class="preset-row">
@@ -968,7 +1015,7 @@
 					min="0"
 					step="1000"
 					class="money-input"
-					value={parseDollar(wizardData.growthCapital) || ''}
+					value={moneyInputValue(wizardData.growthCapital)}
 					oninput={(event) => updateField('growthCapital', event.currentTarget.value)}
 				/>
 				<div class="preset-row">
@@ -987,7 +1034,7 @@
 					min="0"
 					step="1000"
 					class="money-input"
-					value={parseDollar(wizardData.taxableIncome) || ''}
+					value={moneyInputValue(wizardData.taxableIncome)}
 					oninput={(event) => updateField('taxableIncome', event.currentTarget.value)}
 				/>
 				<div class="preset-row">
@@ -1018,7 +1065,7 @@
 					min="0"
 					step="1000"
 					class="money-input"
-					value={parseDollar(wizardData.taxableIncomeBaseline) || ''}
+					value={moneyInputValue(wizardData.taxableIncomeBaseline)}
 					oninput={(event) => updateField('taxableIncomeBaseline', event.currentTarget.value)}
 				/>
 				<div class="preset-row">
@@ -1040,7 +1087,7 @@
 					min="0"
 					step="1000"
 					class="money-input"
-					value={parseDollar(wizardData.netWorth) || ''}
+					value={moneyInputValue(wizardData.netWorth)}
 					oninput={(event) => updateField('netWorth', event.currentTarget.value)}
 				/>
 				<div class="preset-row">
