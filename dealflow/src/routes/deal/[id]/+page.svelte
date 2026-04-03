@@ -1832,12 +1832,10 @@
 											</article>
 										{/each}
 									</div>
-									<div class="investclearly-coming-soon-overlay">
-										<div class="investclearly-coming-soon-badge">Coming Soon</div>
-										<div class="investclearly-coming-soon-copy">
-											Sponsor-level third-party reviews will live here once Invest Clearly launches.
-										</div>
-									</div>
+								</div>
+								<div class="investclearly-coming-soon-overlay">
+									<div class="investclearly-coming-soon-badge">Coming Soon</div>
+									<div class="investclearly-coming-soon-copy">Sponsor-level third-party reviews will live here once Invest Clearly launches.</div>
 								</div>
 							</div>
 						</div>
@@ -2370,6 +2368,7 @@
 		.investclearly-body {
 			padding-top: 18px;
 			position: relative;
+			overflow: hidden;
 		}
 		.investclearly-preview-surface {
 			position: relative;
