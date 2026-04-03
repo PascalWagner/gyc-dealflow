@@ -80,63 +80,9 @@ IMPORTANT:
 - For fees, extract BOTH the "fees" field (full text description) AND the individual fee percentage fields
 - For secEntityName and issuerEntity, return the exact legal issuer name rather than the marketing name`;
 
-// Map Claude extraction keys → Supabase column names
-const SUPABASE_FIELD_MAP = {
-  investmentName:      'investment_name',
-  assetClass:          'asset_class',
-  dealType:            'deal_type',
-  strategy:            'strategy',
-  investmentStrategy:  'investment_strategy',
-  targetIRR:           'target_irr',
-  preferredReturn:     'preferred_return',
-  cashOnCash:          'cash_on_cash',
-  equityMultiple:      'equity_multiple',
-  investmentMinimum:   'investment_minimum',
-  holdPeriod:          'hold_period_years',
-  offeringSize:        'offering_size',
-  purchasePrice:       'purchase_price',
-  offeringType:        'offering_type',
-  availableTo:         'available_to',
-  distributions:       'distributions',
-  lpGpSplit:           'lp_gp_split',
-  fees:                'fees',
-  financials:          'financials',
-  investingGeography:  'investing_geography',
-  instrument:          'instrument',
-  debtPosition:        'debt_position',
-  fundAUM:             'fund_aum',
-  totalLoansUnderMgmt: 'total_loans_under_mgmt',
-  equityCommitments:   'equity_commitments',
-  avgLoanLTC:          'avg_loan_ltc',
-  performanceFeePct:   'performance_fee_pct',
-  inceptionDate:       'inception_date',
-  fundTerm:            'fund_term',
-  sponsorCoinvest:     'sponsor_in_deal_pct',
-  propertyAddress:        'property_address',
-  unitCount:              'unit_count',
-  yearBuilt:              'year_built',
-  squareFootage:          'square_footage',
-  occupancyPct:           'occupancy_pct',
-  propertyType:           'property_type',
-  acquisitionLoan:        'acquisition_loan',
-  loanToValue:            'loan_to_value',
-  loanRate:               'loan_rate',
-  loanTermYears:          'loan_term_years',
-  loanIOYears:            'loan_io_years',
-  capexBudget:            'capex_budget',
-  closingCosts:           'closing_costs',
-  acquisitionFeePct:      'acquisition_fee_pct',
-  assetMgmtFeePct:        'asset_mgmt_fee_pct',
-  propertyMgmtFeePct:     'property_mgmt_fee_pct',
-  capitalEventFeePct:     'capital_event_fee_pct',
-  dispositionFeePct:      'disposition_fee_pct',
-  constructionMgmtFeePct: 'construction_mgmt_fee_pct',
-  waterfallDetails:       'waterfall_details',
-  secEntityName:          'sec_entity_name',
-  issuerEntity:           'issuer_entity',
-  gpEntity:               'gp_entity',
-  sponsorEntity:          'sponsor_entity',
-};
+// Use shared field map + numeric sanitization
+import { DEAL_FIELD_MAP, NUMERIC_DEAL_COLS, sanitizeNumericValue } from './_field-map.js';
+const SUPABASE_FIELD_MAP = DEAL_FIELD_MAP;
 
 export default async function handler(req, res) {
   setCors(res);

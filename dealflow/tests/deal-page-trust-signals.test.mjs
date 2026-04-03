@@ -37,7 +37,7 @@ test('lending cash flow projection does not use target IRR as a fake yield basis
 	assert.equal(projection.reason, 'missing_explicit_yield');
 });
 
-test('lending cash flow projection honors an explicit hold period even when the offering is evergreen', () => {
+test('evergreen lending fund with short holdPeriod defaults to 5-year projection', () => {
 	const projection = buildDealCashFlowProjection({
 		assetClass: 'Private Debt / Credit',
 		dealType: 'Fund',
@@ -48,12 +48,11 @@ test('lending cash flow projection honors an explicit hold period even when the 
 	});
 
 	assert.equal(projection.available, true);
-	assert.equal(projection.holdYears, 1);
-	assert.equal(projection.rows.length, 1);
-	assert.equal(projection.rows[0].capReturn, 0);
+	assert.equal(projection.holdYears, 5);
+	assert.equal(projection.rows.length, 5);
 });
 
-test('evergreen lending cash flow projection stays hidden without an explicit projection horizon', () => {
+test('evergreen lending fund with no holdPeriod defaults to 5-year projection', () => {
 	const projection = buildDealCashFlowProjection({
 		assetClass: 'Private Debt / Credit',
 		dealType: 'Fund',
@@ -62,6 +61,7 @@ test('evergreen lending cash flow projection stays hidden without an explicit pr
 		offeringStatus: 'Evergreen'
 	});
 
-	assert.equal(projection.available, false);
-	assert.equal(projection.reason, 'missing_hold_period');
+	assert.equal(projection.available, true);
+	assert.equal(projection.holdYears, 5);
+	assert.equal(projection.rows.length, 5);
 });

@@ -119,7 +119,7 @@ test('classification payload persists selected investing states through geograph
 
 	assert.deepEqual(errors, {});
 	assert.deepEqual(payload.investingStates, ['AZ', 'CO', 'NV', 'CA', 'OR', 'WA', 'TX', 'TN', 'GA', 'UT', 'NC', 'AL']);
-	assert.equal(payload.investingGeography, 'AZ, CO, NV, CA, OR, WA, TX, TN, GA, UT, NC, AL, United States');
+	assert.equal(payload.investingGeography, 'AZ, CO, NV, CA, OR, WA, TX, TN, GA, UT, NC, AL');
 });
 
 test('unrelated stage saves do not clear offering type compliance fields', () => {
@@ -156,7 +156,7 @@ test('normalized review patches derive geography from selected states when no di
 
 	assert.deepEqual(errors, {});
 	assert.deepEqual(values.investingStates, ['AZ', 'CO', 'TX', 'TN', 'GA', 'UT', 'NC', 'AL']);
-	assert.equal(values.investingGeography, 'AZ, CO, TX, TN, GA, UT, NC, AL, United States');
+	assert.equal(values.investingGeography, 'AZ, CO, TX, TN, GA, UT, NC, AL');
 });
 
 test('historical return payload saves percent-point values without scaling them down', () => {

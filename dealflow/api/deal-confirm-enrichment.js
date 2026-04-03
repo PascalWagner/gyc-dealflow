@@ -3,41 +3,10 @@
 // Only updates fields that are currently empty in the database.
 
 import { getAdminClient, setCors } from './_supabase.js';
+import { DEAL_FIELD_MAP, NUMERIC_DEAL_COLS, sanitizeNumericValue } from './_field-map.js';
 
-const SUPABASE_FIELD_MAP = {
-  investmentName:      'investment_name',
-  managementCompany:   'management_company',
-  ceo:                 'ceo',
-  assetClass:          'asset_class',
-  dealType:            'deal_type',
-  strategy:            'strategy',
-  investmentStrategy:  'investment_strategy',
-  targetIRR:           'target_irr',
-  preferredReturn:     'preferred_return',
-  cashOnCash:          'cash_on_cash',
-  equityMultiple:      'equity_multiple',
-  investmentMinimum:   'investment_minimum',
-  holdPeriod:          'hold_period_years',
-  offeringSize:        'offering_size',
-  purchasePrice:       'purchase_price',
-  offeringType:        'offering_type',
-  availableTo:         'available_to',
-  distributions:       'distributions',
-  lpGpSplit:           'lp_gp_split',
-  fees:                'fees',
-  financials:          'financials',
-  investingGeography:  'investing_geography',
-  instrument:          'instrument',
-  debtPosition:        'debt_position',
-  fundAUM:             'fund_aum',
-  totalLoansUnderMgmt: 'total_loans_under_mgmt',
-  equityCommitments:   'equity_commitments',
-  avgLoanLTC:          'avg_loan_ltc',
-  performanceFeePct:   'performance_fee_pct',
-  inceptionDate:       'inception_date',
-  fundTerm:            'fund_term',
-  sponsorCoinvest:     'sponsor_in_deal_pct',
-};
+// Use shared field map — no longer silently drops confirmed fields
+const SUPABASE_FIELD_MAP = DEAL_FIELD_MAP;
 
 export default async function handler(req, res) {
   setCors(res);

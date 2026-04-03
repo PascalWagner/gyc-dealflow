@@ -15,6 +15,9 @@ import {
 	normalizeReviewFieldStateMap,
 	resolveFinalReviewFieldValue
 } from '../../src/lib/utils/reviewFieldState.js';
+// Shared field map is the canonical source — this file's local FIELD_MAP
+// is kept as the authoritative reference but should be migrated to _field-map.js
+// import { getDealFieldMapWithHistoricalReturns, NUMERIC_DEAL_COLS, JSON_ARRAY_DEAL_COLS } from '../_field-map.js';
 
 const HISTORICAL_RETURN_START_YEAR = 2015;
 const HISTORICAL_RETURN_END_YEAR = new Date().getFullYear() - 1;

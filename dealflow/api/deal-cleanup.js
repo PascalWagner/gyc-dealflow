@@ -388,35 +388,9 @@ IMPORTANT:
 - Use the full document as context, not just the first pages.
 - Do not infer a legal entity if the document does not explicitly state it.`;
 
-// Map AI extraction keys → Supabase column names
-const FIELD_MAP = {
-  investmentName:      'investment_name',
-  assetClass:          'asset_class',
-  dealType:            'deal_type',
-  strategy:            'strategy',
-  investmentStrategy:  'investment_strategy',
-  targetIRR:           'target_irr',
-  preferredReturn:     'preferred_return',
-  cashOnCash:          'cash_on_cash',
-  equityMultiple:      'equity_multiple',
-  investmentMinimum:   'investment_minimum',
-  holdPeriod:          'hold_period_years',
-  offeringSize:        'offering_size',
-  purchasePrice:       'purchase_price',
-  offeringType:        'offering_type',
-  availableTo:         'available_to',
-  distributions:       'distributions',
-  lpGpSplit:           'lp_gp_split',
-  fees:                'fees',
-  financials:          'financials',
-  investingGeography:  'investing_geography',
-  instrument:          'instrument',
-  secEntityName:       'sec_entity_name',
-  issuerEntity:        'issuer_entity',
-  gpEntity:            'gp_entity',
-  sponsorEntity:       'sponsor_entity',
-  status:              'status',
-};
+// Use shared field map — only keys present in AI output get persisted
+import { getDealFieldMapWithHistoricalReturns } from './_field-map.js';
+const FIELD_MAP = getDealFieldMapWithHistoricalReturns();
 
 function cleanEntityValue(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
