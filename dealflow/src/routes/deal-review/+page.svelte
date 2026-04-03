@@ -1575,7 +1575,7 @@
 			await saveIntakeDetails();
 			let nextDealState = deal ? { ...deal } : null;
 
-			if (deckFile || ppmFile) {
+			if ((deckFile || ppmFile) && autoExtract !== false) {
 				const actor = getActorFromSession();
 				if (actor.session?.token) {
 					const tokenState = await ensureSessionUserToken(actor.session);
@@ -1616,7 +1616,9 @@
 				}
 
 				if (warnings.length > 0) {
-					throw new Error(warnings.join('\n'));
+					console.warn('Document upload warnings:', warnings);
+					uploadError = warnings.join('\n');
+					// Don't block the flow — continue to next step even if upload had issues
 				}
 			}
 
