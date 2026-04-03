@@ -1,74 +1,25 @@
-	<script>
+<script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import InvestorShowcase from '$lib/components/marketing/InvestorShowcase.svelte';
 	import { SESSION_VERSION, buildAccessModel, normalizeEmail } from '$lib/auth/access-model.js';
 	import { setStoredSessionUser } from '$lib/stores/auth.js';
 	import { normalizePrivacyProfile } from '$lib/utils/dealflow-contract.js';
 
 	const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
+	const benefits = [
+		'Build your buy box in minutes',
+		'See matched deals instead of random pitches',
+		'Upgrade to Academy only if you want help'
+	];
 
-	// ── Reactive state (Svelte 5 runes) ──
 	let email = $state('');
 	let loading = $state(false);
 	let error = $state('');
 	let sent = $state(false);
 	let signingIn = $state(false);
 	let signInFailed = $state(false);
-
-	// Carousel
-	const screens = [
-		{ label: 'Every deal vetted. Every sponsor tracked.' },
-		{ label: 'Know exactly who you\'re investing with.' },
-		{ label: 'Your buy box. Your matches. Your plan.' }
-	];
-	let currentSlide = $state(0);
-
-	// Testimonials
-	const testimonials = [
-		{
-			initials: 'MR',
-			quote: 'Deployed $200K into my first two deals within 60 days. I\'d still be on the sidelines without this.',
-			author: 'Michael R.',
-			role: 'Business Owner, Tampa FL'
-		},
-		{
-			initials: 'SK',
-			quote: 'I vetted my first sponsor in 20 minutes. My advisor said I was crazy. I\'m up 11% while his clients are flat.',
-			author: 'Sarah K.',
-			role: 'Physician, Austin TX'
-		},
-		{
-			initials: 'DL',
-			quote: '$8,200/month in distributions. That\'s my mortgage, car, and kids\' school — covered. And I still have my W-2.',
-			author: 'David L.',
-			role: 'Software Executive, Denver CO'
-		}
-	];
-	let currentTestimonial = $state(0);
-
-	// Derived
-	let showcaseLabel = $derived(screens[currentSlide].label);
 	let returnUrl = $derived($page.url.searchParams.get('return'));
-
-	// ── Auto-rotate carousel ──
-	$effect(() => {
-		const timer = setInterval(() => {
-			currentSlide = (currentSlide + 1) % screens.length;
-		}, 5000);
-		return () => clearInterval(timer);
-	});
-
-	// ── Auto-rotate testimonials ──
-	$effect(() => {
-		const timer = setInterval(() => {
-			currentTestimonial = (currentTestimonial + 1) % testimonials.length;
-		}, 4000);
-		return () => clearInterval(timer);
-	});
-
-	function showScreen(i) {
-		currentSlide = i;
-	}
 
 	function decodeBase64UrlJson(value) {
 		if (!value) return null;
@@ -88,8 +39,8 @@
 	}
 
 	function buildStoredSessionUser(data) {
-		const email = normalizeEmail(data?.email);
-		if (!email) return null;
+		const normalizedUserEmail = normalizeEmail(data?.email);
+		if (!normalizedUserEmail) return null;
 
 		const managementCompanySeed = data?.managementCompany || {
 			id: data?.managementCompanyId || null,
@@ -97,7 +48,7 @@
 			gpType: data?.gpType || data?.gp_type || null
 		};
 		const accessModel = buildAccessModel({
-			email,
+			email: normalizedUserEmail,
 			tier: data?.tier || data?.legacyTier || 'free',
 			legacyTier: data?.legacyTier || data?.tier || 'free',
 			accessTier: data?.accessTier || null,
@@ -117,11 +68,11 @@
 			share_invested: data?.share_invested,
 			allow_follows: data?.allow_follows
 		});
-		const name = data?.name || data?.fullName || email.split('@')[0];
+		const name = data?.name || data?.fullName || normalizedUserEmail.split('@')[0];
 
 		return {
 			sessionVersion: SESSION_VERSION,
-			email,
+			email: normalizedUserEmail,
 			name,
 			fullName: data?.fullName || data?.name || name,
 			token: data?.token || '',
@@ -158,7 +109,6 @@
 		};
 	}
 
-	// ── Store user data helper ──
 	function storeUser(data) {
 		const userData = buildStoredSessionUser(data);
 		if (!userData) return null;
@@ -166,7 +116,6 @@
 		return setStoredSessionUser(userData);
 	}
 
-	// ── Magic link callback handler ──
 	onMount(() => {
 		const hashParams = new URLSearchParams(window.location.hash.substring(1));
 		const searchParams = new URLSearchParams(window.location.search);
@@ -177,7 +126,6 @@
 
 		signingIn = true;
 
-		// Decode the JWT to get the email
 		let userEmail = '';
 		try {
 			const payload = decodeBase64UrlJson(accessToken.split('.')[1]);
@@ -192,13 +140,12 @@
 
 		const dest = getReturnDestination();
 
-		// Look up user profile
 		fetch('/api/auth', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ action: 'lookup', email: userEmail })
 		})
-			.then((r) => r.json())
+			.then((response) => response.json())
 			.then((data) => {
 				storeUser({
 					...data,
@@ -210,7 +157,6 @@
 				window.location.href = dest;
 			})
 			.catch(() => {
-				// Fallback: store minimal session
 				storeUser({
 					email: userEmail,
 					name: userEmail.split('@')[0],
@@ -224,7 +170,6 @@
 			});
 	});
 
-	// ── Form submit ──
 	async function handleSubmit() {
 		error = '';
 		const trimmed = email.trim();
@@ -237,8 +182,7 @@
 		try {
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), 15000);
-
-			const res = await fetch('/api/auth', {
+			const response = await fetch('/api/auth', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -251,13 +195,11 @@
 			});
 			clearTimeout(timeout);
 
-			const data = await res.json();
+			const data = await response.json();
 
 			if (data.bypass && data.token) {
-				// Dev bypass — store session and redirect with full page reload
 				storeUser(data);
-				const dest = getReturnDestination();
-				window.location.href = dest;
+				window.location.href = getReturnDestination();
 				return;
 			}
 
@@ -267,16 +209,10 @@
 				return;
 			}
 
-			// Normal flow — show "check your email"
 			sent = true;
-		} catch (e) {
-			if (e.name === 'AbortError') {
-				// Timeout — still show success since email may have been sent
-				sent = true;
-			} else {
-				// Network error — show success state anyway (magic link may have sent)
-				sent = true;
-			}
+		} catch (requestError) {
+			if (requestError.name === 'AbortError') sent = true;
+			else sent = true;
 		}
 
 		loading = false;
@@ -289,1115 +225,419 @@
 		error = '';
 	}
 
-	function onKeydown(e) {
-		if (e.key === 'Enter') handleSubmit();
+	function onKeydown(event) {
+		if (event.key === 'Enter') handleSubmit();
 	}
 </script>
 
 <svelte:head>
-	<link
-		href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600&display=swap"
-		rel="stylesheet"
-	/>
-	<title>GYC - Sign In</title>
+	<title>Start Free | Grow Your Cashflow</title>
+	<meta
+		name="description"
+		content="Start free with Grow Your Cashflow. Build your investor plan, browse deals, and compare sponsors with a secure magic link."
+	>
 </svelte:head>
 
-<div class="ly-page">
-<div class="split-layout">
-	<!-- ─── Left: Platform showcase ─── -->
-	<div class="left-panel">
-		<div class="left-content">
-			<div class="screenshot-carousel">
-				<div class="screenshot-frame">
-					<!-- Screen 1: Deal Flow -->
-					<div class="screen screen-deals" class:active={currentSlide === 0}>
-						<div class="page-title">Deal Flow</div>
-						<div class="page-subtitle">838 deals from 455 vetted sponsors</div>
-						<div class="tabs-row">
-							<div class="tab on">Filter</div>
-							<div class="tab">Review</div>
-							<div class="tab">Connect</div>
-							<div class="tab">Decide</div>
-						</div>
-						<div class="deal-grid">
-							<div class="deal-card">
-								<div class="deal-card-header">
-									<div class="deal-card-icon" style="background:#EBF5FF;">&#x1F3E2;</div>
-									<div>
-										<div class="deal-card-name">Meridian Self Storage Fund III</div>
-										<div class="deal-card-sponsor">Meridian Capital Partners</div>
-									</div>
-								</div>
-								<div class="deal-card-metrics">
-									<div class="deal-metric"><strong>8.2%</strong>Pref Return</div>
-									<div class="deal-metric"><strong>18.5%</strong>Target IRR</div>
-								</div>
-								<div class="deal-card-tag" style="background:rgba(81,190,123,0.1);color:#51BE7B;">
-									Open
-								</div>
-							</div>
-							<div class="deal-card">
-								<div class="deal-card-header">
-									<div class="deal-card-icon" style="background:#FFF5EB;">&#x1F3E8;</div>
-									<div>
-										<div class="deal-card-name">Gulf Coast Hospitality REIT</div>
-										<div class="deal-card-sponsor">Tidewater Group</div>
-									</div>
-								</div>
-								<div class="deal-card-metrics">
-									<div class="deal-metric"><strong>10%</strong>Pref Return</div>
-									<div class="deal-metric"><strong>22%</strong>Target IRR</div>
-								</div>
-								<div class="deal-card-tag" style="background:rgba(59,130,246,0.1);color:#3B82F6;">
-									New
-								</div>
-							</div>
-							<div class="deal-card">
-								<div class="deal-card-header">
-									<div class="deal-card-icon" style="background:#F0FFF4;">&#x1F3ED;</div>
-									<div>
-										<div class="deal-card-name">Sunbelt Industrial Portfolio</div>
-										<div class="deal-card-sponsor">Atlas Industrial Group</div>
-									</div>
-								</div>
-								<div class="deal-card-metrics">
-									<div class="deal-metric"><strong>7%</strong>Pref Return</div>
-									<div class="deal-metric"><strong>16%</strong>Target IRR</div>
-								</div>
-								<div class="deal-card-tag" style="background:rgba(81,190,123,0.1);color:#51BE7B;">
-									Open
-								</div>
-							</div>
-							<div class="deal-card">
-								<div class="deal-card-header">
-									<div class="deal-card-icon" style="background:#FFF0F5;">&#x1F3E0;</div>
-									<div>
-										<div class="deal-card-name">Carolina Multifamily Fund II</div>
-										<div class="deal-card-sponsor">Pinnacle Living Partners</div>
-									</div>
-								</div>
-								<div class="deal-card-metrics">
-									<div class="deal-metric"><strong>8%</strong>Pref Return</div>
-									<div class="deal-metric"><strong>17%</strong>Target IRR</div>
-								</div>
-								<div class="deal-card-tag" style="background:rgba(234,179,8,0.1);color:#CA8A04;">
-									Closing Soon
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<!-- Screen 2: Sponsor Profile -->
-					<div class="screen screen-sponsor" class:active={currentSlide === 1}>
-						<div class="sponsor-header">
-							<div class="sponsor-logo">MC</div>
-							<div>
-								<div class="sponsor-name">Meridian Capital Partners</div>
-								<div class="sponsor-type">Self Storage &middot; Industrial &middot; Est. 2014</div>
-								<div class="sponsor-verified">&#10003; Verified Sponsor</div>
-							</div>
-						</div>
-						<div class="sponsor-stats">
-							<div class="sponsor-stat">
-								<div class="sponsor-stat-val">$420M</div>
-								<div class="sponsor-stat-label">AUM</div>
-							</div>
-							<div class="sponsor-stat">
-								<div class="sponsor-stat-val">12</div>
-								<div class="sponsor-stat-label">Deals</div>
-							</div>
-							<div class="sponsor-stat">
-								<div class="sponsor-stat-val">19.2%</div>
-								<div class="sponsor-stat-label">Avg IRR</div>
-							</div>
-							<div class="sponsor-stat">
-								<div class="sponsor-stat-val">0</div>
-								<div class="sponsor-stat-label">Losses</div>
-							</div>
-						</div>
-						<div class="sponsor-track">
-							<div class="sponsor-track-title">Track Record by Asset Class</div>
-							<div class="track-bar-row">
-								<div class="track-bar-label">Self Storage</div>
-								<div class="track-bar-bg"><div class="track-bar-fill" style="width:85%"></div></div>
-							</div>
-							<div class="track-bar-row">
-								<div class="track-bar-label">Industrial</div>
-								<div class="track-bar-bg"><div class="track-bar-fill" style="width:60%"></div></div>
-							</div>
-							<div class="track-bar-row">
-								<div class="track-bar-label">Multifamily</div>
-								<div class="track-bar-bg"><div class="track-bar-fill" style="width:35%"></div></div>
-							</div>
-							<div class="track-bar-row">
-								<div class="track-bar-label">Retail</div>
-								<div class="track-bar-bg"><div class="track-bar-fill" style="width:15%"></div></div>
-							</div>
-						</div>
-					</div>
-
-					<!-- Screen 3: Dashboard -->
-					<div class="screen screen-dashboard" class:active={currentSlide === 2}>
-						<div class="dash-greeting">Good morning, Sarah</div>
-						<div class="dash-cards">
-							<div class="dash-card">
-								<div class="dash-card-label">New Deals</div>
-								<div class="dash-card-val">14</div>
-								<div class="dash-card-change">+6 this week</div>
-							</div>
-							<div class="dash-card">
-								<div class="dash-card-label">Matches</div>
-								<div class="dash-card-val">8</div>
-								<div class="dash-card-change">3 new today</div>
-							</div>
-							<div class="dash-card">
-								<div class="dash-card-label">Saved</div>
-								<div class="dash-card-val">23</div>
-								<div class="dash-card-change">2 closing soon</div>
-							</div>
-						</div>
-						<div class="dash-section-title">Top Matches for You</div>
-						<div class="dash-match-list">
-							<div class="dash-match">
-								<div class="dash-match-icon" style="background:#EBF5FF;">&#x1F3E2;</div>
-								<div class="dash-match-info">
-									<div class="dash-match-name">Meridian Self Storage Fund III</div>
-									<div class="dash-match-detail">
-										8.2% Pref &middot; 18.5% IRR &middot; Self Storage
-									</div>
-								</div>
-								<div class="dash-match-badge">98% Match</div>
-							</div>
-							<div class="dash-match">
-								<div class="dash-match-icon" style="background:#FFF5EB;">&#x1F3E8;</div>
-								<div class="dash-match-info">
-									<div class="dash-match-name">Gulf Coast Hospitality REIT</div>
-									<div class="dash-match-detail">
-										10% Pref &middot; 22% IRR &middot; Hospitality
-									</div>
-								</div>
-								<div class="dash-match-badge">94% Match</div>
-							</div>
-							<div class="dash-match">
-								<div class="dash-match-icon" style="background:#F0FFF4;">&#x1F3ED;</div>
-								<div class="dash-match-info">
-									<div class="dash-match-name">Sunbelt Industrial Portfolio</div>
-									<div class="dash-match-detail">
-										7% Pref &middot; 16% IRR &middot; Industrial
-									</div>
-								</div>
-								<div class="dash-match-badge">91% Match</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div class="showcase-caption">
-				<div class="showcase-label">{showcaseLabel}</div>
-				<div class="showcase-dots">
-					{#each screens as _, i}
-						<button
-							class="showcase-dot"
-							class:active={currentSlide === i}
-							aria-label={`Show slide ${i + 1}`}
-							onclick={() => showScreen(i)}
-						></button>
-					{/each}
-				</div>
-			</div>
-
-			<div class="testimonial-section">
-				{#each testimonials as t, i}
-					<div class="testimonial-slide" class:active={currentTestimonial === i}>
-						<div class="testimonial-avatar">{t.initials}</div>
-						<div class="testimonial-body">
-							<div class="testimonial-quote">"{t.quote}"</div>
-							<div class="testimonial-author">{t.author}</div>
-							<div class="testimonial-role">{t.role}</div>
-						</div>
+<div class="auth-shell">
+	<section class="showcase-panel">
+		<div class="showcase-copy">
+			<div class="eyebrow">Investor access</div>
+			<h1>Start free. Build your plan. See your matches.</h1>
+			<p>
+				Grow Your Cashflow turns sponsor inbox chaos into a cleaner private-investing
+				workflow. Use the product first. Buy support later only if you want it.
+			</p>
+			<div class="benefit-list">
+				{#each benefits as benefit}
+					<div class="benefit-item">
+						<span class="benefit-dot"></span>
+						<span>{benefit}</span>
 					</div>
 				{/each}
 			</div>
 		</div>
-	</div>
 
-	<!-- Mobile header -->
-	<div class="mobile-header">
-		<div class="mobile-brand">
-			<div class="brand-mark-icon">GYC</div>
-			<div class="brand-mark-text">Grow Your Cashflow</div>
+		<div class="showcase-stage">
+			<InvestorShowcase mode="compact" />
 		</div>
-		<div class="mobile-tagline">Research vetted sponsors. Invest with a plan.</div>
-	</div>
+	</section>
 
-	<!-- ─── Right: Form ─── -->
-	<div class="right-panel">
-		<div class="form-container">
-			<div class="brand-mark">
-				<div class="brand-mark-icon">GYC</div>
-				<div class="brand-mark-text">Grow Your Cashflow</div>
-			</div>
+	<section class="form-panel">
+		<div class="form-card">
+			<a href="/landing" class="brand-mark">
+				<span class="brand-icon">GYC</span>
+				<span class="brand-text">Grow Your Cashflow</span>
+			</a>
 
 			{#if signingIn}
-				<!-- Auth callback loading state -->
-				{#if signInFailed}
-					<p style="text-align:center;color:#dc2626;padding:40px 0;">
-						Sign-in failed. Please try again.
+				<div class="status-card">
+					<h2>{signInFailed ? 'Sign-in failed' : 'Signing you in'}</h2>
+					<p>
+						{#if signInFailed}
+							Please try again from the login form.
+						{:else}
+							We are securing your session and sending you into the product.
+						{/if}
 					</p>
-				{:else}
-					<p style="text-align:center;color:var(--slate);font-size:16px;padding:40px 0;">
-						Signing you in...
-					</p>
-				{/if}
+				</div>
 			{:else if sent}
-				<!-- Success state -->
-				<div class="success-state show">
-					<div class="success-check">
-						<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-						</svg>
-					</div>
+				<div class="status-card">
+					<div class="success-badge">Sent</div>
 					<h2>Check your email</h2>
 					<p>
-						We sent a login link to<br /><span class="email-highlight">{email.trim()}</span>
+						We sent a secure login link to <strong>{email.trim()}</strong>.
 					</p>
-					<button class="retry" onclick={resetForm}>Use a different email</button>
+					<button class="text-button" type="button" onclick={resetForm}>Use a different email</button>
 				</div>
 			{:else}
-				<!-- Form state -->
-				<div class="form-title">Build your cash-flowing portfolio</div>
-				<div class="form-desc">
-					Whether you're deploying your first $50K or your next $500K — research vetted sponsors,
-					match deals to your goals, and invest with a plan.
+				<div class="form-intro">
+					<div class="eyebrow eyebrow-light">No password needed</div>
+					<h2>Start using the product</h2>
+					<p>
+						Enter your email and we will send you a secure magic link. Investors start here.
+						Operators use a separate flow.
+					</p>
 				</div>
 
 				<label class="field-label" for="emailInput">Email address</label>
 				<input
+					id="emailInput"
 					type="email"
 					class="field-input"
-					id="emailInput"
 					placeholder="you@example.com"
 					autocomplete="email"
 					bind:value={email}
 					onkeydown={onKeydown}
 				/>
+
 				{#if error}
-					<div class="error-msg show">{error}</div>
+					<div class="error-message">{error}</div>
 				{/if}
 
-				<button
-					class="submit-btn"
-					class:loading
-					onclick={handleSubmit}
-					disabled={loading}
-				>
+				<button class="submit-button" type="button" onclick={handleSubmit} disabled={loading}>
 					{loading ? 'Sending...' : 'Get Started'}
 				</button>
 
-				<div class="helper-text">No password needed. We'll send you a secure link.</div>
+				<div class="helper-text">Free account. No credit card. You can upgrade later inside the app.</div>
+
+				<div class="micro-links">
+					<a href="/for-operators">I am an operator</a>
+					<a href="/landing">Back to landing page</a>
+				</div>
 			{/if}
 		</div>
-	</div>
-</div>
+	</section>
 </div>
 
 <style>
 	:global(body) {
-		font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-		-webkit-font-smoothing: antialiased;
 		margin: 0;
+		background:
+			radial-gradient(circle at top left, rgba(81, 190, 123, 0.1), transparent 26%),
+			linear-gradient(180deg, #f7f6f1 0%, #efeee7 100%);
+	}
+
+	.auth-shell {
 		min-height: 100vh;
 		min-height: 100dvh;
-	}
-
-	.split-layout {
-		--green: #51BE7B;
-		--green-hover: #45A86C;
-		--teal: #1F5159;
-		--teal-dark: #0A1E21;
-		--charcoal: #141413;
-		--slate: #6B7280;
-		--border: #E5E7EB;
-		display: flex;
-		min-height: 100vh;
-		min-height: 100dvh;
-	}
-
-	/* ─── Left panel: showcase ─── */
-	.left-panel {
-		flex: 1;
-		background: linear-gradient(160deg, #0f2d33 0%, #1f5159 40%, #163b42 100%);
-		position: relative;
-		overflow: hidden;
-		display: none;
-	}
-	@media (min-width: 900px) {
-		.left-panel {
-			display: flex;
-			flex-direction: column;
-		}
-	}
-
-	/* Subtle grid pattern */
-	.left-panel::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		opacity: 0.04;
-		background-image: linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
-		background-size: 60px 60px;
-	}
-
-	/* Glow effect */
-	.left-panel::after {
-		content: '';
-		position: absolute;
-		width: 500px;
-		height: 500px;
-		border-radius: 50%;
-		background: radial-gradient(circle, rgba(81, 190, 123, 0.12) 0%, transparent 70%);
-		top: 30%;
-		left: 30%;
-		transform: translate(-50%, -50%);
-		pointer-events: none;
-	}
-
-	.left-content {
-		position: relative;
-		z-index: 2;
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		padding: 60px 40px;
-	}
-
-	/* ─── Screenshot showcase ─── */
-	.screenshot-carousel {
-		width: 100%;
-		max-width: 520px;
-		position: relative;
-	}
-
-	.screenshot-frame {
-		position: relative;
-		border-radius: 12px;
-		overflow: hidden;
-		box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
-		background: #1a1a1a;
-		aspect-ratio: 16 / 10;
-		transition: opacity 0.6s ease;
-	}
-
-	/* Browser chrome bar */
-	.screenshot-frame::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 32px;
-		background: #2a2a2a;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-		z-index: 3;
-	}
-	.screenshot-frame::after {
-		content: '';
-		position: absolute;
-		top: 10px;
-		left: 12px;
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: #ff5f57;
-		box-shadow: 14px 0 0 #ffbd2e, 28px 0 0 #28ca41;
-		z-index: 4;
-	}
-
-	.screen {
-		position: absolute;
-		inset: 0;
-		top: 32px;
-		opacity: 0;
-		transition: opacity 0.8s ease;
-		overflow: hidden;
-	}
-	.screen.active {
-		opacity: 1;
-	}
-
-	/* ─── Screen 1: Deal Flow grid ─── */
-	.screen-deals {
-		background: #faf9f5;
-		padding: 20px;
-		font-family: 'Plus Jakarta Sans', sans-serif;
-	}
-	.screen-deals .page-title {
-		font-family: 'DM Serif Display', serif;
-		font-size: 18px;
-		color: var(--charcoal);
-		margin-bottom: 4px;
-	}
-	.screen-deals .page-subtitle {
-		font-size: 10px;
-		color: var(--slate);
-		margin-bottom: 14px;
-	}
-	.screen-deals .tabs-row {
-		display: flex;
-		gap: 0;
-		border-bottom: 2px solid #e5e7eb;
-		margin-bottom: 14px;
-	}
-	.screen-deals .tab {
-		padding: 6px 12px;
-		font-size: 9px;
-		font-weight: 600;
-		color: var(--slate);
-		border-bottom: 2px solid transparent;
-		margin-bottom: -2px;
-	}
-	.screen-deals .tab.on {
-		color: var(--green);
-		border-bottom-color: var(--green);
-	}
-	.deal-grid {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 10px;
-	}
-	.deal-card {
-		background: #fff;
-		border-radius: 8px;
-		padding: 12px;
-		border: 1px solid #eee;
-	}
-	.deal-card-header {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		margin-bottom: 8px;
-	}
-	.deal-card-icon {
-		width: 28px;
-		height: 28px;
-		border-radius: 6px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 12px;
-	}
-	.deal-card-name {
-		font-size: 10px;
-		font-weight: 700;
-		color: var(--charcoal);
-		line-height: 1.2;
-	}
-	.deal-card-sponsor {
-		font-size: 8px;
-		color: var(--slate);
-		margin-top: 1px;
-	}
-	.deal-card-metrics {
-		display: flex;
-		gap: 10px;
-		margin-top: 6px;
-	}
-	.deal-metric {
-		font-size: 8px;
-		color: var(--slate);
-	}
-	.deal-metric strong {
-		display: block;
-		font-size: 11px;
-		color: var(--charcoal);
-		font-weight: 700;
-	}
-	.deal-card-tag {
-		display: inline-block;
-		font-size: 7px;
-		font-weight: 700;
-		padding: 2px 6px;
-		border-radius: 4px;
-		margin-top: 8px;
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
+		grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr);
 	}
 
-	/* ─── Screen 2: Sponsor profile ─── */
-	.screen-sponsor {
-		background: #faf9f5;
-		padding: 20px;
-		font-family: 'Plus Jakarta Sans', sans-serif;
+	.showcase-panel {
+		display: grid;
+		align-content: center;
+		gap: 28px;
+		padding: 36px;
+		background:
+			radial-gradient(circle at top left, rgba(81, 190, 123, 0.12), transparent 22%),
+			linear-gradient(160deg, #0d2327 0%, #12353b 100%);
+		color: white;
 	}
-	.sponsor-header {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		margin-bottom: 16px;
+
+	.showcase-copy {
+		max-width: 36rem;
 	}
-	.sponsor-logo {
-		width: 44px;
-		height: 44px;
-		border-radius: 10px;
-		background: linear-gradient(135deg, var(--teal), #2a6b75);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 14px;
-		font-weight: 800;
-		color: #fff;
-	}
-	.sponsor-name {
-		font-size: 16px;
-		font-weight: 700;
-		color: var(--charcoal);
-	}
-	.sponsor-type {
-		font-size: 10px;
-		color: var(--slate);
-		margin-top: 2px;
-	}
-	.sponsor-verified {
+
+	.eyebrow {
 		display: inline-flex;
 		align-items: center;
-		gap: 4px;
-		font-size: 8px;
-		font-weight: 700;
-		color: var(--green);
-		background: rgba(81, 190, 123, 0.1);
-		padding: 3px 8px;
-		border-radius: 4px;
-		margin-top: 4px;
-	}
-	.sponsor-stats {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 10px;
-		margin-bottom: 16px;
-	}
-	.sponsor-stat {
-		background: #fff;
-		border-radius: 8px;
-		padding: 10px;
-		border: 1px solid #eee;
-		text-align: center;
-	}
-	.sponsor-stat-val {
-		font-size: 14px;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.12);
+		color: rgba(255, 255, 255, 0.82);
+		font-family: var(--font-ui);
+		font-size: 11px;
 		font-weight: 800;
-		color: var(--charcoal);
-	}
-	.sponsor-stat-label {
-		font-size: 7px;
-		color: var(--slate);
-		margin-top: 2px;
+		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		letter-spacing: 0.3px;
-	}
-	.sponsor-track {
-		background: #fff;
-		border-radius: 8px;
-		padding: 12px;
-		border: 1px solid #eee;
-	}
-	.sponsor-track-title {
-		font-size: 10px;
-		font-weight: 700;
-		color: var(--charcoal);
-		margin-bottom: 10px;
-	}
-	.track-bar-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		margin-bottom: 6px;
-	}
-	.track-bar-label {
-		font-size: 8px;
-		color: var(--slate);
-		width: 60px;
-		flex-shrink: 0;
-	}
-	.track-bar-bg {
-		flex: 1;
-		height: 6px;
-		background: #f0f0f0;
-		border-radius: 3px;
-		overflow: hidden;
-	}
-	.track-bar-fill {
-		height: 100%;
-		border-radius: 3px;
-		background: var(--green);
 	}
 
-	/* ─── Screen 3: Dashboard ─── */
-	.screen-dashboard {
-		background: #faf9f5;
-		padding: 20px;
-		font-family: 'Plus Jakarta Sans', sans-serif;
+	.eyebrow-light {
+		background: rgba(31, 81, 89, 0.08);
+		color: var(--teal);
 	}
-	.dash-greeting {
-		font-family: 'DM Serif Display', serif;
-		font-size: 16px;
-		color: var(--charcoal);
-		margin-bottom: 14px;
+
+	h1,
+	h2 {
+		margin: 18px 0 0;
+		font-family: var(--font-headline);
+		font-weight: 400;
+		line-height: 0.98;
+		letter-spacing: -0.02em;
 	}
-	.dash-cards {
+
+	h1 {
+		font-size: clamp(2.9rem, 4.4vw, 4.8rem);
+		max-width: 10ch;
+	}
+
+	h2 {
+		font-size: clamp(2.2rem, 3.4vw, 3.6rem);
+		color: var(--text-dark);
+	}
+
+	p,
+	label,
+	input,
+	button,
+	a,
+	.helper-text {
+		font-family: var(--font-ui);
+	}
+
+	.showcase-copy p,
+	.form-intro p,
+	.status-card p {
+		margin: 18px 0 0;
+		font-size: 17px;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.76);
+		max-width: 34rem;
+	}
+
+	.benefit-list {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 10px;
-		margin-bottom: 14px;
-	}
-	.dash-card {
-		background: #fff;
-		border-radius: 8px;
-		padding: 12px;
-		border: 1px solid #eee;
-	}
-	.dash-card-label {
-		font-size: 8px;
-		color: var(--slate);
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
-		margin-bottom: 4px;
-	}
-	.dash-card-val {
-		font-size: 18px;
-		font-weight: 800;
-		color: var(--charcoal);
-	}
-	.dash-card-change {
-		font-size: 8px;
-		font-weight: 600;
-		color: var(--green);
-		margin-top: 2px;
-	}
-	.dash-section-title {
-		font-size: 10px;
-		font-weight: 700;
-		color: var(--charcoal);
-		margin-bottom: 8px;
-	}
-	.dash-match-list {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-	.dash-match {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		background: #fff;
-		border-radius: 8px;
-		padding: 10px 12px;
-		border: 1px solid #eee;
-	}
-	.dash-match-icon {
-		width: 28px;
-		height: 28px;
-		border-radius: 6px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 12px;
-		flex-shrink: 0;
-	}
-	.dash-match-info {
-		flex: 1;
-	}
-	.dash-match-name {
-		font-size: 10px;
-		font-weight: 700;
-		color: var(--charcoal);
-	}
-	.dash-match-detail {
-		font-size: 8px;
-		color: var(--slate);
-		margin-top: 1px;
-	}
-	.dash-match-badge {
-		font-size: 7px;
-		font-weight: 700;
-		padding: 3px 8px;
-		border-radius: 4px;
-		background: rgba(81, 190, 123, 0.1);
-		color: var(--green);
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
+		gap: 12px;
+		margin-top: 24px;
 	}
 
-	/* ─── Caption below screenshot ─── */
-	.showcase-caption {
-		text-align: center;
-		margin-top: 28px;
-	}
-	.showcase-label {
-		font-size: 13px;
-		font-weight: 500;
-		color: rgba(255, 255, 255, 0.7);
-		margin-bottom: 16px;
-		transition: opacity 0.5s ease;
-	}
-	.showcase-dots {
-		display: flex;
-		justify-content: center;
-		gap: 8px;
-	}
-	.showcase-dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.2);
-		cursor: pointer;
-		transition: all 0.3s;
-		border: none;
-		padding: 0;
-	}
-	.showcase-dot.active {
-		background: var(--green);
-		width: 24px;
-		border-radius: 3px;
-	}
-
-	/* ─── Testimonial below screenshot ─── */
-	.testimonial-section {
-		margin-top: 32px;
-		max-width: 520px;
-		width: 100%;
-		position: relative;
-		min-height: 80px;
-	}
-	.testimonial-slide {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		transition: opacity 0.6s ease;
+	.benefit-item {
 		display: flex;
 		align-items: flex-start;
-		gap: 14px;
-	}
-	.testimonial-slide.active {
-		opacity: 1;
-	}
-	.testimonial-avatar {
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-		background: rgba(81, 190, 123, 0.15);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--green);
-		flex-shrink: 0;
-		margin-top: 2px;
-	}
-	.testimonial-body {
-		flex: 1;
-	}
-	.testimonial-quote {
-		font-size: 14px;
-		color: rgba(255, 255, 255, 0.75);
+		gap: 12px;
+		font-size: 15px;
 		line-height: 1.55;
-		font-style: italic;
-	}
-	.testimonial-author {
-		margin-top: 8px;
-		font-size: 12px;
-		font-weight: 600;
 		color: rgba(255, 255, 255, 0.9);
 	}
-	.testimonial-role {
-		font-size: 11px;
-		color: rgba(255, 255, 255, 0.4);
-		font-weight: 400;
-		margin-top: 1px;
+
+	.benefit-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 999px;
+		background: var(--primary);
+		margin-top: 8px;
+		flex-shrink: 0;
+		box-shadow: 0 0 0 6px rgba(81, 190, 123, 0.14);
 	}
 
-	/* ─── Right panel: form ─── */
-	.right-panel {
-		flex: 1;
-		max-width: 520px;
-		background: #fff;
+	.showcase-stage {
+		width: min(100%, 560px);
+	}
+
+	.form-panel {
+		display: grid;
+		place-items: center;
+		padding: 36px 24px;
+	}
+
+	.form-card {
+		width: min(100%, 520px);
+		padding: 34px;
+		border-radius: 32px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: rgba(255, 255, 255, 0.86);
+		box-shadow: 0 24px 54px rgba(20, 20, 19, 0.08);
+	}
+
+	.brand-mark,
+	.micro-links {
 		display: flex;
-		flex-direction: column;
-		justify-content: center;
 		align-items: center;
-		padding: 40px 24px;
-	}
-
-	.form-container {
-		width: 100%;
-		max-width: 380px;
 	}
 
 	.brand-mark {
-		display: flex;
-		align-items: center;
 		gap: 10px;
-		margin-bottom: 48px;
+		text-decoration: none;
 	}
-	.brand-mark-icon {
-		width: 36px;
-		height: 36px;
-		background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
-		border-radius: 10px;
-		display: flex;
+
+	.brand-icon {
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
+		width: 36px;
+		height: 36px;
+		border-radius: 12px;
+		background: linear-gradient(145deg, #10353b, #1f5159);
+		color: white;
 		font-size: 11px;
 		font-weight: 800;
-		color: #fff;
-		letter-spacing: -0.3px;
-	}
-	.brand-mark-text {
-		font-family: 'DM Serif Display', Georgia, serif;
-		font-size: 18px;
-		color: var(--charcoal);
+		letter-spacing: 0.04em;
 	}
 
-	.form-title {
-		font-family: 'DM Serif Display', Georgia, serif;
-		font-size: 30px;
-		color: var(--charcoal);
-		margin-bottom: 8px;
-		line-height: 1.2;
-	}
-
-	.form-desc {
+	.brand-text {
 		font-size: 15px;
-		color: var(--slate);
-		margin-bottom: 36px;
-		line-height: 1.5;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.form-intro p,
+	.status-card p {
+		color: var(--text-secondary);
+		max-width: none;
 	}
 
 	.field-label {
 		display: block;
+		margin-top: 26px;
 		font-size: 13px;
-		font-weight: 600;
-		color: var(--charcoal);
-		margin-bottom: 8px;
+		font-weight: 700;
+		color: var(--text-dark);
 	}
 
 	.field-input {
 		width: 100%;
+		box-sizing: border-box;
+		margin-top: 10px;
 		padding: 16px 18px;
-		font-family: 'Plus Jakarta Sans', sans-serif;
-		font-size: 15px;
-		color: var(--charcoal);
-		background: #fafafa;
-		border: 1px solid var(--border);
-		border-radius: 12px;
+		border-radius: 16px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: white;
+		font-size: 16px;
+		color: var(--text-dark);
 		outline: none;
-		transition: all 0.2s;
-		-webkit-appearance: none;
-	}
-	.field-input::placeholder {
-		color: #b0b8c0;
-	}
-	.field-input:focus {
-		border-color: var(--green);
-		background: #fff;
-		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.1);
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
 	}
 
-	.submit-btn {
-		width: 100%;
-		padding: 16px 24px;
-		font-family: 'Plus Jakarta Sans', sans-serif;
+	.field-input:focus {
+		border-color: rgba(81, 190, 123, 0.72);
+		box-shadow: 0 0 0 4px rgba(81, 190, 123, 0.12);
+	}
+
+	.error-message {
+		margin-top: 12px;
+		font-size: 14px;
+		font-weight: 700;
+		color: #b42318;
+	}
+
+	.submit-button,
+	.text-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 999px;
 		font-size: 15px;
-		font-weight: 600;
-		color: #fff;
-		background: var(--green);
-		border: none;
-		border-radius: 12px;
+		font-weight: 800;
 		cursor: pointer;
-		transition: all 0.2s;
-		margin-top: 20px;
 	}
-	.submit-btn:hover {
-		background: var(--green-hover);
+
+	.submit-button {
+		width: 100%;
+		margin-top: 18px;
+		padding: 15px 20px;
+		border: none;
+		background: var(--primary);
+		color: #0d2327;
+		box-shadow: 0 16px 28px rgba(81, 190, 123, 0.24);
 	}
-	.submit-btn:active {
-		transform: scale(0.985);
+
+	.submit-button:hover:not(:disabled) {
+		background: var(--primary-hover);
 	}
-	.submit-btn.loading {
-		pointer-events: none;
-		opacity: 0.6;
+
+	.submit-button:disabled {
+		opacity: 0.7;
+		cursor: default;
 	}
 
 	.helper-text {
-		text-align: center;
+		margin-top: 14px;
 		font-size: 13px;
-		color: #b0b8c0;
-		margin-top: 20px;
-		line-height: 1.5;
-	}
-
-	/* Error */
-	.error-msg {
-		font-size: 13px;
-		color: #dc2626;
-		margin-top: 8px;
-		display: none;
-	}
-	.error-msg.show {
-		display: block;
-	}
-
-	/* Success */
-	.success-state {
-		display: none;
-		text-align: center;
-	}
-	.success-state.show {
-		display: block;
-	}
-	.success-check {
-		width: 56px;
-		height: 56px;
-		border-radius: 50%;
-		background: rgba(81, 190, 123, 0.1);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin: 0 auto 20px;
-	}
-	.success-check svg {
-		width: 24px;
-		height: 24px;
-		color: var(--green);
-	}
-	.success-state h2 {
-		font-family: 'DM Serif Display', Georgia, serif;
-		font-size: 24px;
-		color: var(--charcoal);
-		margin-bottom: 10px;
-	}
-	.success-state p {
-		font-size: 14px;
-		color: var(--slate);
 		line-height: 1.6;
+		color: var(--text-muted);
 	}
-	.success-state .email-highlight {
-		color: var(--charcoal);
-		font-weight: 600;
+
+	.micro-links {
+		margin-top: 22px;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
 	}
-	.retry {
-		display: inline-block;
-		margin-top: 20px;
-		color: var(--green);
+
+	.micro-links a,
+	.text-button {
+		color: var(--teal);
 		text-decoration: none;
-		font-size: 13px;
-		font-weight: 600;
-		cursor: pointer;
 		background: none;
 		border: none;
-		font-family: inherit;
+		padding: 0;
 	}
-	.retry:hover {
+
+	.micro-links a:hover,
+	.text-button:hover {
 		text-decoration: underline;
 	}
 
-	/* ─── Mobile ─── */
-	.mobile-header {
-		display: none;
+	.status-card {
+		padding: 12px 0;
 	}
-	@media (max-width: 899px) {
-		.split-layout {
-			flex-direction: column;
-			min-height: 100vh;
-			min-height: 100dvh;
+
+	.success-badge {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.14);
+		color: #1b8a45;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	@media (max-width: 1080px) {
+		.auth-shell {
+			grid-template-columns: 1fr;
 		}
-		.mobile-header {
-			display: block;
-			background: linear-gradient(160deg, #0f2d33, #1f5159);
-			padding: 48px 24px 28px;
-			padding-top: calc(48px + env(safe-area-inset-top, 0px));
-			text-align: center;
+
+		.showcase-panel {
+			padding: 28px 22px 10px;
 		}
-		.mobile-brand {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			gap: 10px;
-		}
-		.mobile-brand .brand-mark-icon {
-			width: 32px;
-			height: 32px;
-			background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
-			border-radius: 8px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			font-size: 10px;
-			font-weight: 800;
-			color: #fff;
-		}
-		.mobile-brand .brand-mark-text {
-			font-family: 'DM Serif Display', Georgia, serif;
-			font-size: 17px;
-			color: #fff;
-		}
-		.mobile-tagline {
-			margin-top: 10px;
-			font-size: 13px;
-			color: rgba(255, 255, 255, 0.6);
-			line-height: 1.4;
-		}
-		.right-panel {
-			max-width: 100%;
-			min-height: auto;
-			flex: none;
-			justify-content: flex-start;
-			padding: 32px 24px 40px;
-			padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
-		}
-		.right-panel .brand-mark {
-			display: none;
-		}
-		.form-container {
-			max-width: 420px;
-			margin: 0 auto;
-		}
-		.form-title {
-			font-size: 26px;
-			margin-bottom: 8px;
-		}
-		.form-desc {
-			font-size: 14px;
-			margin-bottom: 28px;
-			line-height: 1.5;
-		}
-		.field-input {
-			padding: 14px 16px;
-			font-size: 16px;
-		}
-		.submit-btn {
-			padding: 14px 20px;
-			font-size: 16px;
-			margin-top: 16px;
-		}
-		.helper-text {
-			margin-top: 16px;
-			font-size: 12px;
-		}
-		.success-state h2 {
-			font-size: 22px;
-		}
-		.success-state p {
-			font-size: 13px;
+
+		.showcase-stage {
+			width: min(100%, 620px);
 		}
 	}
-	@media (min-width: 900px) {
-		.mobile-header {
+
+	@media (max-width: 720px) {
+		.showcase-panel {
 			display: none;
+		}
+
+		.form-panel {
+			padding: 20px 16px;
+		}
+
+		.form-card {
+			padding: 26px 22px;
+			border-radius: 24px;
+		}
+
+		h2 {
+			font-size: clamp(2rem, 11vw, 3rem);
 		}
 	}
 </style>
