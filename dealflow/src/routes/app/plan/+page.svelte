@@ -21,10 +21,13 @@
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
 	import {
+		STEP,
 		hasCompletedPlan,
 		hasSavedWizardProgress,
+		getBranchFlowKey,
 		normalizeWizardData,
-		parseDollar
+		parseDollar,
+		stageSlugForStep
 	} from '$lib/onboarding/planWizard.js';
 	import { buildInvestedPortfolio } from '$lib/utils/investedPortfolio.js';
 
@@ -46,6 +49,11 @@
 	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
 	let wizardStep = $state(0);
 	let wizardData = $state(normalizeWizardData({}));
+	let wizardRenderKey = $state(0);
+	let planConfirmDialog = $state(null);
+	let planConfirmError = $state('');
+	let planResetting = $state(false);
+	let wizardRef = $state();
 	const nativeCompanionMode = browser && isNativeApp();
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 	const hasSavedPlanProgress = $derived.by(() => hasSavedWizardProgress(wizardData, portfolioPlan));
@@ -84,7 +92,7 @@
 		'Hotels/Hospitality',
 		'Business / Other',
 		'RV/Mobile Home Parks',
-		'Lending',
+		'Private Debt / Credit',
 		'Self Storage',
 		'Multi-Family',
 		'Retail',
@@ -125,7 +133,8 @@
 		'hotelshospitality': { label: 'Hotels/Hospitality', color: '#5b50d6', icon: 'HH', irrMin: 18.0, irrMax: 33.1, cashYield: 12.9, lockup: 5.1, dealCount: 13, newestDays: 30 },
 		'businessother': { label: 'Business / Other', color: '#7b5a46', icon: 'BO', irrMin: 4.0, irrMax: 45.0, cashYield: 16.9, lockup: 3.7, dealCount: 17, newestDays: 5 },
 		'rvmobilehomeparks': { label: 'RV/Mobile Home Parks', color: '#127c4e', icon: 'RV', irrMin: 15.9, irrMax: 45.7, cashYield: 10.5, lockup: 6.0, dealCount: 16, newestDays: 29 },
-		'lending': { label: 'Lending', color: '#2563eb', icon: 'L', irrMin: 6.0, irrMax: 25.0, cashYield: 11.4, lockup: 1.5, dealCount: 106, newestDays: 5 },
+		'privatedebtcredit': { label: 'Private Debt / Credit', color: '#2563eb', icon: 'PD', irrMin: 6.0, irrMax: 25.0, cashYield: 11.4, lockup: 1.5, dealCount: 106, newestDays: 5 },
+		'lending': { label: 'Private Debt / Credit', color: '#2563eb', icon: 'PD', irrMin: 6.0, irrMax: 25.0, cashYield: 11.4, lockup: 1.5, dealCount: 106, newestDays: 5 },
 		'selfstorage': { label: 'Self Storage', color: '#3b82f6', icon: 'SS', irrMin: 10.2, irrMax: 24.3, cashYield: 9.2, lockup: 4.2, dealCount: 22, newestDays: 11 },
 		'multifamily': { label: 'Multi-Family', color: '#f59e0b', icon: 'MF', irrMin: 11.8, irrMax: 22.4, cashYield: 8.4, lockup: 4.6, dealCount: 34, newestDays: 9 },
 		'retail': { label: 'Retail', color: '#ef4444', icon: 'RT', irrMin: 9.4, irrMax: 19.5, cashYield: 8.7, lockup: 4.8, dealCount: 9, newestDays: 16 },
@@ -134,9 +143,9 @@
 	};
 
 	const goalDefaults = {
-		cashflow: ['Single Family', 'Hotels/Hospitality', 'Business / Other', 'RV/Mobile Home Parks', 'Lending'],
+		cashflow: ['Single Family', 'Hotels/Hospitality', 'Business / Other', 'RV/Mobile Home Parks', 'Private Debt / Credit'],
 		growth: ['Multi-Family', 'Self Storage', 'Hotels/Hospitality', 'Retail'],
-		tax: ['Oil & Gas', 'Multi-Family', 'RV/Mobile Home Parks', 'Lending']
+		tax: ['Oil & Gas', 'Multi-Family', 'RV/Mobile Home Parks', 'Private Debt / Credit']
 	};
 
 	function normalizeAssetKey(value) {
@@ -428,48 +437,262 @@
 		if (wizardStep > 0) wizardStep -= 1;
 	}
 
-	function shouldAutoOpenWizard() {
-		if (!browser) return false;
+	function readWizardRouteState() {
+		if (!browser) {
+			return {
+				shouldOpen: false,
+				stage: '',
+				branch: '',
+				flowKey: '',
+				forceEdit: false
+			};
+		}
 		const params = new URLSearchParams(window.location.search);
 		const hash = window.location.hash.replace('#', '').toLowerCase();
-		return (
-			['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase()) ||
+		const forceEdit = ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase());
+		return {
+			shouldOpen:
+				forceEdit ||
 			['1', 'true', 'yes'].includes((params.get('wizard') || '').toLowerCase()) ||
 			Boolean(params.get('stage')) ||
 			Boolean(params.get('flow')) ||
 			hash === 'edit' ||
-			hash === 'buybox'
-		);
+			hash === 'buybox',
+			stage: params.get('stage') || '',
+			branch: params.get('branch') || '',
+			flowKey: params.get('flow') || '',
+			forceEdit
+		};
 	}
 
-	function openWizard(editMode = hasSavedPlanProgress) {
+	function syncWizardRouteFromLocation() {
+		const routeState = readWizardRouteState();
+		shouldOpenWizardFromLocation = routeState.shouldOpen;
+		wizardStage = routeState.stage;
+		wizardBranch = routeState.branch;
+		wizardFlowKey = routeState.flowKey;
+		wizardForceEdit = routeState.forceEdit;
+		showWizard = routeState.shouldOpen;
+	}
+
+	function resolveWizardBranch() {
+		const branch = String(plan?._branch || wizardData._branch || wizardData.branch || '').toLowerCase();
+		return ['cashflow', 'growth', 'tax'].includes(branch) ? branch : 'cashflow';
+	}
+
+	function buildWizardUrl({ step = STEP.GOAL, branch = '', flowKey = '', editMode = false } = {}) {
+		const stage = stageSlugForStep(step);
+		const params = new URLSearchParams();
+		if (stage) params.set('stage', stage);
+		if (flowKey) params.set('flow', flowKey);
+		if (branch) params.set('branch', branch);
+		if (editMode) params.set('edit', '1');
+		const query = params.toString();
+		return query ? `/app/plan?${query}` : '/app/plan';
+	}
+
+	async function navigateWizardStep(
+		step,
+		{ branch = '', flowKey = '', editMode = false, replaceState = false } = {}
+	) {
 		if (!canViewFullPlan) {
-			goto('/onboarding');
+			await goto('/onboarding');
 			return;
 		}
-		wizardForceEdit = Boolean(editMode);
+		const url = buildWizardUrl({ step, branch, flowKey, editMode });
+		wizardStage = stageSlugForStep(step);
+		wizardBranch = branch;
+		wizardFlowKey = flowKey;
+		wizardForceEdit = editMode;
 		showWizard = true;
+		if (browser) {
+			const historyMethod = replaceState ? 'replaceState' : 'pushState';
+			window.history[historyMethod](window.history.state, '', url);
+			syncWizardRouteFromLocation();
+			return;
+		}
+		await goto(url, { replaceState, noScroll: true, keepFocus: true });
+	}
+
+	function clearLocalPlanState() {
+		wizardData = normalizeWizardData({});
+		plan = wizardData;
+		portfolioPlan = null;
+		hasPlan = false;
+		writeUserScopedJson('gycBuyBox', null);
+		writeUserScopedJson('gycBuyBoxWizard', null);
+		writeUserScopedString('gycBuyBoxComplete', '');
+		writeUserScopedJson('gycGoals', null);
+		writeUserScopedJson('gycPortfolioPlan', null);
+		if (browser) {
+			window.dispatchEvent(new CustomEvent(USER_SCOPED_STATE_EVENT));
+		}
+	}
+
+	async function expectResetResponse(response, label) {
+		if (response.ok) return;
+		let detail = '';
+		try {
+			detail = await response.text();
+		} catch {
+			detail = '';
+		}
+		const suffix = detail ? ` ${detail}` : '';
+		throw new Error(`${label} failed: ${response.status}${suffix}`);
+	}
+
+	async function resetPersistedPlanState() {
+		const stored = browser ? getStoredSessionUser() : null;
+		if (!stored?.token) {
+			clearLocalPlanState();
+			return;
+		}
+
+		const realUser = currentAdminRealUser();
+		const isAdminImpersonation =
+			!!realUser?.email &&
+			realUser.email.toLowerCase() !== String(stored.email || '').toLowerCase();
+		const authHeaders = {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${stored.token}`
+		};
+		const adminPayload = isAdminImpersonation ? { admin: true, email: stored.email } : {};
+
+		const buyBoxResponse = await fetch('/api/buybox', {
+			method: 'DELETE',
+			headers: authHeaders,
+			body: JSON.stringify(adminPayload)
+		});
+		await expectResetResponse(buyBoxResponse, 'buybox reset');
+
+		const goalsResponse = await fetch('/api/userdata', {
+			method: 'POST',
+			headers: authHeaders,
+			body: JSON.stringify({
+				type: 'goals',
+				data: {
+					goal_type: '',
+					current_income: null,
+					target_income: null,
+					capital_available: null,
+					timeline: '',
+					tax_reduction: null
+				},
+				...adminPayload
+			})
+		});
+		await expectResetResponse(goalsResponse, 'goals reset');
+
+		const planResponse = await fetch('/api/userdata', {
+			method: 'POST',
+			headers: authHeaders,
+			body: JSON.stringify({
+				type: 'plan',
+				data: {
+					total_capital: 0,
+					check_size: 100000,
+					target_annual_income: null,
+					target_irr: null,
+					target_tax_offset: null,
+					buckets: [],
+					generated_from: 'wizard'
+				},
+				...adminPayload
+			})
+		});
+		await expectResetResponse(planResponse, 'plan reset');
+
+		clearLocalPlanState();
+	}
+
+	async function startFreshPlan() {
+		await resetPersistedPlanState();
+		wizardRenderKey += 1;
+		await navigateWizardStep(STEP.GOAL, {
+			branch: '',
+			flowKey: 'free',
+			editMode: false,
+			replaceState: true
+		});
+	}
+
+	function openPlanReview() {
+		const branch = resolveWizardBranch();
+		return navigateWizardStep(STEP.PROFILE_REVIEW, {
+			branch,
+			flowKey: getBranchFlowKey(branch),
+			editMode: true
+		});
 	}
 
 	function openPlanEditor() {
-		if (!canViewFullPlan) {
-			goto('/onboarding');
-			return;
-		}
-		const branch = String(plan?._branch || wizardData._branch || wizardData.branch || 'cashflow').toLowerCase();
-		wizardStage = 'plan';
-		wizardBranch = ['cashflow', 'growth', 'tax'].includes(branch) ? branch : 'cashflow';
-		wizardFlowKey = `paid_${wizardBranch}`;
-		wizardForceEdit = true;
-		showWizard = true;
+		const branch = resolveWizardBranch();
+		return navigateWizardStep(STEP.PLAN, {
+			branch,
+			flowKey: getBranchFlowKey(branch),
+			editMode: true
+		});
 	}
 
 	function openInvestorProfile() {
 		goto('/onboarding');
 	}
 
-	function closeWizard() {
+	async function closeWizard() {
+		if (wizardRef?.persistExitState) {
+			try {
+				await wizardRef.persistExitState();
+			} catch (error) {
+				console.warn('Failed to persist wizard state before closing:', error);
+			}
+		}
 		showWizard = false;
+		wizardStage = '';
+		wizardBranch = '';
+		wizardFlowKey = '';
+		wizardForceEdit = false;
+		await goto('/app/plan', { noScroll: true, keepFocus: true });
+	}
+
+	function openStartOverConfirmation() {
+		planConfirmError = '';
+		planConfirmDialog = {
+			kind: 'start-over',
+			title: 'Start over?',
+			body: 'This will clear your current in-progress plan inputs and take you back to the beginning.',
+			confirmLabel: 'Start Over'
+		};
+	}
+
+	function openNewPlanConfirmation() {
+		planConfirmError = '';
+		planConfirmDialog = {
+			kind: 'new-plan',
+			title: 'Create a new plan?',
+			body: 'This app currently supports one active plan. Creating a new plan will clear your current plan inputs and start a fresh replacement plan from the beginning.',
+			confirmLabel: 'Create New Plan'
+		};
+	}
+
+	function closePlanConfirmation() {
+		if (planResetting) return;
+		planConfirmError = '';
+		planConfirmDialog = null;
+	}
+
+	async function confirmPlanReset() {
+		if (!planConfirmDialog || planResetting) return;
+		planResetting = true;
+		planConfirmError = '';
+		try {
+			await startFreshPlan();
+			planConfirmDialog = null;
+		} catch (error) {
+			console.warn('Failed to reset plan state:', error);
+			planConfirmError = 'Could not reset the plan right now. Please try again.';
+		} finally {
+			planResetting = false;
+		}
 	}
 
 	function syncWizardView(detail = {}) {
@@ -1227,27 +1450,26 @@
 
 	onMount(() => {
 		if (!browser) return;
-		shouldOpenWizardFromLocation = shouldAutoOpenWizard();
-		const params = new URLSearchParams(window.location.search);
-		wizardStage = params.get('stage') || '';
-		wizardBranch = params.get('branch') || '';
-		wizardFlowKey = params.get('flow') || '';
-		wizardForceEdit = ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase());
+		syncWizardRouteFromLocation();
 		syncPlanState();
 			fetchDeals().catch(() => {});
 
 		const handleScopedStateUpdate = () => {
 			syncPlanState();
 		};
+		const handlePopState = () => {
+			syncWizardRouteFromLocation();
+		};
 		window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
+		window.addEventListener('popstate', handlePopState);
 
 		void (async () => {
 			try {
 				const stored = getStoredSessionUser();
 					if (!stored?.token) {
 						loading = false;
-						if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasSavedPlanProgress)) {
-							openWizard(wizardForceEdit && hasSavedPlanProgress);
+						if (canViewFullPlan && shouldOpenWizardFromLocation) {
+							showWizard = true;
 						}
 						return;
 					}
@@ -1279,14 +1501,15 @@
 					console.warn('Failed to load plan:', error);
 				} finally {
 					loading = false;
-					if (canViewFullPlan && (shouldOpenWizardFromLocation || !hasSavedPlanProgress) && !showWizard) {
-						openWizard(wizardForceEdit && hasSavedPlanProgress);
+					if (canViewFullPlan && shouldOpenWizardFromLocation && !showWizard) {
+						showWizard = true;
 					}
 				}
 			})();
 
 		return () => {
 			window.removeEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
+			window.removeEventListener('popstate', handlePopState);
 		};
 	});
 </script>
@@ -1325,17 +1548,21 @@
 				<div class="section-subcopy">
 					Complete your thesis, roadmap, and next-best-move setup without leaving the app shell.
 				</div>
-					<LegacyPlanWizard
-						initialData={wizardData}
-						forceEdit={wizardForceEdit}
-						forcedStage={wizardStage}
-						forcedBranch={wizardBranch}
-						forcedFlowKey={wizardFlowKey}
-					fullPlanMode={true}
-					paidCompleteRedirectTo="/app/plan"
-					on:state={handleWizardState}
-					on:complete={handleWizardComplete}
-				/>
+						{#key wizardRenderKey}
+							<LegacyPlanWizard
+								bind:this={wizardRef}
+								initialData={wizardData}
+								forceEdit={wizardForceEdit && hasSavedPlanProgress}
+								forcedStage={wizardStage}
+								forcedBranch={wizardBranch}
+							forcedFlowKey={wizardFlowKey}
+							fullPlanMode={true}
+							paidCompleteRedirectTo="/app/plan"
+							on:state={handleWizardState}
+							on:complete={handleWizardComplete}
+							on:requeststartover={openStartOverConfirmation}
+						/>
+					{/key}
 			</section>
 		</div>
 	{:else if !canViewFullPlan}
@@ -1406,7 +1633,8 @@
 					<span class="goal-pill">{targetBadge}</span>
 					<div class="target-actions">
 						<button class="inline-action" onclick={printPlan}>Print</button>
-						<button class="inline-action" onclick={openWizard}>Edit</button>
+						<button class="inline-action" data-testid="plan-summary-edit" onclick={openPlanReview}>Edit</button>
+						<button class="inline-action" data-testid="plan-summary-new" onclick={openNewPlanConfirmation}>New Plan</button>
 					</div>
 				</div>
 				<div class="plan-kicker">Target</div>
@@ -1757,6 +1985,47 @@
 			{/if}
 		</div>
 	{/if}
+	{/if}
+	{#if planConfirmDialog}
+		<div
+			class="confirm-modal-overlay"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="plan-confirm-title"
+			onclick={(event) => {
+				if (event.target === event.currentTarget) closePlanConfirmation();
+			}}
+		>
+			<div class="confirm-modal">
+				<div class="confirm-modal-header">
+					<h2 id="plan-confirm-title">{planConfirmDialog.title}</h2>
+				</div>
+				<p class="confirm-modal-copy">{planConfirmDialog.body}</p>
+				{#if planConfirmError}
+					<div class="confirm-modal-error">{planConfirmError}</div>
+				{/if}
+				<div class="confirm-modal-actions">
+					<button
+						type="button"
+						class="btn-cta secondary"
+						data-testid="plan-reset-cancel"
+						onclick={closePlanConfirmation}
+						disabled={planResetting}
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						class="btn-cta"
+						data-testid="plan-reset-confirm"
+						onclick={confirmPlanReset}
+						disabled={planResetting}
+					>
+						{planResetting ? 'Working...' : planConfirmDialog.confirmLabel}
+					</button>
+				</div>
+			</div>
+		</div>
 	{/if}
 	</div>
 </PageContainer>
@@ -2508,6 +2777,51 @@
 		font-weight: 700;
 		color: var(--primary);
 	}
+	.confirm-modal-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 120;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 20px;
+		background: rgba(15, 23, 42, 0.42);
+	}
+	.confirm-modal {
+		width: min(100%, 520px);
+		padding: 24px;
+		border-radius: 18px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
+	}
+	.confirm-modal-header h2 {
+		margin: 0;
+		font-family: var(--font-headline);
+		font-size: 28px;
+		line-height: 1.15;
+		color: var(--text-dark);
+	}
+	.confirm-modal-copy {
+		margin: 12px 0 0;
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1.7;
+		color: var(--text-secondary);
+	}
+	.confirm-modal-error {
+		margin-top: 14px;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: #c0392b;
+	}
+	.confirm-modal-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 12px;
+		margin-top: 22px;
+	}
 
 	.loading-skeleton {
 		display: flex;
@@ -3032,6 +3346,12 @@
 		.wizard-modal {
 			padding: 24px 18px;
 		}
+		.confirm-modal {
+			padding: 20px;
+		}
+		.confirm-modal-actions {
+			flex-direction: column-reverse;
+		}
 		.next-move-title {
 			font-size: 24px;
 		}
@@ -3057,6 +3377,7 @@
 		.save-toast,
 		.loading-skeleton,
 		.plan-setup-shell,
+		.confirm-modal-overlay,
 		.wizard-overlay,
 		.empty-state,
 		.plan-stack {

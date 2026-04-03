@@ -6,7 +6,6 @@ export const DEAL_ASSET_CLASS_OPTIONS = [
 	'Industrial',
 	'Self Storage',
 	'Hotels/Hospitality',
-	'Lending',
 	'Private Debt / Credit',
 	'Single Family',
 	'RV/Mobile Home Parks',
@@ -48,11 +47,17 @@ const ASSET_CLASS_ALIASES = {
 	'multifamily': 'Multi-Family',
 	'multi-family': 'Multi-Family',
 	'apartments': 'Multi-Family',
+	'lending': 'Private Debt / Credit',
+	'private lending': 'Private Debt / Credit',
 	'private debt': 'Private Debt / Credit',
 	'private credit': 'Private Debt / Credit',
+	'private debt / credit': 'Private Debt / Credit',
+	'private debt credit': 'Private Debt / Credit',
 	'debt': 'Private Debt / Credit',
 	'credit': 'Private Debt / Credit',
 	'debt fund': 'Private Debt / Credit',
+	'bridge lending': 'Private Debt / Credit',
+	'bridge loan': 'Private Debt / Credit',
 	'hotel': 'Hotels/Hospitality',
 	'hotels': 'Hotels/Hospitality',
 	'hospitality': 'Hotels/Hospitality',
@@ -203,6 +208,20 @@ function readField(source, aliases = []) {
 	return undefined;
 }
 
+export function normalizeAssetClassValue(value) {
+	const raw = String(value || '').trim();
+	if (!raw) return '';
+
+	const token = normalizeToken(raw);
+	if (!token) return '';
+
+	const aliasMatch = ASSET_CLASS_ALIASES[token];
+	if (aliasMatch) return aliasMatch;
+
+	const exactMatch = DEAL_ASSET_CLASS_OPTIONS.find((option) => option.toLowerCase() === raw.toLowerCase());
+	return exactMatch || raw;
+}
+
 function ensureArray(value) {
 	if (Array.isArray(value)) {
 		return value.map((item) => String(item || '').trim()).filter(Boolean);
@@ -290,6 +309,23 @@ export function formatLocationValue(location) {
 }
 
 export function normalizeEnumValue(fieldKey, value, { allowUnknown = false } = {}) {
+	if (fieldKey === 'assetClass') {
+		const normalizedAssetClass = normalizeAssetClassValue(value);
+		if (!normalizedAssetClass) return { value: '', warning: '' };
+		if (DEAL_ASSET_CLASS_OPTIONS.some((option) => option.toLowerCase() === normalizedAssetClass.toLowerCase())) {
+			return { value: normalizedAssetClass, warning: '' };
+		}
+		return allowUnknown
+			? {
+					value: String(value || '').trim(),
+					warning: 'Choose one of the canonical asset classes before publishing.'
+				}
+			: {
+					value: '',
+					warning: 'Choose one of the canonical asset classes before publishing.'
+				};
+	}
+
 	if (fieldKey === 'offeringType') {
 		const normalized = normalizeOfferingType(value, { empty: '' });
 		if (!normalized) return { value: '', warning: '' };

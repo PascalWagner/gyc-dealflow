@@ -17,7 +17,7 @@
 		SOURCE_OPTIONS,
 		RE_PRO_OPTIONS,
 		GROWTH_PRIORITY_OPTIONS,
-		LOSS_TOLERANCE_OPTIONS,
+		CHECK_SIZE_OPTIONS,
 		DIVERSIFICATION_OPTIONS,
 		OPERATOR_FOCUS_OPTIONS,
 		LOCKUP_OPTIONS,
@@ -36,6 +36,7 @@
 		isFreeFlowComplete,
 		normalizeWizardData,
 		parseDollar,
+		phaseEntryStep,
 		phaseForStep,
 		planHeroCopy,
 		stageSlugForStep,
@@ -260,7 +261,8 @@
 	}
 
 	function jumpToPhase(phaseIndex) {
-		const nextIndex = sequence.findIndex((step) => phaseForStep(step) === phaseIndex);
+		const entryStep = phaseEntryStep(sequence, phaseIndex, wizardData);
+		const nextIndex = sequence.findIndex((step) => step === entryStep);
 		if (nextIndex < 0 || nextIndex === wizardStepIndex) return;
 		validationError = '';
 		wizardStepIndex = nextIndex;
@@ -271,6 +273,13 @@
 		if (nextIndex < 0 || nextIndex === wizardStepIndex) return;
 		validationError = '';
 		wizardStepIndex = nextIndex;
+	}
+
+	function requestStartOver() {
+		dispatch('requeststartover', {
+			step: currentStep,
+			branch: wizardData._branch || ''
+		});
 	}
 
 	async function exitToPlan() {
@@ -343,8 +352,8 @@
 				return Array.isArray(data.assetClasses) && data.assetClasses.length > 0;
 			case STEP.STRATEGIES:
 				return Array.isArray(data.strategies) && data.strategies.length > 0;
-			case STEP.RISK:
-				return Boolean(data.maxOperatorPct);
+			case STEP.CHECK_SIZE:
+				return parseDollar(data.checkSize) > 0;
 			case STEP.ACCREDITATION:
 				return Array.isArray(data.accreditation) && data.accreditation.length > 0;
 			case STEP.CF_TARGET:
@@ -358,7 +367,7 @@
 			case STEP.TAX_BASELINE:
 				return parseDollar(data.taxableIncomeBaseline) > 0;
 			case STEP.NET_WORTH:
-				return parseDollar(data.netWorth) > 0;
+				return parseDollar(data.netWorth) > 0 || data.netWorthPreference === 'prefer_not_to_say';
 			case STEP.CAPITAL:
 				return Boolean(data.capital12mo);
 			case STEP.SOURCE:
@@ -407,6 +416,8 @@
 	}
 
 	async function saveBuyBox(markComplete = false) {
+		clearTimeout(saveTimer);
+		saveTimer = null;
 		const sessionUser = getStoredSessionUser() || get(user);
 		if (!sessionUser?.email) return;
 
@@ -447,6 +458,11 @@
 	}
 
 	export async function persistProgress() {
+		await saveBuyBox(false);
+	}
+
+	export async function persistExitState() {
+		await savePortfolioPlan();
 		await saveBuyBox(false);
 	}
 
@@ -723,21 +739,21 @@
 	function stepTitleFor(step) {
 		switch (step) {
 			case STEP.GOAL:
-				return 'What do you want your money to do for you?';
+				return "What's your primary investing goal right now?";
+			case STEP.ACCREDITATION:
+				return 'Are you an accredited investor?';
 			case STEP.EXPERIENCE:
 				return 'How many passive investments have you made?';
 			case STEP.RE_PRO:
-				return 'Do you have Real Estate Professional status?';
+				return 'Do you or your spouse qualify as a Real Estate Professional for tax purposes?';
 			case STEP.BASELINE:
 				return 'Where are you starting from?';
 			case STEP.ASSETS:
-				return 'What types of deals interest you?';
+				return 'Which asset classes should we prioritize in your deal flow?';
 			case STEP.STRATEGIES:
-				return 'How do you want your money working?';
-			case STEP.RISK:
-				return 'What lets you sleep at night?';
-			case STEP.ACCREDITATION:
-				return 'Are you an accredited investor?';
+				return 'Which deal strategies are you open to?';
+			case STEP.CHECK_SIZE:
+				return 'What is the max check size you are realistically open to for one deal?';
 			case STEP.CF_TARGET:
 				return 'How much passive income do you want in 12 months?';
 			case STEP.GROWTH_TARGET:
@@ -759,13 +775,13 @@
 			case STEP.DIVERSIFICATION:
 				return 'Concentrated or diversified?';
 			case STEP.OPERATOR_FOCUS:
-				return 'Who do you want managing your money?';
+				return 'Do you prefer specialists or are you open to broader operators?';
 			case STEP.LOCKUP:
 				return 'How long can you lock up your capital?';
 			case STEP.DISTRIBUTIONS:
 				return 'How often do you want to get paid?';
 			case STEP.LP_NETWORK:
-				return 'Invest alongside other LPs';
+				return 'Do you want visibility into which other LPs are in a deal?';
 			case STEP.PLAN:
 				return heroCopy.title;
 			case STEP.PROFILE_REVIEW:
@@ -780,21 +796,21 @@
 	function stepSubtitleFor(step) {
 		switch (step) {
 			case STEP.GOAL:
-				return 'Whether you are evaluating your first deal or your fifteenth, this takes 3 minutes and shapes everything you see.';
+				return 'This shapes which deals you see first, how we sort them, and what success looks like for you.';
+			case STEP.ACCREDITATION:
+				return 'This determines which private deals we can legally show you. Select all that apply.';
 			case STEP.EXPERIENCE:
 				return 'Syndications, funds, private placements - anything where you wrote a check and someone else operates the deal.';
 			case STEP.RE_PRO:
-				return 'This IRS designation lets you use real estate losses to offset all income - not just passive income.';
+				return 'This helps us understand when tax-focused real estate strategies may be especially relevant for you.';
 			case STEP.BASELINE:
 				return 'Your current passive income - rental checks, distributions, interest. Do not overthink it.';
 			case STEP.ASSETS:
-				return "Select any that interest you. You are not locked in - this just shapes what we show you first.";
+				return 'Choose the categories you want to see more of first. You can change this anytime.';
 			case STEP.STRATEGIES:
-				return 'Each strategy has a different risk/return profile. Best strategies for your goal are shown first.';
-			case STEP.RISK:
-				return 'The max you would be comfortable losing in any single deal. Private investments are illiquid and carry real risk.';
-			case STEP.ACCREDITATION:
-				return 'Most private placements require accreditation. Select all that apply - this determines which deals you can legally invest in.';
+				return 'Asset class is what the deal is. Strategy is how returns are created.';
+			case STEP.CHECK_SIZE:
+				return 'We use this to avoid showing you deals that are clearly outside your range.';
 			case STEP.CF_TARGET:
 				return 'Set a 12-month number so the rest of the plan has a real destination.';
 			case STEP.GROWTH_TARGET:
@@ -806,7 +822,7 @@
 			case STEP.TAX_BASELINE:
 				return 'We need this to size depreciation strategies to your actual tax bracket. Never shared.';
 			case STEP.NET_WORTH:
-				return 'Include everything - investments, savings, real estate, retirement. This helps us right-size recommendations. Never shared.';
+				return 'We use this to dynamically calculate check-size guidance, diversification, and plan pacing for you. This stays private and is never shown to other members.';
 			case STEP.CAPITAL:
 				return 'Not a commitment - just helps us show you deals you can actually get into.';
 			case STEP.SOURCE:
@@ -816,13 +832,13 @@
 			case STEP.DIVERSIFICATION:
 				return `You selected ${wizardData.assetClasses?.length || 0} asset classes. How concentrated do you want your portfolio to be?`;
 			case STEP.OPERATOR_FOCUS:
-				return 'This is about focus vs. diversification at the operator level - not your portfolio.';
+				return 'Tell us whether you want niche operators or broader firms that can invest across more than one lane.';
 			case STEP.LOCKUP:
 				return 'Once you are in, you cannot withdraw early. Longer lockups typically mean higher returns.';
 			case STEP.DISTRIBUTIONS:
 				return 'Monthly checks feel great, but they narrow your options to mostly lending funds. Being flexible opens up more deals.';
 			case STEP.LP_NETWORK:
-				return 'The best investors do not go alone. See who else is in the same deals, share diligence, and deploy together.';
+				return 'Compare notes, build conviction, and see who else is participating. You can only see others if you also opt in.';
 			case STEP.PLAN:
 				return heroCopy.description;
 			case STEP.PROFILE_REVIEW:
@@ -962,29 +978,22 @@
 					/>
 				{/each}
 			</div>
-		{:else if currentStep === STEP.RISK}
+		{:else if currentStep === STEP.CHECK_SIZE}
 			{#if parseDollar(wizardData.netWorth) > 0}
 				<div class="callout subtle">
-					Based on your {formatCompactMoney(wizardData.netWorth)} net worth:
-					<strong>{formatCompactMoney(Math.round(parseDollar(wizardData.netWorth) * 0.01))} - {formatCompactMoney(Math.round(parseDollar(wizardData.netWorth) * 0.02))}</strong>
-					per deal is the standard 1-2% range.
+					Based on your {formatCompactMoney(wizardData.netWorth)} net worth, a typical 1-2% check is
+					<strong>{formatCompactMoney(Math.round(parseDollar(wizardData.netWorth) * 0.01))} - {formatCompactMoney(Math.round(parseDollar(wizardData.netWorth) * 0.02))}</strong>.
 				</div>
 			{/if}
 			<div class="option-stack">
-				{#each LOSS_TOLERANCE_OPTIONS as option}
+				{#each CHECK_SIZE_OPTIONS as option}
 					<OnboardingSelectableCard
 						className="option-card"
-						selected={wizardData.maxOperatorPct === option.value}
+						selected={String(parseDollar(wizardData.checkSize) || '') === option.value}
 						title={option.label}
 						description={option.description}
-						onClick={() => updateField('maxOperatorPct', option.value)}
-					>
-						<svelte:fragment slot="aside">
-							{#if riskDollarRange(option)}
-								<div class="option-badge">{riskDollarRange(option)}</div>
-							{/if}
-						</svelte:fragment>
-					</OnboardingSelectableCard>
+						onClick={() => updateField('checkSize', option.value)}
+					/>
 				{/each}
 			</div>
 		{:else if currentStep === STEP.ACCREDITATION}
@@ -1107,16 +1116,30 @@
 					step="1000"
 					class="money-input"
 					value={moneyInputValue(wizardData.netWorth)}
-					oninput={(event) => updateField('netWorth', event.currentTarget.value)}
+					oninput={(event) => setWizardData({ ...wizardData, netWorth: event.currentTarget.value, netWorthPreference: '' })}
 				/>
 				<div class="preset-row">
 					{#each [250000, 500000, 1000000, 2000000, 5000000, 10000000] as preset}
-						<button type="button" class="pill-chip" class:selected={parseDollar(wizardData.netWorth) === preset} onclick={() => updateField('netWorth', String(preset))}>
+						<button type="button" class="pill-chip" class:selected={parseDollar(wizardData.netWorth) === preset && wizardData.netWorthPreference !== 'prefer_not_to_say'} onclick={() => setWizardData({ ...wizardData, netWorth: String(preset), netWorthPreference: '' })}>
 							{formatCompactMoney(preset)}
 						</button>
 					{/each}
+					<button
+						type="button"
+						class="pill-chip"
+						class:selected={wizardData.netWorthPreference === 'prefer_not_to_say'}
+						onclick={() => setWizardData({ ...wizardData, netWorth: '', netWorthPreference: 'prefer_not_to_say' })}
+					>
+						Prefer not to say
+					</button>
 				</div>
-				<div class="help-text">1-2% per deal = {formatCompactMoney(Math.round(parseDollar(wizardData.netWorth || 0) * 0.01))} - {formatCompactMoney(Math.round(parseDollar(wizardData.netWorth || 0) * 0.02))}.</div>
+				<div class="help-text">
+					{#if wizardData.netWorthPreference === 'prefer_not_to_say'}
+						No problem. We will keep using your other answers to shape pacing and check-size guidance.
+					{:else}
+						1-2% per deal = {formatCompactMoney(Math.round(parseDollar(wizardData.netWorth || 0) * 0.01))} - {formatCompactMoney(Math.round(parseDollar(wizardData.netWorth || 0) * 0.02))}.
+					{/if}
+				</div>
 			</div>
 		{:else if currentStep === STEP.CAPITAL}
 			<div class="option-stack">
@@ -1219,13 +1242,22 @@
 					</div>
 				{/each}
 			</div>
-			<label class="checkbox-row">
-				<input type="checkbox" checked={wizardData.sharePortfolio === true} onchange={(event) => updateField('sharePortfolio', event.currentTarget.checked)} />
-				<div>
-					<div class="option-title">Yes, show my name on deals I invest in</div>
-					<div class="option-copy">You can only see others if you also opt in.</div>
-				</div>
-			</label>
+			<div class="option-stack">
+				<OnboardingSelectableCard
+					className="option-card"
+					selected={wizardData.sharePortfolio === true}
+					title="Yes, show me the LP network"
+					description="You will be able to see who else is participating and compare notes across the same deals."
+					onClick={() => updateField('sharePortfolio', true)}
+				/>
+				<OnboardingSelectableCard
+					className="option-card"
+					selected={wizardData.sharePortfolio === false}
+					title="No, keep this private"
+					description="You can still use the platform normally. We just will not show network participation around your activity."
+					onClick={() => updateField('sharePortfolio', false)}
+				/>
+			</div>
 		{:else if currentStep === STEP.PLAN}
 			<div class="plan-stage">
 				<div class="plan-summary-grid plan-summary-grid--wide">
@@ -1401,7 +1433,19 @@
 		{/if}
 
 		<div class="wizard-actions">
-			<button type="button" class="ob-btn ob-btn--secondary action-btn secondary" onclick={previousStep} disabled={wizardStepIndex === 0}>Back</button>
+			<div class="wizard-actions-group">
+				<button type="button" class="ob-btn ob-btn--secondary action-btn secondary" onclick={previousStep} disabled={wizardStepIndex === 0}>Back</button>
+				{#if currentStep === STEP.PROFILE_REVIEW}
+					<button
+						type="button"
+						class="ob-btn ob-btn--secondary action-btn secondary action-btn--ghost"
+						data-testid="wizard-start-over"
+						onclick={requestStartOver}
+					>
+						Start Over
+					</button>
+				{/if}
+			</div>
 			{#if currentStep !== STEP.GOAL}
 				<button type="button" class="ob-btn ob-btn--primary action-btn primary" onclick={nextStep} disabled={saving}>
 					{#if currentStep === STEP.LP_NETWORK}
@@ -1870,8 +1914,18 @@
 		margin-top: 22px;
 	}
 
+	.wizard-actions-group {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
 	.action-btn {
 		min-width: 132px;
+	}
+
+	.action-btn--ghost {
+		color: var(--text-secondary, #607179);
 	}
 
 	@media (max-width: 900px) {
@@ -1904,6 +1958,11 @@
 
 	@media (max-width: 640px) {
 		.wizard-actions {
+			flex-direction: column;
+		}
+
+		.wizard-actions-group {
+			width: 100%;
 			flex-direction: column;
 		}
 

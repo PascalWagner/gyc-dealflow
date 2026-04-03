@@ -37,7 +37,7 @@
 	// Step 0: Name
 	let firstName = $state('');
 	let lastName = $state('');
-	let lpNetworkOptIn = $state(true);
+	let lpNetworkVisible = $state(false);
 
 	// Step 1: Role
 	let selectedRole = $state(null);
@@ -45,7 +45,16 @@
 	// LP Steps
 	let lpGoal = $state(null);
 	let lpDealsCount = $state(0);
-	let baselineIncome = $state(0);
+	let lpAccreditation = $state([]);
+	let lpReProfessional = $state(null);
+	let lpAssetClasses = $state([]);
+	let lpStrategies = $state([]);
+	let lpMaxCheckSize = $state(null);
+	let lpNetworkAnswered = $state(false);
+	let lpPhotoUrl = $state('');
+	let lpPhotoSkipped = $state(false);
+	let lpPhotoUploading = $state(false);
+	let lpPhotoError = $state('');
 	let lpCompletionSaving = $state(false);
 	let lpCompletionError = $state('');
 
@@ -88,22 +97,98 @@
 	let networkStats = $state(null);
 
 	const ASSET_CLASSES = ['Multi-Family', 'Self Storage', 'Industrial', 'Mobile Home Parks', 'Hotels/Hospitality', 'Retail', 'Office', 'Senior Living', 'Student Housing', 'Medical Office', 'Data Centers', 'Lending', 'Short Term Rental', 'Land', 'Mixed Use', 'Build-to-Rent', 'Other'];
+	const LP_STEP_SEQUENCE = [
+		'stepLpGoal',
+		'stepLpAccreditation',
+		'stepLpExperience',
+		'stepLpRePro',
+		'stepLpAssets',
+		'stepLpStrategies',
+		'stepLpCheckSize',
+		'stepLpNetwork',
+		'stepLpPhoto',
+		'stepLpComplete'
+	];
+	const LP_STEP_PROGRESS = Object.fromEntries(LP_STEP_SEQUENCE.map((step, index) => [
+		step,
+		Math.max(10, Math.round(((index + 1) / LP_STEP_SEQUENCE.length) * 100))
+	]));
+	const LP_ACCREDITATION_OPTIONS = [
+		{ value: 'net_worth', label: 'Net worth over $1M', description: 'Individual or joint net worth exceeding $1M, excluding your primary residence' },
+		{ value: 'income', label: 'Income over $200K', description: 'Earned $200K+ individually (or $300K+ jointly) in each of the past 2 years' },
+		{ value: 'licensed', label: 'Licensed professional', description: 'Hold a Series 7, Series 65, or Series 82 license in good standing' },
+		{ value: 'entity', label: 'Through an entity', description: 'Invest via an LLC, trust, family office, or fund with $5M+ in assets' },
+		{ value: 'not_accredited', label: 'Not yet accredited', description: 'I am still working toward accredited status' }
+	];
+	const LP_RE_PRO_OPTIONS = [
+		{ value: 'yes', label: 'Yes, I qualify', description: 'I or my spouse meet the hours requirement' },
+		{ value: 'no', label: "No, I don't qualify", description: 'I have a full-time job outside of real estate' },
+		{ value: 'unsure', label: "I'm not sure", description: "I'd like to figure this out with my CPA" }
+	];
+	const LP_ASSET_CLASS_OPTIONS = [
+		'Private Debt / Credit',
+		'Multi-Family',
+		'Self Storage',
+		'Industrial',
+		'Single Family',
+		'RV/Mobile Home Parks',
+		'Hotels/Hospitality',
+		'Retail',
+		'Medical Receivables',
+		'Short Term Rental',
+		'Business / Other',
+		'Oil & Gas / Energy'
+	];
+	const LP_STRATEGY_OPTIONS = [
+		{ value: 'Lending', label: 'Lending / Credit' },
+		{ value: 'Buy & Hold', label: 'Buy & Hold' },
+		{ value: 'Value-Add', label: 'Value-Add' },
+		{ value: 'Distressed', label: 'Distressed / Turnaround' },
+		{ value: 'Development', label: 'Ground-Up Development' }
+	];
+	const LP_CHECK_SIZE_OPTIONS = [
+		{ value: '50000', label: 'Under $50K' },
+		{ value: '99000', label: '$50K - $99K' },
+		{ value: '249000', label: '$100K - $249K' },
+		{ value: '250000', label: '$250K+' }
+	];
 
 	let headers = $derived($user ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + $user.token } : { 'Content-Type': 'application/json' });
 
 	// LP derived
 	let dealCountFeedback = $derived.by(() => {
-		if (lpDealsCount === 0) return "Everyone starts somewhere. We'll walk you through everything.";
-		if (lpDealsCount <= 3) return "Nice, you've got some skin in the game. The database will help you find your next deal.";
-		if (lpDealsCount <= 10) return "Solid portfolio building. You know what you're looking for.";
-		return "Seasoned investor. You'll appreciate the comparison tools and deeper deal analysis.";
+		if (lpDealsCount === 0) return "Everyone starts somewhere. We'll tailor the guidance from here.";
+		if (lpDealsCount <= 3) return "Great, you're building experience. We'll keep the context simple and useful.";
+		if (lpDealsCount <= 10) return "Solid experience. You're likely ready for a sharper deal mix.";
+		return "Seasoned investor. We'll keep things efficient and more selective.";
 	});
 
-	let baselineFeedback = $derived.by(() => {
-		const mo = Math.round(baselineIncome / 12).toLocaleString();
-		if (baselineIncome === 0) return "Most of our members started at $0. That's the whole point.";
-		if (baselineIncome < 25000) return "That's $" + mo + "/mo. Good \u2014 you've already started. Let's accelerate it.";
-		return "That's $" + mo + "/mo. Nice foundation \u2014 let's build on it.";
+	let lpStepTitle = $derived.by(() => {
+		if (currentStep === 'stepLpGoal') return "What's your primary investing goal right now?";
+		if (currentStep === 'stepLpAccreditation') return 'Are you an accredited investor?';
+		if (currentStep === 'stepLpExperience') return 'How many passive investments have you made?';
+		if (currentStep === 'stepLpRePro') return 'Do you or your spouse qualify as a Real Estate Professional for tax purposes?';
+		if (currentStep === 'stepLpAssets') return 'Which asset classes should we prioritize in your deal flow?';
+		if (currentStep === 'stepLpStrategies') return 'Which deal strategies are you open to?';
+		if (currentStep === 'stepLpCheckSize') return 'What is the max check size you are realistically open to for one deal?';
+		if (currentStep === 'stepLpNetwork') return 'Do you want visibility into which other LPs are in a deal?';
+		if (currentStep === 'stepLpPhoto') return 'Add a profile photo?';
+		if (currentStep === 'stepLpComplete') return 'Your deal flow is personalized.';
+		return '';
+	});
+
+	let lpStepSubtitle = $derived.by(() => {
+		if (currentStep === 'stepLpGoal') return 'This shapes which deals you see first, how we sort them, and what success looks like for you.';
+		if (currentStep === 'stepLpAccreditation') return 'This determines which private deals we can legally show you. Select all that apply.';
+		if (currentStep === 'stepLpExperience') return 'Syndications, funds, and private placements all count. This helps us tailor how much context and support to give you.';
+		if (currentStep === 'stepLpRePro') return 'This helps us understand when tax-focused real estate strategies may be especially relevant for you.';
+		if (currentStep === 'stepLpAssets') return 'Choose the categories you want to see more of first. You can change this anytime.';
+		if (currentStep === 'stepLpStrategies') return 'Asset class is what the deal is. Strategy is how returns are created.';
+		if (currentStep === 'stepLpCheckSize') return 'We use this to avoid showing you deals that are clearly outside your range.';
+		if (currentStep === 'stepLpNetwork') return 'Compare notes, build conviction, and see who else is participating. You can only see others if you also opt in.';
+		if (currentStep === 'stepLpPhoto') return 'If you participate in the LP network, we can show your face next to your activity and participation. You can skip this for now.';
+		if (currentStep === 'stepLpComplete') return 'Review your answers and finish setup.';
+		return '';
 	});
 
 	let canSignAgreement = $derived(consents.tos && consents.listing && consents.accuracy && consents.recording && sigName.trim().length > 0);
@@ -119,10 +204,22 @@
 	const LP_QUERY_STEP_MAP = {
 		goal: 'stepLpGoal',
 		'lp-goal': 'stepLpGoal',
-		experience: 'stepLpDeals',
-		'lp-deals': 'stepLpDeals',
-		'starting-point': 'stepLpBaseline',
-		'lp-baseline': 'stepLpBaseline',
+		accreditation: 'stepLpAccreditation',
+		'lp-accreditation': 'stepLpAccreditation',
+		experience: 'stepLpExperience',
+		'lp-experience': 'stepLpExperience',
+		're-professional': 'stepLpRePro',
+		're-pro': 'stepLpRePro',
+		'lp-re-pro': 'stepLpRePro',
+		'asset-classes': 'stepLpAssets',
+		'lp-assets': 'stepLpAssets',
+		strategies: 'stepLpStrategies',
+		'lp-strategies': 'stepLpStrategies',
+		'check-size': 'stepLpCheckSize',
+		'lp-check-size': 'stepLpCheckSize',
+		'lp-network': 'stepLpNetwork',
+		photo: 'stepLpPhoto',
+		avatar: 'stepLpPhoto',
 		completion: 'stepLpComplete',
 		'lp-complete': 'stepLpComplete'
 	};
@@ -149,7 +246,7 @@
 
 		// Progress bar
 		const gpProgress = { step0: 0, step1: 0, step2: 0, step3: 11, step4: 22, step5: 33, step6: 44, step7: 55, step8: 66, step9: 77, step10: 88, step11: 100 };
-		const lpProgress = { stepLpGoal: 25, stepLpDeals: 50, stepLpBaseline: 75, stepLpComplete: 100 };
+		const lpProgress = LP_STEP_PROGRESS;
 
 		const isHidden = ['step0', 'step1'].includes(stepId);
 		showProgress = !isHidden;
@@ -160,20 +257,34 @@
 	}
 
 	function readLpWizardSnapshot() {
-		return normalizeWizardData(readUserScopedJson('gycBuyBoxWizard', {}) || {});
+		return readUserScopedJson('gycBuyBoxWizard', {}) || {};
 	}
 
 	function persistLpWizardSnapshot(overrides = {}) {
 		const existing = readLpWizardSnapshot();
 		const next = normalizeWizardData({
 			...existing,
-			sharePortfolio: lpNetworkOptIn,
+			...overrides,
 			goal: lpGoal ?? existing.goal,
 			_branch: lpGoal ?? existing._branch,
 			lpDealsCount,
 			dealExperience: lpDealsCount,
-			baselineIncome,
-			...overrides
+			lpAccreditation,
+			reProfessional: lpReProfessional,
+			lpExperienceCount: lpDealsCount,
+			lpAssetClasses,
+			assetClasses: [...lpAssetClasses],
+			lpStrategies,
+			strategies: [...lpStrategies],
+			lpMaxCheckSize,
+			maxCheckSize: lpMaxCheckSize,
+			lpNetworkAnswered,
+			sharePortfolio: lpNetworkVisible,
+			lpNetworkVisible,
+			lpPhotoUrl,
+			lpPhotoSkipped,
+			avatarUrl: lpPhotoUrl,
+			avatar_url: lpPhotoUrl
 		});
 		writeUserScopedJson('gycBuyBoxWizard', next);
 		return next;
@@ -186,13 +297,25 @@
 		if (next.lpDealsCount !== undefined || next.dealExperience !== undefined) {
 			lpDealsCount = Number(next.lpDealsCount ?? next.dealExperience ?? 0) || 0;
 		}
-		if (next.baselineIncome !== undefined && next.baselineIncome !== null && next.baselineIncome !== '') {
-			baselineIncome = Number(next.baselineIncome) || 0;
-		}
-		baselineInputValue = fmtDollar(baselineIncome);
-		if (typeof next.sharePortfolio === 'boolean') {
-			lpNetworkOptIn = next.sharePortfolio;
-		}
+		lpAccreditation = Array.isArray(snapshot.lpAccreditation) ? [...snapshot.lpAccreditation] : Array.isArray(next.accreditation) ? [...next.accreditation] : [];
+		lpReProfessional = snapshot.lpReProfessional ?? next.reProfessional ?? null;
+		lpAssetClasses = Array.isArray(snapshot.lpAssetClasses) ? [...snapshot.lpAssetClasses] : Array.isArray(next.assetClasses) ? [...next.assetClasses] : [];
+		lpStrategies = Array.isArray(snapshot.lpStrategies) ? [...snapshot.lpStrategies] : Array.isArray(next.strategies) ? [...next.strategies] : [];
+		lpMaxCheckSize = snapshot.lpMaxCheckSize ?? next.maxCheckSize ?? next.checkSize ?? null;
+		lpNetworkAnswered = typeof snapshot.lpNetworkAnswered === 'boolean'
+			? snapshot.lpNetworkAnswered
+			: Object.prototype.hasOwnProperty.call(snapshot || {}, 'sharePortfolio')
+				? true
+				: false;
+		lpNetworkVisible = lpNetworkAnswered
+			? (typeof snapshot.lpNetworkVisible === 'boolean'
+				? snapshot.lpNetworkVisible
+				: typeof snapshot.sharePortfolio === 'boolean'
+					? snapshot.sharePortfolio
+					: false)
+			: false;
+		lpPhotoUrl = snapshot.lpPhotoUrl || snapshot.avatarUrl || snapshot.avatar_url || '';
+		lpPhotoSkipped = Boolean(snapshot.lpPhotoSkipped);
 		return next;
 	}
 
@@ -201,20 +324,27 @@
 	}
 
 	function inferLpResumeStep(snapshot = readLpWizardSnapshot()) {
+		if (!snapshot.goal && !snapshot._branch) return 'stepLpGoal';
+		if (!lpSnapshotHasStepValue(snapshot, 'lpAccreditation') && !lpSnapshotHasStepValue(snapshot, 'accreditation')) return 'stepLpAccreditation';
+		if (!lpSnapshotHasStepValue(snapshot, 'lpDealsCount') && !lpSnapshotHasStepValue(snapshot, 'dealExperience')) return 'stepLpExperience';
+		if (!lpSnapshotHasStepValue(snapshot, 'lpReProfessional') && !lpSnapshotHasStepValue(snapshot, 'reProfessional')) return 'stepLpRePro';
+		if (!lpSnapshotHasStepValue(snapshot, 'lpAssetClasses') && !lpSnapshotHasStepValue(snapshot, 'assetClasses')) return 'stepLpAssets';
+		if (!lpSnapshotHasStepValue(snapshot, 'lpStrategies') && !lpSnapshotHasStepValue(snapshot, 'strategies')) return 'stepLpStrategies';
+		if (!lpSnapshotHasStepValue(snapshot, 'lpMaxCheckSize') && !lpSnapshotHasStepValue(snapshot, 'maxCheckSize')) return 'stepLpCheckSize';
+		const networkAnswered = typeof snapshot.lpNetworkAnswered === 'boolean'
+			? snapshot.lpNetworkAnswered
+			: Object.prototype.hasOwnProperty.call(snapshot || {}, 'sharePortfolio');
+		if (!networkAnswered) return 'stepLpNetwork';
 		if (
-			lpSnapshotHasStepValue(snapshot, 'baselineIncome') &&
-			snapshot.baselineIncome !== null &&
-			snapshot.baselineIncome !== ''
+			(snapshot.lpNetworkVisible ?? snapshot.sharePortfolio) === true &&
+			!snapshot.lpPhotoSkipped &&
+			!lpSnapshotHasStepValue(snapshot, 'lpPhotoUrl') &&
+			!lpSnapshotHasStepValue(snapshot, 'avatarUrl') &&
+			!lpSnapshotHasStepValue(snapshot, 'avatar_url')
 		) {
-			return 'stepLpComplete';
+			return 'stepLpPhoto';
 		}
-		if (lpSnapshotHasStepValue(snapshot, 'lpDealsCount') || lpSnapshotHasStepValue(snapshot, 'dealExperience')) {
-			return 'stepLpBaseline';
-		}
-		if (snapshot.goal || snapshot._branch) {
-			return 'stepLpDeals';
-		}
-		return 'stepLpGoal';
+		return 'stepLpComplete';
 	}
 
 	function resolveLpAppModeStep(url) {
@@ -235,12 +365,8 @@
 		if (!firstName) return;
 		if (!lastName) return;
 
-		const u = { ...$user, name: firstName + ' ' + lastName, firstName, lastName, sharePortfolio: lpNetworkOptIn };
+			const u = { ...$user, name: firstName + ' ' + lastName, firstName, lastName };
 		user.set(u);
-
-		const wzData = readUserScopedJson('gycBuyBoxWizard', {});
-		wzData.sharePortfolio = lpNetworkOptIn;
-		writeUserScopedJson('gycBuyBoxWizard', wzData);
 
 		goToStep('step1');
 	}
@@ -258,83 +384,196 @@
 		}).catch(() => {});
 
 		if (selectedRole === 'lp') {
-			goToStep('stepLpGoal');
+			goToStep(inferLpResumeStep());
 		} else {
 			goToStep('step2');
 		}
 	}
 
-	// ===== LP: Goal Selection (U3) =====
-	function selectGoal(goal) {
+	// ===== LP: Core flow =====
+	const hasMemberAccess = $derived($accessTier === 'member' || $accessTier === 'admin');
+
+	function lpDealsRedirect() {
+		if (!hasMemberAccess) return '/app/deals';
+		const params = new URLSearchParams({
+			stage: lpGoal === 'growth' ? 'growth-target' : lpGoal === 'tax' ? 'tax-target' : 'starting-point',
+			flow: `paid_${lpGoal || 'cashflow'}`,
+			branch: lpGoal || 'cashflow'
+		});
+		return `${lpMemberContinuePath}?${params.toString()}`;
+	}
+
+	function toggleItem(values, value) {
+		return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+	}
+
+	function setLpGoal(goal) {
 		lpGoal = goal;
 		lpCompletionError = '';
 		persistLpWizardSnapshot({ goal, _branch: goal });
-		setTimeout(() => goToStep('stepLpDeals'), 350);
 	}
 
-	// ===== LP: Deal Count =====
+	function selectGoal(goal) {
+		setLpGoal(goal);
+		setTimeout(() => goToStep('stepLpAccreditation'), 250);
+	}
+
+	function toggleLpAccreditation(value) {
+		if (value === 'not_accredited') {
+			lpAccreditation = lpAccreditation.includes('not_accredited') ? [] : ['not_accredited'];
+		} else {
+			lpAccreditation = lpAccreditation.filter((item) => item !== 'not_accredited');
+			lpAccreditation = toggleItem(lpAccreditation, value);
+		}
+		lpCompletionError = '';
+		persistLpWizardSnapshot({ lpAccreditation: [...lpAccreditation], accreditation: [...lpAccreditation] });
+	}
+
+	function saveLpAccreditation() {
+		persistLpWizardSnapshot({ lpAccreditation: [...lpAccreditation], accreditation: [...lpAccreditation] });
+		goToStep('stepLpExperience');
+	}
+
 	function adjustDealCount(delta) {
 		const nextCount = Math.max(0, lpDealsCount + delta);
 		lpDealsCount = nextCount;
-		persistLpWizardSnapshot({ lpDealsCount: nextCount, dealExperience: nextCount });
+		persistLpWizardSnapshot({ lpDealsCount: nextCount, dealExperience: nextCount, lpExperienceCount: nextCount });
 	}
 
 	function onDealCountInput(e) {
 		const clean = e.target.value.replace(/[^0-9]/g, '');
 		const nextCount = parseInt(clean) || 0;
 		lpDealsCount = nextCount;
-		persistLpWizardSnapshot({ lpDealsCount: nextCount, dealExperience: nextCount });
+		persistLpWizardSnapshot({ lpDealsCount: nextCount, dealExperience: nextCount, lpExperienceCount: nextCount });
 	}
 
-	function saveDealCount() {
-		persistLpWizardSnapshot({ lpDealsCount, dealExperience: lpDealsCount });
-		goToStep('stepLpBaseline');
+	function saveLpExperience() {
+		persistLpWizardSnapshot({ lpDealsCount, dealExperience: lpDealsCount, lpExperienceCount: lpDealsCount });
+		goToStep('stepLpRePro');
 	}
 
-	// ===== LP: Baseline Income =====
-	function fmtDollar(n) { return '$' + n.toLocaleString(); }
-	function parseDollar(s) { return parseInt(String(s).replace(/[^0-9]/g, ''), 10) || 0; }
-
-	let baselineInputValue = $state('$0');
-	const hasMemberAccess = $derived($accessTier === 'member' || $accessTier === 'admin');
-
-	function lpDealsRedirect() {
-		return hasMemberAccess ? lpMemberContinuePath : '/app/deals';
+	function selectLpRePro(value) {
+		lpReProfessional = value;
+		lpCompletionError = '';
+		persistLpWizardSnapshot({ lpReProfessional: value, reProfessional: value });
 	}
 
-	function selectBaselinePreset(val) {
-		baselineIncome = val;
-		baselineInputValue = fmtDollar(val);
-		persistLpWizardSnapshot({ baselineIncome: val });
+	function saveLpRePro() {
+		if (!lpReProfessional) return;
+		persistLpWizardSnapshot({ lpReProfessional, reProfessional: lpReProfessional });
+		goToStep('stepLpAssets');
 	}
 
-	function onBaselineInput(e) {
-		const n = parseDollar(e.target.value);
-		baselineIncome = n;
-		persistLpWizardSnapshot({ baselineIncome: n });
+	function toggleLpAssetClass(assetClass) {
+		lpAssetClasses = toggleItem(lpAssetClasses, assetClass);
+		lpCompletionError = '';
+		persistLpWizardSnapshot({ lpAssetClasses: [...lpAssetClasses], assetClasses: [...lpAssetClasses] });
 	}
 
-	function onBaselineFocus(e) {
-		const n = parseDollar(e.target.value);
-		e.target.value = n > 0 ? String(n) : '';
+	function saveLpAssetClasses() {
+		if (lpAssetClasses.length === 0) return;
+		persistLpWizardSnapshot({ lpAssetClasses: [...lpAssetClasses], assetClasses: [...lpAssetClasses] });
+		goToStep('stepLpStrategies');
 	}
 
-	function onBaselineBlur(e) {
-		const n = parseDollar(e.target.value);
-		baselineIncome = n;
-		baselineInputValue = fmtDollar(n);
-		persistLpWizardSnapshot({ baselineIncome: n });
+	function toggleLpStrategy(strategy) {
+		lpStrategies = toggleItem(lpStrategies, strategy);
+		lpCompletionError = '';
+		persistLpWizardSnapshot({ lpStrategies: [...lpStrategies], strategies: [...lpStrategies], dealTypes: [...lpStrategies] });
 	}
 
-	// ===== LP: Completion =====
+	function saveLpStrategies() {
+		if (lpStrategies.length === 0) return;
+		persistLpWizardSnapshot({ lpStrategies: [...lpStrategies], strategies: [...lpStrategies], dealTypes: [...lpStrategies] });
+		goToStep('stepLpCheckSize');
+	}
+
+	function selectLpMaxCheckSize(value) {
+		lpMaxCheckSize = value;
+		lpCompletionError = '';
+		persistLpWizardSnapshot({ lpMaxCheckSize: value, maxCheckSize: value, checkSize: value });
+	}
+
+	function saveLpMaxCheckSize() {
+		if (!lpMaxCheckSize) return;
+		persistLpWizardSnapshot({ lpMaxCheckSize, maxCheckSize: lpMaxCheckSize, checkSize: lpMaxCheckSize });
+		goToStep('stepLpNetwork');
+	}
+
+	function saveLpNetworkVisibility() {
+		lpNetworkAnswered = true;
+		persistLpWizardSnapshot({ lpNetworkVisible, sharePortfolio: lpNetworkVisible });
+		goToStep(lpNetworkVisible ? 'stepLpPhoto' : 'stepLpComplete');
+	}
+
+	function fileToDataUrl(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(String(reader.result || ''));
+			reader.onerror = reject;
+			reader.readAsDataURL(file);
+		});
+	}
+
+	async function handleLpPhotoUpload(event) {
+		const file = event?.currentTarget?.files?.[0];
+		if (!file || lpPhotoUploading) return;
+		lpPhotoUploading = true;
+		lpPhotoError = '';
+		try {
+			const imageData = await fileToDataUrl(file);
+			const response = await fetch('/api/network?action=avatar', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({ action: 'avatar', imageData })
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) throw new Error(payload?.error || 'Unable to upload your photo right now.');
+			lpPhotoUrl = payload.avatarUrl || imageData;
+			lpPhotoSkipped = false;
+			persistLpWizardSnapshot({
+				lpPhotoUrl: payload.avatarUrl || imageData,
+				lpPhotoSkipped: false,
+				avatarUrl: payload.avatarUrl || imageData,
+				avatar_url: payload.avatarUrl || imageData
+			});
+			user.set({ ...$user, avatar_url: payload.avatarUrl || imageData });
+			goToStep('stepLpComplete');
+		} catch (error) {
+			lpPhotoError = error?.message || 'Unable to upload your photo right now.';
+		} finally {
+			lpPhotoUploading = false;
+			if (event?.currentTarget) event.currentTarget.value = '';
+		}
+	}
+
+	function skipLpPhoto() {
+		lpPhotoError = '';
+		lpPhotoSkipped = true;
+		persistLpWizardSnapshot({ lpPhotoSkipped: true });
+		goToStep('stepLpComplete');
+	}
+
 	let completionSummary = $derived.by(() => {
 		const goalLabels = { cashflow: 'Build Passive Income', tax: 'Reduce Tax Bill', growth: 'Grow Wealth' };
-		const dealLabel = lpDealsCount === 0 ? 'First-time investor' : lpDealsCount + (lpDealsCount === 1 ? ' deal' : ' deals');
-		const baselineLabel = baselineIncome === 0 ? '$0/mo' : '$' + Math.round(baselineIncome / 12).toLocaleString() + '/mo';
+		const accreditationLabel = lpAccreditation.length ? lpAccreditation.map((value) => LP_ACCREDITATION_OPTIONS.find((option) => option.value === value)?.label || value).join(', ') : 'Not set';
+		const experienceLabel = lpDealsCount === 0 ? 'First-time investor' : lpDealsCount + (lpDealsCount === 1 ? ' deal' : ' deals');
+		const reProLabel = LP_RE_PRO_OPTIONS.find((option) => option.value === lpReProfessional)?.label || 'Not set';
+		const assetLabel = lpAssetClasses.length ? lpAssetClasses.join(', ') : 'Not set';
+		const strategyLabel = lpStrategies.length
+			? lpStrategies.map((strategy) => LP_STRATEGY_OPTIONS.find((option) => option.value === strategy)?.label || strategy).join(', ')
+			: 'Not set';
+		const checkLabel = LP_CHECK_SIZE_OPTIONS.find((option) => option.value === lpMaxCheckSize)?.label || 'Not set';
 		return [
-			{ label: 'Your goal', value: goalLabels[lpGoal] || 'Not set' },
-			{ label: 'Experience', value: dealLabel },
-			{ label: 'Current income', value: baselineLabel }
+			{ label: 'Goal', value: goalLabels[lpGoal] || 'Not set' },
+			{ label: 'Accreditation', value: accreditationLabel },
+			{ label: 'Experience', value: experienceLabel },
+			{ label: 'RE Pro', value: reProLabel },
+			{ label: 'Asset Classes', value: assetLabel },
+			{ label: 'Strategies', value: strategyLabel },
+			{ label: 'Max Check Size', value: checkLabel },
+			{ label: 'LP Network', value: lpNetworkVisible ? 'Yes' : 'No' },
+			{ label: 'Photo', value: lpNetworkVisible ? (lpPhotoUrl ? 'Added' : 'Skipped') : 'Not shown' }
 		];
 	});
 
@@ -343,21 +582,18 @@
 	});
 
 	let completionSubtitle = $derived.by(() => {
-		return hasMemberAccess
-			? "Next up: we'll build your personalized investment plan."
-			: "We've personalized your deal feed based on your answers.";
+		return "We've set your starting preferences. You can refine them anytime as your goals evolve.";
 	});
 
 	function showLpComplete() {
 		lpCompletionError = '';
-		persistLpWizardSnapshot({ baselineIncome });
 		goToStep('stepLpComplete');
 	}
 
 	async function completeLpOnboarding() {
 		if (lpCompletionSaving) return;
-		if (!lpGoal) {
-			lpCompletionError = 'Choose your investment goal before finishing setup.';
+		if (!lpGoal || !lpAccreditation.length || lpReProfessional === null || lpAssetClasses.length === 0 || lpStrategies.length === 0 || !lpMaxCheckSize || !lpNetworkAnswered) {
+			lpCompletionError = 'Finish the remaining setup questions before completing onboarding.';
 			return;
 		}
 		lpCompletionSaving = true;
@@ -368,7 +604,24 @@
 			_branch: lpGoal,
 			lpDealsCount: lpDealsCount || 0,
 			dealExperience: lpDealsCount || 0,
-			baselineIncome
+			lpExperienceCount: lpDealsCount || 0,
+			lpAccreditation: [...lpAccreditation],
+			accreditation: [...lpAccreditation],
+			lpReProfessional,
+			reProfessional: lpReProfessional,
+			lpAssetClasses: [...lpAssetClasses],
+			assetClasses: [...lpAssetClasses],
+			lpStrategies: [...lpStrategies],
+			strategies: [...lpStrategies],
+			dealTypes: [...lpStrategies],
+			lpMaxCheckSize,
+			maxCheckSize: lpMaxCheckSize,
+			checkSize: lpMaxCheckSize,
+			lpNetworkVisible,
+			sharePortfolio: lpNetworkVisible,
+			lpPhotoUrl,
+			avatarUrl: lpPhotoUrl,
+			avatar_url: lpPhotoUrl
 		});
 		const realUser = currentAdminRealUser();
 		const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== ($user?.email || '').toLowerCase();
@@ -400,7 +653,7 @@
 			writeUserScopedString('gycBuyBoxComplete', 'true');
 			writeUserScopedString('gycOnboardingComplete', 'true');
 
-			const u = { ...$user, onboardingComplete: true, onboardingRole: 'lp', sharePortfolio: lpNetworkOptIn };
+			const u = { ...$user, onboardingComplete: true, onboardingRole: 'lp', sharePortfolio: lpNetworkVisible, avatar_url: lpPhotoUrl || $user?.avatar_url || '' };
 			user.set(u);
 
 			await goto(lpDealsRedirect());
@@ -410,6 +663,11 @@
 		} finally {
 			lpCompletionSaving = false;
 		}
+	}
+
+	function lpStepIndex(stepId) {
+		const index = LP_STEP_SEQUENCE.indexOf(stepId);
+		return index === -1 ? 0 : index;
 	}
 
 	// ===== GP: Company Search =====
@@ -999,8 +1257,16 @@
 	function onKeydown(e) {
 		if (e.key !== 'Enter') return;
 		if (currentStep === 'step0' && firstName && lastName) saveName();
-		else if (currentStep === 'stepLpDeals') saveDealCount();
-		else if (currentStep === 'stepLpBaseline') showLpComplete();
+		else if (currentStep === 'stepLpExperience') saveLpExperience();
+		else if (currentStep === 'stepLpRePro') saveLpRePro();
+		else if (currentStep === 'stepLpAssets') saveLpAssetClasses();
+		else if (currentStep === 'stepLpStrategies') saveLpStrategies();
+		else if (currentStep === 'stepLpCheckSize') saveLpMaxCheckSize();
+		else if (currentStep === 'stepLpNetwork') saveLpNetworkVisibility();
+		else if (currentStep === 'stepLpPhoto') {
+			if (lpPhotoUrl) showLpComplete();
+			else skipLpPhoto();
+		}
 		else if (currentStep === 'stepLpComplete') completeLpOnboarding();
 	}
 </script>
@@ -1027,8 +1293,8 @@
 					<div class="gyc-logo-sub">Dealflow Platform</div>
 				</div>
 				<div class="step-header">
-					<div class="step-title">Welcome! What's your name?</div>
-					<div class="step-subtitle">Let's get to know each other.</div>
+					<div class="step-title">What should we call you?</div>
+					<div class="step-subtitle">This sets up your profile inside the app.</div>
 				</div>
 				<div class="step-body">
 					<div class="form-grid">
@@ -1040,15 +1306,6 @@
 							<label class="form-label" for="last-name">Last Name *</label>
 							<input id="last-name" class="form-input" type="text" bind:value={lastName} placeholder="Last name" autocomplete="family-name">
 						</div>
-					</div>
-					<div class="lp-network-optin">
-						<label class="optin-label">
-							<input type="checkbox" bind:checked={lpNetworkOptIn}>
-							<div>
-								<div class="optin-title">Join the LP Network</div>
-								<div class="optin-desc">See who else is investing in the same deals, share due diligence, and deploy capital together. You can only see others if you also participate.</div>
-							</div>
-						</label>
 					</div>
 				</div>
 				<div class="step-footer">
@@ -1065,8 +1322,8 @@
 		{#if currentStep === 'step1'}
 			<div class="step active">
 				<div class="step-header">
-					<div class="step-title">How will you use the platform?</div>
-					<div class="step-subtitle">This helps us tailor your experience. You can always access both sides later.</div>
+					<div class="step-title">What best describes you right now?</div>
+					<div class="step-subtitle">We’ll route you to the right setup flow.</div>
 				</div>
 				<div class="step-body">
 					<div class="role-cards">
@@ -1074,15 +1331,15 @@
 							<div class="role-card-icon lp-icon">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
 							</div>
-							<div class="role-card-title">I'm an Investor (LP)</div>
-							<div class="role-card-desc">Find and evaluate deals that match my investment goals</div>
+							<div class="role-card-title">I'm an investor (LP)</div>
+							<div class="role-card-desc">I want to discover deals, build a plan, and track my portfolio.</div>
 						</button>
 						<button type="button" class="role-card" class:selected={selectedRole === 'gp'} aria-pressed={selectedRole === 'gp'} onclick={() => selectRole('gp')}>
 							<div class="role-card-icon gp-icon">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
 							</div>
-							<div class="role-card-title">I'm an Operator / Sponsor (GP)</div>
-							<div class="role-card-desc">Get my deals in front of qualified, accredited investors</div>
+							<div class="role-card-title">I'm an operator / sponsor (GP)</div>
+							<div class="role-card-desc">I want to list deals, connect with LPs, and present opportunities.</div>
 						</button>
 					</div>
 				</div>
@@ -1099,27 +1356,27 @@
 			</div>
 		{/if}
 
-		<!-- ===== LP STEP: Goal Selection ===== -->
+		<!-- ===== LP FLOW ===== -->
 		{#if currentStep === 'stepLpGoal'}
 			<div class="step active">
 				<div class="step-header">
-					<div class="lp-progress-dots"><div class="lp-dot active"></div><div class="lp-dot"></div><div class="lp-dot"></div></div>
-					<div class="step-title">What's your #1 investing goal right now?</div>
-					<div class="step-subtitle">This shapes everything &mdash; which deals you see first, how we sort them, and what success looks like for you.</div>
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
 				</div>
 				<div class="step-body">
 					<div class="goal-cards">
 						<button type="button" class="role-card goal-card" class:selected={lpGoal === 'cashflow'} aria-pressed={lpGoal === 'cashflow'} onclick={() => selectGoal('cashflow')}>
 							<div class="goal-emoji">&#128176;</div>
-							<div><div class="role-card-title" style="font-size:16px;">Build Passive Income</div><div class="role-card-desc" style="font-size:13px;">I want predictable monthly/quarterly income from my investments</div></div>
+							<div><div class="role-card-title" style="font-size:16px;">Build Passive Income</div><div class="role-card-desc" style="font-size:13px;">I want predictable monthly or quarterly income from my investments</div></div>
 						</button>
 						<button type="button" class="role-card goal-card" class:selected={lpGoal === 'tax'} aria-pressed={lpGoal === 'tax'} onclick={() => selectGoal('tax')}>
 							<div class="goal-emoji">&#127974;</div>
-							<div><div class="role-card-title" style="font-size:16px;">Reduce My Tax Bill</div><div class="role-card-desc" style="font-size:13px;">I'm getting crushed on taxes and want to legally offset my income</div></div>
+							<div><div class="role-card-title" style="font-size:16px;">Reduce My Tax Bill</div><div class="role-card-desc" style="font-size:13px;">I'm trying to legally offset more of my taxable income</div></div>
 						</button>
 						<button type="button" class="role-card goal-card" class:selected={lpGoal === 'growth'} aria-pressed={lpGoal === 'growth'} onclick={() => selectGoal('growth')}>
 							<div class="goal-emoji">&#128640;</div>
-							<div><div class="role-card-title" style="font-size:16px;">Grow My Wealth</div><div class="role-card-desc" style="font-size:13px;">I want to 2x or more &mdash; I'm playing for appreciation</div></div>
+							<div><div class="role-card-title" style="font-size:16px;">Grow My Wealth</div><div class="role-card-desc" style="font-size:13px;">I want to prioritize appreciation and long-term upside</div></div>
 						</button>
 					</div>
 				</div>
@@ -1133,13 +1390,44 @@
 			</div>
 		{/if}
 
-		<!-- ===== LP STEP: Deal Count ===== -->
-		{#if currentStep === 'stepLpDeals'}
+		{#if currentStep === 'stepLpAccreditation'}
 			<div class="step active">
 				<div class="step-header">
-					<div class="lp-progress-dots"><div class="lp-dot done"></div><div class="lp-dot active"></div><div class="lp-dot"></div></div>
-					<div class="step-title">How many deals have you done as an LP?</div>
-					<div class="step-subtitle">Syndications, private funds, real estate deals &mdash; anything outside stocks, 401k, or your home.</div>
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
+				</div>
+				<div class="step-body">
+					<div class="goal-cards">
+						{#each LP_ACCREDITATION_OPTIONS as option}
+							<button type="button" class="role-card goal-card" class:selected={lpAccreditation.includes(option.value)} aria-pressed={lpAccreditation.includes(option.value)} onclick={() => toggleLpAccreditation(option.value)}>
+								<div>
+									<div class="role-card-title" style="font-size:16px;">{option.label}</div>
+									<div class="role-card-desc" style="font-size:13px;">{option.description}</div>
+								</div>
+							</button>
+						{/each}
+					</div>
+				</div>
+				<div class="step-footer">
+					<button class="btn-secondary" onclick={() => goToStep('stepLpGoal', true)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+						Back
+					</button>
+					<button class="btn-primary" onclick={saveLpAccreditation} disabled={lpAccreditation.length === 0}>
+						Continue
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		{#if currentStep === 'stepLpExperience'}
+			<div class="step active">
+				<div class="step-header">
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
 				</div>
 				<div class="step-body">
 					<div class="deal-count-wrap">
@@ -1148,71 +1436,223 @@
 							<input type="text" value={lpDealsCount} inputmode="numeric" autocomplete="off" class="deal-count-input" oninput={onDealCountInput} onfocus={(e) => e.target.select()}>
 							<button class="count-btn" onclick={() => adjustDealCount(1)}>+</button>
 						</div>
-						<div class="count-label">deals</div>
+						<div class="count-label">passive investments</div>
 						<div class="count-feedback">{dealCountFeedback}</div>
 					</div>
 				</div>
 				<div class="step-footer">
-					<button class="btn-secondary" onclick={() => goToStep('stepLpGoal', true)}>
+					<button class="btn-secondary" onclick={() => goToStep('stepLpAccreditation', true)}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 						Back
 					</button>
-					<button class="btn-primary" onclick={saveDealCount}>
-						Next
+					<button class="btn-primary" onclick={saveLpExperience}>
+						Continue
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
 				</div>
 			</div>
 		{/if}
 
-		<!-- ===== LP STEP: Baseline Income ===== -->
-		{#if currentStep === 'stepLpBaseline'}
+		{#if currentStep === 'stepLpRePro'}
 			<div class="step active">
 				<div class="step-header">
-					<div class="lp-progress-dots"><div class="lp-dot done"></div><div class="lp-dot done"></div><div class="lp-dot active"></div></div>
-					<div class="step-title">Where are you starting from?</div>
-					<div class="step-subtitle">Your current passive income &mdash; rental checks, distributions, interest. Don't overthink it.</div>
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
 				</div>
 				<div class="step-body">
-					<div class="deal-count-wrap">
-						<input type="text" bind:value={baselineInputValue} inputmode="numeric" autocomplete="off" class="deal-count-input big" oninput={onBaselineInput} onfocus={onBaselineFocus} onblur={onBaselineBlur}>
-						<div class="count-label">/ year</div>
-						<div class="preset-chips">
-							<button class="pill-option" class:selected={baselineIncome === 0} onclick={() => selectBaselinePreset(0)}>$0</button>
-							<button class="pill-option" class:selected={baselineIncome === 12000} onclick={() => selectBaselinePreset(12000)}>$12K</button>
-							<button class="pill-option" class:selected={baselineIncome === 25000} onclick={() => selectBaselinePreset(25000)}>$25K</button>
-							<button class="pill-option" class:selected={baselineIncome === 50000} onclick={() => selectBaselinePreset(50000)}>$50K</button>
-							<button class="pill-option" class:selected={baselineIncome === 100000} onclick={() => selectBaselinePreset(100000)}>$100K+</button>
-						</div>
-						<div class="count-feedback">{baselineFeedback}</div>
+					<div class="goal-cards">
+						{#each LP_RE_PRO_OPTIONS as option}
+							<button type="button" class="role-card goal-card" class:selected={lpReProfessional === option.value} aria-pressed={lpReProfessional === option.value} onclick={() => selectLpRePro(option.value)}>
+								<div>
+									<div class="role-card-title" style="font-size:16px;">{option.label}</div>
+									<div class="role-card-desc" style="font-size:13px;">{option.description}</div>
+								</div>
+							</button>
+						{/each}
 					</div>
 				</div>
 				<div class="step-footer">
-					<button class="btn-secondary" onclick={() => goToStep('stepLpDeals', true)}>
+					<button class="btn-secondary" onclick={() => goToStep('stepLpExperience', true)}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 						Back
 					</button>
-					<button class="btn-primary" onclick={showLpComplete}>
-						Next
+					<button class="btn-primary" onclick={saveLpRePro} disabled={!lpReProfessional}>
+						Continue
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
 				</div>
 			</div>
 		{/if}
 
-		<!-- ===== LP STEP: Completion ===== -->
+		{#if currentStep === 'stepLpAssets'}
+			<div class="step active">
+				<div class="step-header">
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
+				</div>
+				<div class="step-body">
+					<div class="pill-grid">
+						{#each LP_ASSET_CLASS_OPTIONS as assetClass}
+							<button type="button" class="pill-option" class:selected={lpAssetClasses.includes(assetClass)} aria-pressed={lpAssetClasses.includes(assetClass)} onclick={() => toggleLpAssetClass(assetClass)}>{assetClass}</button>
+						{/each}
+					</div>
+				</div>
+				<div class="step-footer">
+					<button class="btn-secondary" onclick={() => goToStep('stepLpRePro', true)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+						Back
+					</button>
+					<button class="btn-primary" onclick={saveLpAssetClasses} disabled={lpAssetClasses.length === 0}>
+						Continue
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		{#if currentStep === 'stepLpStrategies'}
+			<div class="step active">
+				<div class="step-header">
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
+				</div>
+				<div class="step-body">
+					<div class="pill-grid">
+						{#each LP_STRATEGY_OPTIONS as strategy}
+							<button type="button" class="pill-option" class:selected={lpStrategies.includes(strategy.value)} aria-pressed={lpStrategies.includes(strategy.value)} onclick={() => toggleLpStrategy(strategy.value)}>{strategy.label}</button>
+						{/each}
+					</div>
+				</div>
+				<div class="step-footer">
+					<button class="btn-secondary" onclick={() => goToStep('stepLpAssets', true)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+						Back
+					</button>
+					<button class="btn-primary" onclick={saveLpStrategies} disabled={lpStrategies.length === 0}>
+						Continue
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		{#if currentStep === 'stepLpCheckSize'}
+			<div class="step active">
+				<div class="step-header">
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
+				</div>
+				<div class="step-body">
+					<div class="deal-pill-grid">
+						{#each LP_CHECK_SIZE_OPTIONS as option}
+							<button type="button" class="pill-option" class:selected={lpMaxCheckSize === option.value} aria-pressed={lpMaxCheckSize === option.value} onclick={() => selectLpMaxCheckSize(option.value)}>{option.label}</button>
+						{/each}
+					</div>
+				</div>
+				<div class="step-footer">
+					<button class="btn-secondary" onclick={() => goToStep('stepLpStrategies', true)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+						Back
+					</button>
+					<button class="btn-primary" onclick={saveLpMaxCheckSize} disabled={!lpMaxCheckSize}>
+						Continue
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		{#if currentStep === 'stepLpNetwork'}
+			<div class="step active">
+				<div class="step-header">
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
+				</div>
+				<div class="step-body">
+					<div class="goal-cards">
+						<button type="button" class="role-card goal-card" class:selected={lpNetworkAnswered && lpNetworkVisible === true} aria-pressed={lpNetworkAnswered && lpNetworkVisible === true} onclick={() => { lpNetworkAnswered = true; lpNetworkVisible = true; persistLpWizardSnapshot({ lpNetworkAnswered: true, lpNetworkVisible: true, sharePortfolio: true }); }}>
+							<div>
+								<div class="role-card-title" style="font-size:16px;">Yes, show me the LP network</div>
+								<div class="role-card-desc" style="font-size:13px;">See who else is participating and compare notes</div>
+							</div>
+						</button>
+						<button type="button" class="role-card goal-card" class:selected={lpNetworkAnswered && lpNetworkVisible === false} aria-pressed={lpNetworkAnswered && lpNetworkVisible === false} onclick={() => { lpNetworkAnswered = true; lpNetworkVisible = false; persistLpWizardSnapshot({ lpNetworkAnswered: true, lpNetworkVisible: false, sharePortfolio: false }); }}>
+							<div>
+								<div class="role-card-title" style="font-size:16px;">No, keep this private</div>
+								<div class="role-card-desc" style="font-size:13px;">I still want the personalized deal flow, just without social visibility</div>
+							</div>
+						</button>
+					</div>
+				</div>
+				<div class="step-footer">
+					<button class="btn-secondary" onclick={() => goToStep('stepLpCheckSize', true)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+						Back
+					</button>
+					<button class="btn-primary" onclick={saveLpNetworkVisibility} disabled={!lpNetworkAnswered}>
+						Continue
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		{#if currentStep === 'stepLpPhoto'}
+			<div class="step active">
+				<div class="step-header">
+					<div class="step-counter">Step {lpStepIndex(currentStep) + 1} of {LP_STEP_SEQUENCE.length}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{lpStepSubtitle}</div>
+				</div>
+				<div class="step-body">
+					<div class="lp-photo-panel">
+						<div class="lp-photo-preview">
+							{#if lpPhotoUrl}
+								<img src={lpPhotoUrl} alt="Profile photo" />
+							{:else}
+								<span>{((firstName?.[0] || '?') + (lastName?.[0] || '')).trim() || '?'}</span>
+							{/if}
+						</div>
+						<div class="lp-photo-actions">
+							<label class="btn-secondary lp-photo-upload">
+								{lpPhotoUploading ? 'Uploading...' : 'Upload Photo'}
+								<input type="file" accept="image/*" style="display:none;" onchange={handleLpPhotoUpload}>
+							</label>
+							<button type="button" class="btn-secondary" onclick={skipLpPhoto}>Skip for Now</button>
+						</div>
+						{#if lpPhotoError}
+							<div class="step-error">{lpPhotoError}</div>
+						{/if}
+						<div class="lp-photo-help">This only appears if you choose to be visible in the LP network.</div>
+					</div>
+				</div>
+				<div class="step-footer">
+					<button class="btn-secondary" onclick={() => goToStep('stepLpNetwork', true)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+						Back
+					</button>
+					<span></span>
+				</div>
+			</div>
+		{/if}
+
 		{#if currentStep === 'stepLpComplete'}
 			<div class="step active">
 				<div class="step-header">
 					<div class="completion-checkmark">
 						<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 					</div>
-					<div class="step-title">You're all set.</div>
-						<div class="step-subtitle">{completionSubtitle}</div>
+					<div class="step-title">{lpStepTitle}</div>
+					<div class="step-subtitle">{completionSubtitle}</div>
 				</div>
 				<div class="step-body">
-						<div class="completion-summary">
-							{#each completionSummary as row}
+					<div class="completion-summary">
+						{#each completionSummary as row}
 							<div class="completion-row">
 								<span class="completion-label">{row.label}</span>
 								<span class="completion-value">{row.value}</span>
@@ -1224,12 +1664,12 @@
 					{/if}
 				</div>
 				<div class="step-footer">
-					<button class="btn-secondary" onclick={() => goToStep('stepLpBaseline', true)}>
+					<button class="btn-secondary" onclick={() => goToStep(lpNetworkVisible ? 'stepLpPhoto' : 'stepLpNetwork', true)}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 						Back
 					</button>
 					<button class="btn-primary" onclick={completeLpOnboarding} style="min-width:220px;" disabled={lpCompletionSaving || !lpGoal}>
-							<span>{lpCompletionSaving ? 'Saving...' : completionBtnText}</span>
+						<span>{lpCompletionSaving ? 'Saving...' : completionBtnText}</span>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
 				</div>
@@ -1890,12 +2330,56 @@
 	.form-input::placeholder { color: var(--text-muted); }
 	select.form-input { cursor: pointer; appearance: auto; }
 
-	/* ====== LP NETWORK OPT-IN ====== */
-	.lp-network-optin { margin-top: 24px; padding: 16px; background: rgba(81,190,123,0.06); border: 1px solid rgba(81,190,123,0.12); border-radius: 12px; }
-	.optin-label { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
-	.optin-label input { width: 20px; height: 20px; accent-color: #51BE7B; flex-shrink: 0; margin-top: 2px; }
-	.optin-title { font-weight: 700; font-size: 14px; color: var(--text-dark); }
-	.optin-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+	/* ====== LP PHOTO STEP ====== */
+	.lp-photo-panel {
+		max-width: 420px;
+		margin: 0 auto;
+		padding: 20px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-card);
+		box-shadow: var(--shadow-card);
+		text-align: center;
+	}
+	.lp-photo-preview {
+		width: 88px;
+		height: 88px;
+		border-radius: 50%;
+		margin: 0 auto 16px;
+		background: var(--green-bg);
+		border: 1px solid rgba(81,190,123,0.15);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+		font-family: var(--font-headline);
+		font-size: 28px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+	.lp-photo-preview img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.lp-photo-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		align-items: center;
+		justify-content: center;
+	}
+	.lp-photo-upload {
+		position: relative;
+		overflow: hidden;
+	}
+	.lp-photo-help {
+		margin-top: 12px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-muted);
+		line-height: 1.5;
+	}
 
 	/* ====== COMPLETION SCREEN ====== */
 	.completion-checkmark { width: 64px; height: 64px; border-radius: 50%; background: var(--green-bg); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; animation: completionPop 0.5s cubic-bezier(.175,.885,.32,1.275) forwards; }

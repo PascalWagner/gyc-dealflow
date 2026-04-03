@@ -1,5 +1,6 @@
 <script>
 	import { selectionChanged } from '$lib/utils/haptics.js';
+	import { normalizeAssetClassValue } from '$lib/utils/dealReviewSchema.js';
 
 	let {
 		search = '',
@@ -41,7 +42,7 @@
 				['Industrial', 'Industrial'],
 				['Self Storage', 'Self Storage'],
 				['Hotels/Hospitality', 'Hotels / Hospitality'],
-				['Lending', 'Lending'],
+				['Private Debt / Credit', 'Private Debt / Credit'],
 				['RV/Mobile Home Parks', 'RV / Mobile Home Parks'],
 				['Business / Other', 'Business / Other'],
 				['Mixed-Use', 'Mixed-Use'],
@@ -165,7 +166,7 @@
 	function valueFor(field) {
 		switch (field) {
 			case 'assetClass':
-				return assetClass;
+				return normalizeAssetClassValue(assetClass);
 			case 'dealType':
 				return dealType;
 			case 'strategy':
