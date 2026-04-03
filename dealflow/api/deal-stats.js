@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     if (error && error.code !== 'PGRST116') throw error;
 
     const result = {
-      _version: 'v5-debug-fix',
+      _version: 'v6-safe-destructure',
       review: data?.review || data?.interested || 0,
       connect: data?.connect || 0,
       decide: data?.decide || 0,
@@ -48,8 +48,8 @@ export default async function handler(req, res) {
       // Try getUser first, fall back to decoding the JWT for the email
       let userId = null;
       try {
-        const { data: { user } } = await supabase.auth.getUser(token);
-        userId = user?.id;
+        const authResult = await supabase.auth.getUser(token);
+        userId = authResult?.data?.user?.id || null;
       } catch {}
       if (!userId) {
         // Token may be expired — decode the JWT payload for the email
