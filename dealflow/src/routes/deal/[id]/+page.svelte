@@ -7,6 +7,7 @@
 	import DealOpportunityCard from '$lib/components/DealOpportunityCard.svelte';
 	import DealAnalysisDashboard from '$lib/components/DealAnalysisDashboard.svelte';
 	import DealDisclaimer from '$lib/components/DealDisclaimer.svelte';
+	import DealReturnsMiniChart from '$lib/components/DealReturnsMiniChart.svelte';
 	import DealModalLayer from '$lib/components/deal/DealModalLayer.svelte';
 	import SimilarDealsPanel from '$lib/components/deal/SimilarDealsPanel.svelte';
 	import {
@@ -72,7 +73,6 @@
 		buildSecFilingSummary,
 		getDealStateCodes
 	} from '$lib/utils/dealDetailSignals.js';
-	import { calcDDProgress, getAutoValue, getChecklistForDeal } from '$lib/utils/dealDueDiligence.js';
 	import {
 		buildDealInviteSharePayload,
 		buildDealShareMailtoHref,
@@ -88,9 +88,10 @@
 		submitDealIntroductionRequest
 	} from '$lib/utils/dealIntroRequests.js';
 	import { buildDealCashFlowProjection } from '$lib/utils/dealCashFlowProjection.js';
+	import { filterComparableDeals } from '$lib/utils/dealComparables.js';
 	import { buildInvestmentReportHtml } from '$lib/utils/dealReport.js';
 	import { getDealOperator } from '$lib/utils/dealSponsors.js';
-	import { isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
+	import { getDealHistoricalReturns, isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
 
 	let { data } = $props();
 	function getInitialDeal() {
@@ -113,13 +114,10 @@
 	let loading = $state(!initialDeal);
 	let error = $state(initialError);
 	let activeTab = $state('overview');
-	let ddAnswers = $state({});
-	let ddAccordionOpen = $state({});
 	let shareDropdownOpen = $state(false);
 	let socialProof = $state(null);
 	let similarDeals = $state(initialComparables?.similarDeals || []);
-	let peerComparison = $state(initialComparables?.peerComparison || null);
-	let peerStats = $state(null);
+	const eligibleSimilarDeals = $derived.by(() => filterComparableDeals(similarDeals));
 
 	// Stress Test sliders
 	let stInvestment = $state(0);
@@ -135,16 +133,6 @@
 	let bgCheckLoading = $state(false);
 	let bgCheckLoaded = $state(false);
 	let bgCheckError = $state(false);
-	let questions = $state([]);
-	let qaLoading = $state(false);
-	let qaLoaded = $state(false);
-	let qaError = $state(false);
-	let newQuestion = $state('');
-	let qaSubmitting = $state(false);
-	let gpInsights = $state(null);
-	let gpInsightsLoading = $state(false);
-	let gpInsightsLoaded = $state(false);
-	let gpInsightsError = $state(false);
 	let buyBox = $state(null);
 	let deckViewed = $state(false);
 	let introRequested = $state(false);
@@ -190,9 +178,7 @@
 	let dealMapLoaded = $state(false);
 
 	// Visibility triggers for deferred sections
-	let qaSectionVisible = $state(false);
 	let bgCheckSectionVisible = $state(false);
-	let gpInsightsSectionVisible = $state(false);
 	let dealMapSectionVisible = $state(false);
 
 	// Invite Co-Investors Modal
@@ -245,7 +231,6 @@
 	const isPublicViewer = $derived(!$isLoggedIn);
 	const isFreeViewer = $derived($isLoggedIn && !$canViewAdvancedDealAnalysis && !gpOwnsDeal);
 	const isPaid = $derived(hasMemberAccess);
-	const showGpInsights = $derived(($isAdmin || gpOwnsDeal) && !!dealOperatorManagementCompanyId);
 	const currentStage = $derived(deal ? getUiStage($dealStages[deal.id] || 'filter') : 'filter');
 	const socialProofCounts = $derived.by(() => normalizeStageCounts(socialProof || {}));
 
@@ -318,17 +303,25 @@
 	const feeRows = $derived.by(() => buildFeeRows(deal));
 	const operatorTrackRecordRows = $derived.by(() => buildOperatorTrackRecordRows(deal));
 	const buyBoxLite = $derived.by(() => buildBuyBoxLite(deal));
-	const investClearlyPreview = $derived.by(() => ($isAdmin ? buildInvestClearlyPreview(deal) : null));
+	const investClearlyPreview = $derived.by(() => buildInvestClearlyPreview(deal));
 	const goalBranch = $derived.by(() => resolveGoalBranch({ userGoal, buyBox }));
 	const goalProgress = $derived.by(() => buildGoalProgress({ deal, buyBox, goalBranch }));
+	const historicalReturns = $derived.by(() => getDealHistoricalReturns(deal));
+	const hasHistoricalReturns = $derived(historicalReturns.length >= 2);
+	const latestHistoricalReturn = $derived(historicalReturns.length ? historicalReturns[historicalReturns.length - 1] : null);
+	const historicalReturnAverage = $derived.by(() => {
+		if (!historicalReturns.length) return null;
+		return historicalReturns.reduce((sum, point) => sum + (Number(point?.value) || 0), 0) / historicalReturns.length;
+	});
+	const historicalReturnsRangeLabel = $derived.by(() => {
+		if (!historicalReturns.length) return '';
+		if (historicalReturns.length === 1) return String(historicalReturns[0].year);
+		return `${historicalReturns[0].year}-${historicalReturns[historicalReturns.length - 1].year}`;
+	});
 
 	// Buy Box Match
 	const buyBoxChecks = $derived.by(() => buildBuyBoxChecks(deal, buyBox));
 	const buyBoxScore = $derived.by(() => summarizeBuyBoxScore(buyBoxChecks));
-
-	// DD Checklist
-	const checklist = $derived(deal ? getChecklistForDeal(deal) : null);
-	const ddProgress = $derived(checklist ? calcDDProgress(checklist, ddAnswers, deal) : { answered: 0, total: 0, pct: 0 });
 
 	// Next stage for advance button
 	const nextStage = $derived.by(() => {
@@ -371,41 +364,12 @@
 	});
 	const keyRiskItems = $derived.by(() => buildKeyRiskItems(deal, dealFit, isStale));
 
-	function setQaSectionVisible(value) {
-		qaSectionVisible = value;
-	}
-
 	function setBgCheckSectionVisible(value) {
 		bgCheckSectionVisible = value;
 	}
 
-	function setGpInsightsSectionVisible(value) {
-		gpInsightsSectionVisible = value;
-	}
-
 	function setDealMapSectionVisible(value) {
 		dealMapSectionVisible = value;
-	}
-
-	async function loadQuestions(force = false) {
-		if (!deal || qaLoading || (qaLoaded && !force)) return;
-		if (!hasMemberAccess) return;
-		qaLoading = true;
-		qaError = false;
-		try {
-			const r = await fetch(`/api/deal-qa?dealId=${encodeURIComponent(deal.id)}`);
-			if (r.ok) {
-				const d = await r.json();
-				questions = d.questions || [];
-			} else {
-				qaError = true;
-			}
-		} catch {
-			qaError = true;
-		} finally {
-			qaLoaded = true;
-			qaLoading = false;
-		}
 	}
 
 	async function loadBackgroundCheck(force = false) {
@@ -430,26 +394,6 @@
 		}
 	}
 
-	async function loadGpInsights(force = false) {
-		if (!dealOperatorManagementCompanyId || gpInsightsLoading || (gpInsightsLoaded && !force)) return;
-		if (!showGpInsights) return;
-		gpInsightsLoading = true;
-		gpInsightsError = false;
-		try {
-			const headers = getStoredSessionUser()?.token ? { 'Authorization': `Bearer ${getStoredSessionUser().token}` } : {};
-			const resp = await fetch(`/api/sponsor-analytics?dealId=${encodeURIComponent(deal.id)}&managementCompanyId=${encodeURIComponent(dealOperatorManagementCompanyId)}`, { headers });
-			if (resp.ok) {
-				gpInsights = await resp.json();
-			} else {
-				gpInsightsError = true;
-			}
-		} catch {
-			gpInsightsError = true;
-		} finally {
-			gpInsightsLoaded = true;
-			gpInsightsLoading = false;
-		}
-	}
 
 	async function loadDealMap(force = false) {
 		if (!deal || dealMapLoading || (dealMapLoaded && !force)) return;
@@ -502,35 +446,12 @@
 	}
 
 	$effect(() => {
-		if (qaSectionVisible) void loadQuestions();
-	});
-
-	$effect(() => {
 		if (bgCheckSectionVisible) void loadBackgroundCheck();
-	});
-
-	$effect(() => {
-		if (gpInsightsSectionVisible) void loadGpInsights();
 	});
 
 	$effect(() => {
 		if (dealMapSectionVisible) void loadDealMap();
 	});
-
-	async function submitQuestion() { if (!deal || !newQuestion.trim()) return; if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to save this deal and start your investor profile.' })) return; if (!hasMemberAccess) { window.location.href = academyHref; return; } qaSubmitting = true; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', dealId: deal.id, dealName: deal.investmentName, question: newQuestion.trim(), userEmail: stored.email || '', userName: stored.name || 'Anonymous' }) }); const d = await r.json(); if (d.success) { newQuestion = ''; await loadQuestions(); } } catch {} qaSubmitting = false; }
-
-	async function submitAnswer(qid, text) { if (!text.trim()) return; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'answer', recordId: qid, answer: text.trim(), userName: stored.name || 'GYC Team' }) }); const d = await r.json(); if (d.success) await loadQuestions(); } catch {} }
-
-	async function upvoteQuestion(qid) {
-		if (!$isLoggedIn || !browser) return;
-		const up = readUserScopedJson('gycQAUpvoted', []);
-		if (up.includes(qid)) return;
-		up.push(qid);
-		writeUserScopedJson('gycQAUpvoted', up);
-		try { await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upvote', recordId: qid }) }); await loadQuestions(); } catch {}
-	}
-
-	function hasUpvoted(qid) { if (!browser) return false; return readUserScopedJson('gycQAUpvoted', []).includes(qid); }
 
 	// ===== Cash Flow Projection (derived) =====
 	const cashFlowProjection = $derived.by(() => buildDealCashFlowProjection(deal));
@@ -1900,16 +1821,18 @@
 
 				<!-- ==================== SIMILAR DEALS ==================== -->
 				<div class="section flow-order-60">
-					<div class="section-header">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-						<span class="section-title">Similar Deals</span>
-						<span class="peer-count-label">
-							{#if similarDeals.length > 0}
-								{similarDeals.length} comparable {isCredit ? 'Lending' : (deal.assetClass || '')} deals
-							{:else}
-								No comparable deals yet
-							{/if}
-						</span>
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+							<span class="section-title">Similar Deals</span>
+							<span class="peer-count-label">
+								{#if eligibleSimilarDeals.length > 0}
+									{eligibleSimilarDeals.length} comparable {isCredit ? 'Lending' : (deal.assetClass || '')} deals
+								{:else if similarDeals.length > 0}
+									Comparable deals need more structured data
+								{:else}
+									No comparable deals yet
+								{/if}
+							</span>
 					</div>
 					<div class="section-body" style="position:relative;min-height:140px;">
 						{#if !hasMemberAccess}
@@ -1933,10 +1856,10 @@
 							</div>
 						{/if}
 						<div class:blurred={!hasMemberAccess}>
-							<SimilarDealsPanel
-								{deal}
-								{similarDeals}
-								{dealOperatorName}
+								<SimilarDealsPanel
+									{deal}
+									{similarDeals}
+									{dealOperatorName}
 								{fmt}
 							/>
 						</div>

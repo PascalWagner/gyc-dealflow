@@ -319,6 +319,7 @@ export function transformDeals(parentDeals, childShareClasses, sponsorRows) {
 			mcAuthorizedEmails: managementCompany.authorized_emails || [],
 			mcIrContactName: managementCompany.ir_contact_name || '',
 			mcIrContactEmail: managementCompany.ir_contact_email || '',
+			mcFullCycleExits: managementCompany.full_cycle_deals || null,
 			mcFullCycleDeals: managementCompany.full_cycle_deals || null,
 			fees: deal.fees || [],
 			firstYrDepreciation: deal.first_yr_depreciation,

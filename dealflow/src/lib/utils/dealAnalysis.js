@@ -5,8 +5,8 @@
  * and goal-path projection helpers for the LP deal page.
  */
 
-import { getDealOperatorName } from '$lib/utils/dealSponsors.js';
-import { normalizeAssetClassValue } from '$lib/utils/dealReviewSchema.js';
+import { getDealOperatorName } from './dealSponsors.js';
+import { normalizeAssetClassValue } from './dealReviewSchema.js';
 
 // ===== Summary Line Builders =====
 // Each returns a short factual sentence (no judgments) for accordion headers.
@@ -39,8 +39,9 @@ export function buildSponsorSummary(deal) {
 		parts.push(`Est. ${deal.mcFoundingYear}`);
 	}
 	if (deal.fundAUM) parts.push(formatMoneyShort(deal.fundAUM) + ' AUM');
-	if (deal.mcFullCycleExits) {
-		parts.push(`${deal.mcFullCycleExits} full-cycle exit${deal.mcFullCycleExits !== 1 ? 's' : ''}`);
+	const fullCycleDeals = deal.mcFullCycleExits ?? deal.mcFullCycleDeals;
+	if (fullCycleDeals) {
+		parts.push(`${fullCycleDeals} full-cycle exit${fullCycleDeals !== 1 ? 's' : ''}`);
 	} else if (deal.mcFoundingYear) {
 		const years = new Date().getFullYear() - deal.mcFoundingYear;
 		if (years >= 5) parts.push(`${years}+ yr track record`);

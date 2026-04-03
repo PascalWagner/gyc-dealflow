@@ -71,6 +71,8 @@ test('single-deal transform preserves lending review fields needed by the review
 	assert.deepEqual(deal.teamContacts, [{ first_name: 'Michael', last_name: 'Anderson' }]);
 	assert.deepEqual(deal.sourceRiskFactors, ['Liquidity is limited by available capital.']);
 	assert.deepEqual(deal.highlightedRisks, ['Leverage']);
+	assert.equal(deal.mcFullCycleExits, null);
+	assert.equal(deal.mcFullCycleDeals, null);
 });
 
 test('single-deal transform derives lending review values from legacy columns when newer columns are missing', () => {

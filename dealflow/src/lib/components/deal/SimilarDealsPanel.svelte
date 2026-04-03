@@ -1,5 +1,6 @@
 <script>
 	import { getDealOperator } from '$lib/utils/dealSponsors.js';
+	import { filterComparableDeals } from '$lib/utils/dealComparables.js';
 
 	let {
 		deal,
@@ -7,6 +8,8 @@
 		dealOperatorName = '',
 		fmt
 	} = $props();
+
+	const eligibleSimilarDeals = $derived.by(() => filterComparableDeals(similarDeals));
 </script>
 
 <div class="similar-table-wrap ly-table-scroll ly-desktop-only">
@@ -34,8 +37,8 @@
 				<td class="sim-td">{deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '---'}</td>
 				<td class="sim-td">{deal.holdPeriod ? `${deal.holdPeriod} Yrs` : '---'}</td>
 			</tr>
-			{#if similarDeals.length > 0}
-				{#each similarDeals as sd}
+			{#if eligibleSimilarDeals.length > 0}
+				{#each eligibleSimilarDeals as sd}
 					{@const similarDealOperator = getDealOperator(sd)}
 					<tr class="sim-peer-row">
 						<td class="sim-td left">
@@ -51,7 +54,7 @@
 				{/each}
 			{:else}
 				<tr>
-					<td class="sim-empty-row" colspan="6">We haven&apos;t matched this deal to comparable opportunities yet.</td>
+					<td class="sim-empty-row" colspan="6">Comparable deals need more structured data before we can show a trustworthy table.</td>
 				</tr>
 			{/if}
 		</tbody>
@@ -89,8 +92,8 @@
 			</div>
 		</details>
 	</article>
-	{#if similarDeals.length > 0}
-		{#each similarDeals as sd}
+	{#if eligibleSimilarDeals.length > 0}
+		{#each eligibleSimilarDeals as sd}
 			{@const similarDealOperator = getDealOperator(sd)}
 			<article class="similar-mobile-card">
 				<div class="similar-mobile-header">
@@ -124,8 +127,8 @@
 		{/each}
 	{:else}
 		<article class="similar-mobile-card similar-empty-card">
-			<div class="similar-empty-title">Comparable deals are still being matched.</div>
-			<div class="similar-empty-copy">This section will populate automatically once we find other opportunities that line up with this deal&apos;s profile.</div>
+			<div class="similar-empty-title">Not enough comparable data yet.</div>
+			<div class="similar-empty-copy">We hide weak matches until the comparison fields are structured enough to be trustworthy.</div>
 		</article>
 	{/if}
 </div>
