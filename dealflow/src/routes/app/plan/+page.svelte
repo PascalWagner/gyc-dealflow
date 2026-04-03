@@ -1008,6 +1008,18 @@
 		if (browser) window.print();
 	}
 
+	// Auto-save plan target to API if plan view is active but target wasn't persisted
+	let autoSaveAttempted = false;
+	$effect(() => {
+		if (!browser || !hasPlan || saving || autoSaveAttempted) return;
+		const bb = plan || wizardData;
+		const hasPersistedTarget = bb?.targetCashFlow || bb?.targetIncome || bb?.targetGrowth || bb?.growthCapital || bb?.taxableIncome || bb?.targetTaxSavings;
+		if (!hasPersistedTarget && annualTargetAmount > 0) {
+			autoSaveAttempted = true;
+			void savePlan();
+		}
+	});
+
 	const goalKey = $derived.by(() => plan?._branch || wizardData.goal || 'cashflow');
 	const selectedAssets = $derived.by(() => {
 		const assets = plan?.assetClasses || wizardData.assetClasses || [];
@@ -1725,14 +1737,6 @@
 				}
 				syncPlanState();
 				dismissPassiveWizardRouteIfPlanExists();
-				// Auto-save if plan exists but target was never persisted to API
-				if (hasPlan && !saving) {
-					const bb = plan || wizardData;
-					const hasPersistedTarget = bb?.targetCashFlow || bb?.targetIncome || bb?.targetGrowth || bb?.growthCapital || bb?.taxableIncome || bb?.targetTaxSavings;
-					if (!hasPersistedTarget) {
-						void savePlan();
-					}
-				}
 			} catch (error) {
 				console.warn('Failed to load plan:', error);
 			} finally {
