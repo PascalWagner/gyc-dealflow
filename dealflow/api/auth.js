@@ -143,12 +143,14 @@ function buildAuthResponse({
   tags = [],
   contactId = null,
   profile = null,
+  authUser = null,
   gpInfo = null,
   subscriptions = {},
   extra = {}
 } = {}) {
   const normalizedEmail = normalizeEmail(email);
   const safeProfile = profile || {};
+  const safeUserMetadata = authUser?.user_metadata || {};
   const resolvedIsAdmin = typeof isAdmin === 'boolean' ? isAdmin : isAdminEmail(normalizedEmail);
   const resolvedTier = canonicalizeTier(tier, normalizedEmail);
   const resolvedName = name || safeProfile.full_name || displayNameFromEmail(normalizedEmail);
@@ -170,7 +172,7 @@ function buildAuthResponse({
     contactId: contactId || null,
     phone: safeProfile.phone || null,
     location: safeProfile.location || null,
-    avatar_url: safeProfile.avatar_url || null,
+    avatar_url: safeProfile.avatar_url || safeUserMetadata.avatar_url || null,
     share_activity: safeProfile.share_activity !== false,
     sharePortfolio:
       safeProfile.share_activity !== undefined
@@ -387,6 +389,7 @@ export default async function handler(req, res) {
           isAdmin: isAdminEmail(normalizedEmail),
           tags: ghl.tags,
           contactId: ghl.contactId,
+          authUser: verifyData.user,
           gpInfo,
           extra: { bypass: true }
         }));
@@ -549,6 +552,7 @@ export default async function handler(req, res) {
         isAdmin,
         tags: ghl.tags,
         contactId: ghl.contactId,
+        authUser: user,
         profile: existingProfile,
         gpInfo,
         subscriptions
@@ -565,6 +569,7 @@ export default async function handler(req, res) {
       isAdmin,
       tags: ghl.tags,
       contactId: ghl.contactId,
+      authUser: user,
       gpInfo
     }));
   }
@@ -624,6 +629,7 @@ export default async function handler(req, res) {
       isAdmin,
       tags: ghl.tags,
       contactId: ghl.contactId,
+      authUser: data.user,
       profile: loginProfileData,
       gpInfo,
       subscriptions
@@ -694,7 +700,8 @@ export default async function handler(req, res) {
       name: `${firstName} ${lastName}`,
       token: 'pending',
       refreshToken: '',
-      tier: 'free'
+      tier: 'free',
+      authUser: data.user
     }));
   }
 
@@ -743,6 +750,7 @@ export default async function handler(req, res) {
         isAdmin,
         tags: ghl.tags,
         contactId: ghl.contactId,
+        authUser: data.user,
         profile,
         gpInfo,
         subscriptions

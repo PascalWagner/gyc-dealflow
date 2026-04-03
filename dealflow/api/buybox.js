@@ -24,6 +24,11 @@ import {
   sendValidationError
 } from './_validation.js';
 import { findTargetUserIdByEmail } from './userdata/identity.js';
+import {
+  findHydratedGhlFieldValue,
+  getGhlContactByEmail,
+  hasMeaningfulGhlValue
+} from './userdata/ghl.js';
 
 // GHL field mapping (for sync): Supabase column → GHL custom field key
 // Only active v3 wizard fields — v1/v2 dead fields removed
@@ -52,6 +57,15 @@ const GHL_FIELD_MAP = {
   share_portfolio: 'contact.lp_network_optin',
   diversification_pref: 'contact.diversification_preference',
   lp_deals_count: 'contact.lp_deals_count'
+};
+const GHL_READ_FIELD_MAP = {
+  ...Object.fromEntries(
+    Object.entries(GHL_FIELD_MAP).map(([column, fieldKey]) => [column, [fieldKey]])
+  ),
+  check_size: ['contact.investment_amount'],
+  trigger_event: ['contact.where_is_the_money_coming_from'],
+  operator_focus: ['contact.firm_focus_preference', 'contact.operator_strategy_preference'],
+  re_professional: ['contact.real_estate_professional_status', 'contact.re_professional_status']
 };
 
 // Map frontend wizard keys → Supabase column names
@@ -100,6 +114,11 @@ const BRANCH_TO_GOAL_LABEL = {
   cashflow: 'Cash Flow (income now)',
   growth: 'Equity Growth (wealth later)',
   tax: 'Tax Optimization (tax shield now)'
+};
+const GOAL_LABEL_TO_BRANCH = {
+  'cash flow (income now)': 'cashflow',
+  'equity growth (wealth later)': 'growth',
+  'tax optimization (tax shield now)': 'tax'
 };
 
 function decodeNestedJson(value) {
@@ -150,6 +169,76 @@ function normalizeWizardValue(column, value) {
   }
 
   return decoded;
+}
+
+function hasMeaningfulWizardValue(value) {
+  if (Array.isArray(value)) return value.some((entry) => hasMeaningfulWizardValue(entry));
+  if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
+  if (typeof value === 'boolean') return true;
+  return String(value || '').trim() !== '';
+}
+
+function mergeWizardFallback(primary = {}, fallback = {}) {
+  const merged = { ...primary };
+  for (const [key, value] of Object.entries(fallback || {})) {
+    if (!hasMeaningfulWizardValue(merged[key])) {
+      merged[key] = value;
+    }
+  }
+  return merged;
+}
+
+function normalizeGoalBranch(wizardBuyBox = {}) {
+  const next = { ...wizardBuyBox };
+  const branch = String(next._branch || next.branch || '').trim().toLowerCase();
+  const normalizedGoal = String(next.goal || '').trim().toLowerCase();
+  const resolvedBranch = branch || GOAL_LABEL_TO_BRANCH[normalizedGoal] || '';
+
+  if (resolvedBranch) {
+    next._branch = resolvedBranch;
+    next.branch = resolvedBranch;
+    if (!next.goal) {
+      next.goal = BRANCH_TO_GOAL_LABEL[resolvedBranch] || resolvedBranch;
+    }
+  }
+
+  return next;
+}
+
+function hasMeaningfulWizardBuyBox(wizardBuyBox = {}) {
+  return Object.entries(wizardBuyBox || {}).some(([key, value]) => {
+    if (key === '_completedAt') return false;
+    return hasMeaningfulWizardValue(value);
+  });
+}
+
+async function buildWizardBuyBoxFromGhl(email) {
+  const contact = await getGhlContactByEmail(email, { hydrateFields: true });
+  if (!contact) return {};
+
+  let wizardBuyBox = {};
+  for (const [column, matchers] of Object.entries(GHL_READ_FIELD_MAP)) {
+    const wizardKey = COLUMN_TO_WIZARD[column];
+    if (!wizardKey) continue;
+
+    const value = findHydratedGhlFieldValue(contact, matchers);
+    if (!hasMeaningfulGhlValue(value)) continue;
+    wizardBuyBox[wizardKey] = normalizeWizardValue(column, value);
+  }
+
+  if (wizardBuyBox.lpDealsCount !== undefined && wizardBuyBox.dealExperience === undefined) {
+    wizardBuyBox.dealExperience = wizardBuyBox.lpDealsCount;
+  }
+
+  const tags = new Set((contact.tags || []).map((tag) => String(tag || '').trim().toLowerCase()));
+  if (
+    !wizardBuyBox._completedAt
+    && (tags.has('wizard-complete') || tags.has('buy-box-complete') || tags.has('buy box complete'))
+  ) {
+    wizardBuyBox._completedAt = contact.dateUpdated || contact.dateAdded || new Date().toISOString();
+  }
+
+  return normalizeGoalBranch(wizardBuyBox);
 }
 
 function applyGoalsOverlay(wizardBuyBox, goalsRow) {
@@ -363,7 +452,12 @@ export default async function handler(req, res) {
         }
       }
 
-      wizardBuyBox = applyGoalsOverlay(wizardBuyBox, goalsRow);
+      const ghlFallback =
+        !hasMeaningfulWizardBuyBox(wizardBuyBox) || !wizardBuyBox._completedAt
+          ? await buildWizardBuyBoxFromGhl(context.email).catch(() => ({}))
+          : {};
+      wizardBuyBox = mergeWizardFallback(wizardBuyBox, ghlFallback);
+      wizardBuyBox = normalizeGoalBranch(applyGoalsOverlay(wizardBuyBox, goalsRow));
 
       return res.status(200).json({
         success: true,

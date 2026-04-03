@@ -503,6 +503,11 @@
 
 	function isReviewStageComplete(stage) {
 		if (!stage) return false;
+		if (legacyApprovedReviewCompat) {
+			return stage.id === 'summary'
+				? secCanAdvance && teamContactsValidation.valid
+				: true;
+		}
 		let baseComplete = false;
 		if (branchInfo.branch !== 'lending_fund') {
 			if (stage.id === 'intake') {
@@ -722,6 +727,11 @@
 	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
 	const secCanAdvance = $derived(secGateResolved || secStatus === 'skipped');
 	const currentLifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
+	const legacyApprovedReviewCompat = $derived(
+		branchInfo.branch === 'lending_fund'
+		&& currentLifecycleStatus === 'approved'
+		&& deal?.legacyApprovedReviewCompat === true
+	);
 	const preservesFullReviewAccess = $derived(
 		preservesFullReviewAccessForLifecycle(currentLifecycleStatus)
 	);
@@ -741,9 +751,10 @@
 		})
 	);
 	const summaryPublishReady = $derived(
-		(branchInfo.branch === 'lending_fund'
+		(legacyApprovedReviewCompat || (
+			branchInfo.branch === 'lending_fund'
 			? reviewStages.filter((stage) => stage.id !== 'summary').every((stage) => isReviewStageComplete(stage))
-			: onboardingFlow.isPublishReady)
+			: onboardingFlow.isPublishReady))
 		&& teamContactsValidation.valid
 		&& secGateResolved
 	);

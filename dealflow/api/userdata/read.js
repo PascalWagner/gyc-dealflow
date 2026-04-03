@@ -1,4 +1,4 @@
-import { getAdminClient, ghlFetch } from '../_supabase.js';
+import { getAdminClient } from '../_supabase.js';
 import {
   expectEnum,
   expectNonEmptyString,
@@ -7,38 +7,28 @@ import {
 } from '../_validation.js';
 import { READ_TYPES, TABLE_MAP } from './constants.js';
 import { findTargetUserIdByEmail, isMissingTableError, normalizeEmail } from './identity.js';
+import {
+  findHydratedGhlFieldValue,
+  getGhlContactByEmail,
+  hasMeaningfulGhlValue,
+  hasMeaningfulGoalsRow
+} from './ghl.js';
 
 async function backfillGoalsFromGhl({ supabase, table, user }) {
   try {
-    const ghlResp = await ghlFetch(
-      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(user.email)}`
-    );
-    if (!ghlResp?.ok) return null;
+    const contact = await getGhlContactByEmail(user.email, { hydrateFields: true });
+    if (!contact) return null;
 
-    const ghlData = await ghlResp.json();
-    const contact = (ghlData.contacts || [])[0];
-    if (!contact?.customField) return null;
+    const goalType = findHydratedGhlFieldValue(contact, 'contact.primary_investment_objective');
+    const currentIncome = findHydratedGhlFieldValue(contact, 'contact.current_passive_income');
+    const targetIncome = findHydratedGhlFieldValue(contact, 'contact.target_passive_income');
+    const capitalAvailable = findHydratedGhlFieldValue(contact, 'contact.capital_12_month');
+    const timeline = findHydratedGhlFieldValue(contact, 'contact.investment_timeline');
+    const taxReduction = findHydratedGhlFieldValue(contact, 'contact.tax_offset_target');
 
-    const cf = {};
-    const GHL_ID_MAP = {
-      WIdv6G8BBHk9lBZqsXLy: 'goal_type',
-      JDRc9bmJpwCNoXDe6T6a: 'current_income',
-      Auy8hrr2O1G4GZweNaqt: 'target_income',
-      '6FpI05sEc7R7VSl5TK2d': 'capital_available'
-    };
-
-    const fields = contact.customFields || contact.customField || [];
-    if (Array.isArray(fields)) {
-      fields.forEach((field) => {
-        const mapped = GHL_ID_MAP[field.id];
-        if (mapped) cf[mapped] = field.value;
-      });
+    if (![goalType, currentIncome, targetIncome, capitalAvailable, timeline, taxReduction].some(hasMeaningfulGhlValue)) {
+      return null;
     }
-
-    const goalType = cf.goal_type;
-    const targetIncome = cf.target_income;
-    const capitalAvailable = cf.capital_available;
-    if (!goalType && !targetIncome && !capitalAvailable) return null;
 
     const GOAL_TYPE_MAP = {
       'Cash Flow (income now)': 'passive_income',
@@ -61,11 +51,11 @@ async function backfillGoalsFromGhl({ supabase, table, user }) {
     const seedGoals = {
       user_id: user.id,
       goal_type: GOAL_TYPE_MAP[goalType] || goalType || 'passive_income',
-      current_income: Number(cf.current_income || 0),
+      current_income: Number(currentIncome || 0),
       target_income: Number(targetIncome || 0),
       capital_available: rangeToCapital(capitalAvailable),
-      timeline: '5',
-      tax_reduction: 0
+      timeline: String(timeline || '5'),
+      tax_reduction: Number(taxReduction || 0)
     };
 
     const { data: seeded } = await supabase
@@ -126,7 +116,7 @@ export async function handleUserdataGet(req, res, supabase, user) {
     throw error;
   }
 
-  if (type === 'goals' && (!data || data.length === 0) && user.email) {
+  if (type === 'goals' && (!hasMeaningfulGoalsRow(data?.[0]) || data.length === 0) && user.email) {
     const seeded = await backfillGoalsFromGhl({ supabase, table, user });
     if (seeded && seeded.length > 0) {
       data = seeded;
@@ -173,7 +163,7 @@ export async function handleUserdataAdminGet(req, res) {
   for (const entryType of types) {
     const table = TABLE_MAP[entryType];
     if (!table) continue;
-    const { data, error } = await adminClient
+    let { data, error } = await adminClient
       .from(table)
       .select('*')
       .eq('user_id', targetUserId);
@@ -183,6 +173,20 @@ export async function handleUserdataAdminGet(req, res) {
         continue;
       }
       throw error;
+    }
+
+    if (entryType === 'goals' && !hasMeaningfulGoalsRow(data?.[0])) {
+      const seeded = await backfillGoalsFromGhl({
+        supabase: adminClient,
+        table,
+        user: {
+          id: targetUserId,
+          email: normalizedEmail
+        }
+      });
+      if (seeded && seeded.length > 0) {
+        data = seeded;
+      }
     }
     result[entryType] = data || [];
   }

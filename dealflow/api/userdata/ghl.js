@@ -10,6 +10,132 @@ const GHL_GOALS_FIELD_MAP = {
   tax_reduction: 'contact.tax_offset_target'
 };
 
+let ghlCustomFieldMapPromise = null;
+
+function normalizeString(value) {
+  return String(value || '').trim();
+}
+
+function normalizeFieldMatcher(value) {
+  return normalizeString(value).toLowerCase();
+}
+
+function normalizeFieldValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeFieldValue(entry)).filter((entry) => entry !== '');
+  }
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value.trim();
+  return value;
+}
+
+export function hasMeaningfulGhlValue(value) {
+  if (Array.isArray(value)) return value.some((entry) => hasMeaningfulGhlValue(entry));
+  if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
+  return normalizeString(value) !== '';
+}
+
+export function hasMeaningfulGoalsRow(goal = null) {
+  if (!goal || typeof goal !== 'object') return false;
+  return [
+    goal.goal_type,
+    goal.current_income,
+    goal.target_income,
+    goal.capital_available,
+    goal.timeline,
+    goal.tax_reduction
+  ].some((value) => hasMeaningfulGhlValue(value));
+}
+
+export async function getGhlCustomFieldMap() {
+  if (!ghlCustomFieldMapPromise) {
+    ghlCustomFieldMapPromise = (async () => {
+      const response = await ghlFetch('https://rest.gohighlevel.com/v1/custom-fields/');
+      if (!response?.ok) return new Map();
+
+      const payload = await response.json().catch(() => ({}));
+      const fields = Array.isArray(payload?.customFields) ? payload.customFields : [];
+
+      return new Map(
+        fields
+          .filter((entry) => normalizeString(entry?.id))
+          .map((entry) => [
+            entry.id,
+            {
+              id: normalizeString(entry.id),
+              name: normalizeString(entry.name),
+              fieldKey: normalizeString(entry.fieldKey),
+              dataType: normalizeString(entry.dataType || entry.type)
+            }
+          ])
+      );
+    })().catch((error) => {
+      ghlCustomFieldMapPromise = null;
+      throw error;
+    });
+  }
+
+  return ghlCustomFieldMapPromise;
+}
+
+export async function getGhlContactByEmail(email, { hydrateFields = false } = {}) {
+  const normalizedEmail = normalizeString(email).toLowerCase();
+  if (!normalizedEmail) return null;
+
+  const response = await ghlFetch(
+    `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(normalizedEmail)}`
+  );
+  if (!response?.ok) return null;
+
+  const payload = await response.json().catch(() => ({}));
+  const contact = (payload?.contacts || []).find(
+    (entry) => normalizeString(entry?.email).toLowerCase() === normalizedEmail
+  );
+  if (!contact) return null;
+  if (!hydrateFields) return contact;
+
+  const customFieldMap = await getGhlCustomFieldMap();
+  const hydratedFields = (Array.isArray(contact.customFields || contact.customField)
+    ? contact.customFields || contact.customField
+    : []
+  )
+    .map((entry) => {
+      const definition = customFieldMap.get(entry?.id) || {};
+      return {
+        id: normalizeString(entry?.id || definition.id),
+        name: normalizeString(definition.name),
+        fieldKey: normalizeString(definition.fieldKey),
+        dataType: normalizeString(definition.dataType),
+        value: normalizeFieldValue(entry?.value)
+      };
+    })
+    .filter((entry) => entry.id);
+
+  return {
+    ...contact,
+    customFieldsHydrated: hydratedFields
+  };
+}
+
+export function findHydratedGhlFieldValue(contact, matchers = []) {
+  const normalizedMatchers = (Array.isArray(matchers) ? matchers : [matchers])
+    .map((entry) => normalizeFieldMatcher(entry))
+    .filter(Boolean);
+  if (normalizedMatchers.length === 0) return '';
+
+  const hydratedFields = Array.isArray(contact?.customFieldsHydrated)
+    ? contact.customFieldsHydrated
+    : [];
+
+  const match = hydratedFields.find((entry) =>
+    normalizedMatchers.includes(normalizeFieldMatcher(entry.fieldKey))
+    || normalizedMatchers.includes(normalizeFieldMatcher(entry.name))
+    || normalizedMatchers.includes(normalizeFieldMatcher(entry.id))
+  );
+
+  return normalizeFieldValue(match?.value);
+}
+
 function capitalToRange(num) {
   const n = Number(num);
   if (!n || Number.isNaN(n)) return null;

@@ -5,6 +5,7 @@
 import { getAdminClient, setCors, ADMIN_EMAILS } from '../_supabase.js';
 import { resolveDealWorkflowMutation, slugify } from '../../src/lib/utils/dealWorkflow.js';
 import { normalizeDealReviewPatch } from '../../src/lib/utils/dealReviewSchema.js';
+import { transformDeals } from '../member/deals/transform.js';
 
 const HISTORICAL_RETURN_START_YEAR = 2015;
 const HISTORICAL_RETURN_END_YEAR = new Date().getFullYear() - 1;
@@ -271,7 +272,7 @@ async function loadAuthorizedDealContext(req, id, supabase = getAdminClient()) {
   if (deal.management_company_id) {
     const { data: linkedCompany, error: linkedCompanyLookupError } = await supabase
       .from('management_companies')
-      .select('id, operator_name, website, authorized_emails')
+      .select('*')
       .eq('id', deal.management_company_id)
       .single();
 
@@ -311,20 +312,60 @@ function serializeDealRecord(deal, {
   currentManagementCompany = null,
   availableColumns = new Set()
 } = {}) {
+  const modernLendingReviewSchemaSupported = [
+    'review_field_evidence',
+    'team_contacts',
+    'sec_verification_state',
+    'current_fund_size',
+    'current_avg_loan_ltv',
+    'max_allowed_ltv',
+    'current_leverage',
+    'max_allowed_leverage',
+    'fund_founded_year',
+    'firm_founded_year',
+    'risk_tags'
+  ].every((columnName) => availableColumns.has(columnName));
+  const transformedDeal = transformDeals(
+    [
+      {
+        ...deal,
+        management_company: currentManagementCompany || deal?.management_company || null
+      }
+    ],
+    [],
+    []
+  )?.[0] || {};
   const resolvedCompanyWebsite = currentManagementCompany?.website || deal?.companyWebsite || deal?.mcWebsite || '';
   return {
     ...deal,
+    ...transformedDeal,
     slug: deal?.slug || slugify(deal?.investment_name || ''),
-    sponsorName: deal?.sponsor_name || currentManagementCompany?.operator_name || '',
-    managementCompanyId: deal?.management_company_id || '',
-    dealBranch: deal?.deal_branch || '',
-    lifecycleStatus: deal?.lifecycle_status || '',
+    sponsorName:
+      transformedDeal?.sponsorName
+      || deal?.sponsor_name
+      || currentManagementCompany?.operator_name
+      || '',
+    managementCompanyId: transformedDeal?.managementCompanyId || deal?.management_company_id || '',
+    dealBranch: transformedDeal?.dealBranch || deal?.deal_branch || '',
+    lifecycleStatus: transformedDeal?.lifecycleStatus || deal?.lifecycle_status || '',
     isVisibleToUsers: deal?.is_visible_to_users === true,
-    reviewFieldEvidence: deal?.review_field_evidence || {},
-    teamContacts: deal?.team_contacts || [],
+    reviewFieldEvidence:
+      transformedDeal?.reviewFieldEvidence
+      || deal?.review_field_evidence
+      || {},
+    reviewFieldEvidenceSupported: availableColumns.has('review_field_evidence'),
+    teamContacts:
+      transformedDeal?.teamContacts
+      || deal?.team_contacts
+      || [],
     teamContactsSnapshotSupported: availableColumns.has('team_contacts'),
-    mcWebsite: resolvedCompanyWebsite,
-    companyWebsite: resolvedCompanyWebsite
+    modernLendingReviewSchemaSupported,
+    legacyApprovedReviewCompat:
+      (transformedDeal?.dealBranch || deal?.deal_branch || '') === 'lending_fund'
+      && String(transformedDeal?.lifecycleStatus || deal?.lifecycle_status || '').trim().toLowerCase() === 'approved'
+      && !modernLendingReviewSchemaSupported,
+    mcWebsite: transformedDeal?.mcWebsite || resolvedCompanyWebsite,
+    companyWebsite: transformedDeal?.companyWebsite || resolvedCompanyWebsite
   };
 }
 

@@ -13,6 +13,12 @@ import {
 import { MUTATION_TYPES, TABLE_MAP, mapFields } from './constants.js';
 import { isMissingTableError, resolveWriteContext } from './identity.js';
 import { getActiveSubscription, isMissingSubscriptionsTableError, SUBSCRIPTIONS_TABLE } from '../_subscriptions.js';
+import { getAdminClient } from '../_supabase.js';
+import {
+  loadUserProfileRecord,
+  persistUserAvatarUrl,
+  pickSupportedProfileFields
+} from '../_user-profile.js';
 import {
   syncGoalsToGhl,
   syncNotifFreqToGhl,
@@ -94,13 +100,36 @@ export async function handleUserdataPost(req, res, supabase, user) {
       return res.status(400).json({ error: 'No valid profile fields to update' });
     }
 
-    const { data: updated, error } = await db
-      .from('user_profiles')
-      .update(fields)
-      .eq('id', effectiveUser.id)
-      .select()
-      .single();
-    if (error) throw error;
+    const profileRecord = await loadUserProfileRecord(db, effectiveUser.id);
+    const supportedFields = pickSupportedProfileFields(fields, profileRecord);
+
+    let updated = profileRecord || {};
+    if (Object.keys(supportedFields).length > 0) {
+      const { data: updatedProfile, error } = await db
+        .from('user_profiles')
+        .update(supportedFields)
+        .eq('id', effectiveUser.id)
+        .select()
+        .single();
+      if (error) throw error;
+      updated = updatedProfile || updated;
+    }
+
+    if (typeof fields.avatar_url === 'string' && fields.avatar_url.trim()) {
+      const avatarPersist = await persistUserAvatarUrl({
+        admin: getAdminClient(),
+        userId: effectiveUser.id,
+        avatarUrl: fields.avatar_url.trim(),
+        profileRecord: updated
+      });
+      updated = avatarPersist.profileRecord || updated;
+      if (!('avatar_url' in updated)) {
+        updated = {
+          ...updated,
+          avatar_url: fields.avatar_url.trim()
+        };
+      }
+    }
 
     if (fields.phone || fields.full_name) {
       try {

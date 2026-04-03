@@ -3,6 +3,7 @@
 // Auth required for avatar upload
 
 import { getAdminClient, getUserClient, setCors } from './_supabase.js';
+import { loadUserProfileRecord, persistUserAvatarUrl } from './_user-profile.js';
 
 const AVATAR_BUCKET = String(
   process.env.SUPABASE_AVATAR_BUCKET || process.env.SUPABASE_AVATARS_BUCKET || 'avatars'
@@ -129,13 +130,13 @@ async function uploadAvatar(req, res) {
   const { data: urlData } = admin.storage.from(AVATAR_BUCKET).getPublicUrl(filePath);
   const avatarUrl = urlData.publicUrl + '?t=' + Date.now(); // cache bust
 
-  // Save to profile
-  const { error: profileErr } = await admin
-    .from('user_profiles')
-    .update({ avatar_url: avatarUrl })
-    .eq('id', user.id);
-
-  if (profileErr) throw profileErr;
+  const profileRecord = await loadUserProfileRecord(admin, user.id);
+  await persistUserAvatarUrl({
+    admin,
+    userId: user.id,
+    avatarUrl,
+    profileRecord
+  });
 
   return res.status(200).json({ avatarUrl });
 }
