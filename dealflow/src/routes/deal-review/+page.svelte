@@ -2925,8 +2925,8 @@
 									<h2>Summary and publish readiness</h2>
 									<p>Review each stage, confirm the source-backed risks, and only publish when the record is actually trustworthy.</p>
 								</div>
-								<span class={`readiness-badge tone-${resolveSummaryReadinessTone({ summaryPublishReady, summaryEvidencePending })}`}>
-									{resolveSummaryReadinessLabel({ summaryPublishReady, summaryEvidencePending })}
+								<span class={`readiness-badge tone-${resolveSummaryReadinessTone({ currentLifecycleStatus, summaryPublishReady, summaryEvidencePending })}`}>
+									{resolveSummaryReadinessLabel({ currentLifecycleStatus, summaryPublishReady, summaryEvidencePending })}
 								</span>
 							</div>
 

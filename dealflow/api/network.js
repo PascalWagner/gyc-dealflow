@@ -4,6 +4,10 @@
 
 import { getAdminClient, getUserClient, setCors } from './_supabase.js';
 
+const AVATAR_BUCKET = String(
+  process.env.SUPABASE_AVATAR_BUCKET || process.env.SUPABASE_AVATARS_BUCKET || 'avatars'
+).trim() || 'avatars';
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -70,6 +74,26 @@ function aggregateCounts(rows) {
   return counts;
 }
 
+function isBucketNotFoundError(error) {
+  return /bucket.+not found/i.test(String(error?.message || error || ''));
+}
+
+async function ensureAvatarBucket(admin) {
+  const { error } = await admin.storage.createBucket(AVATAR_BUCKET, { public: true });
+  if (error && !/already exists/i.test(String(error.message || ''))) {
+    throw error;
+  }
+}
+
+async function uploadAvatarObject(admin, filePath, buffer, contentType) {
+  return admin.storage
+    .from(AVATAR_BUCKET)
+    .upload(filePath, buffer, {
+      contentType,
+      upsert: true
+    });
+}
+
 // POST /api/network?action=avatar
 // Accepts base64 image data, uploads to Supabase Storage
 async function uploadAvatar(req, res) {
@@ -92,18 +116,17 @@ async function uploadAvatar(req, res) {
 
   const admin = getAdminClient();
 
-  // Upload to storage (upsert)
-  const { error: uploadErr } = await admin.storage
-    .from('avatars')
-    .upload(filePath, buffer, {
-      contentType,
-      upsert: true
-    });
+  // Heal the sandbox if the avatar bucket was never provisioned.
+  let { error: uploadErr } = await uploadAvatarObject(admin, filePath, buffer, contentType);
+  if (uploadErr && isBucketNotFoundError(uploadErr)) {
+    await ensureAvatarBucket(admin);
+    ({ error: uploadErr } = await uploadAvatarObject(admin, filePath, buffer, contentType));
+  }
 
   if (uploadErr) throw uploadErr;
 
   // Get public URL
-  const { data: urlData } = admin.storage.from('avatars').getPublicUrl(filePath);
+  const { data: urlData } = admin.storage.from(AVATAR_BUCKET).getPublicUrl(filePath);
   const avatarUrl = urlData.publicUrl + '?t=' + Date.now(); // cache bust
 
   // Save to profile

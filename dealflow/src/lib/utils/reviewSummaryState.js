@@ -39,17 +39,25 @@ export function resolveSummaryLifecycleSyncTarget({
 }
 
 export function resolveSummaryReadinessTone({
+	currentLifecycleStatus = '',
 	summaryPublishReady = false,
 	summaryEvidencePending = false
 } = {}) {
 	if (summaryEvidencePending) return 'pending';
+	const currentLifecycle = normalizeLifecycleStatus(currentLifecycleStatus, 'draft');
+	if (currentLifecycle === 'approved' || currentLifecycle === 'published') return 'ready';
 	return summaryPublishReady ? 'ready' : 'blocked';
 }
 
 export function resolveSummaryReadinessLabel({
+	currentLifecycleStatus = '',
 	summaryPublishReady = false,
 	summaryEvidencePending = false
 } = {}) {
 	if (summaryEvidencePending) return 'Checking citations...';
+	const currentLifecycle = normalizeLifecycleStatus(currentLifecycleStatus, 'draft');
+	if (currentLifecycle === 'published') return 'Published';
+	if (currentLifecycle === 'approved') return 'Approved';
+	if (currentLifecycle === 'do_not_publish') return 'Do not publish';
 	return summaryPublishReady ? 'Ready to publish' : 'Still blocked';
 }

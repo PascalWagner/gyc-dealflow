@@ -3,9 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
-	import { user, getFreshSessionToken, canBuildFullPlan } from '$lib/stores/auth.js';
+	import { user, canBuildFullPlan, bootstrapProtectedRouteSession } from '$lib/stores/auth.js';
 	import AddDealModal from '$lib/components/AddDealModal.svelte';
-	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
+	import { hasCompletedPlan, hasSavedWizardProgress, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { getUserScopedCacheSnapshot } from '$lib/utils/userScopedState.js';
@@ -20,6 +20,7 @@
 	let distributions = $state([]);
 	let portfolioPlan = $state(null);
 	let showAddDealModal = $state(false);
+	let dashboardReady = $state(false);
 	const portfolioView = $derived.by(() =>
 		buildInvestedPortfolio({
 			stageMap: $dealStages || {},
@@ -31,6 +32,7 @@
 	const metricPortfolio = $derived.by(() => portfolioView.metricEntries || []);
 	// Derived
 	const branch = $derived(wizardData._branch || '');
+	const hasDashboardProfile = $derived.by(() => hasSavedWizardProgress(wizardData || {}, portfolioPlan));
 	const hasGoals = $derived(Boolean(goals && goals.targetIncome > 0));
 	const hasGoalContext = $derived(Boolean(branch) || hasGoals);
 	const hasCompletedDashboardPlan = $derived.by(() => hasCompletedPlan(wizardData || {}, portfolioPlan));
@@ -226,7 +228,7 @@
 	}
 
 	function openWizard() {
-		if (!hasGoalContext) {
+		if (!hasDashboardProfile) {
 			goto('/app/plan?stage=goal&flow=free');
 			return;
 		}
@@ -237,42 +239,51 @@
 		showAddDealModal = true;
 	}
 
-	async function syncDashboardState() {
-		if (!browser) return;
-		const snapshot = getUserScopedCacheSnapshot();
-		portfolioDetails = snapshot.portfolio;
+	function applyDashboardSnapshot(snapshot = getUserScopedCacheSnapshot()) {
+		portfolioDetails = Array.isArray(snapshot.portfolio)
+			? snapshot.portfolio.map((record) => normalizePortfolioRecord(record))
+			: [];
 		wizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
 		goals = snapshot.goals;
 		distributions = snapshot.distributions;
 		portfolioPlan = snapshot.portfolioPlan;
+	}
 
-		const token = await getFreshSessionToken();
-		if (!token) return;
+	async function syncDashboardState({ hydrate = false } = {}) {
+		if (!browser) return;
+		applyDashboardSnapshot();
+		if (!hydrate) {
+			dashboardReady = true;
+			return;
+		}
 
 		try {
-			const portfolioResponse = await fetch('/api/userdata?type=portfolio', {
-				headers: { Authorization: `Bearer ${token}` }
+			const returnPath = `${window.location.pathname}${window.location.search}`;
+			const boot = await bootstrapProtectedRouteSession({
+				returnPath,
+				hydrateScopedData: true,
+				awaitHydration: true
 			});
-			if (!portfolioResponse.ok) return;
-			const portfolioData = await portfolioResponse.json();
-			if (Array.isArray(portfolioData?.records)) {
-				portfolioDetails = portfolioData.records.map((record) => normalizePortfolioRecord(record));
+			if (!boot.ok) {
+				goto(boot.redirect).catch(() => {});
+				return;
 			}
-		} catch (error) {
-			console.warn('Dashboard portfolio sync failed:', error);
+			applyDashboardSnapshot();
+		} finally {
+			dashboardReady = true;
 		}
 	}
 
 	async function handleDashboardDealSubmission() {
 		await fetchDeals({ force: true }).catch(() => {});
-		await syncDashboardState();
+		await syncDashboardState({ hydrate: true });
 	}
 
 	onMount(() => {
 		if (!browser) return;
-		void syncDashboardState();
+		void syncDashboardState({ hydrate: true });
 		const handleScopedStateUpdate = () => {
-			void syncDashboardState();
+			applyDashboardSnapshot();
 		};
 		window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
 		return () => {
@@ -297,7 +308,12 @@
 	/>
 
 	<div class="content-area">
-		{#if !hasGoalContext && !hasCompletedDashboardPlan}
+		{#if !dashboardReady}
+			<div class="dashboard-onboarding-card ly-surface ly-surface--strong">
+				<div class="dashboard-onboarding-title">Loading your dashboard.</div>
+				<div class="dashboard-onboarding-copy">Refreshing your saved profile and plan state.</div>
+			</div>
+		{:else if !hasDashboardProfile}
 			<div class="dashboard-onboarding-card ly-surface ly-surface--strong">
 				<div class="dashboard-onboarding-icon">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
@@ -333,7 +349,7 @@
 			</div>
 		{/if}
 
-		{#if hasGoalContext && needsPlanSetup}
+		{#if hasDashboardProfile && needsPlanSetup}
 			<div class="plan-cta-card ly-surface ly-surface--muted">
 				<div>
 					<div class="plan-cta-eyebrow">Your Plan</div>

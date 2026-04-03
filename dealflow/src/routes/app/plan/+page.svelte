@@ -8,6 +8,7 @@
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 	import {
+		bootstrapProtectedRouteSession,
 		canBuildFullPlan,
 		getStoredSessionUser,
 		isMember
@@ -649,6 +650,25 @@
 		wizardFlowKey = routeState.flowKey;
 		wizardForceEdit = routeState.forceEdit;
 		showWizard = routeState.shouldOpen;
+	}
+
+	function hasPassiveWizardRouteIntent() {
+		if (!browser) return false;
+		const params = new URLSearchParams(window.location.search);
+		const hash = window.location.hash.replace('#', '').toLowerCase();
+		if (wizardForceEdit) return false;
+		if (['1', 'true', 'yes'].includes((params.get('wizard') || '').toLowerCase())) return false;
+		if (hash === 'edit' || hash === 'buybox') return false;
+		return Boolean(params.get('stage') || params.get('flow') || params.get('branch'));
+	}
+
+	function dismissPassiveWizardRouteIfPlanExists(snapshot = getUserScopedCacheSnapshot()) {
+		if (!browser || !hasPassiveWizardRouteIntent()) return;
+		const localWizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
+		const localPortfolioPlan = snapshot.portfolioPlan || null;
+		if (!hasCompletedPlan(localWizardData, localPortfolioPlan)) return;
+		showWizard = false;
+		goto('/app/plan', { replaceState: true, noScroll: true, keepFocus: true }).catch(() => {});
 	}
 
 	function resolveWizardBranch() {
@@ -1653,6 +1673,7 @@
 		const snapshot = getUserScopedCacheSnapshot();
 		const shouldRenderFromCache = hasLocalPlanContent(snapshot);
 		syncPlanState();
+		dismissPassiveWizardRouteIfPlanExists(snapshot);
 		if (shouldRenderFromCache) {
 			loading = false;
 		}
@@ -1660,9 +1681,11 @@
 
 		const handleScopedStateUpdate = () => {
 			syncPlanState();
+			dismissPassiveWizardRouteIfPlanExists();
 		};
 		const handlePopState = () => {
 			syncWizardRouteFromLocation();
+			dismissPassiveWizardRouteIfPlanExists();
 		};
 		window.addEventListener(USER_SCOPED_STATE_EVENT, handleScopedStateUpdate);
 		window.addEventListener('popstate', handlePopState);
@@ -1673,42 +1696,19 @@
 
 		void (async () => {
 			try {
-				const stored = getStoredSessionUser();
-				if (!stored?.token) {
+				const returnPath = `${window.location.pathname}${window.location.search}`;
+				const boot = await bootstrapProtectedRouteSession({
+					returnPath,
+					hydrateScopedData: true,
+					awaitHydration: true
+				});
+				if (!boot.ok) {
 					loading = false;
-					if (canViewFullPlan && shouldOpenWizardFromLocation) {
-						showWizard = true;
-					}
+					goto(boot.redirect).catch(() => {});
 					return;
 				}
-				const realUser = currentAdminRealUser();
-				const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== stored.email.toLowerCase();
-				const buyBoxUrl = new URL('/api/buybox', window.location.origin);
-				buyBoxUrl.searchParams.set('email', stored.email);
-				if (isAdminImpersonation) buyBoxUrl.searchParams.set('admin', 'true');
-				const controller = new AbortController();
-				const timeout = window.setTimeout(() => controller.abort(), 8000);
-
-				const response = await fetch(buyBoxUrl.pathname + buyBoxUrl.search, {
-					headers: { Authorization: `Bearer ${stored.token}` },
-					signal: controller.signal
-				});
-				window.clearTimeout(timeout);
-
-				if (response.ok) {
-					const data = await response.json();
-					if (data?.buyBox && Object.keys(data.buyBox).length > 0) {
-						const fetchedWizardData = normalizeWizardData(data.buyBox);
-						wizardData = fetchedWizardData;
-						writeUserScopedJson('gycBuyBox', data.buyBox);
-						writeUserScopedJson('gycBuyBoxWizard', fetchedWizardData);
-						if (data.buyBox._completedAt) {
-							writeUserScopedString('gycBuyBoxComplete', 'true');
-						}
-						plan = fetchedWizardData;
-						hasPlan = hasCompletedPlan(fetchedWizardData, portfolioPlan);
-					}
-				}
+				syncPlanState();
+				dismissPassiveWizardRouteIfPlanExists();
 			} catch (error) {
 				console.warn('Failed to load plan:', error);
 			} finally {
