@@ -6,7 +6,7 @@ import {
 	buildMembershipSummary,
 	isSubscriptionActive
 } from '../src/lib/subscriptions/subscription-model.js';
-import { buildGhlSubscriptionFromContact } from '../api/_subscriptions.js';
+import { buildGhlSubscriptionFromContact, buildLegacySubscriptionFromProfile } from '../api/_subscriptions.js';
 
 function withFixedNow(isoDate, callback) {
 	const originalNow = Date.now;
@@ -109,7 +109,8 @@ test('lifetime access stays active without an end date', () => {
 				status: 'active',
 				start_date: '2024-01-15T00:00:00.000Z',
 				end_date: null,
-				renewal_date: null
+				renewal_date: null,
+				is_lifetime: true
 			},
 			{ productType: 'academy', autoRenew: false }
 		);
@@ -117,6 +118,8 @@ test('lifetime access stays active without an end date', () => {
 		assert.equal(membership.status, 'active');
 		assert.equal(membership.end_date, null);
 		assert.equal(membership.renewal_date, null);
+		assert.equal(membership.is_lifetime, true);
+		assert.equal(membership.billing_state, 'lifetime');
 		assert.equal(isSubscriptionActive(membership, Date.now()), true);
 
 		const access = buildAccessModel({
@@ -226,4 +229,13 @@ test('ghl academy fallback uses academy start date and cohort end date', async (
 	assert.equal(membership.start_date, '2025-11-13');
 	assert.equal(membership.end_date, '2026-12-31T23:59:59.000Z');
 	assert.equal(membership.renewal_date, '2026-12-31T23:59:59.000Z');
+});
+
+test('legacy academy tier without explicit dates no longer invents a subscription window', () => {
+	const membership = buildLegacySubscriptionFromProfile({
+		tier: 'academy',
+		created_at: '2026-03-20T14:14:14.010Z'
+	});
+
+	assert.equal(membership, null);
 });

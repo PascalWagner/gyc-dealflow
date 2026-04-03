@@ -16487,15 +16487,15 @@ function initSubscription() {
     html += '<span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">After your first year</span>';
     html += '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#51be7b;background:rgba(81,190,123,0.12);padding:2px 8px;border-radius:10px;">Alumni</span>';
     html += '</div>';
-    html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);line-height:1.5;">Stay connected for <strong style="color:var(--text-dark);">$2,000/yr</strong> or <strong style="color:var(--text-dark);">$300/mo</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.</div>';
+    html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);line-height:1.5;">Stay connected for <strong style="color:var(--text-dark);">$250/yr</strong> or <strong style="color:var(--text-dark);">$29/mo</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.</div>';
     html += '</div>';
   }
 
   // Billing section (for paid tiers)
   if (activeTier !== 'free') {
-    var autoRenew = user && user.autoRenew !== false; // default to true
     var cardLast4 = user && user.cardLast4;
     var cardBrand = user && user.cardBrand;
+    var academyMembership = user && user.subscriptions && user.subscriptions.academy ? user.subscriptions.academy : null;
 
     html += '<div class="settings-card" style="margin-top:20px;">';
     html += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Billing</div>';
@@ -16504,27 +16504,33 @@ function initSubscription() {
     html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">';
     html += '<div>';
     html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">Payment Method</div>';
-    if (cardLast4) {
+    if (academyMembership && academyMembership.is_lifetime) {
+      html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">No recurring billing for this membership</div>';
+    } else if (academyMembership && academyMembership.billing_management_url) {
+      html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">Managed securely in GoHighLevel</div>';
+    } else if (cardLast4) {
       var brandIcon = (cardBrand || 'card').charAt(0).toUpperCase() + (cardBrand || 'card').slice(1);
       html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">' + brandIcon + ' ending in ' + cardLast4 + '</div>';
     } else {
-      html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">No card on file</div>';
+      html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">No recurring renewal plan is active yet</div>';
     }
     html += '</div>';
-    html += '<button onclick="openBillingPortal()" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;">' + (cardLast4 ? 'Update' : 'Add Card') + '</button>';
+    html += '<button onclick="openBillingPortal()" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;">' + ((academyMembership && academyMembership.billing_management_url) ? 'Update Card' : 'Choose Renewal Plan') + '</button>';
     html += '</div>';
 
-    // Auto-renew toggle
+    // Renewal status
     html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">';
     html += '<div>';
-    html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">Auto-Renew Membership</div>';
-    html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">Automatically renew at $2,000/yr or $300/mo when your membership ends</div>';
+    html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">Renewal Status</div>';
+    if (academyMembership && academyMembership.is_lifetime) {
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">Lifetime access does not require a renewal plan.</div>';
+    } else if (academyMembership && academyMembership.billing_management_url) {
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">Recurring renewal is active. Use Update Card to manage the payment method in GoHighLevel.</div>';
+    } else {
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">Choose $250/yr or $29/mo through Deal Flow Membership after your first year.</div>';
+    }
     html += '</div>';
-    html += '<label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;margin-left:16px;cursor:pointer;">';
-    html += '<input type="checkbox" id="autoRenewToggle" ' + (autoRenew ? 'checked' : '') + ' onchange="toggleAutoRenew(this.checked)" style="opacity:0;width:0;height:0;">';
-    html += '<span style="position:absolute;inset:0;background:' + (autoRenew ? '#51BE7B' : '#ccc') + ';border-radius:24px;transition:background 0.2s;"></span>';
-    html += '<span style="position:absolute;top:2px;left:' + (autoRenew ? '22px' : '2px') + ';width:20px;height:20px;background:#fff;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>';
-    html += '</label>';
+    html += '<div style="display:inline-flex;align-items:center;justify-content:center;min-width:52px;padding:6px 10px;border-radius:999px;background:rgba(81,190,123,0.12);color:#51BE7B;font-family:var(--font-ui);font-size:11px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;">GHL</div>';
     html += '</div>';
 
     html += '</div>';
@@ -16562,12 +16568,14 @@ function toggleAutoRenew(checked) {
 }
 
 function openBillingPortal() {
-  // Opens GHL payment/billing page for card management
-  var GHL_BILLING_URL = 'https://growyourcashflow.io/billing';
   var user = getUser();
   if (!user) return;
-  var url = GHL_BILLING_URL + (GHL_BILLING_URL.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(user.email || '');
-  window.open(url, '_blank');
+  var academyMembership = user && user.subscriptions && user.subscriptions.academy ? user.subscriptions.academy : null;
+  if (academyMembership && academyMembership.billing_management_url) {
+    window.open(academyMembership.billing_management_url, '_blank');
+    return;
+  }
+  window.open('/app/settings?tab=plan', '_blank');
 }
 
 async function handleSubscribe(tier, price) {

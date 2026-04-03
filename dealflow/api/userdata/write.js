@@ -14,7 +14,6 @@ import { MUTATION_TYPES, TABLE_MAP, mapFields } from './constants.js';
 import { isMissingTableError, resolveWriteContext } from './identity.js';
 import { getActiveSubscription, isMissingSubscriptionsTableError, SUBSCRIPTIONS_TABLE } from '../_subscriptions.js';
 import {
-  syncAutoRenewToGhl,
   syncGoalsToGhl,
   syncNotifFreqToGhl,
   syncProfileToGhl
@@ -116,32 +115,34 @@ export async function handleUserdataPost(req, res, supabase, user) {
 
   if (type === 'autoRenew') {
     const autoRenew = expectBooleanish(data.autoRenew, 'data.autoRenew', false);
-    const { data: updated, error } = await db
-      .from('user_profiles')
-      .update({ auto_renew: autoRenew })
-      .eq('id', effectiveUser.id)
-      .select('auto_renew, email')
-      .single();
-    if (error) throw error;
+    let updatedSubscription = null;
 
     try {
       const activeSubscription = await getActiveSubscription(db, effectiveUser.id, 'academy');
       if (activeSubscription) {
-        const { error: subscriptionError } = await db
+        const { data: subscriptionRecord, error: subscriptionError } = await db
           .from(SUBSCRIPTIONS_TABLE)
           .update({ renewal_date: autoRenew ? activeSubscription.end_date || null : null })
-          .eq('id', activeSubscription.id);
+          .eq('id', activeSubscription.id)
+          .select('id, renewal_date, billing_management_url')
+          .single();
         if (subscriptionError) throw subscriptionError;
+        updatedSubscription = subscriptionRecord;
       }
     } catch (subscriptionError) {
       if (!isMissingSubscriptionsTableError(subscriptionError)) throw subscriptionError;
     }
 
-    syncAutoRenewToGhl(updated.email || user.email, autoRenew).catch((syncError) =>
-      console.warn('GHL auto-renew sync failed:', syncError.message)
-    );
-
-    return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
+    return res.status(200).json({
+      record: {
+        auto_renew: autoRenew,
+        email: effectiveUser.email || user.email,
+        subscription_id: updatedSubscription?.id || null,
+        renewal_date: updatedSubscription?.renewal_date || null
+      },
+      type,
+      updatedAt: new Date().toISOString()
+    });
   }
 
   if (type === 'notif_prefs') {
