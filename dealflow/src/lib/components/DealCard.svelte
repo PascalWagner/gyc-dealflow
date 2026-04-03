@@ -301,7 +301,6 @@
 				<div class="hero-empty-surface" aria-hidden="true">
 					<div class="hero-empty-watermark">{heroConfig.icon}</div>
 					<div class="hero-empty-copy">
-						<span class="hero-empty-label">Annual return history unavailable</span>
 						<strong>{heroConfig.emptyMessage}</strong>
 					</div>
 				</div>

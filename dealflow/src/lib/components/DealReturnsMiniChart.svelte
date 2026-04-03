@@ -25,7 +25,7 @@
 		chartWidth: 460,
 		chartHeight: 132,
 		plotLeft: 12,
-		plotRight: 300,
+		plotRight: 448,
 		plotTop: 24,
 		plotBottom: 102,
 		pillYOffset: 20,
