@@ -16,7 +16,10 @@
 	import {
 		currentAdminRealUser,
 		getUserScopedCacheSnapshot,
+		readPlanSessionMode,
 		readScopedJson,
+		saveUserScopedData,
+		writePlanSessionMode,
 		writeScopedJson,
 		writeUserScopedJson,
 		writeUserScopedString
@@ -26,6 +29,7 @@
 	import {
 		STEP,
 		hasCompletedPlan,
+		hasSavedInvestorProfile,
 		hasSavedWizardProgress,
 		getBranchFlowKey,
 		normalizeWizardData,
@@ -62,6 +66,7 @@
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 	const PLAN_MARKET_SNAPSHOT_CACHE_KEY = 'gycPlanMarketSnapshot';
 	const PLAN_MARKET_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+	const PLAN_SESSION_MODE_FRESH_START = 'fresh-start';
 	let wizardStep = $state(0);
 	let wizardData = $state(normalizeWizardData({}));
 	let wizardRenderKey = $state(0);
@@ -81,17 +86,7 @@
 
 	const canViewAnalytics = $derived($isMember);
 	const canViewFullPlan = $derived($canBuildFullPlan);
-	const hasInvestorProfile = $derived.by(() =>
-		Boolean(
-			wizardData._branch ||
-			wizardData.goal ||
-			wizardData.dealExperience !== undefined ||
-			wizardData.lpDealsCount !== undefined ||
-			parseDollar(wizardData.baselineIncome) > 0 ||
-			(wizardData.assetClasses || []).length > 0 ||
-			(wizardData.strategies || []).length > 0
-		)
-	);
+	const hasInvestorProfile = $derived.by(() => hasSavedInvestorProfile(wizardData, portfolioPlan));
 	const showInlineWizard = $derived.by(() =>
 		canViewFullPlan ? showWizard || !hasSavedPlanProgress : showWizard || !hasInvestorProfile
 	);
@@ -459,15 +454,15 @@
 		const localWizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
 		const localPortfolioPlan = snapshot.portfolioPlan || null;
 		if (hasCompletedPlan(localWizardData, localPortfolioPlan)) return true;
-		return Boolean(
-			localWizardData._branch ||
-			localWizardData.goal ||
-			localWizardData.dealExperience !== undefined ||
-			localWizardData.lpDealsCount !== undefined ||
-			parseDollar(localWizardData.baselineIncome) > 0 ||
-			(localWizardData.assetClasses || []).length > 0 ||
-			(localWizardData.strategies || []).length > 0
-		);
+		return hasSavedInvestorProfile(localWizardData, localPortfolioPlan);
+	}
+
+	function readCurrentPlanSessionMode() {
+		return readPlanSessionMode();
+	}
+
+	function setPlanSessionMode(mode = '') {
+		writePlanSessionMode(mode);
 	}
 
 	function isLendingLike(value) {
@@ -719,6 +714,10 @@
 		writeUserScopedString('gycBuyBoxComplete', '');
 		writeUserScopedJson('gycGoals', null);
 		writeUserScopedJson('gycPortfolioPlan', null);
+		const sessionEmail = getStoredSessionUser()?.email || '';
+		if (sessionEmail) {
+			saveUserScopedData(sessionEmail);
+		}
 		if (browser) {
 			window.dispatchEvent(new CustomEvent(USER_SCOPED_STATE_EVENT));
 		}
@@ -801,6 +800,7 @@
 	}
 
 	async function startFreshPlan() {
+		setPlanSessionMode(PLAN_SESSION_MODE_FRESH_START);
 		await resetPersistedPlanState();
 		wizardRenderKey += 1;
 		await navigateWizardStep(STEP.GOAL, {
@@ -909,6 +909,12 @@
 			}
 		}
 		hasPlan = hasCompletedPlan(nextWizard, detail.portfolioPlan || portfolioPlan);
+		if (
+			readCurrentPlanSessionMode() === PLAN_SESSION_MODE_FRESH_START &&
+			hasSavedWizardProgress(nextWizard, detail.portfolioPlan || portfolioPlan)
+		) {
+			setPlanSessionMode('');
+		}
 	}
 
 	function handleWizardState(event) {
@@ -986,6 +992,9 @@
 		wizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
 		plan = wizardData;
 		hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
+		if (readCurrentPlanSessionMode() === PLAN_SESSION_MODE_FRESH_START && hasPlan) {
+			setPlanSessionMode('');
+		}
 	}
 
 	function printPlan() {

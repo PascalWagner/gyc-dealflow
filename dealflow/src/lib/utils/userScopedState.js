@@ -2,6 +2,8 @@ import { browser } from '$app/environment';
 import { normalizeStage } from '$lib/utils/dealflow-contract.js';
 
 export const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
+export const PLAN_SESSION_MODE_KEY = 'gycPlanSessionMode';
+export const PLAN_SESSION_MODE_FRESH_START = 'fresh-start';
 
 const SCOPED_BUNDLE_PREFIX = '_scopedBundle_';
 const SCOPED_STORAGE_PREFIX = '__gycScoped__';
@@ -369,6 +371,14 @@ export function writeScopedSessionString(key, value, { email = currentSessionEma
 	persistString(scopedSessionStorageKey(canonicalScopedKey(key), email), value, sessionStorageArea());
 }
 
+export function readPlanSessionMode({ email = currentSessionEmail() } = {}) {
+	return readScopedSessionString(PLAN_SESSION_MODE_KEY, '', { email });
+}
+
+export function writePlanSessionMode(value, { email = currentSessionEmail() } = {}) {
+	writeScopedSessionString(PLAN_SESSION_MODE_KEY, value, { email });
+}
+
 export function getUserScopedCacheSnapshot() {
 	return {
 		portfolio: readUserScopedJson('gycPortfolio', []),
@@ -558,6 +568,10 @@ export async function hydrateUserScopedData({ email, token, adminEmail } = {}) {
 		});
 		buyBox = buyBoxResponse?.buyBox || {};
 	} catch {
+		buyBox = {};
+	}
+
+	if (readPlanSessionMode({ email: normalizedEmail }) === PLAN_SESSION_MODE_FRESH_START) {
 		buyBox = {};
 	}
 
