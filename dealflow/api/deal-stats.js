@@ -63,12 +63,12 @@ export default async function handler(req, res) {
     // 3. Only fetch named investors if caller has also opted in
     if (callerOptedIn) {
       // Fetch deal stages — use granular toggles to filter by stage
-      const { data: publicInvestors } = await supabase
+      const { data: publicInvestors, error: investorsError } = await supabase
         .from('user_deal_stages')
-        .select('user_id, stage, user_profiles!inner(full_name, avatar_url, share_saved, share_dd, share_invested, share_activity)')
+        .select('user_id, stage, user_profiles(full_name, avatar_url, share_saved, share_dd, share_invested, share_activity)')
         .eq('deal_id', dealId);
 
-      console.log('[deal-stats] callerOptedIn:', callerOptedIn, 'publicInvestors:', publicInvestors?.length, 'raw:', JSON.stringify(publicInvestors?.slice(0, 3)));
+      if (investorsError) console.warn('[deal-stats] investor query error:', investorsError.message);
       if (publicInvestors) {
         for (const row of publicInvestors) {
           const name = row.user_profiles?.full_name;
