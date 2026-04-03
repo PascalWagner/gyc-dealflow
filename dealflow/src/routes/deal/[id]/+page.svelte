@@ -1427,6 +1427,7 @@ shareDropdownOpen = false;
 							{feeRows}
 							{operatorTrackRecordRows}
 							{secFiling}
+							{sponsorDeals}
 							{bgCheck}
 							{bgCheckLoading}
 							{bgCheckLoaded}
@@ -1451,32 +1452,6 @@ shareDropdownOpen = false;
 							<InvestingGeographyMap {deal} />
 						</div>
 					</div>
-
-					<!-- Other Deals from This Sponsor -->
-					{#if sponsorDeals.length > 0}
-						<div class="section flow-order-32">
-							<div class="section-header">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-								<span class="section-title">Other Deals from {deal.managementCompany || 'This Sponsor'}</span>
-							</div>
-							<div class="section-body">
-								<div class="sponsor-deals-grid">
-									{#each sponsorDeals as sd}
-										<a href="/deal/{sd.slug || sd.id}" class="sponsor-deal-card">
-											<div class="sponsor-deal-name">{sd.investmentName || sd.investment_name}</div>
-											<div class="sponsor-deal-meta">
-												{#if sd.assetClass || sd.asset_class}<span>{sd.assetClass || sd.asset_class}</span>{/if}
-												{#if sd.status}<span class="sponsor-deal-status">{sd.status}</span>{/if}
-											</div>
-											{#if sd.targetIRR || sd.target_irr}
-												<div class="sponsor-deal-return">Target IRR: {fmt(sd.targetIRR || sd.target_irr, 'pct')}</div>
-											{/if}
-										</a>
-									{/each}
-								</div>
-							</div>
-						</div>
-					{/if}
 
 					<!-- SEC Filing now in Analysis Dashboard -->
 
@@ -2209,14 +2184,6 @@ shareDropdownOpen = false;
 	.two-col-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px; }
 	.canonical-lower-flow { display: flex; flex-direction: column; }
 
-	/* Sponsor Deals Grid */
-	.sponsor-deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-	.sponsor-deal-card { display: block; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); background: var(--bg-card); text-decoration: none; color: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
-	.sponsor-deal-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-	.sponsor-deal-name { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 6px; line-height: 1.3; }
-	.sponsor-deal-meta { display: flex; gap: 8px; align-items: center; font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
-	.sponsor-deal-status { text-transform: capitalize; }
-	.sponsor-deal-return { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); }
 	.flow-order-10 { order: 10; }
 	.flow-order-20 { order: 20; }
 		.flow-order-30 { order: 30; }

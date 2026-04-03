@@ -18,6 +18,7 @@
 		bgCheck = null,
 		bgCheckLoading = false,
 		bgCheckLoaded = false,
+		sponsorDeals = [],
 		onLoadBgCheck = null,
 		isPaid = false,
 		isPublicViewer = false,
@@ -265,10 +266,27 @@
 								<div class="co-invest-row">Co-Invest: {fmt(deal.sponsorInDeal, 'pct')} alongside LPs</div>
 							{/if}
 
-							<!-- Other deals link -->
-							{#if deal?.managementCompany}
+							<!-- Other deals from sponsor -->
+							{#if sponsorDeals.length > 0 || deal?.managementCompany}
 								<div class="section-divider"></div>
-								<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="ad-action-link">Other deals from this sponsor &rarr;</a>
+								<div class="subsection-title">Other Deals</div>
+								{#if sponsorDeals.length > 0}
+									<div class="sponsor-deals-grid">
+										{#each sponsorDeals as sd}
+											<a href="/deal/{sd.slug || sd.id}" class="sponsor-deal-card">
+												<div class="sponsor-deal-name">{sd.investmentName || sd.investment_name}</div>
+												<div class="sponsor-deal-meta">
+													{#if sd.assetClass || sd.asset_class}<span>{sd.assetClass || sd.asset_class}</span>{/if}
+													{#if sd.status}<span class="sponsor-deal-status">{sd.status}</span>{/if}
+												</div>
+												{#if sd.targetIRR || sd.target_irr}
+													<div class="sponsor-deal-return">Target: {fmt(sd.targetIRR || sd.target_irr, 'pct')}</div>
+												{/if}
+											</a>
+										{/each}
+									</div>
+								{/if}
+								<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="ad-action-link">View all deals from {deal.managementCompany} &rarr;</a>
 							{/if}
 
 							<!-- Background Check -->
@@ -572,6 +590,15 @@
 		text-decoration: none;
 	}
 	.ad-action-link:hover { text-decoration: underline; }
+
+	/* Sponsor Deals Grid */
+	.sponsor-deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px; }
+	.sponsor-deal-card { display: block; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); background: var(--bg-card); text-decoration: none; color: inherit; transition: border-color 0.15s; }
+	.sponsor-deal-card:hover { border-color: var(--primary); }
+	.sponsor-deal-name { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; line-height: 1.3; }
+	.sponsor-deal-meta { display: flex; gap: 6px; align-items: center; font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+	.sponsor-deal-status { text-transform: capitalize; }
+	.sponsor-deal-return { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); }
 
 	/* Structure / Legitimacy / Returns grid */
 	.structure-grid {

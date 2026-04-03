@@ -57,11 +57,10 @@
 			document.documentElement.classList.add('light');
 			document.documentElement.classList.remove('dark');
 		} else {
-			// No preference saved — check system preference
-			isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-			if (isDark) {
-				document.documentElement.classList.add('dark');
-			}
+			// Default to light mode for new users
+			isDark = false;
+			document.documentElement.classList.add('light');
+			document.documentElement.classList.remove('dark');
 		}
 
 		syncImpersonationState(getStoredSessionUser());
