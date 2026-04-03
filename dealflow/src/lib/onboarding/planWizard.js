@@ -696,9 +696,14 @@ export function isPaidFlowComplete(wizardData = {}) {
 	);
 }
 
-export function hasCompletedPlan(wizardData = {}, portfolioPlan = null) {
+export function hasSavedInvestorProfile(wizardData = {}, portfolioPlan = null) {
 	const data = normalizeWizardData(wizardData);
 	if (data._completedAt) return true;
+	return hasSavedWizardProgress(data, portfolioPlan);
+}
+
+export function hasCompletedPlan(wizardData = {}, portfolioPlan = null) {
+	const data = normalizeWizardData(wizardData);
 	if (Array.isArray(portfolioPlan?.slots) && portfolioPlan.slots.length > 0) return true;
 	if (Array.isArray(portfolioPlan?.buckets) && portfolioPlan.buckets.length > 0) return true;
 	return isPaidFlowComplete(data);
