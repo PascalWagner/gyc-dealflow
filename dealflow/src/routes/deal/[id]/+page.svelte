@@ -1539,7 +1539,7 @@
 										<table class="cf-table">
 											<thead>
 												<tr>
-													<th>Year</th><th>Capital</th><th>Distributions</th><th>% CoC</th><th>Total Cash</th><th>Cumulative</th><th>Notes</th>
+													<th>Year</th><th>Capital</th><th>Distributions</th><th>% CoC</th><th>Total Cash</th><th>Cumulative</th>
 												</tr>
 											</thead>
 											<tbody>
@@ -1560,7 +1560,6 @@
 														<td class="cf-highlight">{investment > 0 ? ((row.dist / investment) * 100).toFixed(1) : '0.0'}%</td>
 														<td>{fmt(row.dist + row.capReturn, 'money')}</td>
 														<td>{fmt(row.cumDist + (i === cfRows.length - 1 ? row.capReturn : 0), 'money')}</td>
-														<td class="cf-note">{row.note || ''}</td>
 													</tr>
 												{/each}
 											</tbody>
@@ -1571,7 +1570,6 @@
 													<td><div class="cf-summary-value green">{fmt(cfRows[cfRows.length-1]?.cumDist || 0, 'money')}</div><div class="cf-summary-label">Total Distributions</div></td>
 													<td>{#if cfAvgCoC > 0}<div class="cf-summary-value green">{cfAvgCoC.toFixed(1)}%</div><div class="cf-summary-label">Avg CoC</div>{/if}</td>
 													<td><div class="cf-summary-value">{fmt(cfTotalCash, 'money')}</div><div class="cf-summary-label">Total Cash</div></td>
-													<td>{#if deal.targetIRR}<div class="cf-summary-value green">{fmt(deal.targetIRR, 'pct')}</div><div class="cf-summary-label">Target IRR</div>{/if}</td>
 													<td></td>
 												</tr>
 											</tfoot>
