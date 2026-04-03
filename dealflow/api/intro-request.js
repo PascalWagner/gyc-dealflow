@@ -5,7 +5,7 @@
 import { getAdminClient, setCors, rateLimit, ghlFetch } from './_supabase.js';
 
 const PASCAL_EMAIL = 'info@pascalwagner.com';
-const BASE = 'https://deals.growyourcashflow.io';
+const BASE = 'https://dealflow.growyourcashflow.io';
 
 export default async function handler(req, res) {
   setCors(res);

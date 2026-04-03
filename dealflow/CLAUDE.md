@@ -41,7 +41,7 @@ Sandbox URL: `https://sandbox.growyourcashflow.io`
 - **Backend**: Vercel serverless functions in `api/`
 - **Database**: Supabase (Postgres)
 - **Auth**: Magic link via `/api/auth`, JWT sessions stored in localStorage as `gycUser`
-- **API proxy**: Vite proxies `/api` to `deals.growyourcashflow.io` in dev
+- **API proxy**: Vite proxies `/api` to `dealflow.growyourcashflow.io` in dev
 
 ## Key conventions
 

@@ -5,7 +5,7 @@
 // Pipeline: AI extraction → SEC EDGAR → RentCast → Census/BLS → Background Check
 // All enrichment phases (2-5) run in parallel after AI extraction completes.
 
-const SITE_URL = process.env.SITE_URL || 'https://deals.growyourcashflow.io';
+const SITE_URL = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
 const EXTRACTION_TEXT_LIMIT = 120000;
 
 // ── Full enrichment prompt (PPM is source of truth) ──────────────────────────
