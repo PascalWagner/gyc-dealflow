@@ -63,17 +63,32 @@ export default async function handler(req, res) {
     // 3. Only fetch named investors if caller has also opted in
     if (callerOptedIn) {
       // Fetch deal stages — use granular toggles to filter by stage
-      const { data: publicInvestors, error: investorsError } = await supabase
+      // Two-step query: get stages, then fetch profiles separately
+      // (avoids Supabase join issues with nullable FK relationships)
+      const { data: stageRows, error: stagesError } = await supabase
         .from('user_deal_stages')
-        .select('user_id, stage, user_profiles(full_name, avatar_url, share_saved, share_dd, share_invested, share_activity)')
+        .select('user_id, stage')
         .eq('deal_id', dealId);
 
-      if (investorsError) console.warn('[deal-stats] investor query error:', investorsError.message);
-      if (publicInvestors) {
-        for (const row of publicInvestors) {
-          const name = row.user_profiles?.full_name;
+      if (stagesError) console.warn('[deal-stats] stages query error:', stagesError.message);
+
+      let profilesByUserId = {};
+      if (stageRows?.length > 0) {
+        const userIds = [...new Set(stageRows.map(r => r.user_id))];
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, avatar_url, share_saved, share_dd, share_invested, share_activity')
+          .in('id', userIds);
+        if (profiles) {
+          for (const p of profiles) profilesByUserId[p.id] = p;
+        }
+      }
+
+      if (stageRows) {
+        for (const row of stageRows) {
+          const p = profilesByUserId[row.user_id];
+          const name = p?.full_name;
           if (!name) continue;
-          const p = row.user_profiles;
           const investorInfo = {
             name,
             avatarUrl: p.avatar_url || null,
