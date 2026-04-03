@@ -1,6 +1,10 @@
 <script>
 	import { getDealOperator } from '$lib/utils/dealSponsors.js';
-	import { filterComparableDeals } from '$lib/utils/dealComparables.js';
+	import {
+		filterComparableDeals,
+		getComparableMetricConfig,
+		getComparableMetricValue
+	} from '$lib/utils/dealComparables.js';
 
 	let {
 		deal,
@@ -9,7 +13,23 @@
 		fmt
 	} = $props();
 
-	const eligibleSimilarDeals = $derived.by(() => filterComparableDeals(similarDeals));
+	const metricConfig = $derived.by(() => getComparableMetricConfig(deal));
+	const eligibleSimilarDeals = $derived.by(() => filterComparableDeals(similarDeals, deal));
+	const primaryMobileMetrics = $derived(metricConfig.slice(0, 3));
+	const secondaryMobileMetrics = $derived(metricConfig.slice(3));
+
+	function formatComparableValue(record, metric) {
+		const value = getComparableMetricValue(record, metric);
+		if (value === null || value === undefined || value === '') return '---';
+		if (metric.type === 'pct') return fmt(value, 'pct');
+		if (metric.type === 'money') return fmt(value, 'money');
+		if (metric.type === 'multiple') return fmt(value, 'multiple');
+		if (metric.type === 'hold') {
+			const normalized = String(value);
+			return /open/i.test(normalized) ? normalized : `${normalized} Yrs`;
+		}
+		return value;
+	}
 </script>
 
 <div class="similar-table-wrap ly-table-scroll ly-desktop-only">
@@ -17,11 +37,9 @@
 		<thead>
 			<tr>
 				<th class="sim-th left">Deal Name</th>
-				<th class="sim-th">Target IRR</th>
-				<th class="sim-th">Pref Return</th>
-				<th class="sim-th">Eq Multiple</th>
-				<th class="sim-th">Minimum</th>
-				<th class="sim-th">Hold Period</th>
+				{#each metricConfig as metric}
+					<th class="sim-th">{metric.label}</th>
+				{/each}
 			</tr>
 		</thead>
 		<tbody>
@@ -31,11 +49,9 @@
 					<div class="sim-deal-company">{dealOperatorName || ''}</div>
 					<span class="sim-badge current">THIS DEAL</span>
 				</td>
-				<td class="sim-td">{deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '---'}</td>
-				<td class="sim-td">{deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '---'}</td>
-				<td class="sim-td">{deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '---'}</td>
-				<td class="sim-td">{deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '---'}</td>
-				<td class="sim-td">{deal.holdPeriod ? `${deal.holdPeriod} Yrs` : '---'}</td>
+				{#each metricConfig as metric}
+					<td class="sim-td">{formatComparableValue(deal, metric)}</td>
+				{/each}
 			</tr>
 			{#if eligibleSimilarDeals.length > 0}
 				{#each eligibleSimilarDeals as sd}
@@ -45,16 +61,14 @@
 							<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
 							<div class="sim-deal-company">{similarDealOperator.name || ''}</div>
 						</td>
-						<td class="sim-td">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</td>
-						<td class="sim-td">{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</td>
-						<td class="sim-td">{sd.equityMultiple ? fmt(sd.equityMultiple, 'multiple') : '---'}</td>
-						<td class="sim-td">{sd.investmentMinimum ? fmt(sd.investmentMinimum, 'money') : '---'}</td>
-						<td class="sim-td">{sd.holdPeriod ? `${sd.holdPeriod} Yrs` : '---'}</td>
+						{#each metricConfig as metric}
+							<td class="sim-td">{formatComparableValue(sd, metric)}</td>
+						{/each}
 					</tr>
 				{/each}
 			{:else}
 				<tr>
-					<td class="sim-empty-row" colspan="6">Comparable deals need more structured data before we can show a trustworthy table.</td>
+					<td class="sim-empty-row" colspan={metricConfig.length + 1}>Comparable deals need more structured data before we can show a trustworthy table.</td>
 				</tr>
 			{/if}
 		</tbody>
@@ -71,26 +85,23 @@
 			</div>
 		</div>
 		<div class="similar-mobile-primary">
-			<div class="similar-mobile-stat">
-				<span class="similar-mobile-stat-label">Target IRR</span>
-				<strong class="similar-mobile-stat-value">{deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '---'}</strong>
-			</div>
-			<div class="similar-mobile-stat">
-				<span class="similar-mobile-stat-label">Minimum</span>
-				<strong class="similar-mobile-stat-value">{deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '---'}</strong>
-			</div>
-			<div class="similar-mobile-stat">
-				<span class="similar-mobile-stat-label">Hold</span>
-				<strong class="similar-mobile-stat-value">{deal.holdPeriod ? `${deal.holdPeriod} Yrs` : '---'}</strong>
-			</div>
+			{#each primaryMobileMetrics as metric}
+				<div class="similar-mobile-stat">
+					<span class="similar-mobile-stat-label">{metric.label}</span>
+					<strong class="similar-mobile-stat-value">{formatComparableValue(deal, metric)}</strong>
+				</div>
+			{/each}
 		</div>
-		<details class="similar-mobile-details">
-			<summary>More metrics</summary>
-			<div class="similar-mobile-secondary">
-				<div class="similar-mobile-detail"><span>Pref Return</span><strong>{deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '---'}</strong></div>
-				<div class="similar-mobile-detail"><span>Eq Multiple</span><strong>{deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '---'}</strong></div>
-			</div>
-		</details>
+		{#if secondaryMobileMetrics.length > 0}
+			<details class="similar-mobile-details">
+				<summary>More metrics</summary>
+				<div class="similar-mobile-secondary">
+					{#each secondaryMobileMetrics as metric}
+						<div class="similar-mobile-detail"><span>{metric.label}</span><strong>{formatComparableValue(deal, metric)}</strong></div>
+					{/each}
+				</div>
+			</details>
+		{/if}
 	</article>
 	{#if eligibleSimilarDeals.length > 0}
 		{#each eligibleSimilarDeals as sd}
@@ -103,26 +114,23 @@
 					</div>
 				</div>
 				<div class="similar-mobile-primary">
-					<div class="similar-mobile-stat">
-						<span class="similar-mobile-stat-label">Target IRR</span>
-						<strong class="similar-mobile-stat-value">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</strong>
-					</div>
-					<div class="similar-mobile-stat">
-						<span class="similar-mobile-stat-label">Minimum</span>
-						<strong class="similar-mobile-stat-value">{sd.investmentMinimum ? fmt(sd.investmentMinimum, 'money') : '---'}</strong>
-					</div>
-					<div class="similar-mobile-stat">
-						<span class="similar-mobile-stat-label">Hold</span>
-						<strong class="similar-mobile-stat-value">{sd.holdPeriod ? `${sd.holdPeriod} Yrs` : '---'}</strong>
-					</div>
+					{#each primaryMobileMetrics as metric}
+						<div class="similar-mobile-stat">
+							<span class="similar-mobile-stat-label">{metric.label}</span>
+							<strong class="similar-mobile-stat-value">{formatComparableValue(sd, metric)}</strong>
+						</div>
+					{/each}
 				</div>
-				<details class="similar-mobile-details">
-					<summary>More metrics</summary>
-					<div class="similar-mobile-secondary">
-						<div class="similar-mobile-detail"><span>Pref Return</span><strong>{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</strong></div>
-						<div class="similar-mobile-detail"><span>Eq Multiple</span><strong>{sd.equityMultiple ? fmt(sd.equityMultiple, 'multiple') : '---'}</strong></div>
-					</div>
-				</details>
+				{#if secondaryMobileMetrics.length > 0}
+					<details class="similar-mobile-details">
+						<summary>More metrics</summary>
+						<div class="similar-mobile-secondary">
+							{#each secondaryMobileMetrics as metric}
+								<div class="similar-mobile-detail"><span>{metric.label}</span><strong>{formatComparableValue(sd, metric)}</strong></div>
+							{/each}
+						</div>
+					</details>
+				{/if}
 			</article>
 		{/each}
 	{:else}

@@ -3,38 +3,94 @@ import assert from 'node:assert/strict';
 
 import {
 	filterComparableDeals,
-	getComparableDealScore,
+	getComparableMetricConfig,
+	getComparableMetricValue,
 	isComparableDealEligible
 } from '../src/lib/utils/dealComparables.js';
 
-test('comparable deals require a minimum level of structured comparison data', () => {
-	const deals = [
+test('equity comparable config preserves the classic investor metrics', () => {
+	const deal = {
+		assetClass: 'Multifamily',
+		dealType: 'Syndication'
+	};
+
+	const metrics = getComparableMetricConfig(deal);
+
+	assert.deepEqual(
+		metrics.map((metric) => metric.label),
+		['Target IRR', 'Pref Return', 'Eq Multiple', 'Minimum', 'Hold Period']
+	);
+});
+
+test('lending comparable config swaps in income-oriented comparison fields', () => {
+	const deal = {
+		assetClass: 'Private Debt / Credit',
+		dealType: 'Fund',
+		strategy: 'lending'
+	};
+
+	const metrics = getComparableMetricConfig(deal);
+
+	assert.deepEqual(
+		metrics.map((metric) => metric.label),
+		['Target Yield', 'Distributions', 'Minimum', 'Lockup', 'Manager AUM']
+	);
+});
+
+test('lending comparable eligibility does not require equity-only metrics', () => {
+	const referenceDeal = {
+		assetClass: 'Private Debt / Credit',
+		dealType: 'Fund',
+		strategy: 'lending'
+	};
+
+	const eligibleDeal = {
+		targetIRR: 0.095,
+		distributions: 'Monthly',
+		investmentMinimum: 50000,
+		holdPeriod: 1
+	};
+
+	const ineligibleDeal = {
+		targetIRR: 0.095,
+		investmentMinimum: 50000
+	};
+
+	assert.equal(isComparableDealEligible(eligibleDeal, referenceDeal), true);
+	assert.equal(isComparableDealEligible(ineligibleDeal, referenceDeal), false);
+	assert.equal(
+		getComparableMetricValue(
+			{ fundAUM: 125000000 },
+			getComparableMetricConfig(referenceDeal)[4]
+		),
+		125000000
+	);
+});
+
+test('filterComparableDeals removes weak equity comparables', () => {
+	const referenceDeal = {
+		assetClass: 'Multifamily',
+		dealType: 'Syndication'
+	};
+
+	const comparables = [
 		{
-			id: 'strong',
-			targetIRR: 0.11,
+			id: 'strong-equity',
+			targetIRR: 0.17,
 			preferredReturn: 0.08,
-			equityMultiple: 1.6,
+			equityMultiple: 2.1,
 			investmentMinimum: 50000,
 			holdPeriod: 5
 		},
 		{
-			id: 'borderline',
-			targetIRR: 0.1,
-			investmentMinimum: 50000,
-			holdPeriod: 5
-		},
-		{
-			id: 'weak',
-			targetIRR: 0.1,
+			id: 'weak-equity',
+			targetIRR: 0.16,
 			investmentMinimum: 50000
 		}
 	];
 
-	assert.equal(getComparableDealScore(deals[0]), 5);
-	assert.equal(isComparableDealEligible(deals[0]), true);
-	assert.equal(getComparableDealScore(deals[1]), 3);
-	assert.equal(isComparableDealEligible(deals[1]), true);
-	assert.equal(getComparableDealScore(deals[2]), 2);
-	assert.equal(isComparableDealEligible(deals[2]), false);
-	assert.deepEqual(filterComparableDeals(deals), [deals[0], deals[1]]);
+	assert.deepEqual(
+		filterComparableDeals(comparables, referenceDeal).map((deal) => deal.id),
+		['strong-equity']
+	);
 });

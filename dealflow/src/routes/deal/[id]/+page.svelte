@@ -64,6 +64,7 @@
 		buildFeeRows,
 		buildGeographyLabel,
 		buildInvestClearlyPreview,
+		buildKeyRiskItems,
 		buildOperatorTrackRecordRows,
 		buildSecFilingSummary,
 		getDealStateCodes
@@ -313,6 +314,7 @@
 		if (historicalReturns.length === 1) return String(historicalReturns[0].year);
 		return `${historicalReturns[0].year}-${historicalReturns[historicalReturns.length - 1].year}`;
 	});
+	const keyRiskItems = $derived.by(() => buildKeyRiskItems(deal, dealFit, isStale));
 
 	// Buy Box Match
 	const buyBoxChecks = $derived.by(() => buildBuyBoxChecks(deal, buyBox));
