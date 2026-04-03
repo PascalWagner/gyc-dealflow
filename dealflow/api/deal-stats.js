@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     if (error && error.code !== 'PGRST116') throw error;
 
     const result = {
-      _version: 'v4-jwt-fallback',
+      _version: 'v5-debug-fix',
       review: data?.review || data?.interested || 0,
       connect: data?.connect || 0,
       decide: data?.decide || 0,
@@ -129,9 +129,7 @@ export default async function handler(req, res) {
     // Temporary debug info for investor avatar investigation
     result._debug = {
       callerOptedIn: !!callerOptedIn,
-      callerProfile: callerProfile ? { share_saved: callerProfile.share_saved, share_dd: callerProfile.share_dd, share_invested: callerProfile.share_invested, share_activity: callerProfile.share_activity } : null,
-      stageRowCount: stageRows?.length ?? -1,
-      profileCount: Object.keys(profilesByUserId || {}).length
+      callerProfile: callerProfile ? { share_saved: callerProfile.share_saved, share_dd: callerProfile.share_dd, share_invested: callerProfile.share_invested, share_activity: callerProfile.share_activity } : null
     };
     return res.status(200).json(result);
   } catch (err) {
