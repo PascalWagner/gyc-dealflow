@@ -1346,6 +1346,12 @@
 								{:else}
 									<div class="doc-empty">No documents available yet.</div>
 								{/if}
+								{#if currentStage === 'invested' || currentStage === 'decide'}
+									<button class="doc-item doc-row-button" onclick={generateReport}>
+										<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+										<span>Generate Investment Report</span>
+									</button>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -1484,7 +1490,7 @@
 							{/if}
 							<div class:blurred={!isPaid}>
 								<div class="cf-assumptions">
-									Based on {fmt(cfInvestment, 'money')} invested at {fmt(cfYieldRate, 'pct')} {cfYieldLabel} over {cfHold}{cfIsEvergreen && cfHold === 5 ? '+ years' : ' years'}. Projections are illustrative only.
+									Based on {fmt(cfInvestment, 'money')} invested at {fmt(cfYieldRate, 'pct')} {cfYieldLabel} over {cfHold}{cfIsEvergreen && cfHold === 5 ? '+ years' : ' years'}.{#if hasHistoricalReturns} Projection uses historical average return.{/if} Projections are illustrative only.
 								</div>
 
 								<div class="cf-toggle">
@@ -1872,11 +1878,13 @@
 						I'm Investing &rarr;
 					</button>
 				{:else if currentStage === 'invested'}
-					<a href="/app/deals#portfolio" class="btn-pass" style="text-decoration:none;">My Portfolio</a>
-					<button class="btn-advance" onclick={generateReport}>
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-						Generate Investment Report
+					<button class="btn-pass" onclick={skipDeal}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+						Skip
 					</button>
+					<a href="/app/deals#portfolio" class="btn-advance" style="text-decoration:none;">
+						My Portfolio &rarr;
+					</a>
 				{:else if currentStage === 'skipped'}
 					<button class="btn-pass" onclick={() => setStage('review')}>
 						Review Deal

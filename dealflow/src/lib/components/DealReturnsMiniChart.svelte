@@ -22,7 +22,7 @@
 	};
 
 	const heroLayout = {
-		chartWidth: 312,
+		chartWidth: 460,
 		chartHeight: 132,
 		plotLeft: 12,
 		plotRight: 300,
@@ -36,10 +36,15 @@
 		pillFontSize: 8.5,
 		yearY: 121,
 		yearFontSize: 8.5,
-		label: '5 YEAR RETURNS'
+		label: '' // set dynamically below
 	};
 
 	const layout = $derived.by(() => variant === 'inset' ? insetLayout : heroLayout);
+	const dynamicLabel = $derived.by(() => {
+		const count = normalizedSeries?.length || 0;
+		if (variant === 'inset') return `${count}Y RETURNS`;
+		return `${count} YEAR RETURNS`;
+	});
 	const plotHeight = $derived.by(() => layout.plotBottom - layout.plotTop);
 
 	const normalizedSeries = $derived.by(() =>
@@ -117,7 +122,7 @@
 	class:variant-inset={variant === 'inset'}
 	aria-hidden="true"
 >
-	<div class="mini-chart-label">{layout.label}</div>
+	<div class="mini-chart-label">{dynamicLabel}</div>
 
 	<svg
 		class="mini-chart-svg"
