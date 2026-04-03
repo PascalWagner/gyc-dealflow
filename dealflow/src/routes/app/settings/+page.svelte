@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { getFreshSessionToken, user } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
+	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import {
 		applyAdminImpersonationToUrl,
@@ -24,6 +25,8 @@
 	let pendingAvatarFile = $state(null);
 	let pendingAvatarPreviewUrl = $state('');
 	let avatarUploadError = $state('');
+	let avatarUploading = $state(false);
+	let avatarUploadSuccess = $state(false);
 	let profileSaving = $state(false);
 	let profileSaved = $state(false);
 
@@ -588,11 +591,16 @@
 		weeklyDigest = prefs.weekly_digest !== false;
 	}
 
-	function handleAvatarUpload(event) {
+	async function handleAvatarUpload(event) {
 		const file = event.target.files?.[0];
 		if (!file) return;
 		if (!file.type.startsWith('image/')) {
 			avatarUploadError = 'Please choose an image file.';
+			event.target.value = '';
+			return;
+		}
+		if (file.size > 10 * 1024 * 1024) {
+			avatarUploadError = 'Image must be under 10 MB.';
 			event.target.value = '';
 			return;
 		}
@@ -602,6 +610,23 @@
 		revokePendingAvatarPreview();
 		pendingAvatarPreviewUrl = URL.createObjectURL(file);
 		event.target.value = '';
+
+		// Auto-save photo immediately without requiring Save Profile
+		avatarUploading = true;
+		try {
+			const url = await uploadPendingAvatar();
+			if (url) {
+				avatarUrl = url;
+				pendingAvatarFile = null;
+				revokePendingAvatarPreview();
+				avatarUploadSuccess = true;
+				setTimeout(() => { avatarUploadSuccess = false; }, 2000);
+			}
+		} catch (err) {
+			avatarUploadError = err?.message || 'Photo upload failed. Please try again.';
+		} finally {
+			avatarUploading = false;
+		}
 	}
 
 	function logout() {
@@ -668,13 +693,11 @@
 				<div class="settings-card-title">Personal Information</div>
 				<div class="settings-card-desc">This information is shown to GPs when you request an introduction.</div>
 				<div class="avatar-row profile-avatar-row">
-					<div class="avatar-preview">
-						{#if displayAvatarUrl}
-							<img src={displayAvatarUrl} alt="Avatar" />
-						{:else}
-							<span class="avatar-initials">{avatarInitials}</span>
-						{/if}
-					</div>
+					{#if pendingAvatarPreviewUrl}
+						<div class="avatar-preview"><img src={pendingAvatarPreviewUrl} alt="Uploading..." /></div>
+					{:else}
+						<UserAvatar name="{firstName} {lastName}" avatarUrl={displayAvatarUrl} size="lg" />
+					{/if}
 					<div class="avatar-actions">
 						<label class="upload-btn">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -682,9 +705,10 @@
 							<input type="file" accept="image/*" onchange={handleAvatarUpload} style="display:none;" />
 						</label>
 						<div class="avatar-help">
-							{pendingAvatarFile
-								? 'Photo selected. Click Save Profile to upload it.'
-								: 'This appears on your member profile and next to your deal activity.'}
+								{#if avatarUploadSuccess}Photo saved successfully.{:else if avatarUploading}Uploading photo...{:else}This appears on your member profile and next to your deal activity.{/if}
+
+
+
 						</div>
 						{#if avatarUploadError}
 							<div class="avatar-error">{avatarUploadError}</div>

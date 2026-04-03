@@ -14,6 +14,7 @@
 	import { formatSessionAccessLabel } from '$lib/auth/access-model.js';
 	import { browser } from '$app/environment';
 	import { deals } from '$lib/stores/deals.js';
+	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import { ADMIN_NAV_ITEMS, APP_ROUTES, getSidebarSections } from '$lib/navigation/app-nav.js';
 	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import { selectionChanged } from '$lib/utils/haptics.js';
@@ -160,6 +161,7 @@
 			.map((part) => part.charAt(0).toUpperCase())
 			.join('') || fallback || '?';
 	});
+	const userAvatarUrl = $derived(footerUser?.avatar_url || footerUser?.avatarUrl || '');
 	const accessLabel = $derived(formatSessionAccessLabel(footerUser || {}));
 	const accessClass = $derived(formatSessionAccessLabel(footerUser || {}) === 'Free' ? 'access-free' : 'access-paid');
 	const dealFlowCount = $derived($deals.length || 0);
@@ -608,7 +610,7 @@
 	<!-- User profile at bottom -->
 	{#if $isLoggedIn && userName}
 		<a class="sidebar-user" href="/app/settings" data-sveltekit-reload onclick={closeMobile}>
-			<div class="user-avatar">{userInitials}</div>
+			<UserAvatar name={userName} avatarUrl={userAvatarUrl} size="sm" />
 			<div class="user-info">
 				<div class="user-name">{userName}</div>
 				<div class="user-access {accessClass}">{accessLabel}</div>
