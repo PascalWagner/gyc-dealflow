@@ -245,80 +245,13 @@ export default async function handler(req, res) {
       }
     }
 
-    // 5. Auto-enrich: if PDF, extract fields via AI + run full enrichment cascade
-    // PPM is always the source of truth — enrichment runs regardless of upload context
-    const isPdf = (filename || '').toLowerCase().endsWith('.pdf');
-    let enriched = false;
-    let enrichedFields = [];
-    let extractedData = null;
-    let enrichmentCascade = null;
-    let enrichmentError = null;
-
-    if (isPdf) {
-      try {
-        // For direct uploads, download the file from storage for extraction
-        let extractBuffer = fileBuffer;
-        if (!extractBuffer && isDirectUpload) {
-          try {
-            const { data: dlData, error: dlError } = await supabase.storage
-              .from('deal-decks')
-              .download(effectiveStoragePath);
-            if (!dlError && dlData) {
-              extractBuffer = Buffer.from(await dlData.arrayBuffer());
-            }
-          } catch (dlErr) {
-            console.warn('Could not download file for extraction:', dlErr.message);
-          }
-        }
-        if (!extractBuffer) {
-          console.warn('No file buffer available for extraction, skipping');
-          throw new Error('No file buffer for extraction');
-        }
-        // AI extraction with fallback chain (Claude → OpenAI → Grok)
-        const { extracted, method } = await extractFromPdf(extractBuffer);
-
-        if (extracted) {
-          const fieldsFound = Object.keys(extracted).filter(k => extracted[k] !== null && extracted[k] !== undefined);
-          enriched = fieldsFound.length > 0;
-          enrichedFields = fieldsFound;
-          extractedData = extracted;
-
-          console.log(`Deck upload enrichment (${method}): ${fieldsFound.length} fields extracted`);
-
-          // Run full enrichment cascade (SEC, RentCast, Census/BLS, background check)
-          try {
-            const supabase = getAdminClient();
-            enrichmentCascade = await runEnrichmentCascade(extracted, supabase);
-          } catch (cascadeErr) {
-            console.warn('Enrichment cascade failed (extraction still succeeded):', cascadeErr.message);
-          }
-        }
-      } catch (e) {
-        console.error('Auto-enrichment failed (upload still succeeded):', e.message);
-        enrichmentError = e.message;
-      }
-    }
-
+    // 5. Send response immediately — enrichment runs separately via deal-review extraction
     return res.status(200).json({
       success: true,
       driveUrl: deckUrl,
       dealUpdated,
       ...(newDealId ? { newDealId } : {}),
-      ...(dealUpdateError ? { dealUpdateError } : {}),
-      enriched,
-      enrichedFields,
-      extractedData,
-      ...(enrichmentCascade ? {
-        sec: enrichmentCascade.sec,
-        property: enrichmentCascade.property,
-        market: enrichmentCascade.market,
-        backgroundCheck: enrichmentCascade.backgroundCheck,
-        sponsorTrackRecord: enrichmentCascade.sponsorTrackRecord,
-        matchedDeals: enrichmentCascade.matchedDeals,
-        dbWrite: enrichmentCascade.dbWrite,
-        enrichmentSteps: ['ppm', ...enrichmentCascade.enrichmentSteps]
-      } : {}),
-      ...(enrichmentError ? { enrichmentError } : {})
+      ...(dealUpdateError ? { dealUpdateError } : {})
     });
 
   } catch (error) {
