@@ -123,7 +123,9 @@
 		params.set('stage', stage);
 		if (from) params.set('from', from);
 		if (extract) params.set('extract', '1');
-		if (stage === 'summary' && allowSummary) params.set('allowSummary', '1');
+		if (stage === 'summary' && (allowSummary || allowSummaryPreview || preservesFullReviewAccess)) {
+			params.set('allowSummary', '1');
+		}
 		return `/deal-review?${params.toString()}`;
 	}
 
@@ -399,6 +401,19 @@
 			source,
 			evidence: reviewFieldEvidence
 		});
+	}
+
+	function getStagePendingEvidenceFieldKeys(stageId, { source = onboardingSource } = {}) {
+		if (!hasSourceCitationInputs()) return [];
+
+		return getEvidenceFieldKeysForStage(stageId)
+			.filter((fieldKey) => fieldRequiresSourceCitation(fieldKey))
+			.filter((fieldKey) => hasMeaningfulReviewValue(readReviewFieldValue(source, fieldKey)))
+			.filter((fieldKey) => !reviewFieldEvidenceKnownKeys.has(fieldKey));
+	}
+
+	function isStageEvidencePending(stageId, options = {}) {
+		return getStagePendingEvidenceFieldKeys(stageId, options).length > 0;
 	}
 
 	function summarizeFieldLabels(fieldKeys = []) {
@@ -697,6 +712,10 @@
 	const secStatus = $derived(secVerificationContext?.view?.currentStatus || 'pending');
 	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
 	const secCanAdvance = $derived(secGateResolved || secStatus === 'skipped');
+	const currentLifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
+	const preservesFullReviewAccess = $derived(
+		['approved', 'published', 'do_not_publish'].includes(currentLifecycleStatus)
+	);
 	const hasSourceDocuments = $derived(
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
 	);
@@ -704,7 +723,10 @@
 		Boolean(deckFile || ppmFile || hasSourceDocuments)
 	);
 	const canOpenSummaryPreview = $derived(
-		allowSummaryPreview && hasSourceDocuments && secCanAdvance && teamContactsValidation.valid
+		(allowSummaryPreview || preservesFullReviewAccess)
+		&& hasSourceDocuments
+		&& secCanAdvance
+		&& teamContactsValidation.valid
 	);
 	const summaryPublishReady = $derived(
 		(branchInfo.branch === 'lending_fund'
@@ -725,6 +747,9 @@
 	});
 	const unlockedStageIds = $derived.by(() => {
 		if (!deal) return requestedStage ? [requestedStage] : ['intake'];
+		if (preservesFullReviewAccess) {
+			return reviewStages.map((stage) => stage.id);
+		}
 		if (firstIncompleteStage === 'summary') {
 			return reviewStages.map((stage) => stage.id);
 		}
@@ -846,6 +871,13 @@
 			...Object.keys(reviewFieldEvidence)
 		])
 	);
+	const summaryEvidencePending = $derived.by(() => {
+		if (loading || !deal || activeStage !== 'summary' || !hasSourceCitationInputs()) return false;
+		return reviewStages.some((stage) =>
+			!['intake', 'summary', 'team', 'sec'].includes(stage.id)
+			&& isStageEvidencePending(stage.id)
+		);
+	});
 	const summaryRelevantWarningFieldKeys = $derived.by(() => {
 		const keys = new Set();
 		for (const stage of reviewStages) {
@@ -918,6 +950,39 @@
 		const stageId = getRuleTargetStage(rule);
 		const stageLabel = getStageLabel(stageId);
 		return stageLabel ? `Open ${stageLabel}` : 'Open';
+	}
+
+	function getPublishRuleState(rule) {
+		const stageId = rule?.stageId || '';
+		if (stageId && isStageEvidencePending(stageId)) return 'pending';
+		if (stageId) {
+			const stage = reviewStages.find((candidate) => candidate.id === stageId);
+			if (stage) {
+				return isReviewStageComplete(stage) ? 'ready' : 'blocked';
+			}
+		}
+		return rule?.satisfied ? 'ready' : 'blocked';
+	}
+
+	function getPublishRuleSummary(rule) {
+		const stageId = rule?.stageId || '';
+		if (stageId && isStageEvidencePending(stageId)) {
+			const pendingCount = getStagePendingEvidenceFieldKeys(stageId).length;
+			return `${pendingCount} citation${pendingCount === 1 ? ' is' : 's are'} still loading`;
+		}
+		if (stageId) {
+			const missingCitationFieldKeys = getStageMissingEvidenceFieldKeys(stageId, { requireLoadedEvidence: true });
+			if (missingCitationFieldKeys.length > 0) {
+				return `${missingCitationFieldKeys.length} citation${missingCitationFieldKeys.length === 1 ? ' is' : 's are'} still missing`;
+			}
+		}
+		return rule?.satisfied ? 'Ready' : `${rule?.missingFieldKeys?.length || 0} fields still missing`;
+	}
+
+	function getPublishRuleStatusLabel(rule) {
+		const state = getPublishRuleState(rule);
+		if (state === 'pending') return 'Checking';
+		return state === 'ready' ? 'Ready' : 'Needs review';
 	}
 
 	function markDirty() {
@@ -2292,8 +2357,10 @@
 
 	$effect(() => {
 		if (!dealId || loading || activeStage !== 'summary' || lifecycleSyncState === 'running') return;
-		const currentLifecycle = resolveDealLifecycleStatus(deal || {});
+		if (summaryEvidencePending) return;
+		const currentLifecycle = currentLifecycleStatus;
 		if (currentLifecycle === 'published' || currentLifecycle === 'do_not_publish') return;
+		if (currentLifecycle === 'approved' && !summaryPublishReady) return;
 		const desiredLifecycle = summaryPublishReady ? 'approved' : 'in_review';
 		if (desiredLifecycle === currentLifecycle) return;
 		void syncReviewLifecycleStatus({ quiet: true, targetLifecycle: desiredLifecycle });
@@ -2839,8 +2906,8 @@
 									<h2>Summary and publish readiness</h2>
 									<p>Review each stage, confirm the source-backed risks, and only publish when the record is actually trustworthy.</p>
 								</div>
-								<span class={`readiness-badge tone-${summaryPublishReady ? 'ready' : 'blocked'}`}>
-									{summaryPublishReady ? 'Ready to publish' : 'Still blocked'}
+								<span class={`readiness-badge tone-${summaryEvidencePending ? 'pending' : summaryPublishReady ? 'ready' : 'blocked'}`}>
+									{summaryEvidencePending ? 'Checking citations...' : summaryPublishReady ? 'Ready to publish' : 'Still blocked'}
 								</span>
 							</div>
 
@@ -2913,17 +2980,18 @@
 										</div>
 									</button>
 									{#each onboardingFlow.publishRules as rule}
+										{@const publishRuleState = getPublishRuleState(rule)}
 										<button
 											type="button"
-											class={`check-row check-row--interactive ${rule.satisfied ? 'is-ready' : 'is-blocked'}`}
+											class={`check-row check-row--interactive ${publishRuleState === 'ready' ? 'is-ready' : publishRuleState === 'pending' ? 'is-pending' : 'is-blocked'}`}
 											onclick={() => navigateToStage(getRuleTargetStage(rule))}
 										>
 											<div class="check-row__copy">
 												<strong>{rule.label}</strong>
-												<span>{rule.satisfied ? 'Ready' : `${rule.missingFieldKeys.length} fields still missing`}</span>
+												<span>{getPublishRuleSummary(rule)}</span>
 											</div>
 											<div class="check-row__meta">
-												<span class="check-row__status">{rule.satisfied ? 'Ready' : 'Needs review'}</span>
+												<span class="check-row__status">{getPublishRuleStatusLabel(rule)}</span>
 												<span class="check-row__action">{getRuleActionLabel(rule)}</span>
 											</div>
 										</button>
@@ -3685,6 +3753,11 @@
 		background: rgba(81, 190, 123, 0.08);
 	}
 
+	.check-row.is-pending {
+		border-color: rgba(214, 140, 69, 0.18);
+		background: rgba(214, 140, 69, 0.08);
+	}
+
 	.check-row.is-blocked {
 		border-color: rgba(175, 66, 47, 0.14);
 		background: rgba(175, 66, 47, 0.06);
@@ -3793,6 +3866,11 @@
 	.readiness-badge.tone-ready {
 		background: rgba(22, 122, 82, 0.14);
 		color: #167a52;
+	}
+
+	.readiness-badge.tone-pending {
+		background: rgba(214, 140, 69, 0.16);
+		color: #8c581f;
 	}
 
 	.readiness-badge.tone-blocked {
