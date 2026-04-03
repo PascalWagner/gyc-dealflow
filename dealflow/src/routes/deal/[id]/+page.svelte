@@ -154,12 +154,6 @@
 	// Share Class Switching
 	let activeShareClass = $state(0);
 
-	// Enrichment Wizard (admin)
-	let enrichmentData = $state(null);
-	let showEnrichModal = $state(false);
-	let enrichSaving = $state(false);
-	let enrichSuccess = $state(false);
-	let enrichChecked = $state({});
 
 	// Intro Request Modal
 	let showIntroModal = $state(false);
@@ -710,102 +704,6 @@
 		activeShareClass = idx;
 	}
 
-	const ENRICHMENT_FIELD_LABELS = {
-		investmentName: 'Investment Name',
-		managementCompany: 'Management Company',
-		ceo: 'CEO / Managing Partner',
-		assetClass: 'Asset Class',
-		dealType: 'Deal Type',
-		strategy: 'Strategy',
-		investmentStrategy: 'Investment Strategy',
-		targetIRR: 'Target IRR',
-		preferredReturn: 'Preferred Return',
-		cashOnCash: 'Cash-on-Cash',
-		equityMultiple: 'Equity Multiple',
-		investmentMinimum: 'Min Investment',
-		holdPeriod: 'Hold Period',
-		offeringType: 'Offering Type',
-		offeringSize: 'Offering Size',
-		distributions: 'Distributions',
-		fees: 'Fees',
-		lpGpSplit: 'LP/GP Split',
-		investingGeography: 'Geography',
-		sponsorCoinvest: 'Sponsor Co-Invest',
-		redemption: 'Redemption Terms',
-		taxForm: 'Tax Form'
-	};
-
-	function formatEnrichmentValue(key, val) {
-		if (val === null || val === undefined) return '';
-		if (['targetIRR', 'preferredReturn', 'cashOnCash', 'sponsorCoinvest'].includes(key)) {
-			return typeof val === 'number' ? (val * 100).toFixed(1) + '%' : val;
-		}
-		if (key === 'equityMultiple') return typeof val === 'number' ? val.toFixed(2) + 'x' : val;
-		if (['investmentMinimum', 'offeringSize', 'purchasePrice'].includes(key)) {
-			return typeof val === 'number' ? '$' + val.toLocaleString() : val;
-		}
-		return String(val);
-	}
-
-	async function openEnrichModal() {
-		if (!deal || !$isAdmin) return;
-		showEnrichModal = true;
-		enrichSuccess = false;
-		enrichSaving = false;
-		// Fetch enrichment data from the deal's deck
-		try {
-			const resp = await fetch(`/api/deal-extract-enrichment?dealId=${deal.id}`);
-			if (resp.ok) {
-				const data = await resp.json();
-				enrichmentData = data.extractedData || {};
-				// Initialize all fields as checked
-				const checked = {};
-				for (const key in enrichmentData) {
-					if (enrichmentData[key] != null && ENRICHMENT_FIELD_LABELS[key]) {
-						checked[key] = true;
-					}
-				}
-				enrichChecked = checked;
-			} else {
-				enrichmentData = {};
-			}
-		} catch {
-			enrichmentData = {};
-		}
-	}
-
-	function closeEnrichModal() {
-		showEnrichModal = false;
-	}
-
-	async function confirmEnrichment() {
-		if (!deal || !enrichmentData) return;
-		enrichSaving = true;
-		const confirmed = {};
-		for (const key in enrichChecked) {
-			if (enrichChecked[key] && enrichmentData[key] != null) {
-				confirmed[key] = enrichmentData[key];
-			}
-		}
-		try {
-			const stored = currentSessionUser();
-			const resp = await fetch('/api/deal-confirm-enrichment', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ dealId: deal.id, confirmedData: confirmed, userEmail: stored.email || '' })
-			});
-			if (resp.ok) {
-				enrichSuccess = true;
-				// Refresh deal data
-				const updated = await resp.json();
-				if (updated.deal) deal = updated.deal;
-			}
-		} catch (err) {
-			console.error('Enrichment save failed:', err);
-		} finally {
-			enrichSaving = false;
-		}
-	}
 
 	function openClaimModal() {
 		if (!deal || !browser) return;
@@ -1462,12 +1360,6 @@
 								{:else}
 									<div class="doc-empty">No documents available yet.</div>
 								{/if}
-								{#if $isAdmin && deal.deckUrl}
-									<button class="doc-item doc-enrich-btn" onclick={openEnrichModal}>
-										<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-										Enrich from Deck
-									</button>
-								{/if}
 							</div>
 						</div>
 					</div>
@@ -2115,16 +2007,6 @@
 	{showDeckViewer}
 	{deckPreviewUrl}
 	{closeDeckViewer}
-	{showEnrichModal}
-	isAdmin={$isAdmin}
-	{enrichmentData}
-	{enrichSuccess}
-	bind:enrichChecked
-	{enrichSaving}
-	{closeEnrichModal}
-	{confirmEnrichment}
-	{formatEnrichmentValue}
-	enrichmentFieldLabels={ENRICHMENT_FIELD_LABELS}
 />
 
 <style>
@@ -2512,7 +2394,8 @@
 		}
 		.investclearly-preview-surface {
 			position: relative;
-			filter: blur(10px);
+			filter: blur(2px);
+			opacity: 0.55;
 			transform: scale(0.995);
 			pointer-events: none;
 			user-select: none;
@@ -3162,7 +3045,7 @@
 	.cf-summary-value { font-size: 16px; font-weight: 800; color: var(--text-dark); }
 	.cf-summary-value.green { color: var(--primary); }
 	.cf-summary-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
-	.blurred { opacity: 0.15; pointer-events: none; user-select: none; filter: blur(3px); }
+	.blurred { opacity: 0.45; pointer-events: none; user-select: none; filter: blur(2px); }
 	.peer-count-label { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-left: auto; }
 	.peer-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
 	.peer-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
@@ -3479,14 +3362,6 @@
 	.doc-download-link {
 		flex: 1;
 	}
-	.doc-enrich-btn {
-		cursor: pointer;
-		border: 1px dashed rgba(59,130,246,0.3);
-		background: rgba(59,130,246,0.04);
-		color: #3b82f6;
-		font-weight: 600;
-	}
-	.doc-enrich-btn:hover { background: rgba(59,130,246,0.1); }
 	@media (max-width: 768px) {
 		.doc-item-row { flex-direction: column; }
 	}

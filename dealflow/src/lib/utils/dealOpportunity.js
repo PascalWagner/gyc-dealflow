@@ -35,6 +35,24 @@ const DISTRIBUTION_RANK = {
 	annually: 4
 };
 
+/** Normalize a strategy string to a canonical form for comparison.
+ *  E.g., "Lending / Credit", "lending", "Credit", "Private Debt / Credit" all → "lending_credit" */
+function canonicalStrategy(str) {
+	if (!str) return '';
+	const s = String(str).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+	// Map known synonyms to canonical keys
+	if (/\blend(ing)?\b/.test(s) || /\bcredit\b/.test(s) || /\bprivate debt\b/.test(s)) return 'lending_credit';
+	if (/\bvalue[\s-]?add\b/.test(s)) return 'value_add';
+	if (/\bcore[\s-]?plus\b/.test(s)) return 'core_plus';
+	if (/\bcore\b/.test(s) && !/plus/.test(s)) return 'core';
+	if (/\bopportun/i.test(s)) return 'opportunistic';
+	if (/\bdevelop/i.test(s)) return 'development';
+	if (/\bground[\s-]?up\b/.test(s)) return 'ground_up';
+	if (/\bfix[\s&]?\s*flip\b/.test(s)) return 'fix_and_flip';
+	if (/\bdistress/i.test(s)) return 'distressed';
+	return s.replace(/\s+/g, '_');
+}
+
 export function getDealCompleteness(deal) {
 	let filled = 0;
 	for (const key of COMPLETENESS_KEYS) {
@@ -124,12 +142,12 @@ export function buildGoalProgress({ deal, buyBox, userGoal, goalBranch = resolve
 	let currentRaw = 0;
 
 	if (goalBranch === 'cashflow') {
-		targetRaw = parseTargetAmount(buyBox.targetCashFlow || buyBox.targetIncome);
-		currentRaw = parseTargetAmount(buyBox.baselineIncome) || 0;
+		targetRaw = parseTargetAmount(buyBox.targetCashFlow || buyBox.targetIncome || buyBox.target_cashflow || buyBox.target_income);
+		currentRaw = parseTargetAmount(buyBox.baselineIncome || buyBox.baseline_income || buyBox.currentIncome || buyBox.current_income) || 0;
 	} else if (goalBranch === 'growth') {
-		targetRaw = parseTargetAmount(buyBox.growthCapital || buyBox.targetGrowth);
+		targetRaw = parseTargetAmount(buyBox.growthCapital || buyBox.targetGrowth || buyBox.growth_capital || buyBox.target_growth);
 	} else if (goalBranch === 'tax') {
-		targetRaw = parseTargetAmount(buyBox.taxableIncome || buyBox.targetTaxSavings);
+		targetRaw = parseTargetAmount(buyBox.taxableIncome || buyBox.targetTaxSavings || buyBox.taxable_income || buyBox.tax_reduction);
 	}
 
 	if (!targetRaw || targetRaw <= 0) return null;
@@ -189,9 +207,11 @@ export function buildBuyBoxChecks(deal, buyBox) {
 		});
 	}
 	if (buyBox.strategies?.length > 0) {
+		const dealCanonical = canonicalStrategy(deal.strategy);
+		const buyBoxCanonicals = buyBox.strategies.map(canonicalStrategy);
 		checks.push({
 			label: 'Strategy',
-			match: buyBox.strategies.includes(deal.strategy),
+			match: dealCanonical !== '' && buyBoxCanonicals.includes(dealCanonical),
 			want: buyBox.strategies.join(', '),
 			got: deal.strategy || '---'
 		});

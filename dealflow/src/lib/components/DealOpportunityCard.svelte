@@ -29,7 +29,12 @@
 	function fmtMoney(val) {
 		if (!val || isNaN(val)) return '$0';
 		if (val >= 1e6) return '$' + (val / 1e6).toFixed(1) + 'M';
-		if (val >= 1e3) return '$' + Math.round(val / 1e3).toLocaleString() + 'K';
+		if (val >= 1e3) {
+			const k = val / 1e3;
+			const rounded = Math.round(k);
+			// Use 1 decimal when integer rounding would shift by >3%
+			return '$' + (Math.abs(k - rounded) / k > 0.03 ? k.toFixed(1) : rounded) + 'K';
+		}
 		return '$' + Math.round(val).toLocaleString();
 	}
 
