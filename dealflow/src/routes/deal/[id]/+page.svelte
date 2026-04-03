@@ -324,7 +324,12 @@
 	const investClearlyPreview = $derived.by(() => buildInvestClearlyPreview(deal));
 	const goalBranch = $derived.by(() => resolveGoalBranch({ userGoal, buyBox }));
 	const goalProgress = $derived.by(() => buildGoalProgress({ deal, buyBox, goalBranch }));
-	const historicalReturns = $derived.by(() => getDealHistoricalReturns(deal));
+	const historicalReturns = $derived.by(() => {
+		const all = getDealHistoricalReturns(deal);
+		// Exclude current year — only show completed full calendar years
+		const currentYear = new Date().getFullYear();
+		return all.filter(p => p.year < currentYear);
+	});
 	const hasHistoricalReturns = $derived(historicalReturns.length >= 2);
 	const latestHistoricalReturn = $derived(historicalReturns.length ? historicalReturns[historicalReturns.length - 1] : null);
 	const historicalReturnAverage = $derived.by(() => {
@@ -1393,6 +1398,12 @@ shareDropdownOpen = false;
 								<span class="section-title">Documents</span>
 							</div>
 							<div class="section-body doc-list">
+								{#if currentStage === 'invested' || currentStage === 'decide'}
+									<button class="doc-item doc-row-button doc-report" onclick={generateReport}>
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+										<span>Custom Investment Report</span>
+									</button>
+								{/if}
 								{#if documentRows.length > 0}
 									{#each documentRows as row}
 										<button class="doc-item doc-row-button" onclick={() => openDocumentRow(row)}>
@@ -1405,12 +1416,6 @@ shareDropdownOpen = false;
 									{/each}
 								{:else}
 									<div class="doc-empty">No documents available yet.</div>
-								{/if}
-								{#if currentStage === 'invested' || currentStage === 'decide'}
-									<button class="doc-item doc-row-button" onclick={generateReport}>
-										<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-										<span>Generate Investment Report</span>
-									</button>
 								{/if}
 							</div>
 						</div>
@@ -1486,22 +1491,22 @@ shareDropdownOpen = false;
 													Use this as the backward-looking proof point for the fund. The projected LP cash-flow card below remains forward-looking and assumption-based.
 												</p>
 												<div class="historical-returns-stat-row">
-													<div class="historical-returns-stat">
-														<span>Years shown</span>
-														<strong>{historicalReturns.length}</strong>
-													</div>
-													{#if historicalReturnAverage !== null}
-														<div class="historical-returns-stat">
-															<span>Average</span>
-															<strong>{historicalReturnAverage.toFixed(2)}%</strong>
-														</div>
-													{/if}
 													{#if displayTargetIRR}
 														<div class="historical-returns-stat">
 															<span>Target</span>
 															<strong>{fmt(displayTargetIRR, 'pct')}</strong>
 														</div>
 													{/if}
+													{#if historicalReturnAverage !== null}
+														<div class="historical-returns-stat">
+															<span>Average</span>
+															<strong>{historicalReturnAverage.toFixed(2)}%</strong>
+														</div>
+													{/if}
+													<div class="historical-returns-stat">
+														<span>Years shown</span>
+														<strong>{historicalReturns.length}</strong>
+													</div>
 												</div>
 											</div>
 										</div>
@@ -2600,6 +2605,9 @@ shareDropdownOpen = false;
 	.doc-list { display: flex; flex-direction: column; gap: 8px; }
 	.doc-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-cream); border-radius: 8px; text-decoration: none; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); transition: background 0.15s; }
 	.doc-item:hover { background: rgba(81,190,123,0.08); }
+	.doc-report { background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.15); color: #2563EB; }
+	.doc-report:hover { background: rgba(37,99,235,0.12); }
+	.doc-report svg { stroke: #2563EB; }
 	.doc-row-button { width: 100%; border: none; cursor: pointer; justify-content: flex-start; }
 	.doc-item-status { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.4px; }
 	.doc-locked { color: var(--text-muted); cursor: default; }

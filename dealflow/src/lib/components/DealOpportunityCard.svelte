@@ -90,9 +90,15 @@
 				<!-- LEFT: Goal + Progress -->
 				<div class="opp-plan-left">
 					{#if goalProgress}
-						<div class="opp-goal-display">
-							<div class="opp-goal-amount">{goalProgress.target || '---'}</div>
-							<div class="opp-goal-type">{goalLabels[goal] || 'Passive Income'}</div>
+						<div class="opp-progress-header">
+							<div class="opp-progress-left">
+								<span class="opp-progress-pct">{goalProgress.pct || 0}%</span>
+								<span class="opp-progress-detail">{goalProgress.current || '$0'} of {goalProgress.target || '---'}</span>
+							</div>
+							<div class="opp-goal-display">
+								<span class="opp-goal-amount">{goalProgress.target || '---'}</span>
+								<span class="opp-goal-type">{goalLabels[goal] || 'Passive Income'}</span>
+							</div>
 						</div>
 						<div class="opp-progress-bar">
 							<div class="opp-progress-fill" style="width:{goalProgress.pct || 0}%"></div>
@@ -100,22 +106,16 @@
 								<div class="opp-progress-deal" style="width:{goalProgress.pctAfter - goalProgress.pct}%"></div>
 							{/if}
 						</div>
-						<div class="opp-progress-meta">
-							<span class="opp-progress-pct">{goalProgress.pct || 0}%</span>
-						</div>
-						<div class="opp-progress-detail">
-							{goalProgress.current || '$0'} of {goalProgress.target || '---'}
-						</div>
 					{:else}
 						<div class="opp-goal-display">
-							<div class="opp-goal-amount">{goalLabels[goal]}</div>
-							<div class="opp-goal-type">goal selected</div>
+							<span class="opp-goal-amount">{goalLabels[goal]}</span>
+							<span class="opp-goal-type">goal selected</span>
 						</div>
 						<div class="opp-goal-hint">
 							{#if buyBox}
-								No numeric target set yet. <button class="opp-inline-link" onclick={() => onOpenBuyBox?.()}>Add a target</button> to track your progress.
+								No numeric target set yet. <button class="opp-inline-link" onclick={() => onOpenBuyBox?.()}>Add a target</button>
 							{:else}
-								<button class="opp-inline-link" onclick={() => onOpenBuyBox?.()}>Complete your plan</button> to see how this deal moves you toward your goal.
+								<button class="opp-inline-link" onclick={() => onOpenBuyBox?.()}>Complete your plan</button> to track progress.
 							{/if}
 						</div>
 					{/if}
@@ -124,26 +124,29 @@
 				<!-- RIGHT: Projection -->
 				<div class="opp-plan-right">
 					{#if (projection.type === 'cashflow' && projection.annual > 0) || (projection.type === 'tax' && projection.writeOff > 0) || (projection.type === 'growth' && projection.totalReturn > 0)}
-						<div class="opp-invest-label">If you invest {fmtMoney(investmentAmount || deal?.investmentMinimum || 50000)}:</div>
-
-						{#if projection.type === 'cashflow' && projection.annual > 0}
-							<div class="opp-invest-stat">+{fmtMoney(projection.annual)}/yr income</div>
-						{:else if projection.type === 'tax' && projection.writeOff > 0}
-							<div class="opp-invest-stat">~{fmtMoney(projection.writeOff)} yr-1 write-off</div>
-						{:else if projection.type === 'growth' && projection.totalReturn > 0}
-							<div class="opp-invest-stat">{fmtMoney(projection.gain)} projected gain</div>
-						{/if}
-
-						{#if goalProgress && goalProgress.pctAfter != null}
-							<div class="opp-invest-progress">Gets you to {goalProgress.pctAfter}% of your goal</div>
-						{/if}
-
-						{#if slotLabel}
-							<div class="opp-invest-slot">Fills: {slotLabel}</div>
-						{/if}
+						<div class="opp-invest-top">
+							<div class="opp-invest-main">
+								<div class="opp-invest-label">If you invest {fmtMoney(investmentAmount || deal?.investmentMinimum || 50000)}:</div>
+								{#if projection.type === 'cashflow' && projection.annual > 0}
+									<div class="opp-invest-stat">+{fmtMoney(projection.annual)}/yr income</div>
+								{:else if projection.type === 'tax' && projection.writeOff > 0}
+									<div class="opp-invest-stat">~{fmtMoney(projection.writeOff)} yr-1 write-off</div>
+								{:else if projection.type === 'growth' && projection.totalReturn > 0}
+									<div class="opp-invest-stat">{fmtMoney(projection.gain)} projected gain</div>
+								{/if}
+							</div>
+							<div class="opp-invest-meta">
+								{#if goalProgress && goalProgress.pctAfter != null}
+									<span class="opp-invest-progress">{goalProgress.pctAfter}% of goal</span>
+								{/if}
+								{#if slotLabel}
+									<span class="opp-invest-slot">{slotLabel}</span>
+								{/if}
+							</div>
+						</div>
 					{:else}
 						<div class="opp-invest-label">Projection</div>
-						<div class="opp-invest-stat opp-invest-stat-muted">Not enough deal data to project returns for this goal.</div>
+						<div class="opp-invest-stat opp-invest-stat-muted">Not enough data to project.</div>
 					{/if}
 				</div>
 			</div>
@@ -285,22 +288,34 @@
 		border-radius: var(--radius-sm, 6px);
 	}
 
-	.opp-goal-display {
-		margin-bottom: 8px;
+	.opp-progress-header {
 		display: flex;
 		align-items: baseline;
+		justify-content: space-between;
+		margin-bottom: 6px;
 		gap: 8px;
+	}
+	.opp-progress-left {
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+	}
+	.opp-goal-display {
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+		text-align: right;
 	}
 	.opp-goal-amount {
 		font-family: var(--font-ui);
-		font-size: 20px;
+		font-size: 16px;
 		font-weight: 800;
 		color: var(--text-dark);
 		letter-spacing: -0.3px;
 	}
 	.opp-goal-type {
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 600;
 		color: var(--text-muted);
 	}
@@ -310,7 +325,6 @@
 		background: var(--border-light);
 		border-radius: 3px;
 		overflow: hidden;
-		margin-bottom: 4px;
 		display: flex;
 	}
 	.opp-progress-fill {
@@ -325,15 +339,9 @@
 		border-radius: 0 4px 4px 0;
 		transition: width 0.5s ease;
 	}
-	.opp-progress-meta {
-		margin-bottom: 1px;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
 	.opp-progress-pct {
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 14px;
 		font-weight: 800;
 		color: var(--text-dark);
 	}
@@ -366,36 +374,48 @@
 	}
 
 	/* Right column - projection */
+	.opp-invest-top {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+	}
+	.opp-invest-main { flex: 1; }
+	.opp-invest-meta {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 4px;
+		flex-shrink: 0;
+	}
 	.opp-invest-label {
 		font-family: var(--font-ui);
 		font-size: 12px;
 		font-weight: 600;
 		color: var(--text-secondary);
-		margin-bottom: 6px;
+		margin-bottom: 2px;
 	}
 	.opp-invest-stat {
 		font-family: var(--font-ui);
 		font-size: 17px;
 		font-weight: 800;
 		color: var(--primary);
-		margin-bottom: 6px;
 		letter-spacing: -0.3px;
 	}
 	.opp-invest-progress {
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 600;
 		color: var(--text-dark);
-		margin-bottom: 4px;
 	}
 	.opp-invest-slot {
 		display: inline-block;
-		padding: 4px 10px;
+		padding: 3px 8px;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm, 6px);
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 600;
 		color: var(--text-secondary);
 	}
