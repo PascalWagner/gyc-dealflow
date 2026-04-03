@@ -48,7 +48,7 @@ export default async function handler(req, res) {
       if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('share_saved, share_dd, share_invested')
+          .select('share_saved, share_dd, share_invested, share_activity')
           .eq('id', user.id)
           .single();
         callerProfile = profile;
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
     // Caller must have at least one sharing toggle on to see named investors
     const callerOptedIn = callerProfile && (
-      callerProfile.share_saved || callerProfile.share_dd || callerProfile.share_invested
+      callerProfile.share_saved || callerProfile.share_dd || callerProfile.share_invested || callerProfile.share_activity
     );
 
     // 3. Only fetch named investors if caller has also opted in
@@ -78,7 +78,7 @@ export default async function handler(req, res) {
             avatarUrl: p.avatar_url || null,
             visible: p.share_activity !== false
           };
-          if ((row.stage === 'invested' || row.stage === 'portfolio') && p.share_invested) {
+          if ((row.stage === 'invested' || row.stage === 'portfolio') && (p.share_invested || p.share_activity)) {
             result.namedInvestors.push(investorInfo);
           } else if ((row.stage === 'connect' || row.stage === 'decide' || row.stage === 'dd' || row.stage === 'duediligence') && p.share_dd) {
             result.namedWatchers.push(investorInfo);
