@@ -61,7 +61,7 @@
 		},
 		{
 			question: 'What is free and what is paid?',
-			answer: 'Free lets you look around, save deals, and learn the app. Member gives you the full plan, deeper deal review, and more help.'
+			answer: 'Free lets you look around, save deals, and learn the app. Paid gives you the full plan and more help.'
 		},
 		{
 			question: 'When should I upgrade?',
@@ -141,10 +141,7 @@
 		<div class="hero-copy">
 			<div class="eyebrow">For investors</div>
 			<h1>Find the right private deals <span>before you send money.</span></h1>
-			<p class="hero-description">
-				Set your rules, see deals that fit, compare fund managers, and save the best ones in
-				one place.
-			</p>
+			<p class="hero-description">Set your rules. Find deals that fit. Check the manager. Save the best ones.</p>
 
 			<div class="hero-actions">
 				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
@@ -295,10 +292,7 @@
 			<div class="free-copy">
 				<div class="eyebrow">Start free</div>
 				<h2>Start free. Pay only when you need more help.</h2>
-				<p>
-					Most people should start free. Use the app first. If you like it and want more
-					help, move up to member.
-				</p>
+				<p>Most people should start free. Use the app first. Pay later only if you want more help.</p>
 				<div class="free-list">
 					{#each freeFeatures as item}
 						<div class="free-item">
@@ -317,10 +311,7 @@
 			<div class="support-card">
 				<div class="support-kicker">Member</div>
 				<h3>Need more help? Go member.</h3>
-				<p>
-					Cashflow Academy is the paid layer. Most people should not start there. Start
-					with the app. Go member when you want a full plan, deeper reviews, and live help.
-				</p>
+				<p>Cashflow Academy is the paid layer. Do not start there. Start with the app. Pay when you want a full plan and live help.</p>
 				<div class="support-list">
 					{#each memberFeatures as item}
 						<div class="support-item">
