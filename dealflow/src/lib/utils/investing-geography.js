@@ -275,12 +275,11 @@ export function buildDocumentInvestingStateSignals({ ppmText = '', deckText = ''
 	};
 }
 
-export function formatStateCodesAsGeographyValue(stateCodes, { includeCountry = true } = {}) {
+export function formatStateCodesAsGeographyValue(stateCodes, { includeCountry = false } = {}) {
 	const normalizedStates = mergeStateCodeLists(stateCodes);
-	if (normalizedStates.length === 0) return includeCountry ? 'United States' : '';
-	return includeCountry
-		? `${normalizedStates.join(', ')}, United States`
-		: normalizedStates.join(', ');
+	if (normalizedStates.length === 0) return '';
+	// Don't append "United States" when individual states are listed — it's redundant
+	return normalizedStates.join(', ');
 }
 
 export function getDealStateCodes(deal) {

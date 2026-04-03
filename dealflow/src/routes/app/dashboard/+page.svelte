@@ -252,10 +252,9 @@
 	async function syncDashboardState({ hydrate = false } = {}) {
 		if (!browser) return;
 		applyDashboardSnapshot();
-		if (!hydrate) {
-			dashboardReady = true;
-			return;
-		}
+		// Render immediately from cache — don't block on hydration
+		dashboardReady = true;
+		if (!hydrate) return;
 
 		try {
 			const returnPath = `${window.location.pathname}${window.location.search}`;
@@ -269,8 +268,8 @@
 				return;
 			}
 			applyDashboardSnapshot();
-		} finally {
-			dashboardReady = true;
+		} catch {
+			// Hydration failed — keep showing cached data
 		}
 	}
 
@@ -308,12 +307,7 @@
 	/>
 
 	<div class="content-area">
-		{#if !dashboardReady}
-			<div class="dashboard-onboarding-card ly-surface ly-surface--strong">
-				<div class="dashboard-onboarding-title">Loading your dashboard.</div>
-				<div class="dashboard-onboarding-copy">Refreshing your saved profile and plan state.</div>
-			</div>
-		{:else if !hasDashboardProfile}
+		{#if !dashboardReady && !hasDashboardProfile}
 			<div class="dashboard-onboarding-card ly-surface ly-surface--strong">
 				<div class="dashboard-onboarding-icon">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
@@ -349,16 +343,6 @@
 			</div>
 		{/if}
 
-		{#if hasDashboardProfile && needsPlanSetup}
-			<div class="plan-cta-card ly-surface ly-surface--muted">
-				<div>
-					<div class="plan-cta-eyebrow">Your Plan</div>
-					<div class="plan-cta-title">{$canBuildFullPlan ? 'Turn your goal into a roadmap.' : 'Review the investor profile driving your deal feed.'}</div>
-					<div class="plan-cta-copy">{$canBuildFullPlan ? 'Build out your thesis, roadmap, and next best move without leaving the app shell.' : 'See your saved goal, preferences, and the upgrade path into a full plan.'}</div>
-				</div>
-				<a href="/app/plan" class="btn-primary plan-cta-btn">{$canBuildFullPlan ? 'Open My Plan →' : 'Review My Profile →'}</a>
-			</div>
-		{/if}
 
 		<div class="dashboard-stack" data-dashboard-version="overview-cleanup-2">
 			{#if primaryAction}
