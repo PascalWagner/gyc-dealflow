@@ -326,9 +326,7 @@
 			}
 		} catch (e) {
 			console.warn('Sponsor API unavailable:', e.message);
-			// Fallback data
-			sponsor = { id: 'rec04XU06Qn5rIRJP', name: 'Cohen Investment Group', ceo: 'Hugh D. Cohen', website: 'https://www.coheninvestmentgroup.com', linkedinCeo: 'https://linkedin.com/in/hugh-cohen', foundingYear: 2013, type: 'Operator', investClearlyUrl: 'https://investclearly.com/sponsors/cohen-investment-group', totalInvestors: null, lastUpdated: '2026-02-23', assetClasses: ['Multi Family'], deals: [{ id: 'rec0ZkWEkJd7kvA5l', name: 'Highland Hills Apartments', assetClass: 'Multi Family', dealType: 'Syndication', targetIRR: 0.15, equityMultiple: 2.0, prefReturn: 0.08, minInvestment: 25000, holdPeriod: 5, status: 'Open to invest', strategy: 'Value-Add' }] };
-			deals = sponsor.deals;
+			error = 'Could not load sponsor profile.';
 		}
 
 		loading = false;

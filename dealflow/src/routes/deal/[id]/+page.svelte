@@ -202,7 +202,11 @@
 	const dealOperatorCeo = $derived(dealOperator?.ceo || deal?.ceo || '');
 	const dealOperatorManagementCompanyId = $derived(dealOperator?.managementCompanyId || null);
 	const dealOperatorHref = $derived(
-		dealOperatorName ? `/sponsor?company=${encodeURIComponent(dealOperatorName)}` : '/sponsor'
+		dealOperatorManagementCompanyId
+			? `/sponsor?id=${encodeURIComponent(dealOperatorManagementCompanyId)}`
+			: dealOperatorName
+				? `/sponsor?company=${encodeURIComponent(dealOperatorName)}`
+				: '/sponsor'
 	);
 	const viewerManagementCompanyId = $derived($user?.managementCompany?.id || $user?.managementCompanyId || $user?.management_company_id || null);
 	const viewerManagementCompanyName = $derived(($user?.managementCompany?.name || $user?.managementCompanyName || '').trim().toLowerCase());
