@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import PageContainer from '$lib/layout/PageContainer.svelte';
 
 	function buildPlanRedirect() {
 		const params = new URLSearchParams(window.location.search);
@@ -24,12 +25,12 @@
 	<title>Plan | GYC</title>
 </svelte:head>
 
-<div class="plan-redirect-shell">
+<PageContainer className="plan-redirect-shell">
 	<div class="plan-redirect-card">
 		<div class="plan-redirect-title">Opening your plan</div>
 		<div class="plan-redirect-copy">Plan setup now lives inside the main app experience.</div>
 	</div>
-</div>
+</PageContainer>
 
 <style>
 	.plan-redirect-shell {

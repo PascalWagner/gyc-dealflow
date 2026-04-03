@@ -91,7 +91,24 @@
 			(wizardData.strategies || []).length > 0
 		)
 	);
-	const showInlineWizard = $derived(canViewFullPlan && (showWizard || !hasSavedPlanProgress));
+	const showInlineWizard = $derived.by(() =>
+		canViewFullPlan ? showWizard || !hasSavedPlanProgress : showWizard || !hasInvestorProfile
+	);
+	const inlineWizardTitle = $derived(
+		canViewFullPlan ? 'Build Your Plan' : 'Set Up Your Investor Profile'
+	);
+	const inlineWizardCopy = $derived(
+		canViewFullPlan
+			? 'Complete your thesis, roadmap, and next-best-move setup without leaving the app shell.'
+			: 'Save your goal, experience, and deal preferences without leaving the app shell.'
+	);
+	const showInlineWizardBackAction = $derived(
+		canViewFullPlan ? hasSavedPlanProgress : hasInvestorProfile
+	);
+	const inlineWizardFlowKey = $derived(canViewFullPlan ? wizardFlowKey : 'free');
+	const inlineWizardBranch = $derived.by(
+		() => wizardBranch || String(wizardData._branch || wizardData.branch || '')
+	);
 
 	const goalLabels = {
 		cashflow: 'Build Passive Income',
@@ -654,15 +671,14 @@
 		step,
 		{ branch = '', flowKey = '', editMode = false, replaceState = false } = {}
 	) {
-		if (!canViewFullPlan) {
-			await goto('/onboarding');
-			return;
-		}
-		const url = buildWizardUrl({ step, branch, flowKey, editMode });
+		const nextFlowKey = canViewFullPlan ? flowKey : 'free';
+		const nextBranch = canViewFullPlan ? branch : branch || String(wizardData._branch || wizardData.branch || '');
+		const nextEditMode = canViewFullPlan ? editMode : false;
+		const url = buildWizardUrl({ step, branch: nextBranch, flowKey: nextFlowKey, editMode: nextEditMode });
 		wizardStage = stageSlugForStep(step);
-		wizardBranch = branch;
-		wizardFlowKey = flowKey;
-		wizardForceEdit = editMode;
+		wizardBranch = nextBranch;
+		wizardFlowKey = nextFlowKey;
+		wizardForceEdit = nextEditMode;
 		showWizard = true;
 		if (browser) {
 			const historyMethod = replaceState ? 'replaceState' : 'pushState';
@@ -794,13 +810,21 @@
 	}
 
 	function openInvestorProfile() {
-		goto('/onboarding');
+		return navigateWizardStep(STEP.GOAL, {
+			branch: String(wizardData._branch || wizardData.branch || ''),
+			flowKey: 'free',
+			editMode: false
+		});
 	}
 
 	async function closeWizard() {
-		if (wizardRef?.persistExitState) {
+		if (wizardRef?.persistProgress || wizardRef?.persistExitState) {
 			try {
-				await wizardRef.persistExitState();
+				if (canViewFullPlan && wizardRef?.persistExitState) {
+					await wizardRef.persistExitState();
+				} else if (wizardRef?.persistProgress) {
+					await wizardRef.persistProgress();
+				}
 			} catch (error) {
 				console.warn('Failed to persist wizard state before closing:', error);
 			}
@@ -1728,29 +1752,30 @@
 		<div class="plan-setup-shell">
 			<section class="plan-card plan-setup-card ly-surface ly-surface--strong">
 				<div class="plan-card-top">
-					<div class="section-eyebrow">Build Your Plan</div>
-						{#if hasSavedPlanProgress}
-							<button class="inline-action" onclick={closeWizard}>Back To Plan</button>
-						{/if}
+					<div class="section-eyebrow">{inlineWizardTitle}</div>
+					{#if showInlineWizardBackAction}
+						<button class="inline-action" onclick={closeWizard}>
+							{canViewFullPlan ? 'Back To Plan' : 'Back To Profile'}
+						</button>
+					{/if}
 				</div>
-				<div class="section-subcopy">
-					Complete your thesis, roadmap, and next-best-move setup without leaving the app shell.
-				</div>
-						{#key wizardRenderKey}
-							<LegacyPlanWizard
-								bind:this={wizardRef}
-								initialData={wizardData}
-								forceEdit={wizardForceEdit && hasSavedPlanProgress}
-								forcedStage={wizardStage}
-								forcedBranch={wizardBranch}
-							forcedFlowKey={wizardFlowKey}
-							fullPlanMode={true}
-							paidCompleteRedirectTo="/app/plan"
-							on:state={handleWizardState}
-							on:complete={handleWizardComplete}
-							on:requeststartover={openStartOverConfirmation}
+				<div class="section-subcopy">{inlineWizardCopy}</div>
+				{#key wizardRenderKey}
+					<LegacyPlanWizard
+						bind:this={wizardRef}
+						initialData={wizardData}
+						forceEdit={canViewFullPlan ? (wizardForceEdit && hasSavedPlanProgress) : false}
+						forcedStage={wizardStage}
+						forcedBranch={inlineWizardBranch}
+						forcedFlowKey={inlineWizardFlowKey}
+						fullPlanMode={canViewFullPlan}
+						freeCompleteRedirectTo="/app/plan"
+						paidCompleteRedirectTo="/app/plan"
+						on:state={handleWizardState}
+						on:complete={handleWizardComplete}
+						on:requeststartover={openStartOverConfirmation}
 						/>
-					{/key}
+				{/key}
 			</section>
 		</div>
 	{:else if !canViewFullPlan}

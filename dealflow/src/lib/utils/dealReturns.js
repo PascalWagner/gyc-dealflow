@@ -1,4 +1,4 @@
-import { normalizeAssetClassValue } from '$lib/utils/dealReviewSchema.js';
+import { normalizeAssetClassValue } from './dealReviewSchema.js';
 
 export const MAX_HISTORICAL_RETURN_YEARS = 5;
 export const MIN_RETURN_POINTS_FOR_CHART = 2;

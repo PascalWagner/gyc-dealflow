@@ -160,6 +160,54 @@ function buildStaticTermsEvidence() {
 	};
 }
 
+const READY_LENDING_EVIDENCE_FIELD_KEYS = [
+	'offeringType',
+	'availableTo',
+	'investmentStrategy',
+	'underlyingExposureTypes',
+	'investingStates',
+	'shortSummary',
+	'investmentMinimum',
+	'holdPeriod',
+	'redemption',
+	'distributions',
+	'financials',
+	'lpGpSplit',
+	'fees',
+	'historicalReturn2024',
+	'snapshotAsOfDate',
+	'fundAUM',
+	'currentFundSize',
+	'offeringSize',
+	'loanCount',
+	'currentAvgLoanLtv',
+	'maxAllowedLtv',
+	'currentLeverage',
+	'maxAllowedLeverage',
+	'firmFoundedYear',
+	'fundFoundedYear'
+];
+
+function buildReadyLendingEvidence() {
+	const seedEvidence = buildStaticTermsEvidence();
+
+	return Object.fromEntries(
+		READY_LENDING_EVIDENCE_FIELD_KEYS.map((fieldKey, index) => [
+			fieldKey,
+			seedEvidence[fieldKey] || [
+				{
+					sourceType: 'explicit',
+					document: index % 2 === 0 ? 'ppm' : 'deck',
+					label: index % 2 === 0 ? 'PPM' : 'Deck',
+					page: 20 + index,
+					line: 1,
+					snippet: `Supporting citation saved for ${fieldKey}.`
+				}
+			]
+		])
+	);
+}
+
 async function seedSession(page: Page) {
 	await page.goto('/login');
 	await page.evaluate((seededSession) => {
@@ -186,15 +234,16 @@ async function installReviewFlowMocks(page: Page, {
 		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
 	});
 
-	await page.route(`**/api/deals?id=${DEAL_ID}`, async (route) => {
-		await route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify({ deal: mutableDeal })
-		});
-	});
-
 	await page.route(`**/api/deals/${DEAL_ID}`, async (route) => {
+		if (route.request().method() === 'GET') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ deal: mutableDeal })
+			});
+			return;
+		}
+
 		if (route.request().method() !== 'PATCH') {
 			await route.fallback();
 			return;
@@ -319,7 +368,9 @@ test.describe('deal review provenance smoke', () => {
 	});
 
 	test('summary save no longer throws failed-to-save when it should approve the deal', async ({ page }) => {
-		const { lifecyclePatches } = await installReviewFlowMocks(page);
+		const { lifecyclePatches } = await installReviewFlowMocks(page, {
+			evidence: buildReadyLendingEvidence()
+		});
 		await seedSession(page);
 
 		await page.goto(`/deal-review?id=${DEAL_ID}&stage=summary&allowSummary=1&from=queue`);

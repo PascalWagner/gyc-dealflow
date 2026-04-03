@@ -13,10 +13,15 @@ export function canPreviewDealReviewSummary({
 	secCanAdvance = false,
 	teamContactsValid = false
 } = {}) {
-	return (allowSummaryPreview || preservesFullReviewAccessForLifecycle(lifecycleStatus))
-		&& hasSourceDocuments
-		&& secCanAdvance
-		&& teamContactsValid;
+	if (preservesFullReviewAccessForLifecycle(lifecycleStatus)) {
+		return true;
+	}
+
+	if (!allowSummaryPreview) {
+		return false;
+	}
+
+	return hasSourceDocuments || secCanAdvance || teamContactsValid;
 }
 
 export function resolveSummaryLifecycleSyncTarget({

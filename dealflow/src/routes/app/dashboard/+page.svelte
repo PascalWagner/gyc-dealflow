@@ -227,7 +227,7 @@
 
 	function openWizard() {
 		if (!hasGoalContext) {
-			goto('/onboarding');
+			goto('/app/plan?stage=goal&flow=free');
 			return;
 		}
 		goto(hasCompletedDashboardPlan ? '/app/plan?edit=1' : '/app/plan');

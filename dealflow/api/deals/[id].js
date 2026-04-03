@@ -239,29 +239,22 @@ function normalizeValue(key, value) {
   return value;
 }
 
-export default async function handler(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' });
+function isUuid(value) {
+  return /^[0-9a-f-]{36}$/i.test(String(value || '').trim());
+}
 
-  const { id } = req.query;
-  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
-    return res.status(400).json({ error: 'Invalid deal ID' });
-  }
-
-  // Authenticate via Bearer token
+async function loadAuthorizedDealContext(req, id, supabase = getAdminClient()) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing authorization' });
-  }
-  const token = authHeader.replace('Bearer ', '');
-  const supabase = getAdminClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return res.status(401).json({ error: 'Invalid token' });
+    return { status: 401, body: { error: 'Missing authorization' } };
   }
 
-  // Fetch deal to get management_company_id and current workflow fields
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return { status: 401, body: { error: 'Invalid token' } };
+  }
+
   const { data: deal, error: dealError } = await supabase
     .from('opportunities')
     .select('*')
@@ -269,7 +262,7 @@ export default async function handler(req, res) {
     .single();
 
   if (dealError || !deal) {
-    return res.status(404).json({ error: 'Deal not found' });
+    return { status: 404, body: { error: 'Deal not found' } };
   }
 
   const availableColumns = new Set(Object.keys(deal || {}));
@@ -287,18 +280,82 @@ export default async function handler(req, res) {
     }
   }
 
-  // Verify: user must be in authorized_emails for this deal's company, or be admin
-  const isAdmin = ADMIN_EMAILS.includes(user.email.toLowerCase());
+  const isAdmin = ADMIN_EMAILS.includes(String(user.email || '').toLowerCase());
 
   if (!isAdmin) {
     if (!deal.management_company_id) {
-      return res.status(403).json({ error: 'Deal has no linked company' });
+      return { status: 403, body: { error: 'Deal has no linked company' } };
     }
 
-    const authorizedEmails = (currentManagementCompany?.authorized_emails || []).map(e => e.toLowerCase());
-    if (!authorizedEmails.includes(user.email.toLowerCase())) {
-      return res.status(403).json({ error: 'Not authorized for this deal' });
+    const authorizedEmails = (currentManagementCompany?.authorized_emails || []).map((email) =>
+      String(email || '').toLowerCase()
+    );
+
+    if (!authorizedEmails.includes(String(user.email || '').toLowerCase())) {
+      return { status: 403, body: { error: 'Not authorized for this deal' } };
     }
+  }
+
+  return {
+    status: 200,
+    supabase,
+    user,
+    isAdmin,
+    deal,
+    availableColumns,
+    currentManagementCompany
+  };
+}
+
+function serializeDealRecord(deal, {
+  currentManagementCompany = null,
+  availableColumns = new Set()
+} = {}) {
+  const resolvedCompanyWebsite = currentManagementCompany?.website || deal?.companyWebsite || deal?.mcWebsite || '';
+  return {
+    ...deal,
+    slug: deal?.slug || slugify(deal?.investment_name || ''),
+    sponsorName: deal?.sponsor_name || currentManagementCompany?.operator_name || '',
+    managementCompanyId: deal?.management_company_id || '',
+    dealBranch: deal?.deal_branch || '',
+    lifecycleStatus: deal?.lifecycle_status || '',
+    isVisibleToUsers: deal?.is_visible_to_users === true,
+    reviewFieldEvidence: deal?.review_field_evidence || {},
+    teamContacts: deal?.team_contacts || [],
+    teamContactsSnapshotSupported: availableColumns.has('team_contacts'),
+    mcWebsite: resolvedCompanyWebsite,
+    companyWebsite: resolvedCompanyWebsite
+  };
+}
+
+export default async function handler(req, res) {
+  setCors(res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const { id } = req.query;
+  if (!isUuid(id)) {
+    return res.status(400).json({ error: 'Invalid deal ID' });
+  }
+  if (!['GET', 'PATCH'].includes(req.method)) {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const context = await loadAuthorizedDealContext(req, id);
+  if (context.status !== 200) {
+    return res.status(context.status).json(context.body);
+  }
+
+  const {
+    supabase,
+    deal,
+    availableColumns,
+    currentManagementCompany
+  } = context;
+
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      deal: serializeDealRecord(deal, { currentManagementCompany, availableColumns })
+    });
   }
 
   // Build update object from whitelisted fields
@@ -449,13 +506,20 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to save deal' });
   }
 
-  const responseDeal = {
-    ...updatedDeal,
-    slug: updatedDeal?.slug || slugify(updatedDeal?.investment_name || ''),
-    reviewFieldEvidence: updatedDeal?.review_field_evidence || {},
-    mcWebsite: resolvedCompanyWebsite,
-    companyWebsite: resolvedCompanyWebsite
-  };
+  const responseDeal = serializeDealRecord(
+    {
+      ...updatedDeal,
+      companyWebsite: resolvedCompanyWebsite,
+      mcWebsite: resolvedCompanyWebsite
+    },
+    {
+      currentManagementCompany: {
+        ...(currentManagementCompany || {}),
+        website: resolvedCompanyWebsite
+      },
+      availableColumns
+    }
+  );
 
   for (const camelKey of omitted) {
     if (!(camelKey in candidateBody)) continue;

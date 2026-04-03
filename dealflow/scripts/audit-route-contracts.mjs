@@ -609,6 +609,38 @@ assert(
 		.join(', ')}`
 );
 
+function routePathFromFile(fullPath) {
+	const relativePath = path.relative(routeDir, fullPath);
+	const routeSegments = relativePath
+		.split(path.sep)
+		.slice(0, -1)
+		.filter((segment) => segment && !segment.startsWith('('));
+	return routeSegments.length ? `/${routeSegments.join('/')}` : '/';
+}
+
+const routePagePaths = new Set(
+	routeFiles
+		.filter((fullPath) => fullPath.endsWith(`${path.sep}+page.svelte`))
+		.map((fullPath) => routePathFromFile(fullPath))
+);
+
+const staticDir = path.join(root, 'static');
+const staticHtmlRouteCollisions = fs
+	.readdirSync(staticDir, { withFileTypes: true })
+	.filter((entry) => entry.isFile() && entry.name.endsWith('.html'))
+	.map((entry) => ({
+		file: path.join('static', entry.name),
+		route: `/${entry.name.slice(0, -5)}`
+	}))
+	.filter(({ route }) => routePagePaths.has(route));
+
+assert(
+	staticHtmlRouteCollisions.length === 0,
+	`Static HTML files must not shadow routed paths. Found: ${staticHtmlRouteCollisions
+		.map(({ file, route }) => `${file} -> ${route}`)
+		.join(', ')}`
+);
+
 console.log('Route audit passed.');
 console.log('- Operators cards resolve to Sponsor routes');
 console.log('- Sponsor and Person pages use the shared protected-route bootstrap');
@@ -617,5 +649,6 @@ console.log('- Sponsor and Person do not call rune-derived values like functions
 console.log('- Smoke coverage exists for Operators -> Sponsor -> Person');
 console.log('- Mobile navigation defaults to no hamburger on route pages');
 console.log('- Route pages opt into the shared layout shell');
+console.log('- Static HTML files do not shadow routed paths');
 console.log('- Admin APIs share the verified admin action and metrics modules');
 console.log('- Member deals API uses the modular query/transform/filter pipeline');

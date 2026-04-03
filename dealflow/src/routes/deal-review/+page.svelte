@@ -71,7 +71,8 @@
 	import {
 		fieldRequiresSourceCitation,
 		getMissingRequiredEvidenceFieldKeys,
-		normalizeReviewFieldEvidenceMap
+		normalizeReviewFieldEvidenceMap,
+		readReviewFieldValue
 	} from '$lib/utils/reviewFieldEvidence.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
 
@@ -1180,6 +1181,10 @@
 		deal = nextDeal;
 		const hydrated = createDealReviewFormFromDeal(nextDeal);
 		form = hydrated.form;
+		teamContacts = normalizeTeamContacts(readDealTeamContacts(nextDeal), {
+			ensureOne: false,
+			preserveEmpty: true
+		});
 		fieldWarnings = hydrated.warnings;
 		fieldErrors = {};
 		manualBranch = nextDeal?.deal_branch || nextDeal?.dealBranch || manualBranch || '';
@@ -1861,7 +1866,7 @@
 			const token = await getFreshSessionToken();
 			if (!token) throw new Error('You need an active session to review deals.');
 
-			const response = await fetch(`/api/deals?id=${encodeURIComponent(dealId)}`, {
+			const response = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
 				headers: { Authorization: `Bearer ${token}` }
 			});
 			const payload = await response.json().catch(() => ({}));
@@ -1874,7 +1879,12 @@
 			if (!shouldAutoExtract) {
 				extractionError = '';
 			}
-			await Promise.all([loadTeamContacts(), loadSecVerificationSummary()]);
+			const ancillaryPreloads = Promise.all([loadTeamContacts(), loadSecVerificationSummary()]);
+			if (!(requestedStage === 'summary' || allowSummaryPreview)) {
+				await ancillaryPreloads;
+			} else {
+				void ancillaryPreloads;
+			}
 		} catch (error) {
 			loadError = error?.message || 'Failed to load deal.';
 			deal = null;

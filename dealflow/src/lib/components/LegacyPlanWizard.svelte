@@ -394,12 +394,15 @@
 		}
 		validationError = '';
 
-		if (!forceEdit && !forcedFlowKey && !fullPlanMode && !isFreeFlowComplete(wizardData) && wizardStepIndex >= sequence.length - 1) {
-			void completeFreeFlow();
-			return;
-		}
-
 		if (wizardStepIndex >= sequence.length - 1) {
+			const isFreeFlow =
+				!fullPlanMode &&
+				(forcedFlowKey === 'free' ||
+					(sequence.length > 0 && sequence.every((step) => STEP_SEQUENCE.free.includes(step))));
+			if (isFreeFlow) {
+				void completeFreeFlow();
+				return;
+			}
 			void completePaidFlow();
 			return;
 		}
