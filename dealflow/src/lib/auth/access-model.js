@@ -2,7 +2,7 @@ import {
 	getSubscriptionForProduct,
 	getSubscriptionPhase,
 	normalizeSubscriptionRecord
-} from '$lib/subscriptions/subscription-model.js';
+} from '../subscriptions/subscription-model.js';
 
 export const SESSION_VERSION = 3;
 export const ACCESS_TIERS = ['public', 'free', 'member', 'admin'];
