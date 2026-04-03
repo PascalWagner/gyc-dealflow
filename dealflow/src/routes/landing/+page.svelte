@@ -4,68 +4,123 @@
 
 	const primaryCtaHref = '/login?return=/app/plan';
 	const stats = [
-		{ value: '838', label: 'Live deals', detail: 'See good deals in one place' },
-		{ value: '455', label: 'Fund managers', detail: 'Know who runs the deal before you take a call' },
-		{ value: '3 min', label: 'To start', detail: 'Set your rules fast and sort deals with less guessing' },
-		{ value: '$0', label: 'To join', detail: 'Free account. No card. No sales call' }
+		{ value: '$100K', label: 'Passive income path', detail: 'Start with the outcome, then build the plan to get there' },
+		{ value: '838', label: 'Live deals', detail: 'Find better deal flow in one place' },
+		{ value: '455', label: 'Managers tracked', detail: 'Check who runs the deal before you take the call' },
+		{ value: '1 place', label: 'Plan + diligence', detail: 'Keep your plan, deal notes, and next steps together' }
 	];
 
 	const heroBullets = [
-		'Know what fits before you book a call',
-		'See deals, fund managers, and key details in one place',
-		'Save the best deals and keep your next steps clear'
+		'Find better deal flow',
+		'Do your own diligence with confidence',
+		'Build a real plan for passive income'
+	];
+
+	const problemCards = [
+		{
+			number: '01',
+			title: 'Most investors do not see enough good deals.',
+			body: 'They rely on random emails, warm intros, and whatever happens to show up that week.'
+		},
+		{
+			number: '02',
+			title: 'Most investors do not know how to vet what they see.',
+			body: 'They can spot a pitch deck, but they do not have a simple process for checking the deal and the manager.'
+		},
+		{
+			number: '03',
+			title: 'Most investors do not have a real plan.',
+			body: 'They want passive income, but they do not know what to buy first or how to get to a goal like $100K a year.'
+		}
 	];
 
 	const workflowSteps = [
 		{
 			eyebrow: 'Step 1',
-			title: 'Set your plan',
-			body: 'Tell the app what you want so it can sort deals for you.',
-			points: ['Pick income, tax help, or growth', 'Set your check size and timing', 'Choose the deal types you want to see'],
+			title: 'Build your income plan',
+			body: 'Start with the outcome. Set your passive income goal, your check size, your timeline, and the deal types you want to see.',
+			points: ['Set a passive income goal', 'Choose your check size and timing', 'Decide what kinds of deals belong in your plan'],
 			kind: 'plan'
 		},
 		{
 			eyebrow: 'Step 2',
 			title: 'Find deals that fit',
-			body: 'See the best fits first, then compare the deal, the manager, and the minimum in one place.',
-			points: ['See the best fits first', 'Spot what fits and what does not fast', 'Check the manager before the next call'],
+			body: 'Stop reacting to random pitches. See better matches first and compare the deal, the manager, and the terms in one place.',
+			points: ['See better matches first', 'Compare deals without losing the thread', 'Know what deserves a closer look'],
 			kind: 'matches'
 		},
 		{
 			eyebrow: 'Step 3',
-			title: 'Save the best ones',
-			body: 'Keep the good deals moving and stop losing track of what to do next.',
-			points: ['Save deals you want to review', 'See what needs a closer look', 'Ask for intros when you are ready'],
-			kind: 'pipeline'
+			title: 'Do your own diligence',
+			body: 'Use a clear process to review the deal, the manager, and the risks so you can move forward with more confidence.',
+			points: ['Review the manager and the structure', 'Track questions, risks, and red flags', 'Save the best opportunities and move when ready'],
+			kind: 'review'
+		}
+	];
+
+	const comparisonCards = [
+		{
+			kicker: 'Most platforms',
+			title: 'They curate deals for you.',
+			points: [
+				'You still depend on someone else to think for you.',
+				'You get a list, not a process.',
+				'You never build your own confidence.'
+			]
+		},
+		{
+			kicker: 'Grow Your Cashflow',
+			title: 'We help you think clearly for yourself.',
+			points: [
+				'You define what fits before you look at deals.',
+				'You review the deal and the manager with a clear process.',
+				'You build your own plan and make better decisions.'
+			],
+			accent: true
+		}
+	];
+
+	const networkCards = [
+		{
+			title: 'Better access',
+			body: 'As more serious investors join, more fund managers want to reach the network.'
+		},
+		{
+			title: 'Better signal',
+			body: 'More plans, saves, questions, pitch views, and manager updates create better signal on what deserves attention.'
+		},
+		{
+			title: 'Better decisions',
+			body: 'Your plan, your diligence notes, and your next steps stay in one system instead of getting lost across inboxes and spreadsheets.'
 		}
 	];
 
 	const freeFeatures = [
-		'Make a free account',
-		'Set up your investor profile',
+		'Build your investor profile',
+		'Set an income goal and your deal rules',
 		'Browse live deals and fund managers',
-		'Save deals and track what you want to review'
+		'Save deals and organize what you want to review'
 	];
 
-	const memberFeatures = [
-		'Build your full plan step by step',
-		'Get deeper deal notes and review tools',
-		'Join office hours and member lessons',
-		'Best for people ready to put money to work now'
+	const academyFeatures = [
+		'Build a deeper plan with guided help',
+		'Get more review tools and deal support',
+		'Join office hours and Academy resources',
+		'Best for investors making real moves now'
 	];
 
 	const faqs = [
 		{
 			question: 'Who is the page for?',
-			answer: 'This page is best for accredited investors who want a simple way to find and compare private deals.'
+			answer: 'This page is for accredited investors who want better deal flow, stronger diligence, and a clear path to passive income.'
 		},
 		{
 			question: 'What is free and what is paid?',
-			answer: 'Free lets you look around, save deals, and learn the app. Paid gives you the full plan and more help.'
+			answer: 'The free account lets you build your profile, find deals, review managers, and organize what you want to look at. Cashflow Academy is the paid layer for investors who want guided help.'
 		},
 		{
-			question: 'When should I upgrade?',
-			answer: 'Start free. Upgrade when you are close to making a move and want more help.'
+			question: 'What makes this different from other platforms?',
+			answer: 'Most platforms focus on curation. Grow Your Cashflow gives you the tools to build your own plan, do your own diligence, and make better decisions with more confidence.'
 		},
 		{
 			question: 'What if I run a fund or deal?',
@@ -90,15 +145,15 @@
 </script>
 
 <svelte:head>
-	<title>Find Better Private Deals Before You Send Money | Grow Your Cashflow</title>
+	<title>Build Your Path to $100K in Passive Income | Grow Your Cashflow</title>
 	<meta
 		name="description"
-		content="Set your plan, browse live private deals, compare fund managers, and start using Grow Your Cashflow for free."
+		content="Grow Your Cashflow is the investor network for accredited investors who want better deal flow, stronger diligence, and a clear path to passive income."
 	>
-	<meta property="og:title" content="Find Better Private Deals Before You Send Money | Grow Your Cashflow">
+	<meta property="og:title" content="Build Your Path to $100K in Passive Income | Grow Your Cashflow">
 	<meta
 		property="og:description"
-		content="Start free, set your plan, see deals that fit, and compare fund managers before you send money."
+		content="Find better deal flow, do your own diligence with confidence, and invest with a clear plan."
 	>
 	<meta property="og:type" content="website">
 </svelte:head>
@@ -108,8 +163,9 @@
 		<div class="nav">
 			<a href="/" class="nav-logo">Grow Your Cashflow</a>
 			<div class="nav-links">
+				<a href="#problems" onclick={(event) => scrollToAnchor(event, '#problems')}>Problems</a>
 				<a href="#workflow" onclick={(event) => scrollToAnchor(event, '#workflow')}>How it works</a>
-				<a href="#free" onclick={(event) => scrollToAnchor(event, '#free')}>Free vs member</a>
+				<a href="#network" onclick={(event) => scrollToAnchor(event, '#network')}>Investor network</a>
 				<a href="/for-operators">For fund managers</a>
 			</div>
 			<div class="nav-actions">
@@ -129,8 +185,9 @@
 		</div>
 
 		<div class:open={mobileMenuOpen} class="nav-mobile">
+			<a href="#problems" onclick={(event) => scrollToAnchor(event, '#problems')}>Problems</a>
 			<a href="#workflow" onclick={(event) => scrollToAnchor(event, '#workflow')}>How it works</a>
-			<a href="#free" onclick={(event) => scrollToAnchor(event, '#free')}>Free vs member</a>
+			<a href="#network" onclick={(event) => scrollToAnchor(event, '#network')}>Investor network</a>
 			<a href="/for-operators">For fund managers</a>
 			<a href="/login" data-sveltekit-reload>Log in</a>
 			<a href={primaryCtaHref} class="nav-cta" data-sveltekit-reload>Start free</a>
@@ -139,9 +196,12 @@
 
 	<section class="hero-section">
 		<div class="hero-copy">
-			<div class="eyebrow">For investors</div>
-			<h1>Find the right private deals <span>before you send money.</span></h1>
-			<p class="hero-description">Set your rules. Find deals that fit. Check the manager. Save the best ones.</p>
+			<div class="eyebrow">The investor network for private deals</div>
+			<h1>Build your path to <span>$100K in passive income.</span></h1>
+			<p class="hero-description">
+				Find better deal flow, do your own diligence with confidence, and invest with a
+				clear plan.
+			</p>
 
 			<div class="hero-actions">
 				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
@@ -150,7 +210,7 @@
 				</a>
 			</div>
 
-			<div class="hero-fine-print">Free account. No card. Set your rules in minutes.</div>
+			<div class="hero-fine-print">Free account. No card. Built for accredited investors.</div>
 
 			<div class="hero-bullets">
 				{#each heroBullets as bullet}
@@ -177,13 +237,35 @@
 		{/each}
 	</section>
 
+	<section class="section" id="problems">
+		<div class="section-heading">
+			<div class="eyebrow">The 3 core problems</div>
+			<h2>Most LP investors are missing one of these. Usually all three.</h2>
+			<p>
+				That is why they stay stuck. They do not see enough good deals, they do not know how
+				to vet what they see, and they do not have a real plan for turning money into passive
+				income.
+			</p>
+		</div>
+
+		<div class="problem-grid">
+			{#each problemCards as card}
+				<article class="problem-card">
+					<div class="problem-number">{card.number}</div>
+					<h3>{card.title}</h3>
+					<p>{card.body}</p>
+				</article>
+			{/each}
+		</div>
+	</section>
+
 	<section class="section" id="workflow">
 		<div class="section-heading">
-			<div class="eyebrow">What you do inside</div>
-			<h2>Turn random deal emails into a clear plan.</h2>
+			<div class="eyebrow">How it works</div>
+			<h2>One system for deal flow, diligence, and a real investing plan.</h2>
 			<p>
-				The job of the app is simple: show you what fits, what does not, and what to look at
-				next.
+				The job of the platform is simple: help you know what fits, what to review, and what
+				to do next so you can move toward passive income with more confidence.
 			</p>
 		</div>
 
@@ -234,7 +316,7 @@
 							</div>
 						{:else if step.kind === 'matches'}
 							<div class="mini-window-body">
-								<div class="mini-kicker">Best fits</div>
+								<div class="mini-kicker">Deals that fit</div>
 								<div class="mini-list">
 									<div class="mini-match">
 										<div>
@@ -261,23 +343,25 @@
 							</div>
 						{:else}
 							<div class="mini-window-body">
-								<div class="mini-kicker">Next steps</div>
-								<div class="pipeline-grid">
-									<div class="pipeline-column">
-										<div class="pipeline-label">Save</div>
-										<div class="pipeline-count">12</div>
-										<p>Worth a look</p>
+								<div class="mini-kicker">Diligence</div>
+								<div class="metric-stack">
+									<div class="metric-row">
+										<div>Manager</div>
+										<strong>Reviewed</strong>
 									</div>
-									<div class="pipeline-column">
-										<div class="pipeline-label">Look</div>
-										<div class="pipeline-count">4</div>
-										<p>Look closer</p>
+									<div class="metric-row">
+										<div>Structure</div>
+										<strong>506(c) filed</strong>
 									</div>
-									<div class="pipeline-column">
-										<div class="pipeline-label">Intro</div>
-										<div class="pipeline-count">2</div>
-										<p>Ready to meet</p>
+									<div class="metric-row">
+										<div>Risk notes</div>
+										<strong>4 items saved</strong>
 									</div>
+								</div>
+								<div class="chip-row">
+									<span>Ask questions</span>
+									<span>Compare terms</span>
+									<span>Save red flags</span>
 								</div>
 							</div>
 						{/if}
@@ -287,12 +371,68 @@
 		</div>
 	</section>
 
-	<section class="section section-dark" id="free">
-		<div class="free-grid">
-			<div class="free-copy">
-				<div class="eyebrow">Start free</div>
-				<h2>Start free. Pay only when you need more help.</h2>
-				<p>Most people should start free. Use the app first. Pay later only if you want more help.</p>
+	<section class="section">
+		<div class="difference-panel">
+			<div class="difference-copy">
+				<div class="eyebrow">Why this is different</div>
+				<h2>Not another platform that just tells you what to buy.</h2>
+				<p>
+					Most platforms win by curating deals for you. Grow Your Cashflow is built to help
+					you think clearly for yourself. That is the point.
+				</p>
+			</div>
+
+			<div class="comparison-grid">
+				{#each comparisonCards as card}
+					<article class:comparison-card--accent={card.accent} class="comparison-card">
+						<div class="comparison-kicker">{card.kicker}</div>
+						<h3>{card.title}</h3>
+						<ul class="comparison-list">
+							{#each card.points as point}
+								<li>{point}</li>
+							{/each}
+						</ul>
+					</article>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<section class="section section-dark" id="network">
+		<div class="section-heading">
+			<div class="eyebrow">The investor network</div>
+			<h2>The network matters because better signal creates better decisions.</h2>
+			<p>
+				This is not a noisy social feed. It is a serious investor network built around deal
+				flow, diligence, and capital decisions. As the network grows, the product gets more
+				useful.
+			</p>
+		</div>
+
+		<div class="network-grid">
+			{#each networkCards as card}
+				<article class="network-card">
+					<h3>{card.title}</h3>
+					<p>{card.body}</p>
+				</article>
+			{/each}
+		</div>
+	</section>
+
+	<section class="section" id="free">
+		<div class="section-heading">
+			<div class="eyebrow">Start free</div>
+			<h2>Use the platform first. Add guidance only if you want it.</h2>
+			<p>
+				The free product is the front door. Cashflow Academy is the guided layer for
+				investors who want help turning live opportunities into real decisions.
+			</p>
+		</div>
+
+		<div class="pricing-grid">
+			<article class="pricing-card">
+				<div class="pricing-kicker">Free account</div>
+				<h3>Find deals. Review managers. Build your plan.</h3>
 				<div class="free-list">
 					{#each freeFeatures as item}
 						<div class="free-item">
@@ -302,26 +442,23 @@
 					{/each}
 				</div>
 				<div class="hero-actions">
-					<a href={primaryCtaHref} class="btn btn-primary btn-primary--light" data-sveltekit-reload>
-						Create a free account
-					</a>
+					<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
 				</div>
-			</div>
+			</article>
 
-			<div class="support-card">
-				<div class="support-kicker">Member</div>
-				<h3>Need more help? Go member.</h3>
-				<p>Cashflow Academy is the paid layer. Do not start there. Start with the app. Pay when you want a full plan and live help.</p>
+			<article class="pricing-card pricing-card--accent">
+				<div class="pricing-kicker">Cashflow Academy</div>
+				<h3>Need guided help? Academy is the second layer.</h3>
 				<div class="support-list">
-					{#each memberFeatures as item}
+					{#each academyFeatures as item}
 						<div class="support-item">
 							<span class="checkmark">+</span>
 							<span>{item}</span>
 						</div>
 					{/each}
 				</div>
-				<div class="tier-note">For most people: start free, then pay for more help only when you need it.</div>
-			</div>
+				<div class="tier-note">Start free first. Move into Academy when you want a deeper plan and live support.</div>
+			</article>
 		</div>
 	</section>
 
@@ -329,10 +466,11 @@
 		<div class="operator-card">
 			<div>
 				<div class="eyebrow">For fund managers</div>
-				<h2>Raising money? Go to the operator side.</h2>
+				<h2>Raising money? Use the separate fund-manager path.</h2>
 				<p>
-					If you run a fund or deal, do not go through the investor path. Use the operator
-					side to list deals, book a pitch spot, and get in front of the right people.
+					If you run a fund or deal, do not go through the investor funnel. Use the
+					operator side to list deals, book a pitch spot, and get in front of the right
+					investors.
 				</p>
 			</div>
 			<a href="/for-operators" class="btn btn-secondary btn-secondary--dark">For fund managers</a>
@@ -358,9 +496,10 @@
 	<section class="section section-cta">
 		<div class="cta-panel">
 			<div class="eyebrow">Start now</div>
-			<h2>Make a free account and find deals that fit.</h2>
+			<h2>Start free and build your path to $100K in passive income.</h2>
 			<p>
-				Set your rules, sort deals fast, and stop guessing what to do next.
+				Find better deal flow, review managers with confidence, and build a real investing
+				plan in one place.
 			</p>
 			<div class="hero-actions hero-actions--center">
 				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
@@ -506,7 +645,6 @@
 	}
 
 	.hero-section,
-	.free-grid,
 	.operator-card {
 		display: grid;
 		gap: 36px;
@@ -520,10 +658,10 @@
 
 	.hero-copy,
 	.section-heading,
-	.free-copy,
 	.cta-panel,
-	.support-card,
-	.workflow-copy {
+	.workflow-copy,
+	.difference-copy,
+	.pricing-card {
 		min-width: 0;
 	}
 
@@ -557,7 +695,7 @@
 	h1 {
 		margin-top: 18px;
 		font-size: clamp(3.3rem, 5vw, 5.6rem);
-		max-width: 8.6ch;
+		max-width: 10.4ch;
 	}
 
 	h1 span {
@@ -677,7 +815,9 @@
 
 	.stat-card,
 	.workflow-card,
-	.support-card,
+	.problem-card,
+	.comparison-card,
+	.pricing-card,
 	.operator-card,
 	.cta-panel {
 		border: 1px solid rgba(221, 229, 232, 0.94);
@@ -729,6 +869,61 @@
 
 	.section-heading--narrow {
 		max-width: 700px;
+	}
+
+	.problem-grid,
+	.pricing-grid,
+	.network-grid {
+		display: grid;
+		gap: 18px;
+		margin-top: 32px;
+	}
+
+	.problem-grid,
+	.network-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.pricing-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.problem-card {
+		padding: 24px;
+	}
+
+	.problem-number,
+	.comparison-kicker,
+	.pricing-kicker {
+		display: inline-flex;
+		align-items: center;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(31, 81, 89, 0.08);
+		color: var(--teal);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+
+	.problem-card h3,
+	.comparison-card h3,
+	.network-card h3,
+	.pricing-card h3 {
+		margin-top: 18px;
+		font-size: clamp(1.8rem, 2vw, 2.4rem);
+		line-height: 1.02;
+	}
+
+	.problem-card p,
+	.network-card p,
+	.pricing-card p,
+	.difference-copy p {
+		margin: 16px 0 0;
+		font-size: 17px;
+		color: #2b3a40;
 	}
 
 	.workflow-grid {
@@ -916,54 +1111,58 @@
 		color: white;
 	}
 
-	.free-grid {
-		grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
-		align-items: start;
-	}
-
 	.section-dark h2,
 	.section-dark p,
-	.section-dark .free-item span,
-	.section-dark .support-card p,
-	.section-dark .support-card h3 {
+	.section-dark h3 {
 		color: white;
 	}
 
-	.section-dark .eyebrow,
-	.section-dark .support-kicker {
+	.section-dark .eyebrow {
 		background: rgba(255, 255, 255, 0.12);
 		color: rgba(255, 255, 255, 0.82);
 	}
 
-	.section-dark .free-item,
-	.section-dark .support-card {
-		color: white;
-	}
-
-	.free-list {
-		margin-top: 22px;
-	}
-
-	.support-list {
-		margin-top: 20px;
-	}
-
-	.support-card {
+	.network-card {
 		padding: 24px;
+		border-radius: 24px;
 		background: rgba(255, 255, 255, 0.08);
-		border-color: rgba(255, 255, 255, 0.12);
+		border: 1px solid rgba(255, 255, 255, 0.12);
 		box-shadow: none;
 	}
 
-	.support-card h3 {
-		margin-top: 18px;
-		font-size: 34px;
-		max-width: 11ch;
+	.network-card p {
+		color: rgba(255, 255, 255, 0.78);
 	}
 
-	.support-card p {
-		margin-top: 16px;
-		font-size: 16px;
+	.difference-panel {
+		display: grid;
+		grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+		gap: 24px;
+		align-items: start;
+	}
+
+	.comparison-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 18px;
+	}
+
+	.comparison-card {
+		padding: 24px;
+	}
+
+	.comparison-card--accent,
+	.pricing-card--accent {
+		background:
+			linear-gradient(145deg, rgba(81, 190, 123, 0.12), rgba(31, 81, 89, 0.06)),
+			rgba(255, 255, 255, 0.98);
+		border-color: rgba(81, 190, 123, 0.24);
+	}
+
+	.comparison-list,
+	.pricing-card ul {
+		margin: 18px 0 0;
+		padding-left: 20px;
 	}
 
 	.support-item {
@@ -972,14 +1171,30 @@
 		gap: 12px;
 	}
 
+	.free-list,
+	.support-list {
+		display: grid;
+		gap: 12px;
+		margin-top: 22px;
+	}
+
+	.pricing-card {
+		padding: 28px;
+	}
+
+	.pricing-card--accent .pricing-kicker {
+		background: rgba(81, 190, 123, 0.16);
+		color: #245738;
+	}
+
 	.tier-note {
 		margin-top: 18px;
 		padding-top: 16px;
-		border-top: 1px solid rgba(255, 255, 255, 0.14);
+		border-top: 1px solid rgba(20, 20, 19, 0.08);
 		font-family: var(--font-ui);
 		font-size: 13px;
 		line-height: 1.6;
-		color: rgba(255, 255, 255, 0.76);
+		color: var(--text-secondary);
 	}
 
 	.operator-card,
@@ -1060,12 +1275,19 @@
 	@media (max-width: 1100px) {
 		.hero-section,
 		.workflow-card,
-		.free-grid {
+		.difference-panel,
+		.pricing-grid {
 			grid-template-columns: 1fr;
 		}
 
 		.stats-strip {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.problem-grid,
+		.network-grid,
+		.comparison-grid {
+			grid-template-columns: 1fr;
 		}
 
 		.operator-card {
@@ -1109,7 +1331,9 @@
 
 	@media (max-width: 640px) {
 		.stats-strip,
-		.pipeline-grid {
+		.pipeline-grid,
+		.problem-grid,
+		.network-grid {
 			grid-template-columns: 1fr;
 		}
 
@@ -1138,8 +1362,10 @@
 		}
 
 		.workflow-card,
+		.problem-card,
+		.comparison-card,
+		.pricing-card,
 		.stat-card,
-		.support-card,
 		.operator-card,
 		.cta-panel,
 		.faq-item {
