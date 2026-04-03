@@ -441,6 +441,29 @@ export function deriveLegacyCompanyContactFields(contacts = []) {
 	};
 }
 
+export function pickDealReviewInitialTeamContacts({ dealContacts = [], companyContacts = [] } = {}) {
+	const normalizedDealContacts = normalizeTeamContacts(dealContacts, {
+		ensureOne: false,
+		preserveEmpty: true
+	});
+	const normalizedCompanyContacts = normalizeTeamContacts(companyContacts, {
+		ensureOne: false,
+		preserveEmpty: true
+	});
+	const persistedDealContacts = normalizeTeamContacts(dealContacts, {
+		ensureOne: false,
+		preserveEmpty: false
+	});
+	const persistedCompanyContacts = normalizeTeamContacts(companyContacts, {
+		ensureOne: false,
+		preserveEmpty: false
+	});
+
+	if (persistedDealContacts.length > 0) return normalizedDealContacts;
+	if (persistedCompanyContacts.length > 0) return normalizedCompanyContacts;
+	return normalizedDealContacts.length > 0 ? normalizedDealContacts : normalizedCompanyContacts;
+}
+
 export function serializeTeamContactsForApi(contacts = []) {
 	return rebalanceTeamRoleAssignments(contacts, { preserveEmpty: false }).map((contact) => ({
 		id: contact.id || undefined,

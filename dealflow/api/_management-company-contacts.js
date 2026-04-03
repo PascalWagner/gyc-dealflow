@@ -90,18 +90,29 @@ async function loadCompanySnapshotContacts(supabase, managementCompanyId, fallba
 
 	if (snapshotError) {
 		if (isMissingSnapshotColumn(snapshotError)) {
-			return normalizeTeamContacts(fallbackContacts, {
-				fallbackContact: fallbackContacts[0] || null,
-				ensureOne: true
-			});
+			return {
+				contacts: normalizeTeamContacts(fallbackContacts, {
+					fallbackContact: fallbackContacts[0] || null,
+					ensureOne: true
+				}),
+				snapshotAvailable: false
+			};
 		}
 		throw snapshotError;
 	}
 
-	return normalizeTeamContacts(companySnapshot?.team_contacts || fallbackContacts, {
-		fallbackContact: fallbackContacts[0] || null,
-		ensureOne: true
-	});
+	const snapshotContacts = Array.isArray(companySnapshot?.team_contacts)
+		? companySnapshot.team_contacts
+		: fallbackContacts;
+	const snapshotAvailable = Array.isArray(companySnapshot?.team_contacts);
+
+	return {
+		contacts: normalizeTeamContacts(snapshotContacts, {
+			fallbackContact: snapshotAvailable ? null : fallbackContacts[0] || null,
+			ensureOne: !snapshotAvailable
+		}),
+		snapshotAvailable
+	};
 }
 
 async function updateLegacyCompanyFields(supabase, { managementCompanyId, contacts }) {
@@ -168,8 +179,11 @@ export async function loadManagementCompanyTeamContacts(
 
 	if (error) {
 		if (isMissingContactsTable(error)) {
-			const snapshotContacts = await loadCompanySnapshotContacts(supabase, managementCompanyId, fallbackContacts);
-			return { contacts: snapshotContacts, storageMode: 'legacy' };
+			const snapshotState = await loadCompanySnapshotContacts(supabase, managementCompanyId, fallbackContacts);
+			return {
+				contacts: snapshotState.contacts,
+				storageMode: snapshotState.snapshotAvailable ? 'snapshot' : 'legacy'
+			};
 		}
 		if (
 			isMissingContactsColumn(error, 'first_name')
@@ -192,11 +206,11 @@ export async function loadManagementCompanyTeamContacts(
 	}
 
 	if (!data?.length) {
-		const snapshotContacts = await loadCompanySnapshotContacts(supabase, managementCompanyId, fallbackContacts);
-		if (snapshotContacts.length > 0) {
+		const snapshotState = await loadCompanySnapshotContacts(supabase, managementCompanyId, fallbackContacts);
+		if (snapshotState.snapshotAvailable || snapshotState.contacts.length > 0) {
 			return {
-				contacts: snapshotContacts,
-				storageMode: 'snapshot'
+				contacts: snapshotState.contacts,
+				storageMode: snapshotState.snapshotAvailable ? 'snapshot' : 'legacy'
 			};
 		}
 	}

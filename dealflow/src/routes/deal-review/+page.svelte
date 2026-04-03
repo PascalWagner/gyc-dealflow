@@ -16,6 +16,7 @@
 		deriveTeamRoleAssignments,
 		mergeSuggestedTeamContacts,
 		normalizeTeamContacts,
+		pickDealReviewInitialTeamContacts,
 		pickInvestorRelationsContact,
 		pickPrimaryTeamContact,
 		serializeTeamContactsForApi,
@@ -1452,7 +1453,8 @@
 	async function loadTeamContacts() {
 		teamContactsError = '';
 		const managementCompanyId = getManagementCompanyId();
-		let savedContacts = readDealTeamContacts();
+		const dealSnapshotContacts = readDealTeamContacts();
+		let savedContacts = dealSnapshotContacts;
 		let suggestionWarnings = [];
 		let token = '';
 
@@ -1471,13 +1473,10 @@
 					throw new Error(payload?.error || 'Could not load the management company contacts.');
 				}
 
-				savedContacts = normalizeTeamContacts(
-					payload.teamContacts || payload.team_contacts || savedContacts,
-					{
-					ensureOne: false,
-					preserveEmpty: true
-					}
-				);
+				savedContacts = pickDealReviewInitialTeamContacts({
+					dealContacts: dealSnapshotContacts,
+					companyContacts: payload.teamContacts || payload.team_contacts || []
+				});
 			}
 		} catch (error) {
 			console.error('[deal-review/team] load failed', {
