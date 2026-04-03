@@ -340,8 +340,10 @@ export function getDealStateCodes(deal) {
 export function buildInvestingGeographyModel(deal) {
 	const highlightedStates = getDealStateCodes(deal);
 	const isNationwide = highlightedStates.length > 40;
+	// Strip redundant "United States" suffix from stored geography values
+	const rawGeo = (deal?.investingGeography || '').replace(/,?\s*United States$/i, '').trim();
 	const geographyLabel =
-		deal?.investingGeography ||
+		rawGeo ||
 		deal?.location ||
 		(highlightedStates.length === 1
 			? `${STATE_NAME_BY_CODE[highlightedStates[0]]} focus`
