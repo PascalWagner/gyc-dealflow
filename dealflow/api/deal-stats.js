@@ -28,7 +28,6 @@ export default async function handler(req, res) {
     if (error && error.code !== 'PGRST116') throw error;
 
     const result = {
-      _version: 'v6-safe-destructure',
       review: data?.review || data?.interested || 0,
       connect: data?.connect || 0,
       decide: data?.decide || 0,
@@ -45,32 +44,12 @@ export default async function handler(req, res) {
     let callerProfile = null;
     const token = (req.headers.authorization || '').replace('Bearer ', '');
     if (token) {
-      // Try getUser first, fall back to decoding the JWT for the email
-      let userId = null;
-      try {
-        const authResult = await supabase.auth.getUser(token);
-        userId = authResult?.data?.user?.id || null;
-      } catch {}
-      if (!userId) {
-        // Token may be expired — decode the JWT payload for the email
-        try {
-          const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-          const email = payload?.email;
-          if (email) {
-            const { data: profile } = await supabase
-              .from('user_profiles')
-              .select('id, share_saved, share_dd, share_invested, share_activity')
-              .eq('email', email)
-              .single();
-            if (profile) { userId = profile.id; callerProfile = profile; }
-          }
-        } catch {}
-      }
-      if (userId && !callerProfile) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('share_saved, share_dd, share_invested, share_activity')
-          .eq('id', userId)
+          .select('share_saved, share_dd, share_invested')
+          .eq('id', user.id)
           .single();
         callerProfile = profile;
       }
@@ -78,44 +57,28 @@ export default async function handler(req, res) {
 
     // Caller must have at least one sharing toggle on to see named investors
     const callerOptedIn = callerProfile && (
-      callerProfile.share_saved || callerProfile.share_dd || callerProfile.share_invested || callerProfile.share_activity
+      callerProfile.share_saved || callerProfile.share_dd || callerProfile.share_invested
     );
 
     // 3. Only fetch named investors if caller has also opted in
     if (callerOptedIn) {
       // Fetch deal stages — use granular toggles to filter by stage
-      // Two-step query: get stages, then fetch profiles separately
-      // (avoids Supabase join issues with nullable FK relationships)
-      const { data: stageRows, error: stagesError } = await supabase
+      const { data: publicInvestors } = await supabase
         .from('user_deal_stages')
-        .select('user_id, stage')
+        .select('user_id, stage, user_profiles!inner(full_name, avatar_url, share_saved, share_dd, share_invested, share_activity)')
         .eq('deal_id', dealId);
 
-      if (stagesError) console.warn('[deal-stats] stages query error:', stagesError.message);
-
-      let profilesByUserId = {};
-      if (stageRows?.length > 0) {
-        const userIds = [...new Set(stageRows.map(r => r.user_id))];
-        const { data: profiles } = await supabase
-          .from('user_profiles')
-          .select('id, full_name, avatar_url, share_saved, share_dd, share_invested, share_activity')
-          .in('id', userIds);
-        if (profiles) {
-          for (const p of profiles) profilesByUserId[p.id] = p;
-        }
-      }
-
-      if (stageRows) {
-        for (const row of stageRows) {
-          const p = profilesByUserId[row.user_id];
-          const name = p?.full_name;
+      if (publicInvestors) {
+        for (const row of publicInvestors) {
+          const name = row.user_profiles?.full_name;
           if (!name) continue;
+          const p = row.user_profiles;
           const investorInfo = {
             name,
             avatarUrl: p.avatar_url || null,
             visible: p.share_activity !== false
           };
-          if ((row.stage === 'invested' || row.stage === 'portfolio') && (p.share_invested || p.share_activity)) {
+          if ((row.stage === 'invested' || row.stage === 'portfolio') && p.share_invested) {
             result.namedInvestors.push(investorInfo);
           } else if ((row.stage === 'connect' || row.stage === 'decide' || row.stage === 'dd' || row.stage === 'duediligence') && p.share_dd) {
             result.namedWatchers.push(investorInfo);
@@ -126,11 +89,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Temporary debug info for investor avatar investigation
-    result._debug = {
-      callerOptedIn: !!callerOptedIn,
-      callerProfile: callerProfile ? { share_saved: callerProfile.share_saved, share_dd: callerProfile.share_dd, share_invested: callerProfile.share_invested, share_activity: callerProfile.share_activity } : null
-    };
     return res.status(200).json(result);
   } catch (err) {
     console.error('Deal stats error:', err);
