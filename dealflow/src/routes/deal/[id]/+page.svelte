@@ -1587,33 +1587,14 @@
 
 				<!-- ==================== STRESS TEST CALCULATOR ==================== -->
 				{#if deal && !isCredit}
-					<div class="section flow-order-40">
+					<div class="section flow-order-55">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
 							<span class="section-title">Stress Test Calculator</span>
+							<span class="investclearly-preview-pill coming-soon">Coming Soon</span>
 						</div>
-						<div class="section-body" style="position:relative;min-height:120px;">
-							{#if !isPaid}
-								<div class="gate-overlay">
-									<div class="gate-content">
-										<div class="gate-icon">
-											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
-										<div class="gate-text">
-											{#if nativeCompanionMode}
-												Scenario modeling for rent growth, cap rates, vacancy, and interest rates remains available to existing members on the web.
-											{:else}
-												Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.
-											{/if}
-										</div>
-										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Become a Member</a>
-										{/if}
-									</div>
-								</div>
-							{/if}
-							<div class:blurred={!isPaid}>
+						<div class="section-body" style="position:relative;min-height:120px;overflow:hidden;">
+							<div class="investclearly-preview-surface" aria-hidden="true">
 								<div class="st-base-case">
 									<div class="st-base-title">Base Case from Deal Data</div>
 									<div class="st-base-pills">
@@ -1685,8 +1666,12 @@
 									</div>
 								{/if}
 							</div>
+						<div class="investclearly-coming-soon-overlay">
+							<div class="investclearly-coming-soon-badge">Coming Soon</div>
+							<div class="investclearly-coming-soon-copy">Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.</div>
 						</div>
 					</div>
+				</div>
 				{/if}
 
 				<!-- ==================== SIMILAR DEALS ==================== -->
@@ -2194,6 +2179,7 @@
 		.flow-order-40 { order: 40; }
 		.flow-order-45 { order: 45; }
 		.flow-order-50 { order: 50; }
+	.flow-order-55 { order: 55; }
 	.flow-order-60 { order: 60; }
 	.flow-order-70 { order: 70; }
 	.flow-order-80 { order: 80; }

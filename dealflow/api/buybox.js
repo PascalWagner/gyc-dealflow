@@ -252,17 +252,20 @@ function applyGoalsOverlay(wizardBuyBox, goalsRow) {
     next.capitalReadiness = String(goalsRow.timeline);
   }
 
+  // Only overlay goals data if buybox doesn't already have a target value.
+  // Buybox (user_buy_box.target_cashflow) is the primary source of truth;
+  // goals (user_goals.target_income) is a legacy fallback.
   if (branch === 'growth') {
-    if (goalsRow.target_income !== undefined && goalsRow.target_income !== null && goalsRow.target_income !== '') {
+    if (!next.growthCapital && !next.targetGrowth && goalsRow.target_income !== undefined && goalsRow.target_income !== null && goalsRow.target_income !== '') {
       next.growthCapital = goalsRow.target_income;
       next.targetGrowth = goalsRow.target_income;
     }
   } else if (branch === 'tax') {
-    if (goalsRow.tax_reduction !== undefined && goalsRow.tax_reduction !== null && goalsRow.tax_reduction !== '') {
+    if (!next.taxableIncome && !next.targetTaxSavings && goalsRow.tax_reduction !== undefined && goalsRow.tax_reduction !== null && goalsRow.tax_reduction !== '') {
       next.taxableIncome = goalsRow.tax_reduction;
       next.targetTaxSavings = goalsRow.tax_reduction;
     }
-  } else if (goalsRow.target_income !== undefined && goalsRow.target_income !== null && goalsRow.target_income !== '') {
+  } else if (!next.targetCashFlow && !next.targetIncome && goalsRow.target_income !== undefined && goalsRow.target_income !== null && goalsRow.target_income !== '') {
     next.targetCashFlow = goalsRow.target_income;
     next.targetIncome = goalsRow.target_income;
   }
