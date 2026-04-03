@@ -176,11 +176,11 @@
 					tableColumns = ['LP', 'Deal', 'GP', 'Status', 'Date'];
 					tableData = intros.map((item) => ({
 						cols: [
-							item.lpEmail || '--',
-							item.dealName || '--',
-							item.gpName || '--',
+							item.user_email || '--',
+							item.deal_name || '--',
+							item.operator_name || '--',
 							item.status || '--',
-							item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '--'
+							item.created_at ? new Date(item.created_at).toLocaleDateString() : '--'
 						],
 						id: item.id
 					}));
