@@ -38,7 +38,13 @@ If this is a PPM or subscription agreement, prioritize the INVESTOR'S specific d
   "investingGeography": "Geographic focus",
   "instrument": "Debt, Equity, Preferred Equity, or Hybrid",
   "debtPosition": "Senior, Mezzanine, Bridge, etc. (if lending/debt)",
-  "fundAUM": "Current AUM in dollars if mentioned",
+  "fundAUM": "Current fund AUM (total assets) in dollars if mentioned",
+  "totalLoansUnderMgmt": "Total loans under management in dollars (lending funds only — this is the total loan book including leverage, distinct from fund AUM)",
+  "equityCommitments": "Total equity commitments / capital under management in dollars (LP capital only, distinct from fund AUM)",
+  "avgLoanLTC": "Weighted average loan-to-cost ratio as decimal (0.74 = 74%) for lending funds",
+  "performanceFeePct": "Performance fee / carried interest as decimal (0.20 = 20%). This is the GP's share of profits above the preferred return",
+  "inceptionDate": "Fund inception / launch date (YYYY-MM-DD)",
+  "fundTerm": "Fund term description (e.g. 'Evergreen', '7 years', '10 years with two 1-year extensions')",
   "redemption": "Redemption terms if mentioned",
   "sponsorCoinvest": "GP co-investment percentage or amount if mentioned",
   "taxForm": "K-1, 1099, etc.",
@@ -91,7 +97,9 @@ IMPORTANT:
 - PRIORITIZE investor-specific details (amountInvested, dateInvested, investingEntity) from signature pages
 - For secEntityName and issuerEntity: return the exact legal entity name, not the marketing name
 - Use the full document as context, not only the cover pages, but prefer the most formal issuer definitions when multiple names are present
-- For historicalReturns: prefer NON-DRIP annual returns over DRIP. Do NOT confuse target returns with actual historical returns. Do NOT include the current incomplete year as a full-year return. Look for annualized returns tables with monthly columns plus an average column`;
+- For historicalReturns: prefer NON-DRIP annual returns over DRIP. Do NOT confuse target returns with actual historical returns. Do NOT include the current incomplete year as a full-year return. Look for annualized returns tables with monthly columns plus an average column
+- For lending funds: distinguish between totalLoansUnderMgmt (total loan book), fundAUM (total assets), and equityCommitments (LP capital). These are three distinct numbers
+- performanceFeePct is the GP's share above the hurdle (e.g. 20% → 0.20). This is NOT the same as lpGpSplit — the split describes how profits are shared (80/20), the performance fee is the GP fee percentage`;
 
 // ── AI Extraction with fallback chain ────────────────────────────────────────
 
@@ -572,6 +580,12 @@ const SUPABASE_FIELD_MAP = {
   instrument:             'instrument',
   debtPosition:           'debt_position',
   fundAUM:                'fund_aum',
+  totalLoansUnderMgmt:    'total_loans_under_mgmt',
+  equityCommitments:      'equity_commitments',
+  avgLoanLTC:             'avg_loan_ltc',
+  performanceFeePct:      'performance_fee_pct',
+  inceptionDate:          'inception_date',
+  fundTerm:               'fund_term',
   sponsorCoinvest:        'sponsor_in_deal_pct',
   purchasePrice:          'purchase_price',
   propertyAddress:        'property_address',
@@ -603,7 +617,9 @@ const SUPABASE_FIELD_MAP = {
 const NUMERIC_COLS = new Set([
   'target_irr', 'preferred_return', 'cash_on_cash', 'equity_multiple',
   'investment_minimum', 'hold_period_years', 'offering_size', 'purchase_price',
-  'sponsor_in_deal_pct', 'fund_aum', 'unit_count', 'year_built',
+  'sponsor_in_deal_pct', 'fund_aum', 'total_loans_under_mgmt',
+  'equity_commitments', 'avg_loan_ltc', 'performance_fee_pct',
+  'unit_count', 'year_built',
   'square_footage', 'occupancy_pct', 'acquisition_loan', 'loan_to_value',
   'loan_rate', 'loan_term_years', 'loan_io_years', 'capex_budget',
   'closing_costs', 'acquisition_fee_pct', 'asset_mgmt_fee_pct',

@@ -266,8 +266,14 @@
 	));
 	const currentFundSizeValue = $derived.by(() => firstDefined(deal?.currentFundSize, deal?.current_fund_size));
 	const maxFundSizeValue = $derived.by(() => firstDefined(deal?.maxFundSize, deal?.max_fund_size, deal?.offeringSize, deal?.offering_size));
+	const totalLoansUnderMgmtValue = $derived.by(() => firstDefined(deal?.totalLoansUnderMgmt, deal?.total_loans_under_mgmt));
+	const equityCommitmentsValue = $derived.by(() => firstDefined(deal?.equityCommitments, deal?.equity_commitments));
 	const currentAvgLoanLtvValue = $derived.by(() => firstDefined(deal?.currentAvgLoanLtv, deal?.current_avg_loan_ltv, deal?.avgLoanLtv, deal?.avg_loan_ltv));
+	const avgLoanLTCValue = $derived.by(() => firstDefined(deal?.avgLoanLTC, deal?.avg_loan_ltc));
 	const maxAllowedLtvValue = $derived.by(() => firstDefined(deal?.maxAllowedLtv, deal?.max_allowed_ltv));
+	const performanceFeePctValue = $derived.by(() => firstDefined(deal?.performanceFeePct, deal?.performance_fee_pct));
+	const inceptionDateValue = $derived.by(() => firstDefined(deal?.inceptionDate, deal?.inception_date));
+	const fundTermValue = $derived.by(() => firstDefined(deal?.fundTerm, deal?.fund_term));
 	const currentLeverageRaw = $derived.by(() => firstDefined(deal?.currentLeverage, deal?.current_leverage));
 	const maxAllowedLeverageRaw = $derived.by(() => firstDefined(deal?.maxAllowedLeverage, deal?.max_allowed_leverage));
 	// Normalize leverage: values > 10 are almost certainly percentages stored as whole numbers (e.g. 65 = 65%),
@@ -1264,17 +1270,35 @@
 								{#if deal.debtPosition}
 									<div class="detail-item"><div class="detail-label">Debt Position</div><div class="detail-value">{deal.debtPosition}</div></div>
 								{/if}
-								{#if currentFundSizeValue}
-									<div class="detail-item"><div class="detail-label">Current Fund Size</div><div class="detail-value">{fmt(currentFundSizeValue, 'money')}</div></div>
+								{#if totalLoansUnderMgmtValue}
+									<div class="detail-item"><div class="detail-label">Total Loans Under Mgmt</div><div class="detail-value">{fmt(totalLoansUnderMgmtValue, 'money')}</div></div>
 								{/if}
-								{#if maxFundSizeValue}
+								{#if currentFundSizeValue}
+									<div class="detail-item"><div class="detail-label">Fund AUM</div><div class="detail-value">{fmt(currentFundSizeValue, 'money')}</div></div>
+								{/if}
+								{#if equityCommitmentsValue}
+									<div class="detail-item"><div class="detail-label">Equity Commitments</div><div class="detail-value">{fmt(equityCommitmentsValue, 'money')}</div></div>
+								{/if}
+								{#if maxFundSizeValue && !currentFundSizeValue}
 									<div class="detail-item"><div class="detail-label">Max Fund Size</div><div class="detail-value">{fmt(maxFundSizeValue, 'money')}</div></div>
 								{/if}
 								{#if currentAvgLoanLtvValue}
 									<div class="detail-item"><div class="detail-label">Current Avg LTV</div><div class="detail-value">{fmt(currentAvgLoanLtvValue, 'pct')}</div></div>
 								{/if}
+								{#if avgLoanLTCValue}
+									<div class="detail-item"><div class="detail-label">Avg Loan LTC</div><div class="detail-value">{fmt(avgLoanLTCValue, 'pct')}</div></div>
+								{/if}
 								{#if maxAllowedLtvValue}
 									<div class="detail-item"><div class="detail-label">Max Allowed LTV</div><div class="detail-value">{fmt(maxAllowedLtvValue, 'pct')}</div></div>
+								{/if}
+								{#if performanceFeePctValue}
+									<div class="detail-item"><div class="detail-label">Performance Fee</div><div class="detail-value">{fmt(performanceFeePctValue, 'pct')}</div></div>
+								{/if}
+								{#if inceptionDateValue}
+									<div class="detail-item"><div class="detail-label">Inception Date</div><div class="detail-value">{formatReviewDate(inceptionDateValue)}</div></div>
+								{/if}
+								{#if fundTermValue}
+									<div class="detail-item"><div class="detail-label">Fund Term</div><div class="detail-value">{fundTermValue}</div></div>
 								{/if}
 								{#if currentLeverageValue && leverageConsistent}
 									<div class="detail-item"><div class="detail-label">Current Leverage</div><div class="detail-value">{fmt(currentLeverageValue, 'multiple')}</div></div>

@@ -1040,6 +1040,66 @@ export const dealFieldConfig = {
 		helperText: 'The current portfolio average LTV as of the snapshot date.',
 		readFrom: ['currentAvgLoanLtv', 'current_avg_loan_ltv']
 	},
+	avgLoanLTC: {
+		key: 'avgLoanLTC',
+		label: 'Average loan LTC',
+		type: 'percentage',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '74',
+		helperText: 'Weighted average loan-to-cost ratio across the portfolio.',
+		readFrom: ['avgLoanLTC', 'avg_loan_ltc']
+	},
+	totalLoansUnderMgmt: {
+		key: 'totalLoansUnderMgmt',
+		label: 'Total loans under management',
+		type: 'currency',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '1,000,000,000',
+		helperText: 'Total loan book including leverage. Distinct from Fund AUM and equity commitments.',
+		readFrom: ['totalLoansUnderMgmt', 'total_loans_under_mgmt']
+	},
+	equityCommitments: {
+		key: 'equityCommitments',
+		label: 'Equity commitments',
+		type: 'currency',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '500,000,000',
+		helperText: 'Total LP equity / capital under management. Distinct from Fund AUM and total loans.',
+		readFrom: ['equityCommitments', 'equity_commitments']
+	},
+	performanceFeePct: {
+		key: 'performanceFeePct',
+		label: 'Performance fee',
+		type: 'percentage',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: '20',
+		helperText: 'The GP carried interest / performance fee above the preferred return hurdle.',
+		readFrom: ['performanceFeePct', 'performance_fee_pct']
+	},
+	inceptionDate: {
+		key: 'inceptionDate',
+		label: 'Inception date',
+		type: 'string_free',
+		input: 'date',
+		section: 'returns',
+		requiredForPublish: false,
+		helperText: 'The fund launch or inception date.',
+		readFrom: ['inceptionDate', 'inception_date']
+	},
+	fundTerm: {
+		key: 'fundTerm',
+		label: 'Fund term',
+		type: 'string_free',
+		section: 'returns',
+		requiredForPublish: false,
+		placeholder: 'Evergreen',
+		helperText: 'Fund term (e.g. Evergreen, 7 years, 10 years with extensions).',
+		readFrom: ['fundTerm', 'fund_term']
+	},
 	maxAllowedLtv: {
 		key: 'maxAllowedLtv',
 		label: 'Max allowed LTV',
@@ -1508,11 +1568,17 @@ export const dealReviewSections = [
 			'offeringSize',
 			'currentFundSize',
 			'fundAUM',
+			'totalLoansUnderMgmt',
+			'equityCommitments',
 			'loanCount',
 			'currentAvgLoanLtv',
+			'avgLoanLTC',
 			'maxAllowedLtv',
 			'currentLeverage',
-			'maxAllowedLeverage'
+			'maxAllowedLeverage',
+			'performanceFeePct',
+			'inceptionDate',
+			'fundTerm'
 		]
 	},
 	{
@@ -1889,11 +1955,17 @@ export function buildDealReviewCompletenessModel(form, existingDeal) {
 		offeringSize: parseLooseNumber(form.offeringSize),
 		currentFundSize: parseLooseNumber(form.currentFundSize),
 		fundAUM: parseLooseNumber(form.fundAUM),
+		totalLoansUnderMgmt: parseLooseNumber(form.totalLoansUnderMgmt),
+		equityCommitments: parseLooseNumber(form.equityCommitments),
 		loanCount: parseLooseNumber(form.loanCount),
 		currentAvgLoanLtv: parsePercentInput(form.currentAvgLoanLtv),
+		avgLoanLTC: parsePercentInput(form.avgLoanLTC),
 		maxAllowedLtv: parsePercentInput(form.maxAllowedLtv),
 		currentLeverage: parseLooseNumber(form.currentLeverage),
 		maxAllowedLeverage: parseLooseNumber(form.maxAllowedLeverage),
+		performanceFeePct: parsePercentInput(form.performanceFeePct),
+		inceptionDate: form.inceptionDate,
+		fundTerm: form.fundTerm,
 		snapshotAsOfDate: form.snapshotAsOfDate,
 		fundFoundedYear: parseLooseNumber(form.fundFoundedYear),
 		firmFoundedYear: parseLooseNumber(form.firmFoundedYear),
