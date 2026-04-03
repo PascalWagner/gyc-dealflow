@@ -1086,16 +1086,23 @@
 								{#if total > 0}
 									<div class="hero-social-proof">
 										<div class="sp-avatars">
-											{#each Array(Math.min(total, 5)) as _, i}
-												<div class="sp-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5]}">LP</div>
+											{#each Array(Math.min(total, 3)) as _, i}
+												<div class="sp-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b'][i % 3]}">
+													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+												</div>
 											{/each}
-											{#if total > 5}
-												<div class="sp-avatar sp-count">+{total - 5}</div>
+											{#if total > 3}
+												<div class="sp-avatar sp-count">+{total - 3}</div>
 											{/if}
 										</div>
 										<div class="sp-text">
-											<strong>{total}</strong>
-											<span class="sp-dim">GYC member{total !== 1 ? 's are' : ' is'} active on this deal</span>
+											{#if total === 1}
+												<span>1 GYC investor is currently invested</span>
+											{:else if total <= 4}
+												<span>{total} GYC investors are currently invested in this deal</span>
+											{:else}
+												<span>{total}+ GYC investors have invested or are currently investing</span>
+											{/if}
 										</div>
 									</div>
 								{/if}
@@ -1120,42 +1127,10 @@
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
 									Request Introduction
 								</button>
-								<div class="share-wrapper">
-									<button class="hero-share-btn" onclick={(e) => { e.stopPropagation(); shareDropdownOpen = !shareDropdownOpen; }}>
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-										Share
-									</button>
-									{#if shareDropdownOpen}
-										<div
-											class="share-dropdown active"
-											role="menu"
-											tabindex="-1"
-											aria-label="Share deal options"
-											onclick={(e) => e.stopPropagation()}
-											onkeydown={(e) => {
-												if (e.key === 'Escape') shareDropdownOpen = false;
-												e.stopPropagation();
-											}}
-										>
-											<button class="share-dropdown-item share-invite" onclick={openInviteModal}>
-												<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-												<span class="share-invite-text">Invite a co-investor</span>
-											</button>
-											<button class="share-dropdown-item" onclick={copyDealLink}>
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-												Copy link
-											</button>
-											<button class="share-dropdown-item" onclick={shareDealEmail}>
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-												Email to a friend
-											</button>
-											<button class="share-dropdown-item" onclick={shareDealText}>
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-												Text message
-											</button>
-										</div>
-									{/if}
-								</div>
+								<button class="hero-share-btn" onclick={copyDealLink}>
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+									Share
+								</button>
 							</div>
 						</div>
 					</div>
