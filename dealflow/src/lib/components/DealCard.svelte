@@ -61,6 +61,12 @@
 		return `${(numeric > 1 ? numeric : numeric * 100).toFixed(1)}%`;
 	}
 
+	function fmtPref(val) {
+		if (val === 'None' || val === 'none' || val === 'N/A') return 'None';
+		const formatted = fmtPct(val);
+		return formatted === '—' ? 'None' : formatted;
+	}
+
 	function fmtMoney(val) {
 		if (!hasValue(val)) return '—';
 		const numeric = typeof val === 'string' ? Number.parseFloat(String(val).replace(/[$,]/g, '')) : Number(val);
@@ -343,7 +349,7 @@
 				</div>
 				<div class="metric">
 					<div class="metric-label">Pref Return</div>
-					<div class="metric-value highlight">{fmtPct(preferredReturn)}</div>
+					<div class="metric-value highlight">{fmtPref(preferredReturn)}</div>
 				</div>
 				<div class="metric">
 					<div class="metric-label">Loan Count</div>
@@ -360,7 +366,7 @@
 			{:else}
 				<div class="metric">
 					<div class="metric-label">Pref Return</div>
-					<div class="metric-value highlight">{fmtPct(preferredReturn)}</div>
+					<div class="metric-value highlight">{fmtPref(preferredReturn)}</div>
 				</div>
 				<div class="metric">
 					<div class="metric-label">Minimum</div>

@@ -520,6 +520,13 @@
 		return String(val);
 	}
 
+	/** Display preferred return — shows "None" instead of "---" when absent */
+	function fmtPref(val) {
+		if (val === 'None' || val === 'none' || val === 'N/A') return 'None';
+		const formatted = fmt(val, 'pct');
+		return formatted === '---' ? 'None' : formatted;
+	}
+
 	function formatHold(val) {
 		if (!val) return '---';
 		if (typeof val === 'string' && val.toLowerCase().includes('open')) return 'Open-ended';
@@ -1045,7 +1052,7 @@
 								{:else}
 									{#if deal.targetIRR}<div class="hero-metric"><div class="hero-metric-value highlight">{fmt(deal.targetIRR, 'pct')}</div><div class="hero-metric-label">Target IRR</div></div>{/if}
 									{#if deal.equityMultiple}<div class="hero-metric"><div class="hero-metric-value">{fmt(deal.equityMultiple, 'multiple')}</div><div class="hero-metric-label">Equity Multiple</div></div>{/if}
-									{#if deal.preferredReturn}<div class="hero-metric"><div class="hero-metric-value">{fmt(deal.preferredReturn, 'pct')}</div><div class="hero-metric-label">Pref Return</div></div>{/if}
+									<div class="hero-metric"><div class="hero-metric-value">{fmtPref(deal.preferredReturn)}</div><div class="hero-metric-label">Pref Return</div></div>
 									{#if deal.investmentMinimum}<div class="hero-metric"><div class="hero-metric-value">{fmt(deal.investmentMinimum, 'money')}</div><div class="hero-metric-label">Min Investment</div></div>{/if}
 									{#if deal.holdPeriod}<div class="hero-metric"><div class="hero-metric-value">{formatHold(deal.holdPeriod)}</div><div class="hero-metric-label">Hold Period</div></div>{/if}
 								{/if}
@@ -1242,9 +1249,8 @@
 						<div class="section-body">
 							<div class="details-grid">
 								<div class="detail-item"><div class="detail-label">Target IRR</div><div class="detail-value">{fmt(displayTargetIRR, 'pct')}</div></div>
-								{#if isCredit}
-									<div class="detail-item"><div class="detail-label">Pref Return</div><div class="detail-value">{fmt(displayPrefReturn, 'pct')}</div></div>
-								{:else}
+								<div class="detail-item"><div class="detail-label">Pref Return</div><div class="detail-value">{fmtPref(displayPrefReturn)}</div></div>
+								{#if !isCredit}
 									<div class="detail-item"><div class="detail-label">Cash-on-Cash</div><div class="detail-value">{fmt(displayCashOnCash, 'pct')}</div></div>
 								{/if}
 								<div class="detail-item"><div class="detail-label">Min Investment</div><div class="detail-value">{fmt(displayMinInvestment, 'money')}</div></div>
