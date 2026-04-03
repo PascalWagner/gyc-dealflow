@@ -112,7 +112,6 @@
 	let loading = $state(!initialDeal);
 	let error = $state(initialError);
 	let activeTab = $state('overview');
-	let shareDropdownOpen = $state(false);
 	let socialProof = $state(null);
 	let similarDeals = $state(initialComparables?.similarDeals || []);
 	const eligibleSimilarDeals = $derived.by(() => filterComparableDeals(similarDeals, deal));
@@ -619,13 +618,11 @@
 	function shareDealEmail() {
 		if (!deal || !browser) return;
 		window.open(buildDealShareMailtoHref(deal, window.location.href));
-		shareDropdownOpen = false;
 	}
 
 	function shareDealText() {
 		if (!deal || !browser) return;
 		window.open(buildDealShareSmsHref(deal, window.location.href));
-		shareDropdownOpen = false;
 	}
 
 	function copyDealLink() {
@@ -635,13 +632,11 @@
 		}).catch(() => {
 			showShareToast('Link copied to clipboard');
 		});
-		shareDropdownOpen = false;
 	}
 
 	function openInviteModal() {
 		if (!deal || !browser) return;
 		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to send tracked co-investor invites from your deal workspace.' })) return;
-		shareDropdownOpen = false;
 		inviteEmail = '';
 		inviteMessage = '';
 		inviteCode = null;
@@ -986,7 +981,7 @@
 
 	// Close share dropdown on outside click
 	function handleOutsideClick(e) {
-		if (shareDropdownOpen) shareDropdownOpen = false;
+shareDropdownOpen = false;
 	}
 </script>
 
@@ -2146,10 +2141,6 @@
 	.hero-share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0; background: none; color: rgba(255,255,255,0.5); font-family: var(--font-ui); font-size: 11px; font-weight: 600; border: none; cursor: pointer; letter-spacing: 0.3px; text-transform: uppercase; }
 	.hero-share-btn:hover { color: rgba(255,255,255,0.85); }
 	.share-wrapper { position: relative; }
-	.share-dropdown { position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 6px 0; min-width: 200px; z-index: 50; }
-	.share-dropdown-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-family: var(--font-ui); font-size: 13px; font-weight: 500; color: var(--text-dark); cursor: pointer; transition: background 0.1s; border: none; background: none; width: 100%; }
-	.share-dropdown-item:hover { background: var(--bg-cream); }
-	.share-dropdown-item svg { width: 16px; height: 16px; color: var(--text-secondary); flex-shrink: 0; }
 	.share-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--bg-sidebar); color: #fff; padding: 12px 24px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 9999; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
 	.share-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 	.archived-banner { background: rgba(138,154,160,0.08); border: 1px solid rgba(138,154,160,0.2); border-radius: 8px; padding: 14px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-family: var(--font-ui); font-size: 13px; }
@@ -3037,7 +3028,6 @@
 	.cf-highlight { color: var(--primary) !important; font-weight: 700 !important; }
 	.cf-cap-out { color: var(--text-muted); }
 	.cf-cap-in { color: var(--primary); font-weight: 700; }
-	.cf-note { font-size: 10px !important; color: var(--text-muted) !important; font-style: italic; font-weight: 400 !important; }
 	.cf-summary-row td { padding: 14px 12px; border-bottom: none; vertical-align: top; text-align: right; }
 	.cf-summary-row td:first-child { text-align: left; }
 	.cf-summary-value { font-size: 16px; font-weight: 800; color: var(--text-dark); }
