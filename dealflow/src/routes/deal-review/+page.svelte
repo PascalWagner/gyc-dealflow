@@ -1418,8 +1418,8 @@
 
 	async function setUploadFile(file, type) {
 		if (!file) return;
-		if (file.size > 25 * 1024 * 1024) {
-			uploadError = 'File too large. Maximum size is 25MB.';
+		if (file.size > 50 * 1024 * 1024) {
+			uploadError = 'File too large. Maximum size is 50MB.';
 			return;
 		}
 
