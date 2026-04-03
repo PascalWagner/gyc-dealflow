@@ -935,9 +935,12 @@
 		const stored = browser ? getStoredSessionUser() : null;
 		const payload = {
 			goal: goalLabels[wizardData.goal] || wizardData.goal,
+			targetCashFlow: wizardData.goal === 'cashflow' ? wizardData.targetAmount : undefined,
 			targetIncome: wizardData.goal === 'cashflow' ? wizardData.targetAmount : undefined,
 			targetGrowth: wizardData.goal === 'growth' ? wizardData.targetAmount : undefined,
 			targetTaxSavings: wizardData.goal === 'tax' ? wizardData.targetAmount : undefined,
+			growthCapital: wizardData.goal === 'growth' ? wizardData.targetAmount : undefined,
+			taxableIncome: wizardData.goal === 'tax' ? wizardData.targetAmount : undefined,
 			investableCapital: wizardData.investableCapital,
 			assetClasses: wizardData.assetClasses,
 			dealTypes: wizardData.dealTypes,

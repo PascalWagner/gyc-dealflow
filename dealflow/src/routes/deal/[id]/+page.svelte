@@ -1371,30 +1371,31 @@
 					</div>
 				</div>
 
-				<!-- ==================== PART 2: DEAL ANALYSIS DASHBOARD ==================== -->
-				<DealAnalysisDashboard
-					{deal}
-					{buyBox}
-					{feeRows}
-					{operatorTrackRecordRows}
-					{secFiling}
-					{bgCheck}
-					{bgCheckLoading}
-					{bgCheckLoaded}
-					onLoadBgCheck={() => loadBackgroundCheck()}
-					{isPaid}
-					{isPublicViewer}
-					{isFreeViewer}
-					{hasMemberAccess}
-					isAdmin={$isAdmin}
-					{nativeCompanionMode}
-					{academyHref}
-					onOpenAuth={() => openAuthModal({ title: 'Create a free account', body: 'Create a free account to save deals and start your analysis.' })}
-					{fmt}
-				/>
-
 				<!-- ==================== PART 3: DETAILED SECTIONS ==================== -->
 				<div class="canonical-lower-flow">
+					<!-- ==================== DEAL ANALYSIS DASHBOARD ==================== -->
+					<div class="flow-order-35">
+						<DealAnalysisDashboard
+							{deal}
+							{buyBox}
+							{feeRows}
+							{operatorTrackRecordRows}
+							{secFiling}
+							{bgCheck}
+							{bgCheckLoading}
+							{bgCheckLoaded}
+							onLoadBgCheck={() => loadBackgroundCheck()}
+							{isPaid}
+							{isPublicViewer}
+							{isFreeViewer}
+							{hasMemberAccess}
+							isAdmin={$isAdmin}
+							{nativeCompanionMode}
+							{academyHref}
+							onOpenAuth={() => openAuthModal({ title: 'Create a free account', body: 'Create a free account to save deals and start your analysis.' })}
+							{fmt}
+						/>
+					</div>
 					<div class="section geography-section flow-order-30">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -1741,29 +1742,10 @@
 					<div class="section-header">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 						<span class="section-title">Deal Fit Summary</span>
+						<span class="investclearly-preview-pill coming-soon">Coming Soon</span>
 					</div>
-					<div class="section-body deal-fit-body" class:gated={!hasMemberAccess}>
-						{#if !hasMemberAccess}
-							<div class="gate-overlay">
-								<div class="gate-content">
-									<div class="gate-icon">
-										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-									</div>
-									<div class="gate-title">Become a Member</div>
-									<div class="gate-text">
-										{#if nativeCompanionMode}
-											Available to members on web.
-										{:else}
-											Unlock a faster read on strengths, tradeoffs, and risk signals for this deal.
-										{/if}
-									</div>
-									{#if !nativeCompanionMode}
-										<a href={academyHref} class="gate-cta">Become a Member</a>
-									{/if}
-								</div>
-							</div>
-						{/if}
-						<div class:blurred={!hasMemberAccess}>
+					<div class="section-body deal-fit-body" style="position:relative;overflow:hidden;">
+						<div class="investclearly-preview-surface" aria-hidden="true">
 							<div class="fit-verdict" style={`--verdict-color: ${fitSummary.verdictColor};`}>
 								<div class="fit-verdict-icon" aria-hidden="true">
 									{#if fitSummary.score >= 3}
@@ -1811,6 +1793,10 @@
 									{/each}
 								</div>
 							{/if}
+						</div>
+						<div class="investclearly-coming-soon-overlay">
+							<div class="investclearly-coming-soon-badge">Coming Soon</div>
+							<div class="investclearly-coming-soon-copy">Automated deal fit scoring based on your plan, returns, fees, and sponsor context is coming soon.</div>
 						</div>
 					</div>
 				</div>
@@ -2204,6 +2190,7 @@
 	.flow-order-10 { order: 10; }
 	.flow-order-20 { order: 20; }
 		.flow-order-30 { order: 30; }
+		.flow-order-35 { order: 35; }
 		.flow-order-40 { order: 40; }
 		.flow-order-45 { order: 45; }
 		.flow-order-50 { order: 50; }

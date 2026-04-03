@@ -66,7 +66,10 @@ export function buildDealCashFlowProjection(deal) {
 	const holdInput = toPositiveNumber(firstMeaningful(deal?.holdPeriod, deal?.hold_period_years));
 	const offeringStatus = String(firstMeaningful(deal?.offeringStatus, deal?.offering_status, deal?.status) || '').trim();
 	const isEvergreen = /evergreen/i.test(offeringStatus);
-	const holdYears = holdInput > 0 ? Math.min(Math.ceil(holdInput), 10) : 0;
+	// For evergreen/lending funds, holdPeriod is often the lockup (e.g. 1 year),
+	// not the projection horizon. Use 5 years for a meaningful projection.
+	const rawHold = holdInput > 0 ? Math.min(Math.ceil(holdInput), 10) : 0;
+	const holdYears = (rawHold <= 1 && (isEvergreen || isCredit)) ? 5 : rawHold;
 
 	if (!basis) {
 		return {

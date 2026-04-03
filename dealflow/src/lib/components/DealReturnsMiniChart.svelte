@@ -104,7 +104,7 @@
 				pillWidth,
 				pillX: centerX - (pillWidth / 2),
 				pillY,
-				shortYear: String(point.year).slice(-2),
+				shortYear: String(point.year),
 				isLatest: index === normalizedSeries.length - 1
 			};
 		});
