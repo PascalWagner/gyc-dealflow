@@ -1,6 +1,6 @@
 import { normalizeAssetClassValue } from './dealReviewSchema.js';
 
-export const MAX_HISTORICAL_RETURN_YEARS = 5;
+export const MAX_HISTORICAL_RETURN_YEARS = 7;
 export const MIN_RETURN_POINTS_FOR_CHART = 2;
 
 const RETURN_SERIES_KEYS = ['historicalReturns', 'historical_returns', 'annualReturns', 'annual_returns'];

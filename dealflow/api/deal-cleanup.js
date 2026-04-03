@@ -1182,6 +1182,23 @@ async function enrichDeal(supabase, deal, operatorName) {
     });
   }
 
+  // Expand historicalReturns array into individual year fields
+  if (Array.isArray(allFound.historicalReturns) && allFound.historicalReturns.length > 0) {
+    for (const entry of allFound.historicalReturns) {
+      const year = entry?.year;
+      const value = entry?.value;
+      if (year && year >= 2015 && year <= 2099 && value != null) {
+        const fieldKey = `historicalReturn${year}`;
+        if (!allFound[fieldKey]) {
+          allFound[fieldKey] = typeof value === 'number' && Math.abs(value) <= 1
+            ? value * 100  // Convert decimal to percentage
+            : value;
+        }
+      }
+    }
+    delete allFound.historicalReturns;
+  }
+
   return {
     found_fields: allFound,
     confidence: allConfidence,

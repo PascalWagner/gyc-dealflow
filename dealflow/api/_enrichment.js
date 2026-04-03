@@ -76,11 +76,12 @@ If this is a PPM or subscription agreement, prioritize the INVESTOR'S specific d
   "amountInvested": "The LP's specific commitment/investment amount in dollars (look for signature pages, subscription amount). Number only",
   "dateInvested": "Date the LP signed or subscription was executed (YYYY-MM-DD). Look for signature dates",
   "investingEntity": "The LP's investing entity name (subscriber — look for signature blocks)",
-  "entityInvestedInto": "The legal entity being invested into (issuer / SPV name)"
+  "entityInvestedInto": "The legal entity being invested into (issuer / SPV name)",
+  "historicalReturns": "Array of completed full-year annual returns. Each entry: {\"year\": 2024, \"value\": 10.23, \"type\": \"non_drip\"}. Extract from annualized returns tables, historical performance sections, or fund reports. Use NON-DRIP returns when both DRIP and Non-DRIP are available. Only include completed full calendar years — exclude YTD or partial-year data. Values should be percentages (10.23 = 10.23%, NOT decimals). Look for headings like 'Annualized Returns', 'Historical Returns', 'Fund Performance', 'Annual Net Returns', 'Non-DRIP Avg'."
 }
 
 IMPORTANT:
-- For percentages, convert to decimals (15% -> 0.15)
+- For percentages, convert to decimals (15% -> 0.15) EXCEPT historicalReturns which uses whole percentages
 - For dollar amounts, return raw numbers (no $ or commas)
 - If a field clearly doesn't apply to this deal type, use null
 - Be precise — only extract what's explicitly stated, don't infer
@@ -89,7 +90,8 @@ IMPORTANT:
 - For fees, extract BOTH the "fees" field (full text description) AND the individual fee percentage fields
 - PRIORITIZE investor-specific details (amountInvested, dateInvested, investingEntity) from signature pages
 - For secEntityName and issuerEntity: return the exact legal entity name, not the marketing name
-- Use the full document as context, not only the cover pages, but prefer the most formal issuer definitions when multiple names are present`;
+- Use the full document as context, not only the cover pages, but prefer the most formal issuer definitions when multiple names are present
+- For historicalReturns: prefer NON-DRIP annual returns over DRIP. Do NOT confuse target returns with actual historical returns. Do NOT include the current incomplete year as a full-year return. Look for annualized returns tables with monthly columns plus an average column`;
 
 // ── AI Extraction with fallback chain ────────────────────────────────────────
 
