@@ -1972,7 +1972,7 @@
 								</div>
 							{/each}
 						</div>
-						<div class="schedule-total">{projection.years.length} modeled slots · {currency(projection.checkSize)} target check · {roadmapSummary}</div>
+						<div class="schedule-total-label">Your Modeled Portfolio</div>
 						<div class="schedule-total">{printSchedule.totalSlots} modeled slots · {currency(printSchedule.avgCheckSize)} avg check · {roadmapSummary}</div>
 					</div>
 				{/if}
@@ -2933,10 +2933,20 @@
 		text-decoration: none;
 		font-weight: 600;
 	}
+	.schedule-total-label {
+		margin-top: 14px;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		text-align: right;
+	}
 	.schedule-total {
 		display: flex;
 		justify-content: flex-end;
-		margin-top: 14px;
+		margin-top: 4px;
 		font-family: var(--font-ui);
 		font-size: 14px;
 		font-weight: 700;

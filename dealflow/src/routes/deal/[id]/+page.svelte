@@ -1389,7 +1389,7 @@
 
 				<!-- ==================== PART 3: DETAILED SECTIONS ==================== -->
 				<div class="canonical-lower-flow">
-					<div class="section geography-section flow-order-10">
+					<div class="section geography-section flow-order-30">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
 							<span class="section-title">Investing Geography</span>
@@ -1407,7 +1407,7 @@
 
 						<!-- ==================== HISTORICAL RETURNS ==================== -->
 						{#if isCredit}
-							<div class="section flow-order-45 historical-returns-section">
+							<div class="section flow-order-10 historical-returns-section">
 								<div class="section-header">
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 3v18h18"/><path d="M7 15l3-3 3 2 4-6"/></svg>
 									<span class="section-title">Historical Returns</span>
@@ -1463,7 +1463,7 @@
 
 				<!-- ==================== PROJECTED LP CASH FLOW ==================== -->
 				{#if cfRows.length > 0 || cfUnavailableReason}
-					<div class="section flow-order-50">
+					<div class="section flow-order-20">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
 							<span class="section-title">Projected LP Cash Flow</span>
@@ -1580,7 +1580,7 @@
 
 				<!-- ==================== STRESS TEST CALCULATOR ==================== -->
 				{#if deal && !isCredit}
-					<div class="section flow-order-110">
+					<div class="section flow-order-40">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
 							<span class="section-title">Stress Test Calculator</span>
@@ -1683,7 +1683,7 @@
 				{/if}
 
 				<!-- ==================== SIMILAR DEALS ==================== -->
-				<div class="section flow-order-60">
+				<div class="section flow-order-50">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
 							<span class="section-title">Similar Deals</span>
@@ -1731,7 +1731,7 @@
 				</div>
 
 				<!-- ==================== DEAL FIT SUMMARY ==================== -->
-				<div class="section flow-order-70">
+				<div class="section flow-order-60">
 					<div class="section-header">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 						<span class="section-title">Deal Fit Summary</span>
@@ -1811,7 +1811,7 @@
 
 					<!-- ==================== INVEST CLEARLY REVIEWS (admin preview) ==================== -->
 					{#if investClearlyPreview}
-						<div class="section flow-order-130">
+						<div class="section flow-order-70">
 							<div class="section-header">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
 								<span class="section-title">Invest Clearly Reviews</span>
