@@ -29,7 +29,6 @@
 	);
 	const portfolioEntries = $derived.by(() => portfolioView.entries || []);
 	const metricPortfolio = $derived.by(() => portfolioView.metricEntries || []);
-
 	// Derived
 	const branch = $derived(wizardData._branch || '');
 	const hasGoals = $derived(Boolean(goals && goals.targetIncome > 0));

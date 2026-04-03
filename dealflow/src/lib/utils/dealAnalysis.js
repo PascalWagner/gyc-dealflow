@@ -6,6 +6,7 @@
  */
 
 import { getDealOperatorName } from '$lib/utils/dealSponsors.js';
+import { normalizeAssetClassValue } from '$lib/utils/dealReviewSchema.js';
 
 // ===== Summary Line Builders =====
 // Each returns a short factual sentence (no judgments) for accordion headers.
@@ -352,10 +353,12 @@ function buildGrowthProjection(deal, amount) {
 
 export function computeBuyBoxMatchCount(deal, buyBox) {
 	let matched = 0, total = 0;
+	const normalizedDealAssetClass = normalizeAssetClassValue(deal?.assetClass || deal?.asset_class);
+	const normalizedBuyBoxAssetClasses = normalizeAssetClassList(buyBox?.assetClasses);
 
-	if (buyBox.assetClasses?.length > 0) {
+	if (normalizedBuyBoxAssetClasses.length > 0) {
 		total++;
-		if (buyBox.assetClasses.includes(deal.assetClass)) matched++;
+		if (normalizedBuyBoxAssetClasses.includes(normalizedDealAssetClass)) matched++;
 	}
 	if (buyBox.checkSize) {
 		total++;
@@ -375,6 +378,20 @@ export function computeBuyBoxMatchCount(deal, buyBox) {
 	}
 
 	return { matched, total };
+}
+
+function normalizeAssetClassList(value) {
+	if (!value) return [];
+	const rawItems = Array.isArray(value)
+		? value
+		: String(value)
+			.split(',')
+			.map((item) => item.trim())
+			.filter(Boolean);
+
+	return rawItems
+		.map((item) => normalizeAssetClassValue(item))
+		.filter(Boolean);
 }
 
 

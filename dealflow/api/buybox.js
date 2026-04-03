@@ -23,6 +23,7 @@ import {
   RequestValidationError,
   sendValidationError
 } from './_validation.js';
+import { findTargetUserIdByEmail } from './userdata/identity.js';
 
 // GHL field mapping (for sync): Supabase column → GHL custom field key
 // Only active v3 wizard fields — v1/v2 dead fields removed
@@ -460,6 +461,68 @@ export default async function handler(req, res) {
       });
     } catch (e) {
       console.error('Buy box save error:', e);
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    let body = {};
+    if (typeof req.body === 'string') {
+      try {
+        body = JSON.parse(req.body || '{}');
+      } catch {
+        body = {};
+      }
+    } else if (req.body && typeof req.body === 'object') {
+      body = req.body;
+    }
+
+    let requestedEmail = '';
+    let allowImpersonation = false;
+    try {
+      requestedEmail = expectOptionalString(body.email, 'email', '');
+      allowImpersonation = expectBooleanish(body.admin, 'admin', false);
+    } catch (error) {
+      if (error instanceof RequestValidationError) {
+        return sendValidationError(res, error);
+      }
+      throw error;
+    }
+
+    const context = await resolveBuyBoxContext(req, requestedEmail, {
+      allowImpersonation
+    });
+    if (!context.ok) {
+      return res.status(context.status).json({ error: context.error });
+    }
+
+    try {
+      const supabase = getAdminClient();
+      const targetUserId = context.isAdminImpersonation
+        ? await findTargetUserIdByEmail(supabase, context.email)
+        : context.user?.id || null;
+
+      if (!targetUserId) {
+        return res.status(200).json({
+          success: true,
+          deleted: false,
+          contactId: null
+        });
+      }
+
+      const { error } = await supabase
+        .from('user_buy_box')
+        .delete()
+        .eq('user_id', targetUserId);
+      if (error) throw error;
+
+      return res.status(200).json({
+        success: true,
+        deleted: true,
+        contactId: targetUserId
+      });
+    } catch (e) {
+      console.error('Buy box delete error:', e);
       return res.status(500).json({ error: e.message });
     }
   }

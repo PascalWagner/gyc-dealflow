@@ -1,12 +1,12 @@
 export const STEP = {
 	GOAL: 'goal',
+	ACCREDITATION: 'accreditation',
 	EXPERIENCE: 'experience',
 	RE_PRO: 're-professional',
 	BASELINE: 'starting-point',
 	ASSETS: 'asset-classes',
 	STRATEGIES: 'strategies',
-	RISK: 'risk-tolerance',
-	ACCREDITATION: 'accreditation',
+	CHECK_SIZE: 'check-size',
 	CF_TARGET: 'income-target',
 	GROWTH_TARGET: 'growth-target',
 	TAX_TARGET: 'tax-target',
@@ -29,15 +29,15 @@ export const STEP = {
 export const STEP_SEQUENCE = {
 	free: [
 		STEP.GOAL,
+		STEP.ACCREDITATION,
 		STEP.EXPERIENCE,
 		STEP.RE_PRO,
-		STEP.BASELINE,
 		STEP.ASSETS,
 		STEP.STRATEGIES,
-		STEP.RISK,
-		STEP.ACCREDITATION
+		STEP.CHECK_SIZE
 	],
 	paid_cashflow: [
+		STEP.BASELINE,
 		STEP.CF_TARGET,
 		STEP.NET_WORTH,
 		STEP.CAPITAL,
@@ -56,7 +56,6 @@ export const STEP_SEQUENCE = {
 		STEP.GROWTH_TARGET,
 		STEP.GROWTH_PRIORITY,
 		STEP.NET_WORTH,
-		STEP.TAX_BASELINE,
 		STEP.CAPITAL,
 		STEP.SOURCE,
 		STEP.READINESS,
@@ -91,19 +90,19 @@ export const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'My Plan']
 
 const STEP_TO_PHASE = {
 	[STEP.GOAL]: 0,
+	[STEP.ACCREDITATION]: 0,
 	[STEP.EXPERIENCE]: 0,
 	[STEP.RE_PRO]: 0,
-	[STEP.BASELINE]: 0,
-	[STEP.ASSETS]: 0,
-	[STEP.STRATEGIES]: 0,
-	[STEP.RISK]: 0,
-	[STEP.ACCREDITATION]: 0,
+	[STEP.ASSETS]: 3,
+	[STEP.STRATEGIES]: 3,
+	[STEP.CHECK_SIZE]: 2,
+	[STEP.BASELINE]: 1,
 	[STEP.CF_TARGET]: 1,
 	[STEP.GROWTH_TARGET]: 1,
 	[STEP.TAX_TARGET]: 1,
+	[STEP.GROWTH_PRIORITY]: 1,
 	[STEP.TAX_BASELINE]: 1,
 	[STEP.NET_WORTH]: 2,
-	[STEP.GROWTH_PRIORITY]: 2,
 	[STEP.CAPITAL]: 2,
 	[STEP.SOURCE]: 2,
 	[STEP.READINESS]: 2,
@@ -180,13 +179,24 @@ export const GROWTH_PRIORITY_OPTIONS = [
 	{ value: 'preservation', label: 'Capital preservation first', description: "Protect my principal - I'll take lower returns for less risk", icon: '🛡️' }
 ];
 
-export const LOSS_TOLERANCE_OPTIONS = [
-	{ value: '10', label: '1-2% of net worth', description: 'Very conservative', low: 0.01, high: 0.02 },
-	{ value: '20', label: '3-5% of net worth', description: 'Moderate risk', low: 0.03, high: 0.05 },
-	{ value: '33', label: '5-10% of net worth', description: 'Concentrated', low: 0.05, high: 0.1 },
-	{ value: '50', label: '10%+ of net worth', description: 'High conviction', low: 0.1, high: 0.15 },
-	{ value: 'no_limit', label: 'No limit', description: "I'll decide deal by deal", low: 0, high: 0 }
+export const CHECK_SIZE_OPTIONS = [
+	{ value: '50000', label: 'Under $50K', description: 'A smaller starting check that keeps one deal from dominating your portfolio.' },
+	{ value: '99000', label: '$50K-$99K', description: 'A common first meaningful LP check size while still leaving room to diversify.' },
+	{ value: '249000', label: '$100K-$249K', description: 'A higher-conviction allocation for larger minimums and fewer total deals.' },
+	{ value: '250000', label: '$250K+', description: 'You are comfortable writing larger checks when the opportunity fits.' }
 ];
+
+const LEGACY_CHECK_SIZE_LABELS = {
+	10: 'Under $50K',
+	20: '$50K-$99K',
+	33: '$100K-$249K',
+	50: '$250K+',
+	no_limit: '$250K+',
+	under_50k: 'Under $50K',
+	'50k_99k': '$50K-$99K',
+	'100k_249k': '$100K-$249K',
+	'250k_plus': '$250K+'
+};
 
 export const DIVERSIFICATION_OPTIONS = [
 	{ value: 'focused', label: 'Focused', description: 'Concentrate in 1-2 asset classes you know well. Fewer deals, deeper expertise.', icon: '🎯' },
@@ -195,8 +205,8 @@ export const DIVERSIFICATION_OPTIONS = [
 ];
 
 export const OPERATOR_FOCUS_OPTIONS = [
-	{ value: 'specialist', label: 'Specialists Only', description: 'I want operators laser-focused on one asset class' },
-	{ value: 'diversified', label: 'Prefer Diversified', description: 'I like firms that can deploy across multiple strategies' },
+	{ value: 'specialist', label: 'Prefer Specialists', description: 'I want operators laser-focused on one asset class or niche strategy.' },
+	{ value: 'diversified', label: 'Open to Broader Operators', description: 'I am open to firms that deploy across multiple asset classes or strategies.' },
 	{ value: 'both', label: 'Open to Both', description: "I'll evaluate any operator based on their track record" }
 ];
 
@@ -219,7 +229,8 @@ export const ACCREDITATION_OPTIONS = [
 	{ value: 'net_worth', label: 'Net worth over $1M', description: 'Individual or joint net worth exceeding $1M, excluding your primary residence (SEC Rule 501)' },
 	{ value: 'income', label: 'Income over $200K', description: 'Earned $200K+ individually (or $300K+ jointly) in each of the past 2 years, with reasonable expectation of the same this year' },
 	{ value: 'licensed', label: 'Licensed professional', description: 'Hold a Series 7, Series 65, or Series 82 license in good standing' },
-	{ value: 'entity', label: 'Through an entity', description: 'Invest via an LLC, trust, family office, or fund with $5M+ in assets' }
+	{ value: 'entity', label: 'Through an entity', description: 'Invest via an LLC, trust, family office, or fund with $5M+ in assets' },
+	{ value: 'not_accredited', label: 'Not yet accredited', description: 'We will only surface deals that are open to all investors.' }
 ];
 
 export const NETWORK_BENEFITS = [
@@ -231,13 +242,14 @@ export const NETWORK_BENEFITS = [
 
 export const STAGE_QUERY_MAP = {
 	goal: STEP.GOAL,
+	accreditation: STEP.ACCREDITATION,
 	experience: STEP.EXPERIENCE,
 	're-professional': STEP.RE_PRO,
 	'starting-point': STEP.BASELINE,
 	'asset-classes': STEP.ASSETS,
 	strategies: STEP.STRATEGIES,
-	'risk-tolerance': STEP.RISK,
-	accreditation: STEP.ACCREDITATION,
+	'check-size': STEP.CHECK_SIZE,
+	'risk-tolerance': STEP.CHECK_SIZE,
 	'income-target': STEP.CF_TARGET,
 	'growth-target': STEP.GROWTH_TARGET,
 	'tax-target': STEP.TAX_TARGET,
@@ -262,6 +274,16 @@ const STEP_TO_STAGE = Object.fromEntries(
 );
 
 export const ASSET_CLASS_OPTIONS = {
+	'Private Debt / Credit': {
+		icon: '🤝',
+		label: 'Private Debt / Credit',
+		oneLiner: 'Private lending, credit funds, and asset-backed debt investments',
+		yieldRange: '8-12%',
+		holdYears: '1-3',
+		cashflow: { fit: 'great' },
+		tax: { fit: 'okay' },
+		growth: { fit: 'poor' }
+	},
 	'Multi-Family': {
 		icon: '🏢',
 		label: 'Multi-Family',
@@ -364,7 +386,41 @@ export const ASSET_CLASS_OPTIONS = {
 	}
 };
 
-export const STRATEGY_ORDER = ['Lending', 'Buy & Hold', 'Value-Add', 'Distressed', 'Development'];
+export const PLAN_ASSET_OPTIONS = [
+	{
+		value: 'Private Debt / Credit',
+		icon: '🤝',
+		label: 'Private Debt / Credit',
+		yieldRange: '8-12%'
+	},
+	...Object.entries(ASSET_CLASS_OPTIONS)
+		.filter(([value]) => value !== 'Private Debt / Credit')
+		.map(([value, option]) => ({
+			value,
+			icon: option.icon,
+			label: option.label,
+			yieldRange: option.yieldRange
+		}))
+];
+
+const PLAN_ASSET_ALIASES = {
+	'Multi Family': 'Multi-Family',
+	'Hotels / Hospitality': 'Hotels/Hospitality',
+	'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
+	'Short-Term Rentals': 'Short Term Rental',
+	'Oil & Gas': 'Oil & Gas / Energy',
+	SFH: 'Single Family',
+	'Single Family Homes': 'Single Family',
+	'NNN (Triple Net Lease)': 'NNN',
+	'Retail Shopping Centres': 'Retail',
+	Lending: 'Private Debt / Credit',
+	'Private Debt': 'Private Debt / Credit',
+	'Private Credit': 'Private Debt / Credit',
+	Debt: 'Private Debt / Credit',
+	Credit: 'Private Debt / Credit'
+};
+
+export const STRATEGY_ORDER = ['Buy & Hold', 'Value-Add', 'Distressed', 'Development'];
 
 export const STRATEGY_OPTIONS = {
 	'Lending': {
@@ -398,6 +454,69 @@ export function parseDollar(value) {
 	if (typeof value === 'number') return value;
 	if (!value) return 0;
 	return parseInt(String(value).replace(/[^0-9]/g, ''), 10) || 0;
+}
+
+function normalizeRate(value) {
+	const numeric = Number(value || 0);
+	if (!numeric) return 0;
+	return numeric > 1 ? numeric / 100 : numeric;
+}
+
+function roundRate(value) {
+	return Math.round(normalizeRate(value) * 1000) / 1000;
+}
+
+function normalizePlanAssetClass(assetClass = '') {
+	return PLAN_ASSET_ALIASES[assetClass] || assetClass || 'Multi-Family';
+}
+
+function average(values = []) {
+	if (!values.length) return 0;
+	return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function moneyAnswer(value, { perYear = false, allowZero = false } = {}) {
+	if (value === undefined || value === null || value === '') {
+		return allowZero ? `${formatCompactMoney(0)}${perYear ? '/yr' : ''}` : 'Not answered';
+	}
+	return `${formatCompactMoney(value)}${perYear ? '/yr' : ''}`;
+}
+
+function listAnswer(values = [], mapper = (value) => value) {
+	if (!Array.isArray(values) || !values.length) return 'Not answered';
+	return values.map(mapper).join(', ');
+}
+
+function optionLabel(options = [], value) {
+	const match = options.find((option) => option.value === value);
+	return match?.label || value || 'Not answered';
+}
+
+export function checkSizeLabel(value) {
+	const normalized = String(parseDollar(value) || value || '');
+	return optionLabel(CHECK_SIZE_OPTIONS, normalized) || LEGACY_CHECK_SIZE_LABELS[normalized] || 'Not answered';
+}
+
+export function averageDealYieldForAsset(assetClass, deals = []) {
+	const normalizedAsset = normalizePlanAssetClass(assetClass);
+	const rows = Array.isArray(deals) ? deals : [];
+	const yields = [];
+
+	for (const deal of rows) {
+		if (deal?.isStale || deal?.status === 'Closed') continue;
+		const rawYield = Number(deal?.cashOnCash || deal?.preferredReturn || 0);
+		if (!(rawYield > 0 && rawYield < 1)) continue;
+
+		const dealAsset = normalizePlanAssetClass(deal?.assetClass || deal?.asset_class || '');
+		const strategy = String(deal?.strategy || '').toLowerCase();
+		if (normalizedAsset === 'Private Debt / Credit') {
+			if (strategy === 'lending' || dealAsset === 'Private Debt / Credit') yields.push(rawYield);
+			continue;
+		}
+		if (dealAsset === normalizedAsset) yields.push(rawYield);
+	}
+
+	return roundRate(average(yields) || 0.08);
 }
 
 export function formatDollar(value) {
@@ -437,8 +556,33 @@ export function phaseForStep(step) {
 	return STEP_TO_PHASE[step] ?? 0;
 }
 
+export function phaseEntryStep(sequence = [], phaseIndex = 0, wizardData = {}) {
+	const data = normalizeWizardData(wizardData);
+	const branch = data._branch || 'cashflow';
+	const preferredEntries = {
+		0: [STEP.ACCREDITATION, STEP.EXPERIENCE, STEP.RE_PRO, STEP.GOAL],
+		1: [branch === 'cashflow' ? STEP.BASELINE : branch === 'growth' ? STEP.GROWTH_TARGET : STEP.TAX_TARGET, STEP.GOAL],
+		2: [STEP.CHECK_SIZE, STEP.NET_WORTH, STEP.CAPITAL, STEP.SOURCE, STEP.READINESS],
+		3: [STEP.ASSETS, STEP.STRATEGIES, STEP.DIVERSIFICATION, STEP.OPERATOR_FOCUS, STEP.LOCKUP, STEP.DISTRIBUTIONS],
+		4: [STEP.PLAN, STEP.LP_NETWORK, STEP.PROFILE_REVIEW, STEP.COMPLETION]
+	};
+
+	const sequenceSet = new Set(sequence || []);
+	const candidates = preferredEntries[phaseIndex] || [];
+	for (const step of candidates) {
+		if (sequenceSet.has(step)) return step;
+	}
+
+	return (sequence || []).find((candidate) => phaseForStep(candidate) === phaseIndex) || '';
+}
+
 export function stageSlugForStep(step) {
 	return STEP_TO_STAGE[step] || '';
+}
+
+export function stageSlugForPhase(sequence = [], phaseIndex = 0) {
+	const step = phaseEntryStep(sequence, phaseIndex);
+	return step ? stageSlugForStep(step) : '';
 }
 
 export function normalizeWizardData(input = {}) {
@@ -461,13 +605,37 @@ export function normalizeWizardData(input = {}) {
 
 	if (next.investableCapital === undefined && next.capital12mo !== undefined) next.investableCapital = next.capital12mo;
 	if (next.capital12mo === undefined && next.investableCapital !== undefined) next.capital12mo = next.investableCapital;
+	if (next.checkSize === undefined && next.maxCheckSize !== undefined) next.checkSize = next.maxCheckSize;
+	if (next.maxCheckSize === undefined && next.checkSize !== undefined) next.maxCheckSize = next.checkSize;
+	if (next.maxOperatorPct === undefined && next.checkSize !== undefined) next.maxOperatorPct = next.checkSize;
+	if (next.checkSize === undefined && next.maxOperatorPct !== undefined) next.checkSize = next.maxOperatorPct;
+	if (next.sharePortfolio === undefined && typeof next.lpNetworkVisible === 'boolean') next.sharePortfolio = next.lpNetworkVisible;
+	if (next.lpNetworkVisible === undefined && typeof next.sharePortfolio === 'boolean') next.lpNetworkVisible = next.sharePortfolio;
 
 	if (!Array.isArray(next.assetClasses)) next.assetClasses = Array.isArray(next.asset_classes) ? [...next.asset_classes] : [];
+	next.assetClasses = next.assetClasses.map((asset) => normalizePlanAssetClass(asset)).filter(Boolean);
 	if (!Array.isArray(next.strategies)) next.strategies = Array.isArray(next.dealTypes) ? [...next.dealTypes] : [];
 	if (!Array.isArray(next.dealTypes)) next.dealTypes = [...next.strategies];
+	next.strategies = [...new Set(next.strategies.filter(Boolean))];
+	next.dealTypes = [...new Set(next.dealTypes.filter(Boolean))];
 	if (!Array.isArray(next.accreditation) && next.accreditation) next.accreditation = [next.accreditation];
 	if (!Array.isArray(next.accreditation)) next.accreditation = [];
+	if (!Array.isArray(next.customPlanSlots) && Array.isArray(next.planSlots)) next.customPlanSlots = next.planSlots;
+	if (!Array.isArray(next.customPlanSlots)) next.customPlanSlots = [];
+	else next.customPlanSlots = next.customPlanSlots.map((slot) => ({ ...slot }));
 	if (typeof next.sharePortfolio !== 'boolean') next.sharePortfolio = next.sharePortfolio === undefined ? true : Boolean(next.sharePortfolio);
+	if (next.checkSize !== undefined && next.checkSize !== null && next.checkSize !== '') {
+		next.checkSize = String(parseDollar(next.checkSize) || next.checkSize);
+	}
+	if (!next.netWorthPreference && typeof next.netWorth === 'string' && next.netWorth.toLowerCase().includes('prefer')) {
+		next.netWorthPreference = next.netWorth;
+	}
+	if (!next.netWorth && next.netWorthPreference === 'prefer_not_to_say') {
+		next.netWorth = 'prefer_not_to_say';
+	}
+	if (!next.netWorthPreference) next.netWorthPreference = '';
+	if (!next.avatarUrl && typeof next.avatar_url === 'string') next.avatarUrl = next.avatar_url;
+	if (next.avatarUrl === undefined) next.avatarUrl = '';
 
 	return next;
 }
@@ -475,7 +643,12 @@ export function normalizeWizardData(input = {}) {
 export function shouldSkipPrefilledStep(step, wizardData, { editing = false, forcedStage = false } = {}) {
 	if (editing || forcedStage) return false;
 	if (step === STEP.GOAL) return Boolean(wizardData._branch && wizardData.goal);
+	if (step === STEP.ACCREDITATION) return Array.isArray(wizardData.accreditation) && wizardData.accreditation.length > 0;
 	if (step === STEP.EXPERIENCE) return wizardData.dealExperience !== undefined && wizardData.dealExperience !== null;
+	if (step === STEP.RE_PRO) return Boolean(wizardData.reProfessional);
+	if (step === STEP.ASSETS) return Array.isArray(wizardData.assetClasses) && wizardData.assetClasses.length > 0;
+	if (step === STEP.STRATEGIES) return Array.isArray(wizardData.strategies) && wizardData.strategies.length > 0;
+	if (step === STEP.CHECK_SIZE) return parseDollar(wizardData.checkSize || wizardData.maxCheckSize || wizardData.maxOperatorPct) > 0;
 	if (step === STEP.BASELINE) return wizardData.baselineIncome !== undefined && wizardData.baselineIncome !== null && wizardData.baselineIncome !== '';
 	return false;
 }
@@ -484,13 +657,12 @@ export function isFreeFlowComplete(wizardData = {}) {
 	const data = normalizeWizardData(wizardData);
 	return Boolean(
 		data._branch &&
+		data.accreditation.length > 0 &&
 		data.dealExperience !== undefined &&
 		data.reProfessional &&
-		data.baselineIncome !== undefined &&
 		data.assetClasses.length > 0 &&
 		data.strategies.length > 0 &&
-		data.maxOperatorPct &&
-		data.accreditation.length > 0
+		(parseDollar(data.checkSize) > 0 || parseDollar(data.maxCheckSize) > 0 || parseDollar(data.maxOperatorPct) > 0)
 	);
 }
 
@@ -499,7 +671,7 @@ export function isPaidFlowComplete(wizardData = {}) {
 	if (!isFreeFlowComplete(data)) return false;
 
 	const common = Boolean(
-		data.netWorth &&
+		(parseDollar(data.netWorth) > 0 || data.netWorthPreference === 'prefer_not_to_say') &&
 		data.capital12mo &&
 		data.triggerEvent &&
 		data.capitalReadiness &&
@@ -511,12 +683,17 @@ export function isPaidFlowComplete(wizardData = {}) {
 	if (!common) return false;
 
 	if (data._branch === 'growth') {
-		return Boolean(data.growthCapital && data.growthPriority && data.taxableIncomeBaseline);
+		return Boolean(data.growthCapital && data.growthPriority);
 	}
 	if (data._branch === 'tax') {
 		return Boolean(data.taxableIncome && data.taxableIncomeBaseline);
 	}
-	return Boolean(data.targetCashFlow);
+	return Boolean(
+		data.baselineIncome !== undefined &&
+		data.baselineIncome !== null &&
+		data.baselineIncome !== '' &&
+		data.targetCashFlow
+	);
 }
 
 export function hasCompletedPlan(wizardData = {}, portfolioPlan = null) {
@@ -525,6 +702,37 @@ export function hasCompletedPlan(wizardData = {}, portfolioPlan = null) {
 	if (Array.isArray(portfolioPlan?.slots) && portfolioPlan.slots.length > 0) return true;
 	if (Array.isArray(portfolioPlan?.buckets) && portfolioPlan.buckets.length > 0) return true;
 	return isPaidFlowComplete(data);
+}
+
+export function hasSavedWizardProgress(wizardData = {}, portfolioPlan = null) {
+	const data = normalizeWizardData(wizardData);
+	if (hasCompletedPlan(data, portfolioPlan)) return true;
+	return Boolean(
+		data._branch ||
+		data.goal ||
+		data.accreditation.length > 0 ||
+		(data.dealExperience !== undefined && data.dealExperience !== null && data.dealExperience !== '') ||
+		data.reProfessional ||
+		data.assetClasses.length > 0 ||
+		data.strategies.length > 0 ||
+		parseDollar(data.checkSize) > 0 ||
+		parseDollar(data.maxCheckSize) > 0 ||
+		parseDollar(data.maxOperatorPct) > 0 ||
+		(data.baselineIncome !== undefined && data.baselineIncome !== null && data.baselineIncome !== '') ||
+		parseDollar(data.targetCashFlow) > 0 ||
+		parseDollar(data.growthCapital) > 0 ||
+		parseDollar(data.taxableIncome) > 0 ||
+		parseDollar(data.taxableIncomeBaseline) > 0 ||
+		parseDollar(data.netWorth) > 0 ||
+		data.netWorthPreference === 'prefer_not_to_say' ||
+		data.capital12mo ||
+		data.triggerEvent ||
+		data.capitalReadiness ||
+		data.diversificationPref ||
+		data.operatorFocus ||
+		data.lockup ||
+		data.distributions
+	);
 }
 
 export function getStepSequence(wizardData = {}, { editing = false, includePaidFlow = false } = {}) {
@@ -544,12 +752,12 @@ export function getStepSequence(wizardData = {}, { editing = false, includePaidF
 	if (editing) {
 		return [
 			STEP.GOAL,
+			STEP.ACCREDITATION,
+			STEP.EXPERIENCE,
 			STEP.RE_PRO,
-			STEP.BASELINE,
 			STEP.ASSETS,
 			STEP.STRATEGIES,
-			STEP.RISK,
-			STEP.ACCREDITATION,
+			STEP.CHECK_SIZE,
 			...(STEP_SEQUENCE[paidKey] || STEP_SEQUENCE.paid_cashflow)
 		];
 	}
@@ -569,11 +777,12 @@ export function applyGoalDefaults(wizardData = {}, branch) {
 	next.goal = GOAL_CARDS.find((card) => card.branch === branch)?.goalValue || branch;
 
 	if (!next.assetClasses.length) {
-		if (branch === 'tax') next.assetClasses = ['Multi-Family', 'Oil & Gas / Energy', 'RV/Mobile Home Parks'];
+		if (branch === 'cashflow') next.assetClasses = ['Private Debt / Credit', 'Self Storage', 'Multi-Family'];
+		else if (branch === 'tax') next.assetClasses = ['Multi-Family', 'Oil & Gas / Energy', 'RV/Mobile Home Parks'];
 		else next.assetClasses = ['Multi-Family', 'Self Storage', 'Industrial'];
 	}
 	if (!next.strategies.length) {
-		if (branch === 'cashflow') next.strategies = ['Lending', 'Buy & Hold'];
+		if (branch === 'cashflow') next.strategies = ['Buy & Hold', 'Value-Add'];
 		else if (branch === 'growth') next.strategies = ['Value-Add', 'Distressed'];
 		else next.strategies = ['Value-Add', 'Development'];
 	}
@@ -635,155 +844,175 @@ export function planHeroCopy(wizardData = {}, plan = null) {
 	};
 }
 
-export function generatePortfolioPlan(wizardData = {}, deals = []) {
+function buildPlanMeta(wizardData = {}, deals = []) {
 	const data = normalizeWizardData(wizardData);
 	const branch = data._branch || 'cashflow';
 	const totalCapital = parseDollar(data.capital12mo) || parseDollar(data.growthCapital) || parseDollar(data.investableCapital) || 500000;
-	const checkSize = parseDollar(data.checkSize) || 100000;
-	const rawAssets = data.assetClasses || [];
+	const defaultCheckSize = parseDollar(data.checkSize) || 100000;
+	const globalTargetYield = normalizeRate(data.planTargetYieldPct);
+	const rawAssets = Array.isArray(data.assetClasses) ? data.assetClasses : [];
+	const currentYear = new Date().getFullYear();
 
 	let targetIncome = 0;
 	if (branch === 'cashflow') targetIncome = parseDollar(data.targetCashFlow) || 100000;
-	else if (branch === 'growth') targetIncome = Math.round(totalCapital * 0.15);
+	else if (branch === 'growth') targetIncome = parseDollar(data.growthCapital) || Math.round(totalCapital * 0.15);
 	else targetIncome = parseDollar(data.taxableIncome) || 100000;
 
-	const assetMap = {
-		'Multi Family': 'Multi-Family',
-		'Hotels / Hospitality': 'Hotels/Hospitality',
-		'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
-		'Short-Term Rentals': 'Short Term Rental',
-		'Oil & Gas': 'Oil & Gas / Energy',
-		SFH: 'Single Family',
-		'Single Family Homes': 'Single Family',
-		'NNN (Triple Net Lease)': 'NNN',
-		'Retail Shopping Centres': 'Retail'
+	let sourceAssets = rawAssets.map((asset) => normalizePlanAssetClass(asset)).filter(Boolean);
+	if (!sourceAssets.length) sourceAssets = ['Multi-Family'];
+
+	return {
+		data,
+		branch,
+		totalCapital,
+		defaultCheckSize,
+		targetIncome,
+		sourceAssets,
+		currentYear,
+		defaultDealsPerYear: Math.max(1, Math.min(4, Math.floor(totalCapital / Math.max(defaultCheckSize, 1) / 3) || 1)),
+		avgCocFor(assetClass) {
+			if (globalTargetYield > 0) return roundRate(globalTargetYield);
+			return averageDealYieldForAsset(assetClass, deals);
+		}
 	};
-	const lendingAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
-	let mappedAssets = rawAssets
-		.filter((asset) => !lendingAliases.includes(asset))
-		.map((asset) => assetMap[asset] || asset);
-	const wantsLending = rawAssets.some((asset) => lendingAliases.includes(asset));
-	if (wantsLending && !mappedAssets.includes('Lending')) mappedAssets.push('Lending');
-	if (!mappedAssets.length) mappedAssets = ['Multi-Family'];
+}
 
-	const cocByClass = {};
-	for (const deal of deals || []) {
-		if (deal?.isStale || deal?.status === 'Closed') continue;
-		const assetClass = deal?.assetClass || deal?.asset_class || '';
-		const coc = Number(deal?.cashOnCash || deal?.preferredReturn || 0);
-		if (coc > 0 && coc < 1) {
-			if (!cocByClass[assetClass]) cocByClass[assetClass] = [];
-			cocByClass[assetClass].push(coc);
-		}
-	}
+function slotStrategyForAsset(assetClass, branch) {
+	if (assetClass === 'Lending' || assetClass === 'Private Debt / Credit') return 'Lending';
+	if (branch === 'growth') return 'Value-Add';
+	if (branch === 'tax') return 'Development';
+	return 'Income';
+}
 
-	function avgCocFor(assetClass) {
-		if (Array.isArray(cocByClass[assetClass]) && cocByClass[assetClass].length > 0) {
-			return cocByClass[assetClass].reduce((sum, value) => sum + value, 0) / cocByClass[assetClass].length;
-		}
-		if (assetClass === 'Lending') {
-			const lendingYields = (deals || [])
-				.filter((deal) => String(deal?.strategy || '').toLowerCase() === 'lending')
-				.map((deal) => Number(deal?.cashOnCash || deal?.preferredReturn || 0))
-				.filter((value) => value > 0 && value < 1);
-			if (lendingYields.length) {
-				return lendingYields.reduce((sum, value) => sum + value, 0) / lendingYields.length;
-			}
-		}
-		return 0.08;
+function buildPlanFromSlots(meta, slots = [], generatedFrom = 'wizard_custom') {
+	const normalizedSlots = slots.map((slot, index) => {
+		const assetClass = normalizePlanAssetClass(slot?.asset_class || slot?.assetClass || meta.sourceAssets[index % meta.sourceAssets.length]);
+		const targetCoc = roundRate(slot?.target_coc ?? slot?.targetCoC ?? slot?.targetYield ?? slot?.yield) || meta.avgCocFor(assetClass);
+		const checkSize = parseDollar(slot?.check_size ?? slot?.checkSize ?? meta.defaultCheckSize);
+		const year = Number(slot?.year) || meta.currentYear + Math.floor(index / meta.defaultDealsPerYear);
+
+		return {
+			id: Number(slot?.id) || index + 1,
+			asset_class: assetClass,
+			strategy: slot?.strategy || slotStrategyForAsset(assetClass, meta.branch),
+			check_size: checkSize,
+			target_coc: targetCoc,
+			est_income: Math.round(checkSize * targetCoc),
+			year,
+			filled_by: slot?.filled_by ?? slot?.filledBy ?? null,
+			filled_name: slot?.filled_name ?? slot?.filledName ?? null
+		};
+	});
+
+	const totalCapital = normalizedSlots.length ? normalizedSlots.reduce((sum, slot) => sum + slot.check_size, 0) : meta.totalCapital;
+	const averageCheckSize = normalizedSlots.length ? Math.round(totalCapital / normalizedSlots.length) : meta.defaultCheckSize;
+	const yearCounts = normalizedSlots.reduce((counts, slot) => {
+		counts[slot.year] = (counts[slot.year] || 0) + 1;
+		return counts;
+	}, {});
+	const dealsPerYear = Math.max(1, ...Object.values(yearCounts), meta.defaultDealsPerYear);
+
+	return {
+		target_income: meta.targetIncome,
+		total_capital: totalCapital,
+		check_size: averageCheckSize,
+		deals_per_year: dealsPerYear,
+		blended_coc: normalizedSlots.length ? Math.round(average(normalizedSlots.map((slot) => slot.target_coc)) * 100) / 100 : meta.avgCocFor(meta.sourceAssets[0]),
+		slots: normalizedSlots,
+		buckets: normalizedSlots,
+		generated_from: generatedFrom
+	};
+}
+
+export function generatePortfolioPlan(wizardData = {}, deals = []) {
+	const meta = buildPlanMeta(wizardData, deals);
+	const data = meta.data;
+	if (Array.isArray(data.customPlanSlots) && data.customPlanSlots.length > 0) {
+		return buildPlanFromSlots(meta, data.customPlanSlots, 'wizard_custom');
 	}
 
 	const slots = [];
 	let runningIncome = 0;
 	let slotId = 1;
-	const currentYear = new Date().getFullYear();
-	const dealsPerYear = Math.max(1, Math.min(4, Math.floor(totalCapital / Math.max(checkSize, 1) / 3) || 1));
-	const maxSlots = Math.max(Math.ceil(totalCapital / Math.max(checkSize, 1)), 20);
+	const maxSlots = Math.max(Math.ceil(meta.totalCapital / Math.max(meta.defaultCheckSize, 1)), 20);
 	let assetIndex = 0;
 
-	while (runningIncome < targetIncome && slots.length < maxSlots) {
-		const assetClass = mappedAssets[assetIndex % mappedAssets.length];
-		const coc = avgCocFor(assetClass);
-		const estIncome = Math.round(checkSize * coc);
-		const year = currentYear + Math.floor(slots.length / dealsPerYear);
-
+	while (runningIncome < meta.targetIncome && slots.length < maxSlots) {
+		const assetClass = meta.sourceAssets[assetIndex % meta.sourceAssets.length];
+		const targetCoc = meta.avgCocFor(assetClass);
+		const checkSize = meta.defaultCheckSize;
 		slots.push({
 			id: slotId,
 			asset_class: assetClass,
-			strategy: assetClass === 'Lending' ? 'Lending' : branch === 'growth' ? 'Value-Add' : 'Income',
+			strategy: slotStrategyForAsset(assetClass, meta.branch),
 			check_size: checkSize,
-			target_coc: Math.round(coc * 100) / 100,
-			est_income: estIncome,
-			year,
+			target_coc: targetCoc,
+			est_income: Math.round(checkSize * targetCoc),
+			year: meta.currentYear + Math.floor(slots.length / meta.defaultDealsPerYear),
 			filled_by: null,
 			filled_name: null
 		});
-
-		runningIncome += estIncome;
+		runningIncome += Math.round(checkSize * targetCoc);
 		slotId += 1;
 		assetIndex += 1;
 	}
 
-	return {
-		target_income: targetIncome,
-		total_capital: totalCapital,
-		check_size: checkSize,
-		deals_per_year: dealsPerYear,
-		blended_coc: slots.length ? Math.round((slots.reduce((sum, slot) => sum + slot.target_coc, 0) / slots.length) * 100) / 100 : 0.08,
-		slots,
-		buckets: slots,
-		generated_from: 'wizard'
-	};
+	return buildPlanFromSlots(meta, slots, 'wizard');
 }
 
 export function wizardSummaryRows(wizardData = {}) {
 	const data = normalizeWizardData(wizardData);
 	const branchLabel = data._branch === 'growth' ? 'Equity Growth' : data._branch === 'tax' ? 'Tax Optimization' : 'Cash Flow';
-	const riskLabels = {
-		'10': 'Very conservative',
-		'20': 'Moderate',
-		'33': 'Concentrated',
-		'50': 'High conviction',
-		no_limit: 'No limit'
-	};
-	const diversificationLabels = {
-		focused: 'Focused (1-2 types)',
-		balanced: 'Balanced (3-4)',
-		wide: 'Maximum'
-	};
-	const lockLabels = {
-		flexible: 'Flexible',
-		'1': '1 year',
-		'3': '3 years',
-		'5': '5 years',
-		'5+': '5+ years'
-	};
-	const distributionLabels = {
-		Monthly: 'Monthly',
-		Quarterly: 'Quarterly',
-		Annual: 'Annually',
-		Any: 'Flexible'
-	};
+	const assetDisplay = (value) => normalizePlanAssetClass(value);
 
 	const rows = [
-		{ label: 'Primary Goal', value: branchLabel },
-		{ label: 'Passive Investments', value: data.dealExperience ?? '—' },
-		{ label: 'Current Income', value: `${formatCompactMoney(data.baselineIncome)}/yr` },
-		{ label: 'Asset Classes', value: data.assetClasses.join(', ') || '—' },
-		{ label: 'Strategies', value: data.strategies.join(', ') || '—' }
+		{ step: STEP.GOAL, label: 'Primary Goal', value: branchLabel },
+		{
+			step: STEP.ACCREDITATION,
+			label: 'Accreditation',
+			value: listAnswer(data.accreditation, (value) => ACCREDITATION_OPTIONS.find((option) => option.value === value)?.label || value)
+		},
+		{ step: STEP.EXPERIENCE, label: 'Passive Investments', value: data.dealExperience ?? data.lpDealsCount ?? 'Not answered' },
+		{ step: STEP.RE_PRO, label: 'Real Estate Professional', value: optionLabel(RE_PRO_OPTIONS, data.reProfessional) },
+		{ step: STEP.ASSETS, label: 'Asset Classes', value: listAnswer(data.assetClasses, assetDisplay) },
+		{ step: STEP.STRATEGIES, label: 'Strategies', value: listAnswer(data.strategies, (value) => STRATEGY_OPTIONS[value]?.label || value) },
+		{ step: STEP.CHECK_SIZE, label: 'Max Check Size', value: parseDollar(data.checkSize || data.maxCheckSize || data.maxOperatorPct) > 0 ? checkSizeLabel(data.checkSize || data.maxCheckSize || data.maxOperatorPct) : 'Not answered' }
 	];
 
-	if (data._branch === 'cashflow') rows.push({ label: '12-Month Target', value: `${formatCompactMoney(data.targetCashFlow)}/yr` });
-	if (data._branch === 'growth') rows.push({ label: 'Growth Target', value: formatCompactMoney(data.growthCapital) });
-	if (data._branch === 'tax') rows.push({ label: 'Shelter Target', value: formatCompactMoney(data.taxableIncome) });
+	if (data._branch === 'cashflow') {
+		rows.push(
+			{ step: STEP.BASELINE, label: 'Where are you starting from?', value: moneyAnswer(data.baselineIncome, { perYear: true, allowZero: true }) },
+			{ step: STEP.CF_TARGET, label: '12-Month Target', value: moneyAnswer(data.targetCashFlow, { perYear: true }) }
+		);
+	}
+	if (data._branch === 'growth') {
+		rows.push(
+			{ step: STEP.GROWTH_TARGET, label: 'Growth Target', value: moneyAnswer(data.growthCapital) },
+			{ step: STEP.GROWTH_PRIORITY, label: 'Growth Priority', value: optionLabel(GROWTH_PRIORITY_OPTIONS, data.growthPriority) }
+		);
+	}
+	if (data._branch === 'tax') {
+		rows.push(
+			{ step: STEP.TAX_TARGET, label: 'Shelter Target', value: moneyAnswer(data.taxableIncome) },
+			{ step: STEP.TAX_BASELINE, label: 'Pre-Tax Income', value: moneyAnswer(data.taxableIncomeBaseline, { perYear: true }) }
+		);
+	}
+
+	rows.push({
+		step: STEP.NET_WORTH,
+		label: 'Net Worth',
+		value: data.netWorthPreference === 'prefer_not_to_say' ? 'Prefer not to say' : moneyAnswer(data.netWorth)
+	});
 
 	rows.push(
-		{ label: 'Net Worth', value: formatCompactMoney(data.netWorth) },
-		{ label: '12-Month Capital', value: data.capital12mo || '—' },
-		{ label: 'Risk Tolerance', value: riskLabels[data.maxOperatorPct] || '—' },
-		{ label: 'Diversification', value: diversificationLabels[data.diversificationPref] || '—' },
-		{ label: 'Lockup', value: lockLabels[data.lockup] || '—' },
-		{ label: 'Distributions', value: distributionLabels[data.distributions] || '—' }
+		{ step: STEP.CAPITAL, label: '12-Month Capital', value: optionLabel(CAPITAL_OPTIONS, data.capital12mo) },
+		{ step: STEP.SOURCE, label: 'Capital Source', value: optionLabel(SOURCE_OPTIONS, data.triggerEvent) },
+		{ step: STEP.READINESS, label: 'Capital Ready In', value: optionLabel(READINESS_OPTIONS, data.capitalReadiness) },
+		{ step: STEP.DIVERSIFICATION, label: 'Diversification', value: optionLabel(DIVERSIFICATION_OPTIONS, data.diversificationPref) },
+		{ step: STEP.OPERATOR_FOCUS, label: 'Operator Breadth', value: optionLabel(OPERATOR_FOCUS_OPTIONS, data.operatorFocus) },
+		{ step: STEP.LOCKUP, label: 'Lockup', value: optionLabel(LOCKUP_OPTIONS, data.lockup) },
+		{ step: STEP.DISTRIBUTIONS, label: 'Distributions', value: optionLabel(DISTRIBUTION_OPTIONS, data.distributions) },
+		{ step: STEP.LP_NETWORK, label: 'LP Network', value: data.sharePortfolio === true ? 'Yes' : 'No' }
 	);
 
 	return rows;

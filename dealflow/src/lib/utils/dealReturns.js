@@ -1,18 +1,21 @@
+import { normalizeAssetClassValue } from '$lib/utils/dealReviewSchema.js';
+
 export const MAX_HISTORICAL_RETURN_YEARS = 5;
 export const MIN_RETURN_POINTS_FOR_CHART = 2;
 
 const RETURN_SERIES_KEYS = ['historicalReturns', 'historical_returns', 'annualReturns', 'annual_returns'];
 
 export function isDebtOrLendingDeal(deal) {
-	const assetClass = String(deal?.assetClass || deal?.asset_class || '').toLowerCase();
+	const assetClass = normalizeAssetClassValue(deal?.assetClass || deal?.asset_class);
+	const normalizedAssetClass = String(assetClass || '').toLowerCase();
 	const strategy = String(deal?.strategy || '').toLowerCase();
 	const instrument = String(deal?.instrument || '').toLowerCase();
 	const name = String(deal?.investmentName || deal?.investment_name || '').toLowerCase();
 
 	if (instrument === 'debt') return true;
 	if (strategy === 'lending') return true;
-	if (assetClass === 'lending') return true;
-	if (assetClass.includes('credit') || assetClass.includes('debt')) return true;
+	if (normalizedAssetClass === 'private debt / credit') return true;
+	if (normalizedAssetClass.includes('credit') || normalizedAssetClass.includes('debt')) return true;
 
 	if (name.includes('debt fund') || name.includes('credit fund') || name.includes('income fund')) {
 		if (strategy === 'lending' || instrument === 'debt' || instrument === 'preferred equity' || deal?.debtPosition || deal?.debt_position) {
