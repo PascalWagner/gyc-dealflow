@@ -1268,38 +1268,44 @@
 
 				<!-- ==================== JOURNEY BAR ==================== -->
 				<div class="journey-bar">
-					{#each stages as stage, i}
-						{#if i > 0}
-							<div class="journey-connector" class:done={currentStageIdx >= i}></div>
-						{/if}
-						<button
-							class="journey-step"
-							class:active={currentStage === stage.key}
-							class:completed={currentStageIdx > i}
-							class:skipped={currentStage === 'skipped' && i === 0}
-							onclick={() => setStage(stage.key)}
-						>
+					<div class="journey-process-group">
+						{#each stages as stage, i}
+							{#if i > 0}
+								<div class="journey-connector journey-arrow" class:done={currentStageIdx >= i}>
+									<svg viewBox="0 0 8 12" width="8" height="12" fill="none"><path d="M1 1l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+								</div>
+							{/if}
+							<button
+								class="journey-step"
+								class:active={currentStage === stage.key}
+								class:completed={currentStageIdx > i}
+								class:skipped={currentStage === 'skipped' && i === 0}
+								onclick={() => setStage(stage.key)}
+							>
+								<div class="step-dot">
+									{#if currentStageIdx > i}
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+									{:else}
+										{stage.num}
+									{/if}
+								</div>
+								{stage.label}
+							</button>
+						{/each}
+					</div>
+					<div class="journey-outcome-divider"></div>
+					<div class="journey-outcome-group">
+						<button class="journey-step journey-step-skip" class:active={currentStage === 'skipped'} class:skipped={currentStage === 'skipped'} onclick={skipDeal}>
 							<div class="step-dot">
-								{#if currentStageIdx > i}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+								{#if currentStage === 'skipped'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 								{:else}
-									{stage.num}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 								{/if}
 							</div>
-							{stage.label}
+							Skipped
 						</button>
-					{/each}
-					<div class="journey-connector" class:done={currentStage === 'skipped'}></div>
-					<button class="journey-step journey-step-skip" class:active={currentStage === 'skipped'} class:skipped={currentStage === 'skipped'} onclick={skipDeal}>
-						<div class="step-dot">
-							{#if currentStage === 'skipped'}
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-							{:else}
-								6
-							{/if}
-						</div>
-						Skipped
-					</button>
+					</div>
 				</div>
 
 				<!-- ==================== PART 1: THE OPPORTUNITY ==================== -->
@@ -1976,7 +1982,7 @@
 			</div><!-- /deal-page-content -->
 
 			<!-- ==================== STICKY ACTION BAR ==================== -->
-			<div class="sticky-action-bar">
+			<div class="sticky-action-bar"><div class="sticky-action-bar-inner">
 				{#if currentStage === 'filter' || !currentStage}
 					<button class="btn-pass" onclick={skipDeal}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -2036,7 +2042,7 @@
 						Reconsider Deal &rarr;
 					</button>
 				{/if}
-			</div>
+			</div></div>
 		{/if}
 	</div>
 </main>
@@ -2269,8 +2275,11 @@
 	.archived-banner { background: rgba(138,154,160,0.08); border: 1px solid rgba(138,154,160,0.2); border-radius: 8px; padding: 14px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-family: var(--font-ui); font-size: 13px; }
 	.archived-banner strong { color: var(--text-secondary); font-weight: 700; }
 	.archived-banner span { color: var(--text-muted); font-size: 12px; margin-left: 8px; }
-	.journey-bar { display: flex; align-items: center; justify-content: space-between; gap: 0; margin-bottom: 18px; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; }
-	.journey-step { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: default; padding: 2px 6px; border-radius: 10px; transition: all 0.2s; font-family: var(--font-ui); font-size: 9px; font-weight: 700; color: var(--text-muted); white-space: nowrap; text-align: center; background: none; border: none; text-transform: uppercase; letter-spacing: 0.35px; }
+	.journey-bar { display: flex; align-items: center; gap: 0; margin: 0 auto 18px; padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; max-width: 680px; width: 100%; }
+	.journey-process-group { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+	.journey-outcome-divider { width: 1px; height: 28px; background: var(--border); margin: 0 12px; flex-shrink: 0; align-self: center; }
+	.journey-outcome-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+	.journey-step { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: default; padding: 4px 8px; border-radius: 8px; transition: all 0.2s; font-family: var(--font-ui); font-size: 9px; font-weight: 700; color: var(--text-muted); white-space: nowrap; text-align: center; background: none; border: none; text-transform: uppercase; letter-spacing: 0.35px; }
 	.journey-step:hover { background: var(--bg-cream); color: var(--text-dark); }
 	.step-dot { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--bg-page); transition: all 0.2s; flex-shrink: 0; }
 	.journey-step.active .step-dot { background: var(--primary); border-color: var(--primary); color: #fff; }
@@ -2279,6 +2288,10 @@
 	.journey-step.completed { color: var(--text-dark); }
 	.journey-step.skipped .step-dot { background: #D04040; border-color: #D04040; color: #fff; }
 	.journey-step.skipped { color: #D04040; }
+	.journey-step-skip { opacity: 0.7; }
+	.journey-step-skip.active, .journey-step-skip.skipped { opacity: 1; }
+	.journey-arrow { display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--border); margin-top: -12px; }
+	.journey-arrow.done { color: var(--primary); }
 	.journey-connector { flex: 1; min-width: 12px; max-width: 34px; height: 2px; background: var(--border); align-self: center; margin-top: -12px; }
 	.journey-connector.done { background: var(--primary); }
 	.data-completeness { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; font-family: var(--font-ui); }
@@ -2835,7 +2848,8 @@
 		background: var(--text-muted) !important;
 		font-size: 9px;
 	}
-	.sticky-action-bar { position: fixed; bottom: 16px; left: calc(var(--sidebar-width, 240px) + 24px); right: 24px; background: var(--bg-card); border: 1px solid var(--border); padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-radius: 12px; }
+	.sticky-action-bar { position: fixed; bottom: 16px; left: calc(var(--sidebar-width, 240px) + 24px); right: 24px; display: flex; align-items: center; justify-content: center; z-index: 100; }
+	.sticky-action-bar-inner { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
 	.btn-pass { padding: 9px 18px; border: 1px solid var(--border); background: var(--bg-card); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; }
 	.btn-pass:hover { border-color: #ef4444; color: #ef4444; }
 	.btn-advance { padding: 9px 18px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
@@ -3005,14 +3019,10 @@
 			left: 16px;
 			right: 16px;
 			bottom: calc(var(--deal-mobile-tab-bar-offset) + 12px);
-			padding: 10px 16px;
-			gap: 8px;
-			border-radius: 12px;
-			border-left: 1px solid var(--border);
-			border-right: 1px solid var(--border);
 		}
-		.sticky-action-bar .btn-pass, .sticky-action-bar .btn-advance { padding: 8px 14px; font-size: 12px; }
-		.sticky-action-bar .stage-label { font-size: 11px; }
+		.sticky-action-bar-inner { padding: 10px 16px; gap: 8px; }
+		.sticky-action-bar-inner .btn-pass, .sticky-action-bar-inner .btn-advance { padding: 8px 14px; font-size: 12px; }
+		.sticky-action-bar-inner .stage-label { font-size: 11px; }
 		.deal-page-content { padding-bottom: calc(var(--deal-mobile-tab-bar-offset) + 108px); }
 		.floating-compare-badge { bottom: calc(var(--deal-mobile-tab-bar-offset) + 88px); }
 		.metrics-strip { grid-template-columns: repeat(3, 1fr); }
@@ -3079,10 +3089,10 @@
 			flex-direction: column;
 			gap: 3px;
 		}
-		.journey-bar { padding: 12px 16px; gap: 0; justify-content: space-between; overflow: visible; }
-		.journey-step { padding: 4px; font-size: 9px; flex-direction: column; text-align: center; gap: 4px; }
-		.step-dot { width: 32px; height: 32px; font-size: 12px; }
-		.journey-connector { width: 20px; min-width: 12px; flex: 1; }
+		.journey-bar { padding: 8px 12px; max-width: 100%; }
+		.journey-step { padding: 3px 5px; font-size: 8px; }
+		.step-dot { width: 28px; height: 28px; font-size: 11px; }
+		.journey-outcome-divider { height: 24px; margin: 0 8px; }
 		.hero-type-icon svg { width: 80px; height: 80px; }
 		.deal-tags { flex-wrap: wrap; gap: 6px !important; }
 		.deal-tag { font-size: 11px !important; padding: 3px 10px !important; }
@@ -3110,10 +3120,11 @@
 		.action-buttons { flex-direction: column; }
 		.btn-action { justify-content: center; width: 100%; }
 		.geo-info { flex-direction: column; gap: 12px; }
-		.journey-bar { padding: 10px 8px; }
-		.journey-step { padding: 2px; font-size: 8px; }
-		.step-dot { width: 28px; height: 28px; font-size: 11px; }
-		.journey-connector { width: 8px; min-width: 8px; }
+		.journey-bar { padding: 6px 6px; }
+		.journey-step { padding: 2px 3px; font-size: 7px; }
+		.step-dot { width: 24px; height: 24px; font-size: 10px; }
+		.journey-arrow svg { width: 6px; height: 10px; }
+		.journey-outcome-divider { height: 20px; margin: 0 6px; }
 		.hero-social-proof { font-size: 12px; gap: 10px; }
 		.sp-avatar { width: 26px; height: 26px; font-size: 9px; }
 		.dd-perspective-links { flex-direction: column; }
