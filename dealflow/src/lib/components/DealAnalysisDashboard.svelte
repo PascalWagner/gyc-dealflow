@@ -46,6 +46,35 @@
 	const sponsorHasDetails = $derived(!!(deal?.ceo || deal?.mcFoundingYear || deal?.investingGeography));
 	const fullCycleDeals = $derived(deal?.mcFullCycleExits ?? deal?.mcFullCycleDeals ?? null);
 	const hasTrackRecordStats = $derived(!!(deal?.mcFoundingYear || deal?.fundAUM || fullCycleDeals));
+	const hasBgCheckData = $derived(!!(bgCheck || bgCheckLoading));
+
+	// Sample fallbacks for preview
+	const sampleSponsor = { ceo: 'John Smith', founded: 2012, location: 'Dallas, TX' };
+	const sampleTrackRecord = [
+		{ value: '12+ years', label: 'Operating' },
+		{ value: '$340M', label: 'Under Mgmt' },
+		{ value: '3 exits', label: 'Full-cycle' }
+	];
+	const sampleBgSources = [
+		{ label: 'SEC EDGAR', status: 'clear', detail: '3 filings' },
+		{ label: 'FINRA', status: 'clear', detail: 'Clear' },
+		{ label: 'OFAC', status: 'clear', detail: 'Clear' }
+	];
+	const sampleRisks = [
+		{ label: 'Liquidity risk', detail: 'Your capital is locked for 5 years. There is no redemption provision for early exit.' },
+		{ label: 'Execution risk', detail: 'Returns depend on the sponsor deploying capital into quality loans on schedule.' },
+		{ label: 'Interest rate risk', detail: 'Fund yields may fluctuate with changes in the broader interest rate environment.' }
+	];
+	const sampleCompensations = [
+		{ title: '9.5% Preferred Return', subtitle: 'You are paid first before sponsor participation' },
+		{ title: '80/20 Profit Split', subtitle: 'LP-favorable split after preferred return is met' },
+		{ title: 'Quarterly Distributions', subtitle: 'Regular income paid every quarter' },
+		{ title: '5% Sponsor Co-Investment', subtitle: 'Sponsor investing alongside LPs \u2014 aligned interests' }
+	];
+	const sampleGaps = [
+		{ label: 'Financials are unaudited', detail: 'No audited financial statements on file' },
+		{ label: 'No third-party appraisal on file', detail: 'Property valuations have not been independently verified' }
+	];
 
 	const layers = $derived([
 		{
@@ -320,9 +349,9 @@
 									{#if showRisks.length > 0}
 										<div class="rc-items">
 											{#each showRisks as risk}
-												<div class="rc-risk-card">
-													<div class="rc-risk-label">{risk.label}</div>
-													<div class="rc-risk-detail">{risk.detail}</div>
+												<div class="rc-insight-card">
+													<div class="rc-insight-title">{risk.label}</div>
+													<div class="rc-insight-detail">{risk.detail}</div>
 												</div>
 											{/each}
 										</div>
@@ -336,11 +365,11 @@
 								<div class="rc-section">
 									<div class="rc-section-title">WHAT YOU'RE BEING COMPENSATED WITH</div>
 									{#if showComps.length > 0}
-										<div class="rc-comp-list">
+										<div class="rc-items">
 											{#each showComps as comp}
-												<div class="rc-comp-row">
-													<span class="rc-comp-value">{comp.label}{#if comp.value} {comp.value}{/if}</span>
-													<span class="rc-comp-detail">{comp.detail}</span>
+												<div class="rc-insight-card">
+													<div class="rc-insight-title">{comp.title}</div>
+													<div class="rc-insight-detail">{comp.subtitle}</div>
 												</div>
 											{/each}
 										</div>
@@ -354,16 +383,18 @@
 								<div class="rc-section">
 									<div class="rc-section-title">WHAT'S NOT COVERED</div>
 									{#if showGaps.length > 0}
-										<div class="rc-gap-list">
+										<div class="rc-items">
 											{#each showGaps as gap}
-												<div class="rc-gap-row">
-													<span class="rc-gap-dot"></span>
-													<span class="rc-gap-label">{gap.label}{#if gap.field} not provided{/if}</span>
+												<div class="rc-insight-card">
+													<div class="rc-insight-title">{gap.label}{#if gap.field} Not Provided{/if}</div>
+													{#if gap.detail}
+														<div class="rc-insight-detail">{gap.detail}</div>
+													{/if}
 												</div>
 											{/each}
 										</div>
 									{:else}
-										<div class="ad-empty"><p>No missing-data gaps are flagged for this deal yet.</p></div>
+										<p class="rc-no-gaps">No missing-data gaps are flagged for this deal.</p>
 									{/if}
 								</div>
 							{/if}
@@ -738,7 +769,7 @@
 
 	/* Risk & Compensation stacked sections */
 	.rc-section {
-		margin-bottom: 4px;
+		margin-bottom: 8px;
 	}
 	.rc-section-title {
 		font-family: var(--font-ui);
@@ -752,88 +783,40 @@
 	.rc-divider {
 		height: 1px;
 		background: var(--border-light);
-		margin: 16px 0;
+		margin: 20px 0;
 	}
 
-	/* Risk cards */
+	/* Insight cards (shared across risks, compensation, gaps) */
 	.rc-items {
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
 	}
-	.rc-risk-card {
+	.rc-insight-card {
 		padding: 12px 14px;
 		border: 1px solid var(--border-light);
 		border-radius: var(--radius-sm, 6px);
 		background: var(--bg-cream);
 	}
-	.rc-risk-label {
+	.rc-insight-title {
 		font-family: var(--font-ui);
 		font-size: 13px;
 		font-weight: 700;
 		color: var(--text-dark);
 		margin-bottom: 4px;
 	}
-	.rc-risk-detail {
+	.rc-insight-detail {
 		font-family: var(--font-body);
 		font-size: 12px;
 		color: var(--text-secondary);
 		line-height: 1.5;
 	}
-
-	/* Compensation list */
-	.rc-comp-list {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-	.rc-comp-row {
-		display: flex;
-		gap: 12px;
-		align-items: baseline;
-	}
-	.rc-comp-value {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-		white-space: nowrap;
-		min-width: 60px;
-	}
-	.rc-comp-detail {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-secondary);
-	}
-
-	/* Gaps list */
-	.rc-gap-list {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-	.rc-gap-row {
-		display: flex;
-		gap: 10px;
-		align-items: center;
-	}
-	.rc-gap-dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: var(--text-muted);
-		flex-shrink: 0;
-	}
-	.rc-gap-label {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-muted);
-	}
-	.rc-empty {
+	.rc-no-gaps {
 		font-family: var(--font-body);
 		font-size: 13px;
 		color: var(--text-muted);
-		padding: 4px 0;
+		padding: 8px 0 0;
+		margin: 0;
 	}
 
 	/* Data Completeness bar */

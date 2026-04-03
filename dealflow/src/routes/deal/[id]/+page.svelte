@@ -6,6 +6,7 @@
 	import InvestingGeographyMap from '$lib/components/InvestingGeographyMap.svelte';
 	import DealOpportunityCard from '$lib/components/DealOpportunityCard.svelte';
 	import DealAnalysisDashboard from '$lib/components/DealAnalysisDashboard.svelte';
+	import ComingSoonOverlay from '$lib/components/ComingSoonOverlay.svelte';
 	import DealDisclaimer from '$lib/components/DealDisclaimer.svelte';
 	import DealReturnsMiniChart from '$lib/components/DealReturnsMiniChart.svelte';
 	import DealModalLayer from '$lib/components/deal/DealModalLayer.svelte';
@@ -1587,14 +1588,15 @@
 
 				<!-- ==================== STRESS TEST CALCULATOR ==================== -->
 				{#if deal && !isCredit}
-					<div class="section flow-order-55">
+					<div class="section flow-order-65">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
 							<span class="section-title">Stress Test Calculator</span>
 							<span class="investclearly-preview-pill coming-soon">Coming Soon</span>
 						</div>
-						<div class="section-body" style="position:relative;min-height:120px;overflow:hidden;">
-							<div class="investclearly-preview-surface" aria-hidden="true">
+						<div class="section-body">
+							<ComingSoonOverlay label="Coming Soon" description="Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.">
+							<div>
 								<div class="st-base-case">
 									<div class="st-base-title">Base Case from Deal Data</div>
 									<div class="st-base-pills">
@@ -1666,12 +1668,9 @@
 									</div>
 								{/if}
 							</div>
-						<div class="investclearly-coming-soon-overlay">
-							<div class="investclearly-coming-soon-badge">Coming Soon</div>
-							<div class="investclearly-coming-soon-copy">Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.</div>
+							</ComingSoonOverlay>
 						</div>
 					</div>
-				</div>
 				{/if}
 
 				<!-- ==================== SIMILAR DEALS ==================== -->
@@ -2179,6 +2178,7 @@
 		.flow-order-50 { order: 50; }
 	.flow-order-55 { order: 55; }
 	.flow-order-60 { order: 60; }
+	.flow-order-65 { order: 65; }
 	.flow-order-70 { order: 70; }
 	.flow-order-80 { order: 80; }
 	.flow-order-90 { order: 90; }
@@ -2678,11 +2678,7 @@
 	.gate-title { font-family: var(--font-ui); font-size: 15px; font-weight: 800; color: var(--text-dark); margin-bottom: 4px; }
 	.gate-text { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.5; }
 	.gate-cta { display: inline-block; padding: 10px 24px; background: var(--primary); color: #fff; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; font-weight: 700; text-decoration: none; }
-	.coming-soon-section { position: relative; min-height: 120px; }
-	.coming-soon-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; text-align: center; padding: 32px 48px; background: rgba(255,255,255,0.92); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-	.coming-soon-label { font-family: var(--font-ui); font-size: 20px; font-weight: 800; color: var(--text-dark); margin-bottom: 6px; }
-	.coming-soon-desc { font-size: 13px; color: var(--text-secondary); }
-	.coming-soon-placeholder { opacity: 0.15; pointer-events: none; user-select: none; }
+	/* Deferred section overlay (now handled by ComingSoonOverlay component) */
 	.qa-placeholder-item { padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-secondary); }
 	.qa-placeholder-item:last-child { border-bottom: none; }
 	.community-stat { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 10px; }

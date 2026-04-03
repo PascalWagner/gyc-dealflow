@@ -210,29 +210,30 @@ function extractCompensation(deal) {
 
 	if (deal.preferredReturn) {
 		const pref = deal.preferredReturn > 1 ? deal.preferredReturn : deal.preferredReturn * 100;
-		items.push({ label: 'Preferred return', value: `${pref.toFixed(1)}%`, detail: 'you get paid first' });
+		items.push({ title: `${pref.toFixed(1)}% Preferred Return`, subtitle: 'You are paid first before sponsor participation' });
 	}
 
 	if (deal.lpGpSplit) {
-		items.push({ label: deal.lpGpSplit, value: '', detail: 'LP-favorable split after pref hurdle' });
+		items.push({ title: `${deal.lpGpSplit} Profit Split`, subtitle: 'LP-favorable split after preferred return is met' });
 	}
 
 	if (deal.distributions && deal.distributions !== 'Unknown' && deal.distributions !== 'None') {
-		items.push({ label: deal.distributions.toLowerCase(), value: '', detail: `${deal.distributions.toLowerCase()} distributions for regular cash` });
+		const freq = deal.distributions.charAt(0).toUpperCase() + deal.distributions.slice(1).toLowerCase();
+		items.push({ title: `${freq} Distributions`, subtitle: `Regular income paid every ${freq.toLowerCase().replace('ly', '').replace('month', 'month').replace('quarter', 'quarter')}` });
 	}
 
 	if (deal.sponsorInDeal) {
 		const pct = deal.sponsorInDeal > 1 ? deal.sponsorInDeal : deal.sponsorInDeal * 100;
-		items.push({ label: `${pct.toFixed(0)}%`, value: '', detail: 'sponsor co-investing alongside LPs' });
+		items.push({ title: `${pct.toFixed(0)}% Sponsor Co-Investment`, subtitle: 'Sponsor investing alongside LPs \u2014 aligned interests' });
 	}
 
 	if (deal.targetIRR) {
 		const irr = deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100;
-		items.push({ label: 'Target IRR', value: `${irr.toFixed(1)}%`, detail: 'projected total annualized return' });
+		items.push({ title: `${irr.toFixed(1)}% Target IRR`, subtitle: 'Projected annualized return (not guaranteed)' });
 	}
 
 	if (deal.equityMultiple) {
-		items.push({ label: 'Equity Multiple', value: `${deal.equityMultiple.toFixed(2)}x`, detail: 'total cash returned per dollar invested' });
+		items.push({ title: `${deal.equityMultiple.toFixed(2)}x Equity Multiple`, subtitle: 'Total cash returned per dollar invested' });
 	}
 
 	return items;
@@ -242,24 +243,24 @@ export function computeDataGaps(deal) {
 	if (!deal) return [];
 	const gaps = [];
 	const criticalFields = [
-		{ key: 'targetIRR', label: 'Target IRR' },
-		{ key: 'investmentMinimum', label: 'Minimum Investment' },
-		{ key: 'holdPeriod', label: 'Hold Period' },
-		{ key: 'offeringType', label: 'Offering Type' },
-		{ key: 'distributions', label: 'Distribution Frequency' },
-		{ key: 'fees', label: 'Fee Schedule' },
-		{ key: 'managementCompany', label: 'Management Company' },
-		{ key: 'investingGeography', label: 'Investing Geography' },
-		{ key: 'deckUrl', label: 'Investment Deck' },
-		{ key: 'strategy', label: 'Investment Strategy' }
+		{ key: 'targetIRR', label: 'Target IRR', detail: 'No projected return target has been disclosed' },
+		{ key: 'investmentMinimum', label: 'Minimum Investment', detail: 'Minimum check size is not specified' },
+		{ key: 'holdPeriod', label: 'Hold Period', detail: 'Expected investment duration is unknown' },
+		{ key: 'offeringType', label: 'Offering Type', detail: 'SEC offering type has not been identified' },
+		{ key: 'distributions', label: 'Distribution Frequency', detail: 'Payment schedule has not been specified' },
+		{ key: 'fees', label: 'Fee Schedule', detail: 'Management and performance fees are not disclosed' },
+		{ key: 'managementCompany', label: 'Management Company', detail: 'No operating entity is linked to this deal' },
+		{ key: 'investingGeography', label: 'Investing Geography', detail: 'Target markets or regions are not specified' },
+		{ key: 'deckUrl', label: 'Investment Deck', detail: 'No pitch deck or offering materials available' },
+		{ key: 'strategy', label: 'Investment Strategy', detail: 'Investment approach has not been categorized' }
 	];
 
 	for (const field of criticalFields) {
 		const val = deal[field.key];
 		if (val === null || val === undefined || val === '' || val === 0) {
-			gaps.push({ field: field.key, label: field.label });
+			gaps.push({ field: field.key, label: field.label, detail: field.detail });
 		} else if (field.key === 'distributions' && (val === 'Unknown' || val === 'None')) {
-			gaps.push({ field: field.key, label: field.label });
+			gaps.push({ field: field.key, label: field.label, detail: field.detail });
 		}
 	}
 
