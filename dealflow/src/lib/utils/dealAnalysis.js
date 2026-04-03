@@ -7,6 +7,7 @@
 
 import { getDealOperatorName } from './dealSponsors.js';
 import { normalizeAssetClassValue } from './dealReviewSchema.js';
+import { isDebtOrLendingDeal } from './dealReturns.js';
 
 // ===== Summary Line Builders =====
 // Each returns a short factual sentence (no judgments) for accordion headers.
@@ -285,17 +286,24 @@ export function buildGoalProjection(deal, goal, investmentAmount) {
 }
 
 function buildCashflowProjection(deal, amount) {
-	const rate = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
+	// For lending/credit deals, prioritize cashYield (historical average) over preferredReturn
+	const isCredit = isDebtOrLendingDeal(deal);
+	const rate = isCredit
+		? (deal.cashYield || deal.cash_yield || deal.cashOnCash || deal.cash_on_cash || deal.preferredReturn || deal.preferred_return || 0)
+		: (deal.preferredReturn || deal.preferred_return || deal.cashOnCash || deal.cash_on_cash || deal.cashYield || deal.cash_yield || deal.targetIRR || deal.target_irr || 0);
 	const annualRate = rate > 1 ? rate / 100 : rate;
 	if (annualRate <= 0) return { type: 'cashflow', headline: 'Cash flow data not available', monthly: 0, annual: 0, detail: 'This deal does not have enough return data to project income.' };
 	const annual = amount * annualRate;
 	const monthly = annual / 12;
+	const basisLabel = isCredit && (deal.cashYield || deal.cash_yield)
+		? 'average historical return'
+		: 'preferred return';
 	return {
 		type: 'cashflow',
 		headline: `~${formatMoneyShort(monthly)}/mo projected income`,
 		monthly,
 		annual,
-		detail: `Based on ${(annualRate * 100).toFixed(1)}% preferred return at ${formatMoneyShort(amount)} minimum. Actual returns may vary.`
+		detail: `Based on ${(annualRate * 100).toFixed(1)}% ${basisLabel} at ${formatMoneyShort(amount)} minimum. Actual returns may vary.`
 	};
 }
 

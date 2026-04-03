@@ -540,7 +540,8 @@
 	}
 
 	function formatHold(val) {
-		if (!val) return '---';
+		if (val === 0) return 'None';
+		if (!val) return 'None';
 		if (typeof val === 'string' && val.toLowerCase().includes('open')) return 'Open-ended';
 		const n = parseFloat(val);
 		if (isNaN(n)) return String(val);
