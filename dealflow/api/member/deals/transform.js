@@ -170,13 +170,17 @@ function inferSnapshotAsOfDate(deal) {
 }
 
 function inferCurrentLeverage(deal, currentFundSize) {
-	if (deal?.current_leverage != null) return deal.current_leverage;
+	if (deal?.current_leverage != null && deal.current_leverage > 0) return deal.current_leverage;
 	if (!currentFundSize) return null;
 
 	const fundAum = Number(deal?.fund_aum);
 	if (!Number.isFinite(fundAum) || fundAum <= currentFundSize) return null;
 
-	return Number(((fundAum - currentFundSize) / currentFundSize).toFixed(2));
+	const inferred = Number(((fundAum - currentFundSize) / currentFundSize).toFixed(2));
+	// Sanity cap: leverage > 5x is almost certainly a data mapping error
+	// (e.g. comparing manager AUM to fund offering size)
+	if (inferred > 5) return null;
+	return inferred;
 }
 
 function inferMaxAllowedLeverage(deal, maxAllowedLtv) {
