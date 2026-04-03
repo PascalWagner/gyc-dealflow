@@ -269,8 +269,22 @@
 	const maxFundSizeValue = $derived.by(() => firstDefined(deal?.maxFundSize, deal?.max_fund_size, deal?.offeringSize, deal?.offering_size));
 	const currentAvgLoanLtvValue = $derived.by(() => firstDefined(deal?.currentAvgLoanLtv, deal?.current_avg_loan_ltv, deal?.avgLoanLtv, deal?.avg_loan_ltv));
 	const maxAllowedLtvValue = $derived.by(() => firstDefined(deal?.maxAllowedLtv, deal?.max_allowed_ltv));
-	const currentLeverageValue = $derived.by(() => firstDefined(deal?.currentLeverage, deal?.current_leverage));
-	const maxAllowedLeverageValue = $derived.by(() => firstDefined(deal?.maxAllowedLeverage, deal?.max_allowed_leverage));
+	const currentLeverageRaw = $derived.by(() => firstDefined(deal?.currentLeverage, deal?.current_leverage));
+	const maxAllowedLeverageRaw = $derived.by(() => firstDefined(deal?.maxAllowedLeverage, deal?.max_allowed_leverage));
+	// Normalize leverage: values > 10 are almost certainly percentages stored as whole numbers (e.g. 65 = 65%),
+	// not debt-to-equity ratios. Convert to ratio: 65 → 0.65x. Values 1-10 are plausible ratios (1.5x etc.).
+	function normalizeLeverage(val) {
+		if (val == null) return null;
+		const n = typeof val === 'number' ? val : parseFloat(val);
+		if (isNaN(n) || n <= 0) return null;
+		return n > 10 ? n / 100 : n;
+	}
+	const currentLeverageValue = $derived.by(() => normalizeLeverage(currentLeverageRaw));
+	const maxAllowedLeverageValue = $derived.by(() => normalizeLeverage(maxAllowedLeverageRaw));
+	// If current > max, the data is inconsistent — suppress both to avoid misleading display
+	const leverageConsistent = $derived(
+		currentLeverageValue == null || maxAllowedLeverageValue == null || currentLeverageValue <= maxAllowedLeverageValue
+	);
 	const snapshotAsOfDateValue = $derived.by(() => firstDefined(deal?.snapshotAsOfDate, deal?.snapshot_as_of_date, deal?.asOfDate, deal?.as_of_date));
 
 	// Share Classes
@@ -495,7 +509,13 @@
 			if (n === 0) return '$0';
 			if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + 'B';
 			if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
-			if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+			if (n >= 1e3) {
+				const k = n / 1e3;
+				// Use 1 decimal when rounding to integer would shift by >3%, otherwise integer
+				const rounded = Math.round(k);
+				const pctError = Math.abs(k - rounded) / k;
+				return '$' + (pctError > 0.03 ? k.toFixed(1) : rounded) + 'K';
+			}
 			return '$' + n.toLocaleString();
 		}
 		if (type === 'multiple') {
@@ -1366,10 +1386,10 @@
 								{#if maxAllowedLtvValue}
 									<div class="detail-item"><div class="detail-label">Max Allowed LTV</div><div class="detail-value">{fmt(maxAllowedLtvValue, 'pct')}</div></div>
 								{/if}
-								{#if currentLeverageValue}
+								{#if currentLeverageValue && leverageConsistent}
 									<div class="detail-item"><div class="detail-label">Current Leverage</div><div class="detail-value">{fmt(currentLeverageValue, 'multiple')}</div></div>
 								{/if}
-								{#if maxAllowedLeverageValue}
+								{#if maxAllowedLeverageValue && leverageConsistent}
 									<div class="detail-item"><div class="detail-label">Max Allowed Leverage</div><div class="detail-value">{fmt(maxAllowedLeverageValue, 'multiple')}</div></div>
 								{/if}
 								{#if snapshotAsOfDateValue}
@@ -1893,7 +1913,7 @@
 
 					<!-- ==================== INVEST CLEARLY REVIEWS (admin preview) ==================== -->
 					{#if investClearlyPreview}
-						<div class="section flow-order-85">
+						<div class="section flow-order-130">
 							<div class="section-header">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
 								<span class="section-title">Invest Clearly Reviews</span>
@@ -1947,47 +1967,6 @@
 							</div>
 						</div>
 					{/if}
-
-				<!-- ==================== BACKGROUND CHECK ==================== -->
-				{#if dealOperatorManagementCompanyId}
-					<div class="section flow-order-90" use:loadWhenVisible={setBgCheckSectionVisible}>
-						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Sponsor Background Report</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div>
-						<div class="section-body bg-check-body" class:gated={!isPaid && !$isAdmin}>
-							{#if !isPaid && !$isAdmin}
-								<div class="gate-overlay">
-									<div class="gate-content">
-										<div class="gate-icon">
-											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
-										<div class="gate-text">
-											{#if nativeCompanionMode}
-												SEC EDGAR, FINRA, IAPD, and OFAC screening remains available to existing members on the web.
-											{:else}
-												Members get SEC EDGAR, FINRA, IAPD, and OFAC screening.
-											{/if}
-										</div>
-										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Become a Member</a>
-										{/if}
-									</div>
-								</div>
-							{/if}
-							<div class:blurred={!isPaid && !$isAdmin}>
-								{#if !bgCheckLoaded && !bgCheckLoading}
-									<div class="bg-empty"><div class="bg-empty-text">Background check loads when you scroll here.</div></div>
-								{:else if bgCheckLoading}
-									<div class="bg-loading">Loading background check data...</div>
-								{:else if bgCheckError}
-									<div class="bg-empty">
-										<div class="bg-empty-text">Couldn’t load background check.</div>
-										<button class="bg-run-cta" onclick={() => loadBackgroundCheck(true)}>Try Again</button>
-									</div>
-								{:else if bgCheck}{@const sources = [{ label: 'SEC EDGAR', status: bgCheck.sec_status, detail: `${bgCheck.sec_filings_count || 0} filing(s)`, url: bgCheck.sec_url },{ label: 'FINRA BrokerCheck', status: bgCheck.finra_status, detail: bgCheck.finra_found ? (bgCheck.finra_disclosures > 0 ? `${bgCheck.finra_disclosures} disclosure(s)` : 'No disclosures') : 'Not registered', url: 'https://brokercheck.finra.org/' },{ label: 'IAPD', status: bgCheck.iapd_status, detail: bgCheck.iapd_found ? (bgCheck.iapd_disclosures > 0 ? `${bgCheck.iapd_disclosures} disclosure(s)` : 'Clean') : 'Not found', url: 'https://adviserinfo.sec.gov/' },{ label: 'OFAC', status: bgCheck.ofac_status, detail: bgCheck.ofac_found ? 'Match found' : 'Clear', url: 'https://sanctionssearch.ofac.treas.gov/' },{ label: 'Courts', status: bgCheck.court_status, detail: `${bgCheck.court_cases_count || 0} case(s)`, url: null }]}<div class="bg-sources">{#each sources as src}<div class="bg-source-badge {bgStatusClass(src.status)}"><span class="bg-source-label">{src.label}</span><span class="bg-source-detail">{src.detail}</span>{#if src.url}<a href={src.url} target="_blank" rel="noopener" class="bg-source-link" title="Verify externally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>{/if}</div>{/each}</div>{#if bgCheck.flags && bgCheck.flags.length > 0}<div class="bg-flags">{#each bgCheck.flags as flag}<div class="bg-flag-item"><strong>{flag.source}:</strong> {flag.message}</div>{/each}</div>{/if}<div class="bg-footer"><a href={dealOperatorHref + '#bgReportSection'} class="bg-full-report">View Full Report &rarr;</a>{#if bgCheck.run_at}<span class="bg-run-date">Checked: {new Date(bgCheck.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>{/if}</div>{:else}<div class="bg-empty"><div class="bg-empty-text">No background check has been run yet.</div><a href={dealOperatorHref + '#bgReportSection'} class="bg-run-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a></div>{/if}
-							</div>
-						</div>
-					</div>
-				{/if}
 
 					</div>
 

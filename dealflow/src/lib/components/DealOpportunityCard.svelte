@@ -114,30 +114,39 @@
 							<div class="opp-goal-amount">{goalLabels[goal]}</div>
 							<div class="opp-goal-type">goal selected</div>
 						</div>
-						<div class="opp-goal-hint">Set a target in your plan to track progress.</div>
+						<div class="opp-goal-hint">
+							{#if buyBox}
+								No numeric target set yet. <button class="opp-inline-link" onclick={() => onOpenBuyBox?.()}>Add a target</button> to track your progress.
+							{:else}
+								<button class="opp-inline-link" onclick={() => onOpenBuyBox?.()}>Complete your plan</button> to see how this deal moves you toward your goal.
+							{/if}
+						</div>
 					{/if}
 				</div>
 
 				<!-- RIGHT: Projection -->
 				<div class="opp-plan-right">
-					<div class="opp-invest-label">If you invest {fmtMoney(investmentAmount || deal?.investmentMinimum || 50000)}:</div>
+					{#if (projection.type === 'cashflow' && projection.annual > 0) || (projection.type === 'tax' && projection.writeOff > 0) || (projection.type === 'growth' && projection.totalReturn > 0)}
+						<div class="opp-invest-label">If you invest {fmtMoney(investmentAmount || deal?.investmentMinimum || 50000)}:</div>
 
-					{#if projection.type === 'cashflow' && projection.annual > 0}
-						<div class="opp-invest-stat">+{fmtMoney(projection.annual)}/yr income</div>
-					{:else if projection.type === 'tax' && projection.writeOff > 0}
-						<div class="opp-invest-stat">~{fmtMoney(projection.writeOff)} yr-1 write-off</div>
-					{:else if projection.type === 'growth' && projection.totalReturn > 0}
-						<div class="opp-invest-stat">{fmtMoney(projection.gain)} projected gain</div>
+						{#if projection.type === 'cashflow' && projection.annual > 0}
+							<div class="opp-invest-stat">+{fmtMoney(projection.annual)}/yr income</div>
+						{:else if projection.type === 'tax' && projection.writeOff > 0}
+							<div class="opp-invest-stat">~{fmtMoney(projection.writeOff)} yr-1 write-off</div>
+						{:else if projection.type === 'growth' && projection.totalReturn > 0}
+							<div class="opp-invest-stat">{fmtMoney(projection.gain)} projected gain</div>
+						{/if}
+
+						{#if goalProgress && goalProgress.pctAfter != null}
+							<div class="opp-invest-progress">Gets you to {goalProgress.pctAfter}% of your goal</div>
+						{/if}
+
+						{#if slotLabel}
+							<div class="opp-invest-slot">Fills: {slotLabel}</div>
+						{/if}
 					{:else}
-						<div class="opp-invest-stat">Projection data limited</div>
-					{/if}
-
-					{#if goalProgress && goalProgress.pctAfter != null}
-						<div class="opp-invest-progress">Gets you to {goalProgress.pctAfter}% of your goal</div>
-					{/if}
-
-					{#if slotLabel}
-						<div class="opp-invest-slot">Fills: {slotLabel}</div>
+						<div class="opp-invest-label">Projection</div>
+						<div class="opp-invest-stat opp-invest-stat-muted">Not enough deal data to project returns for this goal.</div>
 					{/if}
 				</div>
 			</div>
@@ -329,6 +338,22 @@
 		font-size: 12px;
 		color: var(--text-muted);
 		line-height: 1.5;
+	}
+	.opp-inline-link {
+		background: none;
+		border: none;
+		padding: 0;
+		font: inherit;
+		color: var(--primary);
+		font-weight: 600;
+		cursor: pointer;
+		text-decoration: underline;
+	}
+	.opp-inline-link:hover { color: var(--primary-hover); }
+	.opp-invest-stat-muted {
+		color: var(--text-muted) !important;
+		font-size: 13px !important;
+		font-weight: 600 !important;
 	}
 
 	/* Right column - projection */

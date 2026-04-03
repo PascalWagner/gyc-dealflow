@@ -76,6 +76,7 @@
 </div>
 
 <div class="similar-mobile-list ly-mobile-only">
+	{#if eligibleSimilarDeals.length > 0}
 	<article class="similar-mobile-card current">
 		<div class="similar-mobile-header">
 			<div class="similar-mobile-copy">
@@ -103,7 +104,6 @@
 			</details>
 		{/if}
 	</article>
-	{#if eligibleSimilarDeals.length > 0}
 		{#each eligibleSimilarDeals as sd}
 			{@const similarDealOperator = getDealOperator(sd)}
 			<article class="similar-mobile-card">
