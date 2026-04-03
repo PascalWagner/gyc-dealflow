@@ -25,7 +25,6 @@
 		currentAdminRealUser,
 		readUserScopedJson,
 		readUserScopedString,
-		writeUserScopedJson,
 		writeUserScopedString
 	} from '$lib/utils/userScopedState.js';
 	import { PRIMARY_MOBILE_NAV_ITEMS } from '$lib/navigation/app-nav.js';
@@ -45,12 +44,9 @@
 		currentSessionUser,
 		firstDefined,
 		formatReviewDate,
-		getRelativeTime,
 		loadWhenVisible,
-		readScopedDealJson,
 		readScopedDealString,
 		statusBadgeClass,
-		writeScopedDealJson,
 		writeScopedDealString
 	} from '$lib/utils/dealPageHelpers.js';
 	import {
@@ -838,9 +834,8 @@
 		claimSubmitting = false;
 	}
 
-	// ===== DD Checklist =====
-	// ===== Goal Path =====
-	function setUserGoal(goal) {
+		// ===== Goal Path =====
+		function setUserGoal(goal) {
 		const normalizedGoal = normalizeGoalBranch(goal);
 		if (!normalizedGoal) return;
 		userGoal = normalizedGoal;
@@ -871,38 +866,9 @@
 		dealStages.setStage(deal.id, stageKey);
 	}
 
-	function saveDDAnswer(key, value) {
-		if (!deal) return;
-		const updated = { ...ddAnswers };
-		if (value) {
-			updated[key] = value;
-		} else {
-			delete updated[key];
-		}
-		ddAnswers = updated;
-		if (browser) {
-			writeScopedDealJson(deal?.id, 'gycDDChecklist', updated);
-		}
-		// Sync to backend
-		try {
-			const stored = currentSessionUser();
-			if (stored?.token) {
-				fetch('/api/ddchecklist', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token}` },
-					body: JSON.stringify({ dealId: deal.id, itemIndex: key, checked: !!value, answer: value || '', source: 'user' })
-				}).catch(() => {});
-			}
-		} catch {}
-	}
-
-	function toggleAccordion(sectionIdx) {
-		ddAccordionOpen = { ...ddAccordionOpen, [sectionIdx]: !ddAccordionOpen[sectionIdx] };
-	}
-
-	function requestIntroduction() {
-		if (!deal) return;
-		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to request an introduction to the sponsor.' })) return;
+		function requestIntroduction() {
+			if (!deal) return;
+			if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to request an introduction to the sponsor.' })) return;
 		const gate = getDealIntroductionRequestGate(deal.id);
 		if (!gate.ok) {
 			showShareToast(gate.message || 'Introduction requests are unavailable right now.');
@@ -1013,14 +979,8 @@
 			loading = false;
 			return;
 		}
-		// Load DD answers from scoped browser state
-		try {
-			const stored = readScopedDealJson(deal?.id, 'gycDDChecklist', {});
-			ddAnswers = stored;
-		} catch { ddAnswers = {}; }
-
-		// Load social proof
-		fetch(`/api/deal-stats?dealId=${encodeURIComponent(deal.id)}`, { headers })
+			// Load social proof
+			fetch(`/api/deal-stats?dealId=${encodeURIComponent(deal.id)}`, { headers })
 			.then(r => r.ok ? r.json() : null)
 			.then(stats => { if (stats) socialProof = stats; })
 			.catch(() => {});
@@ -1528,75 +1488,61 @@
 
 					<!-- Operator Track Record now in Analysis Dashboard -->
 
-				<!-- ==================== DD CHECKLIST (inline accordion) ==================== -->
-					{#if checklist && deal}
-						<div class="section flow-order-35">
-							<div class="section-header">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-								<span class="section-title">Deal Research Checklist</span>
-								<span class="dd-accordion-progress">{ddProgress.pct}% · {ddProgress.answered}/{ddProgress.total}</span>
-							</div>
-							<div class="dd-section-body" style="position:relative;min-height:80px;">
-								{#if !isPaid && !$isAdmin}
-									<div class="gate-overlay">
-										<div class="gate-content">
-											<div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-											<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
-											<div class="gate-text">Members unlock the interactive DD checklist with auto-filled answers.</div>
-											{#if !nativeCompanionMode}<a href={academyHref} class="gate-cta">Become a Member</a>{/if}
-										</div>
-									</div>
-								{/if}
-								<div class:blurred={!isPaid && !$isAdmin}>
-									<div class="dd-checklist-subtitle">{checklist.label} · {checklist.sections.length} sections</div>
-									<div class="dd-accordion">
-										{#each checklist.sections as sec, si}
-											<div class="dd-accordion-section">
-												<button class="dd-accordion-header" onclick={() => { ddAccordionOpen = { ...ddAccordionOpen, [si]: !ddAccordionOpen[si] }; }}>
-													<span class="dd-accordion-title">
-														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron" class:open={ddAccordionOpen[si]}><polyline points="9 18 15 12 9 6"/></svg>
-														{sec.title}
-													</span>
-													<span class="dd-accordion-progress">
-														{sec.questions.filter((q, qi) => {
-															const key = `s${si}q${qi}`;
-															return !!(q.autoField ? getAutoValue(deal, q.autoField, q.format) : null) || ddAnswers[key];
-														}).length}/{sec.questions.length}
-													</span>
-												</button>
-												{#if ddAccordionOpen[si]}
-													<div class="dd-accordion-body">
-														{#each sec.questions as q, qi}
-															{@const key = `s${si}q${qi}`}
-															{@const autoVal = q.autoField ? getAutoValue(deal, q.autoField, q.format) : null}
-															{@const userVal = ddAnswers[key] || ''}
-															<div class="dd-question" class:answered={!!autoVal || !!userVal}>
-																<div class="dd-question-text">{q.q}</div>
-																{#if autoVal}
-																	<div class="dd-answer">
-																		<span class="dd-answer-badge auto">auto</span>
-																		<span class="dd-answer-text">{autoVal}</span>
-																	</div>
-																{:else if userVal}
-																	<div class="dd-answer">
-																		<span class="dd-answer-badge user">you</span>
-																		<span class="dd-answer-text">{userVal}</span>
-																	</div>
-																{:else}
-																	<input class="dd-answer-input" type="text" placeholder="Add your research..."
-																		onblur={(e) => saveDDAnswer(key, e.target.value)} />
-																{/if}
-															</div>
-														{/each}
+						<!-- ==================== HISTORICAL RETURNS ==================== -->
+						{#if isCredit}
+							<div class="section flow-order-45 historical-returns-section">
+								<div class="section-header">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 3v18h18"/><path d="M7 15l3-3 3 2 4-6"/></svg>
+									<span class="section-title">Historical Returns</span>
+									{#if historicalReturnsRangeLabel}
+										<span class="historical-returns-range">{historicalReturnsRangeLabel}</span>
+									{/if}
+								</div>
+								<div class="section-body historical-returns-body">
+									{#if hasHistoricalReturns}
+										<div class="historical-returns-grid">
+											<div class="historical-returns-chart-card">
+												<DealReturnsMiniChart series={historicalReturns} variant="hero" />
+											</div>
+											<div class="historical-returns-summary">
+												<div class="historical-returns-kicker">Actual annual returns to LPs</div>
+												{#if latestHistoricalReturn}
+													<div class="historical-returns-headline">
+														{latestHistoricalReturn.year}: {latestHistoricalReturn.value.toFixed(2)}%
 													</div>
 												{/if}
+												<p class="historical-returns-copy">
+													Use this as the backward-looking proof point for the fund. The projected LP cash-flow card below remains forward-looking and assumption-based.
+												</p>
+												<div class="historical-returns-stat-row">
+													<div class="historical-returns-stat">
+														<span>Years shown</span>
+														<strong>{historicalReturns.length}</strong>
+													</div>
+													{#if historicalReturnAverage !== null}
+														<div class="historical-returns-stat">
+															<span>Average</span>
+															<strong>{historicalReturnAverage.toFixed(2)}%</strong>
+														</div>
+													{/if}
+													{#if displayTargetIRR}
+														<div class="historical-returns-stat">
+															<span>Target</span>
+															<strong>{fmt(displayTargetIRR, 'pct')}</strong>
+														</div>
+													{/if}
+												</div>
 											</div>
-										{/each}
-									</div>
+										</div>
+									{:else}
+										<div class="empty-detail-card">
+											<strong>Historical returns are not available yet.</strong>
+											<p>This card appears once at least two annual return data points have been captured for the fund.</p>
+										</div>
+									{/if}
 								</div>
 							</div>
-						</div>
-					{/if}
+						{/if}
 
 				<!-- ==================== PROJECTED LP CASH FLOW ==================== -->
 				{#if cfRows.length > 0 || cfUnavailableReason}
@@ -1945,58 +1891,62 @@
 					</div>
 				</div>
 
-				<!-- ==================== INVEST CLEARLY REVIEWS (admin preview) ==================== -->
-				{#if investClearlyPreview}
-					<div class="section flow-order-85">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-							<span class="section-title">Invest Clearly Reviews</span>
-							<span class="investclearly-preview-pill">Preview</span>
-							<div class="investclearly-summary">
-								<span class="investclearly-summary-stars">★★★★★</span>
-								<span class="investclearly-summary-copy">{investClearlyPreview.averageRating} average · {investClearlyPreview.reviewCount} reviews</span>
+					<!-- ==================== INVEST CLEARLY REVIEWS (admin preview) ==================== -->
+					{#if investClearlyPreview}
+						<div class="section flow-order-85">
+							<div class="section-header">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+								<span class="section-title">Invest Clearly Reviews</span>
+								<span class="investclearly-preview-pill coming-soon">Coming Soon</span>
 							</div>
-						</div>
-						<div class="section-body investclearly-body">
-							<div class="investclearly-intro">
-								<div class="investclearly-intro-copy">
-									Admin preview for <strong>{investClearlyPreview.sponsorName}</strong>. Live sponsor-level review data will replace this sample content once the API is available.
+							<div class="section-body investclearly-body">
+								<div class="investclearly-preview-surface" aria-hidden="true">
+									<div class="investclearly-intro">
+										<div class="investclearly-intro-copy">
+											Sponsor-level reviews for <strong>{investClearlyPreview.sponsorName}</strong> will live here once Invest Clearly launches.
+										</div>
+									</div>
+									<div class="investclearly-review-list">
+										{#each investClearlyPreview.reviews as review}
+											<article class="investclearly-review-card">
+												<div class="investclearly-review-top">
+													<div class="investclearly-review-photo" aria-hidden="true">
+														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+															<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+															<circle cx="12" cy="7" r="4"/>
+														</svg>
+														<span class="investclearly-review-photo-badge">{getInitials(review.reviewer)}</span>
+													</div>
+													<div class="investclearly-reviewer-copy">
+														<div class="investclearly-reviewer-name-row">
+															<div class="investclearly-reviewer-name">{review.reviewer}</div>
+															<span class="investclearly-review-date">{formatReviewDate(review.publishedAt)}</span>
+														</div>
+														<div class="investclearly-reviewer-meta">
+															<div class="investclearly-review-stars" aria-hidden="true">
+																{#each [1, 2, 3, 4, 5] as star}
+																	<span class:filled={star <= review.rating}>★</span>
+																{/each}
+															</div>
+															<span class="investclearly-reviewer-role">Verified third-party review</span>
+														</div>
+													</div>
+												</div>
+												<div class="investclearly-review-title">{review.title}</div>
+												<div class="investclearly-review-body">{review.body}</div>
+											</article>
+										{/each}
+									</div>
+									<div class="investclearly-coming-soon-overlay">
+										<div class="investclearly-coming-soon-badge">Coming Soon</div>
+										<div class="investclearly-coming-soon-copy">
+											Sponsor-level third-party reviews will live here once Invest Clearly launches.
+										</div>
+									</div>
 								</div>
 							</div>
-							<div class="investclearly-review-list">
-								{#each investClearlyPreview.reviews as review}
-									<article class="investclearly-review-card">
-										<div class="investclearly-review-top">
-											<div class="investclearly-review-photo" aria-hidden="true">
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-													<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-													<circle cx="12" cy="7" r="4"/>
-												</svg>
-												<span class="investclearly-review-photo-badge">{getInitials(review.reviewer)}</span>
-											</div>
-											<div class="investclearly-reviewer-copy">
-												<div class="investclearly-reviewer-name-row">
-													<div class="investclearly-reviewer-name">{review.reviewer}</div>
-													<span class="investclearly-review-date">{formatReviewDate(review.publishedAt)}</span>
-												</div>
-												<div class="investclearly-reviewer-meta">
-													<div class="investclearly-review-stars" aria-hidden="true">
-														{#each [1, 2, 3, 4, 5] as star}
-															<span class:filled={star <= review.rating}>★</span>
-														{/each}
-													</div>
-													<span class="investclearly-reviewer-role">Verified third-party review</span>
-												</div>
-											</div>
-										</div>
-										<div class="investclearly-review-title">{review.title}</div>
-										<div class="investclearly-review-body">{review.body}</div>
-									</article>
-								{/each}
-							</div>
 						</div>
-					</div>
-				{/if}
+					{/if}
 
 				<!-- ==================== BACKGROUND CHECK ==================== -->
 				{#if dealOperatorManagementCompanyId}
@@ -2039,72 +1989,7 @@
 					</div>
 				{/if}
 
-				<!-- ==================== INVESTOR Q&A ==================== -->
-				<div class="section flow-order-120" use:loadWhenVisible={setQaSectionVisible}>
-					<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span>{#if questions.length > 0}<span class="qa-count">{questions.length}</span>{/if}</div>
-					<div class="section-body" style="position:relative;min-height:120px;">
-						{#if !hasMemberAccess}
-							<div class="gate-overlay">
-								<div class="gate-content">
-									<div class="gate-icon">
-										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-									</div>
-									<div class="gate-title">Become a Member</div>
-									<div class="gate-text">
-										{#if nativeCompanionMode}
-											Available to members on web.
-										{:else}
-											Investor Q&A is fully member-only, but the section stays visible here so the page contract is preserved.
-										{/if}
-									</div>
-									{#if !nativeCompanionMode}
-										<a href={academyHref} class="gate-cta">Become a Member</a>
-									{/if}
-								</div>
-							</div>
-						{/if}
-						<div class:blurred={!hasMemberAccess}>
-						<div class="qa-ask-form"><textarea class="qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea><button class="qa-submit-btn" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button></div>
-						{#if !qaLoaded && !qaLoading}
-							<div class="qa-empty qa-empty-deferred">Questions load when this section comes into view.</div>
-						{:else if qaLoading}
-							<div class="qa-loading">Loading questions...</div>
-						{:else if qaError}
-							<div class="qa-empty">
-								Couldn't load questions.
-								<div style="margin-top:10px;">
-									<button class="qa-submit-btn" onclick={() => loadQuestions(true)}>Try Again</button>
-								</div>
-							</div>
-						{:else if questions.length === 0}
-							<div class="qa-empty">No questions yet. Be the first to ask!</div>
-						{:else}
-							<div class="qa-list">{#each questions as q}<div class="qa-item"><div class="qa-vote-col"><button class="qa-upvote-btn" class:upvoted={hasUpvoted(q.id)} onclick={() => upvoteQuestion(q.id)} disabled={hasUpvoted(q.id)} aria-label="Upvote question" title="Upvote question"><svg viewBox="0 0 24 24" fill={hasUpvoted(q.id) ? 'var(--primary)' : 'none'} stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><span class="qa-vote-count" class:has-votes={q.upvotes > 0}>{q.upvotes || 0}</span></div><div class="qa-content"><div class="qa-question-text">{q.question}</div><div class="qa-meta"><span class="qa-author">{q.askedBy || 'Anonymous'}</span>{#if q.askedAt}<span class="qa-time">&middot; {getRelativeTime(q.askedAt)}</span>{/if}</div>{#if q.answer}<div class="qa-answer"><div class="qa-answer-header"><div class="qa-answer-avatar">PW</div><span class="qa-answer-by">{q.answeredBy || 'Pascal'}</span>{#if q.answeredAt}<span class="qa-answer-time">{getRelativeTime(q.answeredAt)}</span>{/if}</div><div class="qa-answer-text">{q.answer}</div></div>{:else if $isAdmin}<div class="qa-answer-form"><textarea class="qa-answer-input" rows="2" placeholder="Write your answer..." id="qaAnswer_{q.id}"></textarea><button class="qa-answer-submit" onclick={() => { const el = document.getElementById('qaAnswer_' + q.id); if (el) submitAnswer(q.id, el.value); }}>Answer</button></div>{:else}<div class="qa-awaiting">Awaiting response from Pascal</div>{/if}</div></div>{/each}</div>
-						{/if}
-						</div>
 					</div>
-				</div>
-
-				<!-- ==================== GP INSIGHTS (admin only) ==================== -->
-				{#if showGpInsights}
-					<div class="section gp-insights-section flow-order-130" use:loadWhenVisible={setGpInsightsSectionVisible}>
-						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">GP Insights — Investor Pipeline</span><span class="gp-admin-badge">{$isAdmin ? 'ADMIN' : 'GP'}</span></div>
-						<div class="section-body">
-							{#if !gpInsightsLoaded && !gpInsightsLoading}
-								<div class="gp-empty">Investor pipeline loads when you scroll here.</div>
-							{:else if gpInsightsLoading}
-								<div class="gp-loading">Loading investor pipeline...</div>
-							{:else if gpInsightsError}
-								<div class="gp-empty">
-									Couldn't load investor pipeline.
-									<div style="margin-top:10px;">
-										<button class="gp-share-copy" onclick={() => loadGpInsights(true)}>Try Again</button>
-									</div>
-								</div>
-							{:else if gpInsights}<div class="gp-funnel"><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.review || 0}</div><div class="gp-funnel-label">Review</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.connect || 0}</div><div class="gp-funnel-label">Connect</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.decide || 0}</div><div class="gp-funnel-label">Decide</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step gp-funnel-invested"><div class="gp-funnel-count">{gpInsights.invested || 0}</div><div class="gp-funnel-label">Invested</div></div></div><div class="gp-stats-row">{#if gpInsights.deckViews !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.deckViews}</span> deck views</div>{/if}{#if gpInsights.introRequests !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.introRequests}</span> intro requests</div>{/if}{#if gpInsights.avgTimeOnPage}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.avgTimeOnPage}</span> avg. time on page</div>{/if}</div>{:else}<div class="gp-empty">No investor pipeline data available yet.</div>{/if}</div>
-					</div>
-				{/if}
-				</div>
 
 				<!-- ==================== DISCLAIMER ==================== -->
 				<DealDisclaimer variant="standard" />
