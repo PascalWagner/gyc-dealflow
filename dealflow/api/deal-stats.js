@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     if (error && error.code !== 'PGRST116') throw error;
 
     const result = {
+      _version: 'v3-split-query',
       review: data?.review || data?.interested || 0,
       connect: data?.connect || 0,
       decide: data?.decide || 0,
