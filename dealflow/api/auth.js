@@ -22,6 +22,16 @@ const PERSONA_OVERRIDES = {
   'info@pascalwagner.com': { tier: 'academy', isAdmin: true }
 };
 
+export function isSandboxPreviewEnvironment(env = process.env) {
+  const vercelEnv = String(env?.VERCEL_ENV || '').trim().toLowerCase();
+  const nodeEnv = String(env?.NODE_ENV || '').trim().toLowerCase();
+  return vercelEnv === 'preview' || nodeEnv === 'development';
+}
+
+export function shouldUseAuthBypass(email, env = process.env) {
+  return BYPASS_EMAILS.includes(normalizeEmail(email)) && isSandboxPreviewEnvironment(env);
+}
+
 function normalizeSiteOrigin(candidate) {
   try {
     const url = new URL(candidate || DEFAULT_SITE_URL);
@@ -352,8 +362,8 @@ export default async function handler(req, res) {
   if (action === 'magic-link') {
     if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
 
-    // Dev bypass: skip email for specific test accounts
-    if (BYPASS_EMAILS.includes(normalizedEmail)) {
+    // Sandbox/preview bypass: skip email for specific test accounts only outside production.
+    if (shouldUseAuthBypass(normalizedEmail)) {
       try {
         // Ensure user exists first
         let { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
