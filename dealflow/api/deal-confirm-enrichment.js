@@ -30,6 +30,12 @@ const SUPABASE_FIELD_MAP = {
   instrument:          'instrument',
   debtPosition:        'debt_position',
   fundAUM:             'fund_aum',
+  totalLoansUnderMgmt: 'total_loans_under_mgmt',
+  equityCommitments:   'equity_commitments',
+  avgLoanLTC:          'avg_loan_ltc',
+  performanceFeePct:   'performance_fee_pct',
+  inceptionDate:       'inception_date',
+  fundTerm:            'fund_term',
   sponsorCoinvest:     'sponsor_in_deal_pct',
 };
 
