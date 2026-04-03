@@ -41,10 +41,17 @@
 	];
 
 	const freeFeatures = [
-		'Free investor plan and buy box workflow',
-		'Deal browsing and sponsor comparison',
-		'Saved pipeline and match-oriented review flow',
-		'Optional upgrade to Academy only when you want help'
+		'Create a free account and build a starter investor profile',
+		'Browse live deals and compare sponsors in one place',
+		'Save deals and organize your research pipeline',
+		'Use the product first before you decide if you want more'
+	];
+
+	const memberFeatures = [
+		'Unlock the full plan builder and deployment roadmap',
+		'See deeper deal analysis and more advanced diligence tools',
+		'Access office hours, member resources, and implementation support',
+		'Best fit when you are actively deploying and want more depth'
 	];
 
 	const faqs = [
@@ -53,8 +60,12 @@
 			answer: 'This page is built for accredited investors, especially business owners and executives who want a better way to evaluate private deals before wiring capital.'
 		},
 		{
-			question: 'Should Academy be the first thing I do?',
-			answer: 'Usually no. The best first step is to create a free account, build your plan, and get familiar with the workflow. Academy is the higher-touch layer for people who want Pascal helping them review live opportunities.'
+			question: 'What is free versus member?',
+			answer: 'Free is for getting oriented: create an account, browse deals, compare sponsors, and organize your pipeline. Member is for investors actively deploying capital who want the full plan builder, deeper diligence, and additional support.'
+		},
+		{
+			question: 'When should I upgrade?',
+			answer: 'Start free first. Upgrade when you are actively evaluating live deals, want deeper analysis, and need more structure around what to buy, when to buy it, and what to avoid.'
 		},
 		{
 			question: 'What about operators or fund managers?',
@@ -129,7 +140,7 @@
 	<section class="hero-section">
 		<div class="hero-copy">
 			<div class="eyebrow">For accredited investors buying private deals</div>
-			<h1>Stop wiring money into deals that do not fit your goals.</h1>
+			<h1>Stop wiring money into private deals that <span>do not fit your goals.</span></h1>
 			<p class="hero-description">
 				Build your buy box, see best-fit opportunities first, compare sponsors side by side,
 				and move the right deals into diligence with more confidence.
@@ -172,10 +183,10 @@
 	<section class="section" id="workflow">
 		<div class="section-heading">
 			<div class="eyebrow">What you actually do inside</div>
-			<h2>Everything the page promises should be visible in the product immediately.</h2>
+			<h2>How you go from random sponsor pitches to a real investing process.</h2>
 			<p>
-				This is not supposed to feel like another finance content site. It should feel like the
-				fastest way to get clear on what to invest in next and what to ignore.
+				The job of the product is simple: help you get clear on what deserves attention, what
+				does not fit, and what should move into real diligence.
 			</p>
 		</div>
 
@@ -282,11 +293,11 @@
 	<section class="section section-dark" id="free">
 		<div class="free-grid">
 			<div class="free-copy">
-				<div class="eyebrow">What is free</div>
-				<h2>Get real value first. Buy extra help only if you need it.</h2>
+				<div class="eyebrow">Start free</div>
+				<h2>Use the product first. Upgrade only when deeper diligence will actually help.</h2>
 				<p>
-					The highest-converting move here is simple: let investors use the product fast, get
-					oriented, and only then offer the higher-touch support.
+					Most investors should start free. Get oriented, build conviction that the workflow
+					helps, and only then decide whether you want the full member layer.
 				</p>
 				<div class="free-list">
 					{#each freeFeatures as item}
@@ -304,17 +315,22 @@
 			</div>
 
 			<div class="support-card">
-				<div class="support-kicker">Need Pascal in the room?</div>
-				<h3>Academy is the upsell, not the opener.</h3>
+				<div class="support-kicker">Become a member</div>
+				<h3>Upgrade when you want full planning, deeper diligence, and more support.</h3>
 				<p>
-					Start with the software first. If you want live deal review, office hours, and faster
-					decision support, then upgrade into Cashflow Academy or 1:1.
+					Cashflow Academy is the member layer of the business. It is not the opener. The
+					product is the opener. Membership is for people actively deploying who want extra
+					depth and support around real opportunities.
 				</p>
-				<div class="support-pills">
-					<span>Free product</span>
-					<span>Academy upgrade</span>
-					<span>1:1 advisory</span>
+				<div class="support-list">
+					{#each memberFeatures as item}
+						<div class="support-item">
+							<span class="checkmark">+</span>
+							<span>{item}</span>
+						</div>
+					{/each}
 				</div>
+				<div class="tier-note">For most people: start free, then upgrade once the extra depth will pay for itself.</div>
 			</div>
 		</div>
 	</section>
@@ -323,11 +339,11 @@
 		<div class="operator-card">
 			<div>
 				<div class="eyebrow">For operators</div>
-				<h2>Operators should have a separate path.</h2>
+				<h2>Raising capital? Start on the operator side.</h2>
 				<p>
 					If you are a debt fund, private credit manager, or emerging operator raising capital,
-					you should not compete with the investor CTA. Apply separately to list offerings or
-					book a pitch slot.
+					you should not land in the same funnel as investors. Use the operator path to list
+					offerings, book pitch slots, and get in front of the right LPs.
 				</p>
 			</div>
 			<a href="/for-operators" class="btn btn-secondary btn-secondary--dark">For operators</a>
@@ -337,7 +353,7 @@
 	<section class="section section-faq">
 		<div class="section-heading section-heading--narrow">
 			<div class="eyebrow">FAQ</div>
-			<h2>Questions people ask right before they decide whether this is worth trying.</h2>
+			<h2>Common questions before you create a free account.</h2>
 		</div>
 
 		<div class="faq-list">
@@ -425,7 +441,6 @@
 	.nav-links,
 	.nav-actions,
 	.hero-actions,
-	.support-pills,
 	.chip-row {
 		display: flex;
 		align-items: center;
@@ -555,6 +570,10 @@
 		margin-top: 18px;
 		font-size: clamp(3.3rem, 5vw, 5.6rem);
 		max-width: 8.6ch;
+	}
+
+	h1 span {
+		color: var(--teal);
 	}
 
 	h2 {
@@ -814,8 +833,7 @@
 		margin-top: 16px;
 	}
 
-	.chip-row span,
-	.support-pills span {
+	.chip-row span {
 		padding: 8px 12px;
 		border-radius: 999px;
 		background: rgba(31, 81, 89, 0.08);
@@ -828,7 +846,8 @@
 	.metric-stack,
 	.mini-list,
 	.faq-list,
-	.free-list {
+	.free-list,
+	.support-list {
 		display: grid;
 		gap: 12px;
 	}
@@ -937,6 +956,10 @@
 		margin-top: 22px;
 	}
 
+	.support-list {
+		margin-top: 20px;
+	}
+
 	.support-card {
 		padding: 24px;
 		background: rgba(255, 255, 255, 0.08);
@@ -955,13 +978,20 @@
 		font-size: 16px;
 	}
 
-	.support-pills {
-		margin-top: 18px;
+	.support-item {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
 	}
 
-	.support-pills span {
-		background: rgba(255, 255, 255, 0.12);
-		color: white;
+	.tier-note {
+		margin-top: 18px;
+		padding-top: 16px;
+		border-top: 1px solid rgba(255, 255, 255, 0.14);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.76);
 	}
 
 	.operator-card,
