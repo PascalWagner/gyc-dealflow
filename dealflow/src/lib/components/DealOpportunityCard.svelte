@@ -103,10 +103,13 @@
 					{#if goalProgress}
 						<div class="opp-goal-display">
 							<div class="opp-goal-amount">{goalProgress.target || '---'}</div>
-							<div class="opp-goal-type">{goalLabels[goal]?.toLowerCase() || 'passive income'}</div>
+							<div class="opp-goal-type">{goalLabels[goal] || 'Passive Income'}</div>
 						</div>
 						<div class="opp-progress-bar">
 							<div class="opp-progress-fill" style="width:{goalProgress.pct || 0}%"></div>
+							{#if goalProgress.pctAfter > goalProgress.pct}
+								<div class="opp-progress-deal" style="width:{goalProgress.pctAfter - goalProgress.pct}%"></div>
+							{/if}
 						</div>
 						<div class="opp-progress-meta">
 							<span class="opp-progress-pct">{goalProgress.pct || 0}%</span>
@@ -317,11 +320,18 @@
 		border-radius: 4px;
 		overflow: hidden;
 		margin-bottom: 6px;
+		display: flex;
 	}
 	.opp-progress-fill {
 		height: 100%;
 		background: var(--primary);
-		border-radius: 4px;
+		border-radius: 4px 0 0 4px;
+		transition: width 0.5s ease;
+	}
+	.opp-progress-deal {
+		height: 100%;
+		background: rgba(81, 190, 123, 0.35);
+		border-radius: 0 4px 4px 0;
 		transition: width 0.5s ease;
 	}
 	.opp-progress-meta {

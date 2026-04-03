@@ -209,6 +209,11 @@ function buildIdentifiedRisks(deal) {
 function extractCompensation(deal) {
 	const items = [];
 
+	if (deal.targetIRR) {
+		const irr = deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100;
+		items.push({ title: `${irr.toFixed(1)}% Target IRR`, subtitle: 'Projected annualized return (not guaranteed)' });
+	}
+
 	if (deal.preferredReturn) {
 		const pref = deal.preferredReturn > 1 ? deal.preferredReturn : deal.preferredReturn * 100;
 		items.push({ title: `${pref.toFixed(1)}% Preferred Return`, subtitle: 'You are paid first before sponsor participation' });
@@ -228,11 +233,6 @@ function extractCompensation(deal) {
 		items.push({ title: `${pct.toFixed(0)}% Sponsor Co-Investment`, subtitle: 'Sponsor investing alongside LPs \u2014 aligned interests' });
 	}
 
-	if (deal.targetIRR) {
-		const irr = deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100;
-		items.push({ title: `${irr.toFixed(1)}% Target IRR`, subtitle: 'Projected annualized return (not guaranteed)' });
-	}
-
 	if (deal.equityMultiple) {
 		items.push({ title: `${deal.equityMultiple.toFixed(2)}x Equity Multiple`, subtitle: 'Total cash returned per dollar invested' });
 	}
@@ -246,7 +246,6 @@ export function computeDataGaps(deal) {
 	const criticalFields = [
 		{ key: 'targetIRR', label: 'Target IRR', detail: 'No projected return target has been disclosed' },
 		{ key: 'investmentMinimum', label: 'Minimum Investment', detail: 'Minimum check size is not specified' },
-		{ key: 'holdPeriod', label: 'Hold Period', detail: 'Expected investment duration is unknown' },
 		{ key: 'offeringType', label: 'Offering Type', detail: 'SEC offering type has not been identified' },
 		{ key: 'distributions', label: 'Distribution Frequency', detail: 'Payment schedule has not been specified' },
 		{ key: 'fees', label: 'Fee Schedule', detail: 'Management and performance fees are not disclosed' },
@@ -258,7 +257,7 @@ export function computeDataGaps(deal) {
 
 	for (const field of criticalFields) {
 		const val = deal[field.key];
-		if (val === null || val === undefined || val === '' || val === 0) {
+		if (val === null || val === undefined || val === '') {
 			gaps.push({ field: field.key, label: field.label, detail: field.detail });
 		} else if (field.key === 'distributions' && (val === 'Unknown' || val === 'None')) {
 			gaps.push({ field: field.key, label: field.label, detail: field.detail });

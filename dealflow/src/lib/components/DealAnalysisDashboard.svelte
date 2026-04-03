@@ -254,8 +254,6 @@
 							<!-- Co-Invest -->
 							{#if deal?.sponsorInDeal}
 								<div class="co-invest-row">Co-Invest: {fmt(deal.sponsorInDeal, 'pct')} alongside LPs</div>
-							{:else}
-								<div class="co-invest-row">Co-Invest not yet structured.</div>
 							{/if}
 
 							<!-- Other deals link -->
@@ -317,20 +315,20 @@
 						{:else if layer.id === 'returns'}
 							<!-- RETURNS LAYER -->
 							<div class="structure-grid">
+								{#if deal?.targetIRR}
+									<div class="struct-row"><span class="struct-label">Target IRR</span><span class="struct-value">{fmt(deal.targetIRR, 'pct')}</span></div>
+								{/if}
 								{#if deal?.preferredReturn}
 									<div class="struct-row"><span class="struct-label">Preferred Return</span><span class="struct-value">{fmt(deal.preferredReturn, 'pct')}</span></div>
 								{/if}
 								{#if deal?.cashOnCash}
 									<div class="struct-row"><span class="struct-label">Cash-on-Cash</span><span class="struct-value">{fmt(deal.cashOnCash, 'pct')}</span></div>
 								{/if}
-								{#if deal?.targetIRR}
-									<div class="struct-row"><span class="struct-label">Target IRR</span><span class="struct-value">{fmt(deal.targetIRR, 'pct')}</span></div>
+								{#if deal?.distributions && deal.distributions !== 'Unknown'}
+									<div class="struct-row"><span class="struct-label">Distribution Frequency</span><span class="struct-value">{deal.distributions}</span></div>
 								{/if}
 								{#if deal?.equityMultiple}
 									<div class="struct-row"><span class="struct-label">Equity Multiple</span><span class="struct-value">{deal.equityMultiple.toFixed(2)}x</span></div>
-								{/if}
-								{#if deal?.distributions && deal.distributions !== 'Unknown'}
-									<div class="struct-row"><span class="struct-label">Distribution Frequency</span><span class="struct-value">{deal.distributions}</span></div>
 								{/if}
 								{#if deal?.holdPeriod}
 									<div class="struct-row"><span class="struct-label">Hold Period</span><span class="struct-value">{deal.holdPeriod} Years</span></div>
@@ -386,7 +384,7 @@
 										<div class="rc-items">
 											{#each showGaps as gap}
 												<div class="rc-insight-card">
-													<div class="rc-insight-title">{gap.label}{#if gap.field} Not Provided{/if}</div>
+													<div class="rc-insight-title">{gap.label}{#if gap.field} — Not Provided{/if}</div>
 													{#if gap.detail}
 														<div class="rc-insight-detail">{gap.detail}</div>
 													{/if}

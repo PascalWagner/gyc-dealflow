@@ -2138,7 +2138,7 @@ shareDropdownOpen = false;
 	.hero-deck-btn.hero-deck-locked { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); cursor: default; border: 1px solid rgba(255,255,255,0.12); }
 	.hero-intro-btn { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; width: 100%; padding: 12px 18px; }
 	.hero-intro-btn:hover { background: rgba(255,255,255,0.18); }
-	.hero-share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0; background: none; color: rgba(255,255,255,0.5); font-family: var(--font-ui); font-size: 11px; font-weight: 600; border: none; cursor: pointer; letter-spacing: 0.3px; text-transform: uppercase; }
+	.hero-share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0; background: none; color: rgba(255,255,255,0.5); font-family: var(--font-ui); font-size: 11px; font-weight: 600; border: none; cursor: pointer; letter-spacing: 0.3px; text-transform: uppercase; align-self: center; }
 	.hero-share-btn:hover { color: rgba(255,255,255,0.85); }
 	.share-wrapper { position: relative; }
 	.share-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--bg-sidebar); color: #fff; padding: 12px 24px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 9999; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
