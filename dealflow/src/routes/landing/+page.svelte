@@ -1,863 +1,1122 @@
 <script>
 	import { browser } from '$app/environment';
+	import InvestorShowcase from '$lib/components/marketing/InvestorShowcase.svelte';
+
+	const primaryCtaHref = '/login?return=/app/plan';
+	const stats = [
+		{ value: '838', label: 'Live deals', detail: 'Across income, tax, and growth strategies' },
+		{ value: '455', label: 'Sponsors tracked', detail: 'With operator context in one place' },
+		{ value: '3 min', label: 'To build your plan', detail: 'Answer a few questions and get oriented fast' },
+		{ value: '$0', label: 'To start', detail: 'Free account, no credit card required' }
+	];
+
+	const heroBullets = [
+		'Build your buy box before the next sponsor pitch hits your inbox',
+		'See which deals fit your goals instead of reacting to whoever emailed last',
+		'Compare sponsor quality, structure, and fit without juggling 14 tabs'
+	];
+
+	const workflowSteps = [
+		{
+			eyebrow: 'Step 1',
+			title: 'Build your investor plan',
+			body: 'Tell the platform what you are actually trying to buy so the workflow starts with your goals, not with someone else\'s deck.',
+			points: ['Set your income, tax, or growth target', 'Define check size and timeline', 'Choose asset classes you actually want to review'],
+			kind: 'plan'
+		},
+		{
+			eyebrow: 'Step 2',
+			title: 'See matched deals and sponsors',
+			body: 'Browse live opportunities with more context, then compare deal structure, minimums, and sponsor quality in one place.',
+			points: ['See strongest-fit opportunities first', 'Spot what fits and what does not faster', 'Review sponsor context before taking the next meeting'],
+			kind: 'matches'
+		},
+		{
+			eyebrow: 'Step 3',
+			title: 'Move winners into diligence',
+			body: 'Save what looks promising, organize what needs more work, and keep your investing pipeline clean instead of ad hoc.',
+			points: ['Track saved, review, and connect stages', 'Keep your next moves visible', 'Request intros only when a deal clears your filter'],
+			kind: 'pipeline'
+		}
+	];
+
+	const freeFeatures = [
+		'Free investor plan and buy box workflow',
+		'Deal browsing and sponsor comparison',
+		'Saved pipeline and match-oriented review flow',
+		'Optional upgrade to Academy only when you want help'
+	];
+
+	const faqs = [
+		{
+			question: 'Who is the page for?',
+			answer: 'This page is built for accredited investors, especially business owners, operators, and executives who want a cleaner way to evaluate private deals before wiring capital.'
+		},
+		{
+			question: 'Should Academy be the first thing I do?',
+			answer: 'Usually no. The best first step is to create a free account, build your plan, and get familiar with the workflow. Academy is the higher-touch layer for people who want Pascal helping them review live opportunities.'
+		},
+		{
+			question: 'What about operators or fund managers?',
+			answer: 'Operators have a separate path. They should go to the operator page instead of the investor funnel so the main landing page stays focused on getting investors into the product.'
+		},
+		{
+			question: 'Is this a broker-dealer or investment advisor?',
+			answer: 'No. Grow Your Cashflow is a technology and education platform. The workflow is built with regulated infrastructure in mind, but the landing page is optimized around product use, not individualized advice.'
+		}
+	];
 
 	let mobileMenuOpen = $state(false);
-
-	function toggleFaq(event) {
-		const item = event.currentTarget.parentElement;
-		item.classList.toggle('open');
-	}
 
 	function scrollToAnchor(event, href) {
 		if (!browser) return;
 		const target = document.querySelector(href);
-		if (target) {
-			event.preventDefault();
-			mobileMenuOpen = false;
-			target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-		}
+		if (!target) return;
+		event.preventDefault();
+		mobileMenuOpen = false;
+		target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 </script>
 
 <svelte:head>
-	<title>Grow Your Cashflow | 800+ Private Deals. Free to Browse.</title>
-	<meta name="description" content="Browse 800+ vetted real estate and alternative investment deals for free. Compare side-by-side, vet sponsors, and invest with confidence. Built for accredited investors.">
-	<meta property="og:title" content="Grow Your Cashflow | 800+ Private Deals. Free to Browse.">
-	<meta property="og:description" content="The deal database for accredited investors. Browse 800+ private real estate and alternative deals, compare sponsors, and invest with data — not guesswork.">
+	<title>Find Private Deals That Fit Your Goals | Grow Your Cashflow</title>
+	<meta
+		name="description"
+		content="Build your investor plan, browse live private deals, compare sponsors, and start using Grow Your Cashflow for free."
+	>
+	<meta property="og:title" content="Find Private Deals That Fit Your Goals | Grow Your Cashflow">
+	<meta
+		property="og:description"
+		content="Start free, build your plan, see matched deals, and compare sponsors before you wire your next check."
+	>
 	<meta property="og:type" content="website">
-	<meta property="og:url" content="https://growyourcashflow.io">
 </svelte:head>
 
-<div class="ly-page">
-<!-- Nav -->
-<nav class="nav">
-	<a href="/" class="nav-logo">Grow Your Cashflow</a>
-	<ul class="nav-links">
-		<li><a href="#how-it-works" onclick={(e) => scrollToAnchor(e, '#how-it-works')}>How It Works</a></li>
-		<li><a href="/for-operators">For Operators</a></li>
-	</ul>
-	<div class="nav-right">
-		<a href="/login" class="nav-login" data-sveltekit-reload>Log In</a>
-		<a href="/login" class="nav-cta" data-sveltekit-reload>Browse Deals Free</a>
-	</div>
-	<button class="nav-hamburger" onclick={() => mobileMenuOpen = !mobileMenuOpen} aria-label="Menu">
-		<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-	</button>
-</nav>
-<div class="nav-mobile-menu" class:open={mobileMenuOpen}>
-	<a href="#how-it-works" onclick={(e) => scrollToAnchor(e, '#how-it-works')}>How It Works</a>
-	<a href="/for-operators">For Operators</a>
-	<a href="/login" data-sveltekit-reload>Log In</a>
-	<a href="/login" class="nav-cta" data-sveltekit-reload>Browse Deals Free</a>
-</div>
-
-<!-- 1. HERO -->
-<section class="hero-dark">
-	<div class="hero-inner">
-		<div class="hero-eyebrow">The Deal Database for Accredited Investors</div>
-		<h1><span class="highlight">800+</span> private real estate & alternative deals. Exposed.</h1>
-		<p class="hero-desc">Compare sponsors. See the real numbers. Vet deals the way family offices do — not the way pitch decks want you to. Free to browse. No credit card.</p>
-		<a href="/login" class="btn-primary" data-sveltekit-reload>Browse Deals Free →</a>
-		<p class="hero-fine">No credit card required. Takes 30 seconds.</p>
-		<div class="hero-trust-row">
-			<div class="hero-trust-item"><div class="hero-trust-dot"></div> 800+ Deals</div>
-			<div class="hero-trust-item"><div class="hero-trust-dot"></div> 455 Verified Sponsors</div>
-			<div class="hero-trust-item"><div class="hero-trust-dot"></div> 8 Asset Classes</div>
-			<div class="hero-trust-item"><div class="hero-trust-dot"></div> Updated Weekly</div>
-		</div>
-	</div>
-</section>
-
-<!-- Stats Bar -->
-<div class="stats-bar">
-	<div class="stat">
-		<div class="stat-num">838</div>
-		<div class="stat-label">Deals in Database</div>
-	</div>
-	<div class="stat">
-		<div class="stat-num">455</div>
-		<div class="stat-label">Verified Sponsors</div>
-	</div>
-	<div class="stat">
-		<div class="stat-num">8</div>
-		<div class="stat-label">Asset Classes</div>
-	</div>
-	<div class="stat">
-		<div class="stat-num">16.2%</div>
-		<div class="stat-label">Avg Target IRR</div>
-	</div>
-</div>
-
-<!-- 2. PROBLEM -->
-<section class="section section-center">
-	<div class="section-eyebrow">The Problem</div>
-	<h2>You're making investment decisions in the dark</h2>
-	<p class="section-desc">You're smart enough to make the money. But when it comes to deploying it into private deals, you're stuck:</p>
-	<div class="pain-grid">
-		<div class="pain-item">
-			<div class="pain-x">✕</div>
-			<p><strong>Comparing deals in a vacuum</strong> — no benchmarks, no peer data, no way to know if 8% pref is good or garbage</p>
-		</div>
-		<div class="pain-item">
-			<div class="pain-x">✕</div>
-			<p><strong>Trusting slick pitch decks</strong> — because you've never seen the sponsor's actual track record next to 454 others</p>
-		</div>
-		<div class="pain-item">
-			<div class="pain-x">✕</div>
-			<p><strong>Googling "how to vet a syndication"</strong> — and getting 47 conflicting blog posts from people who've never invested</p>
-		</div>
-		<div class="pain-item">
-			<div class="pain-x">✕</div>
-			<p><strong>Wiring $50K on gut feel</strong> — because you don't have the tools to stress-test, compare, or verify anything</p>
-		</div>
-	</div>
-</section>
-
-<!-- 3. SOLUTION -->
-<section class="feature-dark" id="how-it-works">
-	<div class="feature-dark-inner">
-		<div class="section-eyebrow">The Platform</div>
-		<h2>What "no more guesswork" actually looks like</h2>
-		<p class="feature-dark-desc">Real financial data. Side-by-side comparisons. Operator track records. SEC filings. All in one place — not scattered across 14 browser tabs.</p>
-
-		<div class="preview-window">
-			<div class="preview-bar">
-				<div class="preview-dot"></div>
-				<div class="preview-dot"></div>
-				<div class="preview-dot"></div>
+<div class="marketing-page">
+	<nav class="nav-shell">
+		<div class="nav">
+			<a href="/" class="nav-logo">Grow Your Cashflow</a>
+			<div class="nav-links">
+				<a href="#workflow" onclick={(event) => scrollToAnchor(event, '#workflow')}>Workflow</a>
+				<a href="#free" onclick={(event) => scrollToAnchor(event, '#free')}>What is free</a>
+				<a href="/for-operators">For operators</a>
 			</div>
-			<div class="preview-body">
-				<div class="preview-metrics">
-					<div class="preview-metric">
-						<div class="preview-metric-label">Total Deals</div>
-						<div class="preview-metric-value">838</div>
-						<div class="preview-metric-delta">+24 this month</div>
+			<div class="nav-actions">
+				<a href="/login" class="nav-login" data-sveltekit-reload>Log in</a>
+				<a href={primaryCtaHref} class="nav-cta" data-sveltekit-reload>Start free</a>
+			</div>
+			<button
+				class="nav-toggle"
+				type="button"
+				aria-label="Toggle menu"
+				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
+			>
+				<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+					<path d="M4 6h16M4 12h16M4 18h16"></path>
+				</svg>
+			</button>
+		</div>
+
+		<div class:open={mobileMenuOpen} class="nav-mobile">
+			<a href="#workflow" onclick={(event) => scrollToAnchor(event, '#workflow')}>Workflow</a>
+			<a href="#free" onclick={(event) => scrollToAnchor(event, '#free')}>What is free</a>
+			<a href="/for-operators">For operators</a>
+			<a href="/login" data-sveltekit-reload>Log in</a>
+			<a href={primaryCtaHref} class="nav-cta" data-sveltekit-reload>Start free</a>
+		</div>
+	</nav>
+
+	<section class="hero-section">
+		<div class="hero-copy">
+			<div class="eyebrow">Private dealflow for accredited investors</div>
+			<h1>Find private deals that fit your goals before you wire your next $50K.</h1>
+			<p class="hero-description">
+				Build your investor plan, see matched opportunities, compare sponsors, and keep
+				your diligence pipeline in one place. The landing page should sell the product, so
+				that is exactly what this page now does.
+			</p>
+
+			<div class="hero-actions">
+				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
+				<a href="#workflow" class="btn btn-secondary" onclick={(event) => scrollToAnchor(event, '#workflow')}>
+					See the workflow
+				</a>
+			</div>
+
+			<div class="hero-fine-print">Free account. No credit card. Build your buy box in minutes.</div>
+
+			<div class="hero-bullets">
+				{#each heroBullets as bullet}
+					<div class="hero-bullet">
+						<span class="hero-bullet-dot"></span>
+						<span>{bullet}</span>
 					</div>
-					<div class="preview-metric">
-						<div class="preview-metric-label">Asset Classes</div>
-						<div class="preview-metric-value">8</div>
+				{/each}
+			</div>
+		</div>
+
+		<div class="hero-visual">
+			<InvestorShowcase mode="hero" />
+		</div>
+	</section>
+
+	<section class="stats-strip" aria-label="Platform stats">
+		{#each stats as stat}
+			<div class="stat-card">
+				<div class="stat-value">{stat.value}</div>
+				<div class="stat-label">{stat.label}</div>
+				<p>{stat.detail}</p>
+			</div>
+		{/each}
+	</section>
+
+	<section class="section" id="workflow">
+		<div class="section-heading">
+			<div class="eyebrow">What you actually do inside</div>
+			<h2>A cleaner investing workflow, not another generic finance homepage.</h2>
+			<p>
+				The point of the page is to get people into the product. So every section below shows
+				what they get once they sign up and why that is useful immediately.
+			</p>
+		</div>
+
+		<div class="workflow-grid">
+			{#each workflowSteps as step}
+				<article class="workflow-card">
+					<div class="workflow-copy">
+						<div class="workflow-eyebrow">{step.eyebrow}</div>
+						<h3>{step.title}</h3>
+						<p>{step.body}</p>
+						<ul>
+							{#each step.points as point}
+								<li>{point}</li>
+							{/each}
+						</ul>
 					</div>
-					<div class="preview-metric">
-						<div class="preview-metric-label">Avg Target IRR</div>
-						<div class="preview-metric-value">16.2%</div>
+
+					<div class={`mini-window mini-window--${step.kind}`}>
+						<div class="mini-window-bar">
+							<span></span>
+							<span></span>
+							<span></span>
+						</div>
+
+						{#if step.kind === 'plan'}
+							<div class="mini-window-body">
+								<div class="mini-kicker">Investor plan</div>
+								<div class="mini-title">$120K / year passive income</div>
+								<div class="chip-row">
+									<span>Debt funds</span>
+									<span>Self storage</span>
+									<span>$100K checks</span>
+								</div>
+								<div class="metric-stack">
+									<div class="metric-row">
+										<div>Timeline</div>
+										<strong>3 to 5 years</strong>
+									</div>
+									<div class="metric-row">
+										<div>Priority</div>
+										<strong>Cash flow first</strong>
+									</div>
+									<div class="metric-row">
+										<div>Risk posture</div>
+										<strong>Moderate</strong>
+									</div>
+								</div>
+							</div>
+						{:else if step.kind === 'matches'}
+							<div class="mini-window-body">
+								<div class="mini-kicker">Matches</div>
+								<div class="mini-list">
+									<div class="mini-match">
+										<div>
+											<strong>Blue Mesa Income Fund IV</strong>
+											<small>11.2% cash yield</small>
+										</div>
+										<span>97%</span>
+									</div>
+									<div class="mini-match">
+										<div>
+											<strong>North Harbor Storage Fund</strong>
+											<small>8.5% pref + 17.0% IRR</small>
+										</div>
+										<span>93%</span>
+									</div>
+									<div class="mini-match">
+										<div>
+											<strong>Summit Credit Opportunities</strong>
+											<small>Private credit</small>
+										</div>
+										<span>91%</span>
+									</div>
+								</div>
+							</div>
+						{:else}
+							<div class="mini-window-body">
+								<div class="mini-kicker">Pipeline</div>
+								<div class="pipeline-grid">
+									<div class="pipeline-column">
+										<div class="pipeline-label">Saved</div>
+										<div class="pipeline-count">12</div>
+										<p>Worth a second look</p>
+									</div>
+									<div class="pipeline-column">
+										<div class="pipeline-label">Review</div>
+										<div class="pipeline-count">4</div>
+										<p>Needs diligence</p>
+									</div>
+									<div class="pipeline-column">
+										<div class="pipeline-label">Connect</div>
+										<div class="pipeline-count">2</div>
+										<p>Ready for intros</p>
+									</div>
+								</div>
+							</div>
+						{/if}
 					</div>
-					<div class="preview-metric">
-						<div class="preview-metric-label">Verified Sponsors</div>
-						<div class="preview-metric-value">455</div>
-						<div class="preview-metric-delta">Background checked</div>
-					</div>
+				</article>
+			{/each}
+		</div>
+	</section>
+
+	<section class="section section-dark" id="free">
+		<div class="free-grid">
+			<div class="free-copy">
+				<div class="eyebrow">What is free</div>
+				<h2>Enough product to get real value before anyone asks you to buy anything.</h2>
+				<p>
+					This is the right landing-page strategy for conversion: let investors start using the
+					product fast, then earn the right to upsell support later.
+				</p>
+				<div class="free-list">
+					{#each freeFeatures as item}
+						<div class="free-item">
+							<span class="checkmark">+</span>
+							<span>{item}</span>
+						</div>
+					{/each}
 				</div>
-				<div class="preview-deals">
-					<div class="preview-deal">
-						<div class="preview-deal-header">
-							<div class="preview-deal-icon">🏢</div>
-							<div>
-								<div class="preview-deal-name">Midwest MF Fund III</div>
-								<div class="preview-deal-sponsor">Sunrise Capital</div>
-							</div>
-						</div>
-						<div class="preview-deal-stats">
-							<div><div class="preview-deal-stat-label">Pref Return</div><div class="preview-deal-stat-value">8%</div></div>
-							<div><div class="preview-deal-stat-label">Target IRR</div><div class="preview-deal-stat-value">17%</div></div>
-						</div>
-					</div>
-					<div class="preview-deal">
-						<div class="preview-deal-header">
-							<div class="preview-deal-icon">🏗️</div>
-							<div>
-								<div class="preview-deal-name">Industrial Income Trust</div>
-								<div class="preview-deal-sponsor">Evergreen RE</div>
-							</div>
-						</div>
-						<div class="preview-deal-stats">
-							<div><div class="preview-deal-stat-label">Pref Return</div><div class="preview-deal-stat-value">7%</div></div>
-							<div><div class="preview-deal-stat-label">Target IRR</div><div class="preview-deal-stat-value">14%</div></div>
-						</div>
-					</div>
-					<div class="preview-deal">
-						<div class="preview-deal-header">
-							<div class="preview-deal-icon">💰</div>
-							<div>
-								<div class="preview-deal-name">Bridge Lending Fund IV</div>
-								<div class="preview-deal-sponsor">Atlas Credit</div>
-							</div>
-						</div>
-						<div class="preview-deal-stats">
-							<div><div class="preview-deal-stat-label">Pref Return</div><div class="preview-deal-stat-value">9%</div></div>
-							<div><div class="preview-deal-stat-label">Target IRR</div><div class="preview-deal-stat-value">12%</div></div>
-						</div>
-					</div>
+				<div class="hero-actions">
+					<a href={primaryCtaHref} class="btn btn-primary btn-primary--light" data-sveltekit-reload>
+						Create a free account
+					</a>
+				</div>
+			</div>
+
+			<div class="support-card">
+				<div class="support-kicker">Need Pascal in the room?</div>
+				<h3>Academy belongs lower on the page, not in the hero.</h3>
+				<p>
+					Start with the software first. If you want hands-on deal review, office hours, and
+					faster decision support, upgrade into Cashflow Academy or 1:1 after you already
+					understand the product.
+				</p>
+				<div class="support-pills">
+					<span>Free product</span>
+					<span>Academy upgrade</span>
+					<span>1:1 advisory</span>
 				</div>
 			</div>
 		</div>
+	</section>
 
-		<div class="callout-row">
-			<div class="callout">
-				<div class="callout-icon">📋</div>
-				<h4>7-Stage Pipeline</h4>
-				<p>Track deals from discovery to distribution</p>
+	<section class="section">
+		<div class="operator-card">
+			<div>
+				<div class="eyebrow">For operators</div>
+				<h2>Operators should have a separate path.</h2>
+				<p>
+					If you are a debt fund, private credit manager, or emerging operator raising capital,
+					you should not compete with the investor CTA. Apply separately to list offerings and
+					book a pitch slot.
+				</p>
 			</div>
-			<div class="callout">
-				<div class="callout-icon">🗺️</div>
-				<h4>Map View</h4>
-				<p>See deals geographically across the US</p>
+			<a href="/for-operators" class="btn btn-secondary btn-secondary--dark">For operators</a>
+		</div>
+	</section>
+
+	<section class="section section-faq">
+		<div class="section-heading section-heading--narrow">
+			<div class="eyebrow">FAQ</div>
+			<h2>Questions that matter before someone clicks Start free.</h2>
+		</div>
+
+		<div class="faq-list">
+			{#each faqs as item}
+				<details class="faq-item">
+					<summary>{item.question}</summary>
+					<p>{item.answer}</p>
+				</details>
+			{/each}
+		</div>
+	</section>
+
+	<section class="section section-cta">
+		<div class="cta-panel">
+			<div class="eyebrow">Start using it</div>
+			<h2>Build your plan, see your matches, and decide what deserves diligence.</h2>
+			<p>
+				The page should convert by making the next step obvious. So the next step is simple:
+				create a free account and start using the product.
+			</p>
+			<div class="hero-actions hero-actions--center">
+				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
+				<a href="/login" class="btn btn-secondary" data-sveltekit-reload>Log in</a>
 			</div>
-			<div class="callout">
-				<div class="callout-icon">⚖️</div>
-				<h4>Side-by-Side Compare</h4>
-				<p>Stack deals against your buy box</p>
-			</div>
 		</div>
-	</div>
-</section>
-
-<!-- 4. CREDIBILITY -->
-<section class="founder-section">
-	<div class="section founder-section-inner">
-		<div class="founder-inner">
-			<div class="founder-photo">👤</div>
-			<div class="founder-text">
-				<h3>Pascal Wagner</h3>
-				<div class="founder-role">Founder & GP</div>
-				<p>When my dad passed away, I became responsible for managing my mom's retirement. We had money, but no plan. Every "advisor" just wanted to sell us their fund.</p>
-				<p>So I built the tool I wish I'd had — a database of every deal I could find, with real data, real comparisons, and no sales pitch. 800+ deals and 455 sponsors later, I opened it up to every accredited investor.</p>
-				<blockquote>"I built this for the investor I was three years ago — overwhelmed, overexposed to stocks, and tired of guessing."</blockquote>
-			</div>
-		</div>
-	</div>
-</section>
-
-<!-- 5. SOCIAL PROOF -->
-<section class="section section-center">
-	<div class="section-eyebrow">From Our Members</div>
-	<h2>What happens when you stop guessing</h2>
-	<p class="section-desc" style="margin-bottom:32px;">Real investors. Real outcomes.</p>
-	<div class="proof-grid">
-		<div class="proof-card">
-			<div class="proof-result">Found a Framework</div>
-			<div class="proof-quote">"I had been piecing things together for months. This gave me a framework, templates, and a mentor to cut through the noise."</div>
-			<div class="proof-author">Philip K.</div>
-			<div class="proof-role">Strategic Account Executive</div>
-		</div>
-		<div class="proof-card">
-			<div class="proof-result">Better Questions</div>
-			<div class="proof-quote">"I have a much better framework for reviewing deals and asking better questions when talking with sponsors."</div>
-			<div class="proof-author">Kathleen M.</div>
-			<div class="proof-role">Customer Success & Operations Executive</div>
-		</div>
-		<div class="proof-card">
-			<div class="proof-result">Invested with Confidence</div>
-			<div class="proof-quote">"The deal database and comparison tools made it possible to actually evaluate deals with confidence instead of hoping for the best."</div>
-			<div class="proof-author">Philip L.</div>
-			<div class="proof-role">Founded & Exited B2B Analytics Firm</div>
-		</div>
-	</div>
-</section>
-
-<!-- 6. FAQ -->
-<section class="section">
-	<div class="section-eyebrow">FAQ</div>
-	<h2>Common questions</h2>
-	<div class="faq-list">
-		<div class="faq-item">
-			<button class="faq-q" onclick={toggleFaq}>
-				What do I get for free?
-				<svg class="faq-arrow" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-			</button>
-			<div class="faq-a">You can browse all 800+ deals, view basic deal overviews and investment thesis, use search and filter tools, see deals on the map, and get the weekly market digest email. No credit card required, no time limit.</div>
-		</div>
-		<div class="faq-item">
-			<button class="faq-q" onclick={toggleFaq}>
-				Is this a broker-dealer?
-				<svg class="faq-arrow" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-			</button>
-			<div class="faq-a">No. Grow Your Cashflow is a technology and education platform. We do not sell securities, provide investment advice, or act as a broker-dealer. We provide data and tools — you make your own decisions.</div>
-		</div>
-		<div class="faq-item">
-			<button class="faq-q" onclick={toggleFaq}>
-				Who can use this?
-				<svg class="faq-arrow" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-			</button>
-			<div class="faq-a">Anyone can browse deals for free. The platform is designed for accredited investors — individuals who earn $200K+/yr (or $300K jointly) or have a net worth of $1M+ excluding their primary residence.</div>
-		</div>
-		<div class="faq-item">
-			<button class="faq-q" onclick={toggleFaq}>
-				What if I've never invested in a private deal before?
-				<svg class="faq-arrow" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-			</button>
-			<div class="faq-a">That's exactly who this is for. Browse deals to learn how they're structured, compare terms across 800+ offerings, and build confidence before you ever invest a dollar. There's no pressure and no sales process.</div>
-		</div>
-		<div class="faq-item">
-			<button class="faq-q" onclick={toggleFaq}>
-				How is the data sourced?
-				<svg class="faq-arrow" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-			</button>
-			<div class="faq-a">Deal data comes from SEC filings, PPM documents, operator pitch decks, and direct sponsor submissions. We verify sponsor backgrounds through SEC, FINRA, and court record checks. New deals are added weekly.</div>
-		</div>
-	</div>
-</section>
-
-<!-- 7. FINAL CTA -->
-<section class="final-cta">
-	<h2>Stop comparing deals in the dark</h2>
-	<p>800+ deals. 455 verified sponsors. Every number exposed. Free to browse — see for yourself.</p>
-	<a href="/login" class="btn-primary" data-sveltekit-reload>Browse Deals Free →</a>
-	<p class="hero-fine">No credit card. No sales call. Just data.</p>
-</section>
-
-<!-- Footer -->
-<footer class="footer">
-	<div class="footer-links">
-		<a href="/for-operators">For Operators</a>
-		<a href="/login" data-sveltekit-reload>Log In</a>
-	</div>
-	<div class="footer-copy">&copy; 2026 Grow Your Cashflow. All rights reserved. Not a broker-dealer. Not investment advice.</div>
-</footer>
+	</section>
 </div>
 
 <style>
-	/* ── Landing-specific CSS variables ── */
 	:global(body) {
-		/* These are already set by theme.css, but landing needs a few extras */
-	}
-
-	/* ── Nav ── */
-	.nav {
-		position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-		background: rgba(250,249,245,0.92);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
-		border-bottom: 1px solid var(--border-light);
-		padding: 0 24px;
-		height: 64px;
-		display: flex; align-items: center; justify-content: space-between;
-	}
-	.nav-logo {
-		font-family: var(--font-headline);
-		font-size: 20px;
-		color: #1F5159;
-		text-decoration: none;
-	}
-	.nav-links {
-		display: flex; align-items: center; gap: 32px;
-		list-style: none;
-	}
-	.nav-links a {
-		font-family: var(--font-ui);
-		font-size: 14px; font-weight: 500;
-		color: var(--text-secondary);
-		text-decoration: none;
-		transition: color var(--transition);
-	}
-	.nav-links a:hover { color: var(--text-dark); }
-	.nav-right {
-		display: flex; align-items: center; gap: 16px;
-	}
-	.nav-login {
-		font-family: var(--font-ui);
-		font-size: 14px; font-weight: 600;
-		color: #1F5159;
-		text-decoration: none;
-	}
-	.nav-login:hover { color: var(--primary); }
-	.nav-cta {
-		font-family: var(--font-ui);
-		font-size: 14px; font-weight: 600;
-		background: var(--primary); color: #fff;
-		border: none; border-radius: var(--radius-sm);
-		padding: 10px 20px;
-		cursor: pointer;
-		text-decoration: none;
-		transition: background var(--transition);
-	}
-	.nav-cta:hover { background: var(--primary-hover); }
-	.nav-hamburger {
-		display: none;
-		background: none; border: none;
-		cursor: pointer; padding: 4px;
-	}
-	.nav-hamburger svg { width: 24px; height: 24px; color: var(--text-dark); }
-	.nav-mobile-menu {
-		display: none;
-		position: fixed; top: 64px; left: 0; right: 0;
-		background: rgba(250,249,245,0.98);
-		backdrop-filter: blur(12px);
-		border-bottom: 1px solid var(--border-light);
-		padding: 16px 24px 24px;
-		flex-direction: column; gap: 8px;
-		z-index: 99;
-	}
-	.nav-mobile-menu.open { display: flex; }
-	.nav-mobile-menu a {
-		font-family: var(--font-ui);
-		font-size: 16px; font-weight: 500;
+		margin: 0;
+		background:
+			radial-gradient(circle at top left, rgba(81, 190, 123, 0.08), transparent 26%),
+			linear-gradient(180deg, #faf9f5 0%, #f4f4ee 100%);
 		color: var(--text-dark);
-		text-decoration: none;
-		padding: 12px 0;
-		border-bottom: 1px solid var(--border-light);
-	}
-	.nav-mobile-menu :global(.nav-cta) {
-		display: block; text-align: center;
-		margin-top: 8px; padding: 14px;
-		font-size: 16px;
 	}
 
-	/* ── Hero ── */
-	.hero-dark {
-		background: linear-gradient(135deg, #0A1E21 0%, #1F5159 100%);
-		padding: 140px 24px 80px;
-		text-align: center;
-		position: relative;
-		overflow: hidden;
-	}
-	.hero-dark::before {
-		content: '';
-		position: absolute; inset: 0;
-		background: radial-gradient(ellipse at 30% 50%, rgba(81,190,123,0.08) 0%, transparent 60%),
-		            radial-gradient(ellipse at 70% 20%, rgba(64,228,127,0.05) 0%, transparent 50%);
-		pointer-events: none;
-	}
-	.hero-inner {
-		max-width: 820px;
+	.marketing-page {
+		width: min(100%, 1320px);
 		margin: 0 auto;
-		position: relative;
-		z-index: 1;
+		padding: 24px;
+		box-sizing: border-box;
 	}
-	.hero-eyebrow {
-		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 1.5px;
-		color: #40E47F;
-		margin-bottom: 16px;
+
+	.nav-shell {
+		position: sticky;
+		top: 0;
+		z-index: 40;
+		padding-top: 4px;
 	}
-	.hero-dark h1 {
-		font-family: var(--font-headline);
-		font-size: clamp(36px, 5vw, 56px);
-		line-height: 1.12;
-		color: #fff;
-		margin-bottom: 24px;
+
+	.nav {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 20px;
+		padding: 14px 18px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		border-radius: 999px;
+		background: rgba(250, 249, 245, 0.9);
+		backdrop-filter: blur(18px);
+		box-shadow: 0 16px 34px rgba(20, 20, 19, 0.05);
 	}
-	.hero-dark h1 :global(.highlight) { color: #40E47F; }
-	.highlight { color: #40E47F; }
-	.hero-desc {
-		font-size: 20px;
-		color: rgba(255,255,255,0.65);
-		max-width: 600px;
-		margin: 0 auto 40px;
-		line-height: 1.5;
-	}
-	.btn-primary {
-		display: inline-flex; align-items: center; gap: 8px;
-		font-family: var(--font-ui);
-		font-size: 18px; font-weight: 700;
-		background: #40E47F; color: #0A1E21;
-		border: none; border-radius: 12px;
-		padding: 18px 40px;
-		cursor: pointer;
+
+	.nav-logo,
+	.nav-links a,
+	.nav-actions a,
+	.nav-mobile a {
 		text-decoration: none;
-		transition: background 0.2s, transform 0.15s;
-	}
-	.btn-primary:hover { background: #4df590; transform: translateY(-1px); }
-	.hero-fine {
-		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 500;
-		color: rgba(255,255,255,0.35);
-		margin-top: 14px;
-	}
-	.hero-trust-row {
-		display: flex;
-		justify-content: center;
-		gap: 32px;
-		flex-wrap: wrap;
-		margin-top: 40px;
-	}
-	.hero-trust-item {
-		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 600;
-		color: rgba(255,255,255,0.4);
-		display: flex; align-items: center; gap: 6px;
-	}
-	.hero-trust-dot {
-		width: 6px; height: 6px;
-		border-radius: 50%;
-		background: #40E47F;
 	}
 
-	/* ── Stats bar ── */
-	.stats-bar {
-		display: flex;
-		justify-content: center;
-		gap: 48px;
-		flex-wrap: wrap;
-		padding: 48px 24px;
-		border-bottom: 1px solid var(--border-light);
-		background: #fff;
-	}
-	.stat { text-align: center; }
-	.stat-num {
-		font-family: var(--font-headline);
-		font-size: 40px;
-		color: #1F5159;
-	}
-	.stat-label {
+	.nav-logo {
 		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 1px;
-		color: var(--text-muted);
-		margin-top: 4px;
+		font-size: 15px;
+		font-weight: 800;
+		color: var(--text-dark);
 	}
 
-	/* ── Section ── */
-	.section {
-		max-width: 1000px;
-		margin: 0 auto;
-		padding: 80px 24px;
+	.nav-links,
+	.nav-actions,
+	.hero-actions,
+	.support-pills,
+	.chip-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
 	}
-	.section-eyebrow {
+
+	.nav-links a,
+	.nav-login,
+	.nav-mobile a {
 		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 1.5px;
-		color: var(--primary);
-		margin-bottom: 12px;
-	}
-	.section h2 {
-		font-family: var(--font-headline);
-		font-size: clamp(28px, 3.5vw, 40px);
-		color: #0A1E21;
-		margin-bottom: 16px;
-		line-height: 1.2;
-	}
-	.section-desc {
-		font-size: 18px;
+		font-size: 14px;
+		font-weight: 600;
 		color: var(--text-secondary);
-		max-width: 640px;
-		margin-bottom: 48px;
-	}
-	.section-center { text-align: center; }
-	.section-center .section-desc { margin-left: auto; margin-right: auto; }
-
-	/* ── Pain grid ── */
-	.pain-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 16px;
-		max-width: 720px;
-		margin: 0 auto;
-	}
-	.pain-item {
-		display: flex; gap: 12px; align-items: flex-start;
-		padding: 16px 20px;
-		background: #FFF0F0;
-		border-radius: var(--radius-sm);
-		border: 1px solid #FDD;
-	}
-	.pain-x {
-		width: 24px; height: 24px; border-radius: 50%;
-		background: #FDD; color: #D04040;
-		font-family: var(--font-ui); font-size: 13px; font-weight: 700;
-		display: flex; align-items: center; justify-content: center;
-		flex-shrink: 0; margin-top: 1px;
-	}
-	.pain-item p { font-size: 15px; color: var(--text-dark); line-height: 1.45; }
-
-	/* ── Dark feature section ── */
-	.feature-dark {
-		background: linear-gradient(135deg, #0A1E21 0%, #1F5159 100%);
-		padding: 80px 24px;
-		position: relative; overflow: hidden;
-	}
-	.feature-dark::before {
-		content: '';
-		position: absolute; inset: 0;
-		background: radial-gradient(ellipse at 50% 0%, rgba(81,190,123,0.06) 0%, transparent 60%);
-		pointer-events: none;
-	}
-	.feature-dark-inner {
-		max-width: 1000px;
-		margin: 0 auto;
-		position: relative; z-index: 1;
-		text-align: center;
-	}
-	.feature-dark .section-eyebrow { color: #40E47F; }
-	.feature-dark h2 {
-		font-family: var(--font-headline);
-		font-size: clamp(28px, 3.5vw, 40px);
-		color: #fff; margin-bottom: 16px; line-height: 1.2;
-	}
-	.feature-dark-desc {
-		font-size: 18px;
-		color: rgba(255,255,255,0.6);
-		max-width: 640px;
-		margin: 0 auto 48px;
 	}
 
-	/* ── Preview window ── */
-	.preview-window {
-		max-width: 900px; margin: 0 auto;
-		background: var(--bg-cream);
-		border-radius: 12px; overflow: hidden;
-		box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+	.nav-login:hover,
+	.nav-links a:hover,
+	.nav-mobile a:hover {
+		color: var(--text-dark);
 	}
-	.preview-bar {
-		background: #e8ede9;
-		padding: 10px 16px;
-		display: flex; gap: 6px;
-	}
-	.preview-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
-	.preview-body { padding: 32px; }
-	.preview-metrics {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 16px; margin-bottom: 24px;
-	}
-	.preview-metric {
-		background: #fff;
-		border: 1px solid var(--border-light);
-		border-radius: var(--radius-sm);
-		padding: 20px 16px; text-align: left;
-	}
-	.preview-metric-label {
+
+	.nav-cta,
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 999px;
 		font-family: var(--font-ui);
-		font-size: 11px; font-weight: 600;
-		text-transform: uppercase; letter-spacing: 0.5px;
-		color: var(--text-muted); margin-bottom: 6px;
+		font-size: 14px;
+		font-weight: 700;
+		text-decoration: none;
+		transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 	}
-	.preview-metric-value {
-		font-family: var(--font-headline);
-		font-size: 28px; color: #1F5159;
+
+	.nav-cta,
+	.btn-primary {
+		padding: 12px 18px;
+		background: var(--primary);
+		color: #0d2327;
+		box-shadow: 0 14px 28px rgba(81, 190, 123, 0.22);
 	}
-	.preview-metric-delta {
-		font-family: var(--font-ui);
-		font-size: 12px; font-weight: 600;
-		color: var(--primary); margin-top: 4px;
+
+	.nav-cta:hover,
+	.btn-primary:hover {
+		transform: translateY(-1px);
+		background: var(--primary-hover);
 	}
-	.preview-deals {
+
+	.nav-toggle {
+		display: none;
+		align-items: center;
+		justify-content: center;
+		width: 42px;
+		height: 42px;
+		border-radius: 999px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: white;
+		color: var(--text-dark);
+	}
+
+	.nav-mobile {
+		display: none;
+		margin-top: 10px;
+		padding: 16px;
+		border-radius: 24px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: rgba(250, 249, 245, 0.95);
+		box-shadow: 0 20px 34px rgba(20, 20, 19, 0.06);
+	}
+
+	.nav-mobile.open {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
 		gap: 12px;
 	}
-	.preview-deal {
-		background: #fff;
-		border: 1px solid var(--border-light);
-		border-radius: var(--radius-sm);
-		padding: 16px;
+
+	.hero-section,
+	.free-grid,
+	.operator-card {
+		display: grid;
+		gap: 36px;
 	}
-	.preview-deal-header {
-		display: flex; align-items: center; gap: 10px;
-		margin-bottom: 10px;
+
+	.hero-section {
+		grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+		align-items: center;
+		padding: 64px 0 40px;
 	}
-	.preview-deal-icon {
-		width: 32px; height: 32px; border-radius: 6px;
-		background: #E7F5F0;
-		display: flex; align-items: center; justify-content: center;
-		font-size: 16px;
+
+	.hero-copy,
+	.section-heading,
+	.free-copy,
+	.cta-panel,
+	.support-card,
+	.workflow-copy {
+		min-width: 0;
 	}
-	.preview-deal-name {
+
+	.eyebrow,
+	.workflow-eyebrow,
+	.support-kicker {
+		display: inline-flex;
+		align-items: center;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(31, 81, 89, 0.08);
+		color: var(--teal);
 		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 700;
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+
+	h1,
+	h2,
+	h3 {
+		margin: 0;
+		font-family: var(--font-headline);
+		font-weight: 400;
+		line-height: 0.98;
+		letter-spacing: -0.02em;
+	}
+
+	h1 {
+		margin-top: 18px;
+		font-size: clamp(3.2rem, 5vw, 5.5rem);
+		max-width: 11ch;
+	}
+
+	h2 {
+		margin-top: 18px;
+		font-size: clamp(2.4rem, 3.6vw, 4rem);
+		max-width: 14ch;
+	}
+
+	h3 {
+		font-size: clamp(1.8rem, 2.2vw, 2.6rem);
+	}
+
+	p,
+	li,
+	.hero-fine-print,
+	.stat-card p,
+	.faq-item p {
+		font-family: var(--font-body);
+		font-size: 18px;
+		line-height: 1.62;
+		color: var(--text-secondary);
+	}
+
+	.hero-description {
+		max-width: 36rem;
+		margin: 18px 0 0;
+	}
+
+	.hero-actions {
+		margin-top: 28px;
+	}
+
+	.hero-actions--center {
+		justify-content: center;
+	}
+
+	.btn {
+		padding: 14px 22px;
+	}
+
+	.btn-secondary {
+		padding: 14px 22px;
+		border: 1px solid rgba(20, 20, 19, 0.12);
+		background: rgba(255, 255, 255, 0.78);
 		color: var(--text-dark);
 	}
-	.preview-deal-sponsor { font-size: 11px; color: var(--text-muted); }
-	.preview-deal-stats { display: flex; gap: 16px; }
-	.preview-deal-stat-label {
-		font-family: var(--font-ui);
-		font-size: 10px; font-weight: 600;
-		text-transform: uppercase; color: var(--text-muted);
-	}
-	.preview-deal-stat-value {
-		font-family: var(--font-ui);
-		font-size: 15px; font-weight: 700;
-		color: #1F5159;
+
+	.btn-secondary:hover {
+		transform: translateY(-1px);
+		background: white;
 	}
 
-	/* ── Feature callouts ── */
-	.callout-row {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 24px;
-		max-width: 900px;
-		margin: 48px auto 0;
-	}
-	.callout { text-align: center; }
-	.callout-icon {
-		width: 48px; height: 48px; border-radius: 12px;
-		background: rgba(64,228,127,0.1);
-		display: flex; align-items: center; justify-content: center;
-		font-size: 24px; margin: 0 auto 12px;
-	}
-	.callout h4 {
-		font-family: var(--font-ui);
-		font-size: 15px; font-weight: 700;
-		color: #fff; margin-bottom: 4px;
-	}
-	.callout p { font-size: 14px; color: rgba(255,255,255,0.5); }
-
-	/* ── Founder ── */
-	.founder-section {
+	.btn-primary--light {
 		background: #fff;
-		border-top: 1px solid var(--border-light);
-		border-bottom: 1px solid var(--border-light);
-	}
-	.founder-section-inner {
-		padding-top: 60px;
-		padding-bottom: 60px;
-	}
-	.founder-inner {
-		display: flex; gap: 40px; align-items: center;
-		max-width: 800px; margin: 0 auto;
-	}
-	.founder-photo {
-		width: 140px; height: 140px; border-radius: 50%;
-		background: #E7F5F0; border: 3px solid var(--primary);
-		display: flex; align-items: center; justify-content: center;
-		font-size: 56px; flex-shrink: 0; overflow: hidden;
-	}
-	.founder-photo img { width: 100%; height: 100%; object-fit: cover; }
-	.founder-text h3 {
-		font-family: var(--font-ui);
-		font-size: 18px; font-weight: 700;
-		color: var(--text-dark); margin-bottom: 4px;
-	}
-	.founder-text .founder-role {
-		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 600;
-		color: var(--primary); text-transform: uppercase;
-		letter-spacing: 1px; margin-bottom: 16px;
-	}
-	.founder-text p {
-		font-size: 16px; color: var(--text-secondary);
-		line-height: 1.65; margin-bottom: 12px;
-	}
-	.founder-text blockquote {
-		font-family: var(--font-headline);
-		font-size: 20px; color: #1F5159;
-		font-style: italic;
-		border-left: 3px solid var(--primary);
-		padding-left: 16px; margin-top: 16px;
+		color: #0d2327;
+		box-shadow: none;
 	}
 
-	/* ── Testimonials ── */
-	.proof-grid {
+	.btn-secondary--dark {
+		background: rgba(255, 255, 255, 0.1);
+		border-color: rgba(255, 255, 255, 0.16);
+		color: white;
+	}
+
+	.hero-fine-print {
+		margin: 14px 0 0;
+		font-size: 15px;
+	}
+
+	.hero-bullets {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-		gap: 24px;
-	}
-	.proof-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border-light);
-		border-radius: 12px;
-		padding: 28px; box-shadow: var(--shadow-sm);
-	}
-	.proof-result {
-		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 700;
-		color: var(--primary); text-transform: uppercase;
-		letter-spacing: 0.5px; margin-bottom: 8px;
-	}
-	.proof-quote {
-		font-size: 16px; color: var(--text-dark);
-		font-style: italic; line-height: 1.6; margin-bottom: 16px;
-	}
-	.proof-author {
-		font-family: var(--font-ui);
-		font-size: 14px; font-weight: 600; color: var(--text-dark);
-	}
-	.proof-role {
-		font-family: var(--font-ui);
-		font-size: 13px; color: var(--text-muted);
+		gap: 12px;
+		margin-top: 28px;
 	}
 
-	/* ── FAQ ── */
-	.faq-list { max-width: 700px; }
-	.faq-item { border-bottom: 1px solid var(--border-light); padding: 20px 0; }
-	.faq-q {
-		font-family: var(--font-ui);
-		font-size: 16px; font-weight: 600; color: var(--text-dark);
-		cursor: pointer;
-		display: flex; align-items: center; justify-content: space-between; gap: 12px;
-		background: none; border: none; width: 100%; text-align: left; padding: 0;
+	.hero-bullet,
+	.free-item {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
 	}
-	.faq-arrow {
-		width: 20px; height: 20px;
-		transition: transform 0.2s; flex-shrink: 0; color: var(--text-muted);
-	}
-	:global(.faq-item.open) .faq-arrow { transform: rotate(180deg); }
-	.faq-a {
-		font-size: 15px; color: var(--text-secondary); line-height: 1.6;
-		max-height: 0; overflow: hidden;
-		transition: max-height 0.3s ease, padding 0.3s ease;
-		padding-top: 0;
-	}
-	:global(.faq-item.open) .faq-a { max-height: 300px; padding-top: 12px; }
 
-	/* ── Final CTA ── */
-	.final-cta {
-		background: #0A1E21;
-		padding: 100px 24px; text-align: center;
-		position: relative; overflow: hidden;
+	.hero-bullet-dot,
+	.checkmark {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.14);
+		color: #1b8a45;
+		font-size: 13px;
+		font-weight: 800;
+		flex-shrink: 0;
+		margin-top: 2px;
 	}
-	.final-cta::before {
-		content: '';
-		position: absolute; inset: 0;
-		background: radial-gradient(ellipse at 50% 50%, rgba(81,190,123,0.06) 0%, transparent 60%);
-		pointer-events: none;
+
+	.hero-visual {
+		min-width: 0;
 	}
-	.final-cta h2 {
+
+	.stats-strip {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 16px;
+		margin-top: 10px;
+	}
+
+	.stat-card,
+	.workflow-card,
+	.support-card,
+	.operator-card,
+	.cta-panel {
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		border-radius: 28px;
+		background: rgba(255, 255, 255, 0.84);
+		box-shadow: 0 18px 40px rgba(20, 20, 19, 0.05);
+	}
+
+	.stat-card {
+		padding: 22px;
+	}
+
+	.stat-value {
 		font-family: var(--font-headline);
-		font-size: clamp(30px, 4vw, 44px);
-		color: #fff; margin-bottom: 16px; position: relative;
-	}
-	.final-cta p {
-		font-size: 18px; color: rgba(255,255,255,0.6);
-		max-width: 520px; margin: 0 auto 32px; position: relative;
-	}
-	.final-cta .btn-primary { position: relative; }
-	.final-cta .hero-fine {
-		margin-top: 14px; position: relative;
-		color: rgba(255,255,255,0.3);
+		font-size: 40px;
+		line-height: 1;
+		color: var(--text-dark);
 	}
 
-	/* ── Footer ── */
-	.footer {
-		background: #0A1E21;
-		border-top: 1px solid rgba(255,255,255,0.08);
-		padding: 32px 24px; text-align: center;
-	}
-	.footer-links {
-		display: flex; justify-content: center; gap: 24px; margin-bottom: 16px;
-	}
-	.footer-links a {
+	.stat-label {
+		margin-top: 10px;
 		font-family: var(--font-ui);
-		font-size: 13px; font-weight: 500;
-		color: rgba(255,255,255,0.4); text-decoration: none;
-	}
-	.footer-links a:hover { color: rgba(255,255,255,0.7); }
-	.footer-copy {
-		font-family: var(--font-ui);
-		font-size: 13px; color: rgba(255,255,255,0.25);
+		font-size: 13px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
 	}
 
-	/* ── Responsive ── */
-	@media (max-width: 768px) {
-		.nav-links { display: none; }
-		.nav-hamburger { display: block; }
-		.stats-bar { gap: 32px; padding: 32px 24px; }
-		.stat-num { font-size: 32px; }
-		.section { padding: 60px 20px; }
-		.hero-dark { padding: 120px 20px 60px; }
-		.hero-trust-row { gap: 16px; }
-		.pain-grid { grid-template-columns: 1fr; }
-		.preview-metrics { grid-template-columns: repeat(2, 1fr); }
-		.preview-deals { grid-template-columns: 1fr; }
-		.callout-row { grid-template-columns: 1fr; gap: 16px; }
-		.founder-inner { flex-direction: column; text-align: center; }
-		.founder-text blockquote { text-align: left; }
+	.stat-card p {
+		margin: 10px 0 0;
+		font-size: 15px;
 	}
-	@media (max-width: 480px) {
-		.preview-metrics { grid-template-columns: 1fr 1fr; }
-		.stats-bar { gap: 24px; }
+
+	.section {
+		padding: 88px 0 0;
+	}
+
+	.section-heading {
+		max-width: 820px;
+	}
+
+	.section-heading p {
+		margin: 18px 0 0;
+	}
+
+	.section-heading--narrow {
+		max-width: 700px;
+	}
+
+	.workflow-grid {
+		display: grid;
+		gap: 18px;
+		margin-top: 32px;
+	}
+
+	.workflow-card {
+		display: grid;
+		grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+		gap: 24px;
+		padding: 24px;
+		align-items: center;
+	}
+
+	.workflow-card ul {
+		margin: 18px 0 0;
+		padding-left: 20px;
+	}
+
+	.workflow-card li {
+		margin-top: 10px;
+		font-size: 16px;
+	}
+
+	.workflow-copy p {
+		margin: 16px 0 0;
+		font-size: 17px;
+	}
+
+	.mini-window {
+		border-radius: 24px;
+		overflow: hidden;
+		background: #f9faf5;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+	}
+
+	.mini-window-bar {
+		display: flex;
+		gap: 6px;
+		padding: 12px 14px;
+		background: #22292c;
+	}
+
+	.mini-window-bar span {
+		width: 9px;
+		height: 9px;
+		border-radius: 999px;
+	}
+
+	.mini-window-bar span:nth-child(1) {
+		background: #ff5f57;
+	}
+
+	.mini-window-bar span:nth-child(2) {
+		background: #ffbd2e;
+	}
+
+	.mini-window-bar span:nth-child(3) {
+		background: #28ca41;
+	}
+
+	.mini-window-body {
+		padding: 18px;
+		font-family: var(--font-ui);
+	}
+
+	.mini-kicker,
+	.pipeline-label {
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.mini-title {
+		margin-top: 10px;
+		font-size: 24px;
+		font-weight: 800;
+		line-height: 1.1;
+		color: var(--text-dark);
+	}
+
+	.chip-row {
+		margin-top: 16px;
+	}
+
+	.chip-row span,
+	.support-pills span {
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(31, 81, 89, 0.08);
+		color: var(--teal);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+	}
+
+	.metric-stack,
+	.mini-list,
+	.faq-list,
+	.free-list {
+		display: grid;
+		gap: 12px;
+	}
+
+	.metric-stack {
+		margin-top: 18px;
+	}
+
+	.metric-row,
+	.mini-match,
+	.pipeline-column {
+		padding: 14px;
+		border-radius: 18px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: white;
+	}
+
+	.metric-row,
+	.mini-match {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+	}
+
+	.metric-row div,
+	.pipeline-column p,
+	.mini-match small {
+		font-size: 13px;
+		color: var(--text-secondary);
+	}
+
+	.metric-row strong,
+	.mini-match strong,
+	.pipeline-count {
+		font-size: 15px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.mini-match span {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 54px;
+		padding: 8px 10px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.14);
+		color: #1b8a45;
+		font-size: 12px;
+		font-weight: 800;
+	}
+
+	.pipeline-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+		margin-top: 16px;
+	}
+
+	.pipeline-count {
+		margin-top: 10px;
+		font-size: 28px;
+	}
+
+	.pipeline-column p {
+		margin: 8px 0 0;
+		line-height: 1.5;
+	}
+
+	.section-dark {
+		margin-top: 88px;
+		padding: 40px;
+		border-radius: 38px;
+		background:
+			radial-gradient(circle at top left, rgba(81, 190, 123, 0.18), transparent 25%),
+			linear-gradient(160deg, #0d2327 0%, #12353b 100%);
+		color: white;
+	}
+
+	.free-grid {
+		grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+		align-items: start;
+	}
+
+	.section-dark h2,
+	.section-dark p,
+	.section-dark .free-item span,
+	.section-dark .support-card p,
+	.section-dark .support-card h3 {
+		color: white;
+	}
+
+	.section-dark .eyebrow,
+	.section-dark .support-kicker {
+		background: rgba(255, 255, 255, 0.12);
+		color: rgba(255, 255, 255, 0.82);
+	}
+
+	.section-dark .free-item,
+	.section-dark .support-card {
+		color: white;
+	}
+
+	.free-list {
+		margin-top: 22px;
+	}
+
+	.support-card {
+		padding: 24px;
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.12);
+		box-shadow: none;
+	}
+
+	.support-card h3 {
+		margin-top: 18px;
+		font-size: 34px;
+		max-width: 11ch;
+	}
+
+	.support-card p {
+		margin-top: 16px;
+		font-size: 16px;
+	}
+
+	.support-pills {
+		margin-top: 18px;
+	}
+
+	.support-pills span {
+		background: rgba(255, 255, 255, 0.12);
+		color: white;
+	}
+
+	.operator-card,
+	.cta-panel {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 24px;
+		padding: 28px;
+	}
+
+	.operator-card {
+		background: linear-gradient(145deg, #102a2f, #173e45);
+		border-color: rgba(255, 255, 255, 0.08);
+	}
+
+	.operator-card h2,
+	.operator-card p {
+		color: white;
+	}
+
+	.operator-card p {
+		max-width: 42rem;
+		margin: 18px 0 0;
+		font-size: 16px;
+	}
+
+	.section-faq {
+		padding-bottom: 88px;
+	}
+
+	.faq-list {
+		margin-top: 28px;
+	}
+
+	.faq-item {
+		padding: 22px 24px;
+		border-radius: 24px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: rgba(255, 255, 255, 0.82);
+	}
+
+	.faq-item summary {
+		cursor: pointer;
+		list-style: none;
+		font-family: var(--font-ui);
+		font-size: 17px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.faq-item summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.faq-item p {
+		margin: 16px 0 0;
+		font-size: 16px;
+	}
+
+	.section-cta {
+		padding-top: 0;
+		padding-bottom: 64px;
+	}
+
+	.cta-panel {
+		flex-direction: column;
+		text-align: center;
+		padding: 40px 28px;
+	}
+
+	.cta-panel p {
+		max-width: 760px;
+		margin: 18px auto 0;
+	}
+
+	@media (max-width: 1100px) {
+		.hero-section,
+		.workflow-card,
+		.free-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.stats-strip {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.operator-card {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
+
+	@media (max-width: 820px) {
+		.marketing-page {
+			padding: 16px;
+		}
+
+		.nav-links,
+		.nav-actions {
+			display: none;
+		}
+
+		.nav-toggle {
+			display: inline-flex;
+		}
+
+		.hero-section {
+			padding-top: 42px;
+		}
+
+		h1 {
+			max-width: 12ch;
+		}
+
+		.section,
+		.section-faq {
+			padding-top: 72px;
+		}
+
+		.section-dark {
+			margin-top: 72px;
+			padding: 28px 22px;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.stats-strip,
+		.pipeline-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.nav {
+			padding-inline: 14px;
+		}
+
+		h1 {
+			font-size: clamp(2.7rem, 14vw, 4rem);
+		}
+
+		h2 {
+			font-size: clamp(2rem, 11vw, 3rem);
+		}
+
+		h3,
+		.support-card h3 {
+			font-size: clamp(1.8rem, 9vw, 2.4rem);
+		}
+
+		p,
+		li,
+		.hero-description,
+		.hero-fine-print {
+			font-size: 16px;
+		}
+
+		.workflow-card,
+		.stat-card,
+		.support-card,
+		.operator-card,
+		.cta-panel,
+		.faq-item {
+			border-radius: 24px;
+		}
+
+		.workflow-card,
+		.operator-card,
+		.cta-panel {
+			padding: 20px;
+		}
 	}
 </style>
