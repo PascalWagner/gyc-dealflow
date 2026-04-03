@@ -1,6 +1,6 @@
 import { chromium } from '@playwright/test';
 
-const baseUrl = process.env.QA_BASE_URL || 'http://127.0.0.1:4175';
+const baseUrl = process.env.QA_BASE_URL || 'http://127.0.0.1:4173';
 const fakeToken =
 	'eyJhbGciOiJub25lIn0.eyJlbWFpbCI6Im1lbWJlckBleGFtcGxlLmNvbSIsImV4cCI6OTk5OTk5OTk5OX0.';
 

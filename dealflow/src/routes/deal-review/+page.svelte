@@ -39,6 +39,7 @@
 		createEmptyDealReviewForm,
 		dealFieldConfig,
 		dealReviewSections,
+		formatDealReviewFieldDisplay,
 		getDealReviewFieldWarning
 	} from '$lib/utils/dealReviewSchema.js';
 	import {
@@ -75,6 +76,12 @@
 		normalizeReviewFieldEvidenceMap,
 		readReviewFieldValue
 	} from '$lib/utils/reviewFieldEvidence.js';
+	import {
+		getReviewFieldKeyForColumn,
+		getReviewFieldLabel,
+		hasActiveAdminOverride,
+		normalizeReviewFieldStateMap
+	} from '$lib/utils/reviewFieldState.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
 
 	function listFromValue(value) {
@@ -633,6 +640,7 @@
 	let saveError = $state('');
 	let saveMessage = $state('');
 	let dirty = $state(false);
+	let conflictServerDeal = $state(null);
 	let deal = $state(null);
 	let deckInputEl = $state(null);
 	let ppmInputEl = $state(null);
@@ -649,6 +657,8 @@
 	let extractionState = $state('idle');
 	let extractionError = $state('');
 	let extractionSummary = $state(null);
+	let extractionPreview = $state(null);
+	let extractionApplyState = $state('idle');
 	let autoExtractionHandled = $state(false);
 	let secStageRefreshKey = $state(0);
 	let intakeSponsorResults = $state([]);
@@ -676,6 +686,7 @@
 	let riskFactorDraft = $state('');
 	let highlightedRiskDraft = $state('');
 	let manualBranch = $state('');
+	let editedFieldLogCache = new Set();
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
 	const requestedStage = $derived($page.url.searchParams.get('stage') || '');
@@ -814,9 +825,10 @@
 		return unlockedStageIds.includes(requestedStage) ? requestedStage : firstIncompleteStage;
 	});
 	const reviewFooterBusy = $derived.by(() => {
-		if (saving) return true;
+		if (saving || teamContactsSaveState === 'running' || extractionState === 'running' || extractionApplyState === 'running') return true;
 		if (activeStage === 'sec' && secVerificationLoadState === 'running') return true;
 		if (activeStage === 'classification' && classificationSignalsState === 'running') return true;
+		if (lifecycleSyncState === 'running') return true;
 		return false;
 	});
 	const activeStageConfig = $derived(
@@ -885,8 +897,38 @@
 		ppmUrl: getDocumentUrl('ppm') || form.ppmUrl,
 		subAgreementUrl: deal?.subAgreementUrl || deal?.sub_agreement_url || ''
 	});
+	const reviewFieldState = $derived(
+		normalizeReviewFieldStateMap(deal?.reviewFieldState || deal?.review_field_state || {})
+	);
+	const reviewStateVersion = $derived(Number(deal?.reviewStateVersion || deal?.review_state_version || 0));
 	const reviewFieldEvidence = $derived(
 		normalizeReviewFieldEvidenceMap(deal?.reviewFieldEvidence || deal?.review_field_evidence || {})
+	);
+	const currentStageExtractionFieldKeys = $derived.by(() => {
+		const fieldKeys = getSaveFieldKeysForStage(activeStage);
+		return Array.isArray(fieldKeys) ? Array.from(new Set(fieldKeys.filter(Boolean))) : [];
+	});
+	const saveStatusLabel = $derived.by(() => {
+		if (saving || teamContactsSaveState === 'running' || extractionApplyState === 'running' || lifecycleSyncState === 'running') {
+			return 'Saving...';
+		}
+		if (extractionState === 'running') return 'Extracting...';
+		if (saveError) {
+			return 'Save failed';
+		}
+		return dirty ? 'Unsaved changes' : 'Saved';
+	});
+	const saveStatusTone = $derived.by(() => {
+		if (saving || teamContactsSaveState === 'running' || extractionApplyState === 'running' || lifecycleSyncState === 'running' || extractionState === 'running') return 'pending';
+		if (saveError) return 'error';
+		return dirty ? 'warning' : 'success';
+	});
+	const extractionPreviewLockedFieldKeys = $derived.by(() =>
+		extractionPreview
+			? extractionPreview.items
+				.filter((item) => item.adminLocked)
+				.map((item) => item.fieldKey)
+			: []
 	);
 	const reviewFieldEvidenceKnownKeys = $derived.by(() =>
 		new Set([
@@ -1008,6 +1050,105 @@
 		return state === 'ready' ? 'Ready' : 'Needs review';
 	}
 
+	function buildDealPatchBody(payload = {}) {
+		return {
+			...payload,
+			reviewStateVersion
+		};
+	}
+
+	function resolveDealPatchFailure(payload, fallbackMessage = 'Failed to save deal.') {
+		if (payload?.code !== 'review_state_conflict') {
+			conflictServerDeal = null;
+		}
+		if (payload?.code === 'review_state_conflict') {
+			conflictServerDeal = payload?.deal || null;
+			return 'This deal changed after you loaded it. Your local edits are still here, but the save was blocked to protect newer data. Load the latest saved version before saving again.';
+		}
+		if (payload?.code === 'review_schema_mismatch') {
+			return payload?.error || 'This deal is missing required review-schema support, so the save was blocked to prevent silent data loss.';
+		}
+		return payload?.error || fallbackMessage;
+	}
+
+	async function loadLatestServerDeal() {
+		if (!conflictServerDeal) return false;
+		if (!confirmDiscardUnsavedChanges()) return false;
+		syncDealState(conflictServerDeal, { clearSaveMessage: true });
+		saveMessage = 'Loaded the latest saved version of this deal.';
+		return true;
+	}
+
+	function confirmDiscardUnsavedChanges() {
+		if (!browser || !dirty) return true;
+		return window.confirm('You have unsaved changes that will be lost if you leave this page.');
+	}
+
+	async function navigateBack() {
+		if (!confirmDiscardUnsavedChanges()) return false;
+		await goto(backHref);
+		return true;
+	}
+
+	function logFieldEdit(fieldKey) {
+		if (!fieldKey || editedFieldLogCache.has(fieldKey)) return;
+		editedFieldLogCache.add(fieldKey);
+		console.info('[deal-review/edit]', {
+			dealId,
+			fieldKey,
+			reviewStateVersion
+		});
+	}
+
+	function formatPreviewValue(fieldKey, value) {
+		if (value === null || value === undefined || value === '') return 'Blank';
+		if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : 'Blank';
+		if (value && typeof value === 'object') {
+			if ('city' in value || 'state' in value || 'country' in value) {
+				return [value.city, value.state, value.country].filter(Boolean).join(', ') || 'Blank';
+			}
+			if (Array.isArray(value)) return value.join(', ');
+			return JSON.stringify(value);
+		}
+		return String(formatDealReviewFieldDisplay(fieldKey, value) || 'Blank');
+	}
+
+	function buildExtractionPreview(updates = {}, { scopeLabel = 'whole deal', fieldKeys = [] } = {}) {
+		const items = Object.entries(updates)
+			.map(([rawFieldKey, nextValue]) => {
+				const fieldKey = dealFieldConfig[rawFieldKey] ? rawFieldKey : getReviewFieldKeyForColumn(rawFieldKey);
+				if (!fieldKey) return null;
+				return {
+					fieldKey,
+					rawFieldKey,
+					label: getReviewFieldLabel(fieldKey),
+					currentValue: form[fieldKey],
+					extractedValue: nextValue,
+					adminLocked: hasActiveAdminOverride(reviewFieldState[fieldKey])
+				};
+			})
+			.filter(Boolean);
+
+		return {
+			scopeLabel,
+			fieldKeys,
+			rawUpdates: updates,
+			items
+		};
+	}
+
+	function buildExtractionPreviewFromItems(preview, items = []) {
+		if (!preview || items.length === 0) return null;
+		return {
+			...preview,
+			fieldKeys: items.map((item) => item.fieldKey),
+			rawUpdates: Object.fromEntries(
+				items.map((item) => [item.rawFieldKey, preview.rawUpdates[item.rawFieldKey]])
+			),
+			items
+		};
+	}
+
 	function markDirty() {
 		dirty = true;
 		saveMessage = '';
@@ -1043,8 +1184,22 @@
 				patchedFieldKeys.map((fieldKey) => [fieldKey, getDealReviewFieldWarning(fieldKey, nextForm[fieldKey])])
 			)
 		};
+		if (extractionPreview) {
+			extractionPreview = {
+				...extractionPreview,
+				items: extractionPreview.items.map((item) => (
+					patchedFieldKeys.includes(item.fieldKey)
+						? {
+							...item,
+							currentValue: nextForm[item.fieldKey]
+						}
+						: item
+				))
+			};
+		}
 
 		if (shouldMarkDirty) {
+			patchedFieldKeys.forEach((fieldKey) => logFieldEdit(fieldKey));
 			markDirty();
 		}
 	}
@@ -1208,6 +1363,16 @@
 		reviewFieldEvidenceError = '';
 		dirty = false;
 		saveError = '';
+		conflictServerDeal = null;
+		extractionPreview = null;
+		editedFieldLogCache = new Set();
+		console.info('[deal-review/load]', {
+			dealId: nextDeal?.id || dealId,
+			reviewStateVersion: Number(nextDeal?.reviewStateVersion || nextDeal?.review_state_version || 0),
+			reviewFieldStateCount: Object.keys(
+				normalizeReviewFieldStateMap(nextDeal?.reviewFieldState || nextDeal?.review_field_state || {})
+			).length
+		});
 		if (clearSaveMessage) {
 			saveMessage = '';
 		}
@@ -1438,14 +1603,19 @@
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${token}`
 			},
-			body: JSON.stringify(intakePayload)
+			body: JSON.stringify(buildDealPatchBody(intakePayload))
 		});
 		const payload = await response.json().catch(() => ({}));
 
 		if (!response.ok || !payload?.deal) {
-			throw new Error(payload?.error || 'Could not save the intake details.');
+			throw new Error(resolveDealPatchFailure(payload, 'Could not save the intake details.'));
 		}
 
+		console.info('[deal-review/save]', {
+			dealId,
+			scope: 'intake',
+			reviewStateVersion
+		});
 		syncDealState({
 			...(deal || {}),
 			...payload.deal
@@ -1633,9 +1803,9 @@
 							'Content-Type': 'application/json',
 							Authorization: `Bearer ${token}`
 						},
-						body: JSON.stringify({
+						body: JSON.stringify(buildDealPatchBody({
 							teamContacts: serializeTeamContactsForApi(persistedContacts)
-						})
+						}))
 					});
 					const dealSnapshotPayload = await dealSnapshotResponse.json().catch(() => ({}));
 					if (dealSnapshotResponse.ok && dealSnapshotPayload?.deal) {
@@ -1650,6 +1820,10 @@
 							{ clearSaveMessage: true }
 						);
 					} else {
+						teamContactsError = resolveDealPatchFailure(
+							dealSnapshotPayload,
+							'Sponsor contacts saved, but the deal review snapshot could not be updated.'
+						);
 						deal = {
 							...(deal || {}),
 							teamContactsSnapshotSupported: deal?.teamContactsSnapshotSupported === true,
@@ -1657,7 +1831,8 @@
 							teamContacts: persistedContacts
 						};
 					}
-				} catch {
+				} catch (error) {
+					teamContactsError = error?.message || 'Sponsor contacts saved, but the deal review snapshot could not be updated.';
 					deal = {
 						...(deal || {}),
 						teamContactsSnapshotSupported: deal?.teamContactsSnapshotSupported === true,
@@ -1960,7 +2135,7 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token}`
 				},
-				body: JSON.stringify(requestBody)
+				body: JSON.stringify(buildDealPatchBody(requestBody))
 			});
 			const payload = await response.json().catch(() => ({}));
 
@@ -1981,9 +2156,15 @@
 						...nextFieldErrors
 					};
 				}
-				throw new Error(payload?.error || 'Failed to save deal.');
+				throw new Error(resolveDealPatchFailure(payload, 'Failed to save deal.'));
 			}
 
+			console.info('[deal-review/save]', {
+				dealId,
+				scope: stage,
+				fieldCount: Array.isArray(scopedFieldKeys) ? scopedFieldKeys.length : Object.keys(nextPayload || {}).length,
+				reviewStateVersion
+			});
 			syncDealState(
 				{
 					...(deal || {}),
@@ -2012,6 +2193,12 @@
 			}
 			return true;
 		} catch (error) {
+			console.warn('[deal-review/save] failed', {
+				dealId,
+				stage,
+				message: error?.message || 'unknown_error',
+				reviewStateVersion
+			});
 			saveError = error?.message || 'Failed to save deal.';
 			revealReviewFeedback();
 			return false;
@@ -2049,16 +2236,22 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token}`
 				},
-				body: JSON.stringify({
+				body: JSON.stringify(buildDealPatchBody({
 					lifecycleStatus: desiredLifecycle
-				})
+				}))
 			});
 			const payload = await response.json().catch(() => ({}));
 
 			if (!response.ok || !payload?.deal) {
-				throw new Error(payload?.error || 'Failed to update the deal workflow status.');
+				throw new Error(resolveDealPatchFailure(payload, 'Failed to update the deal workflow status.'));
 			}
 
+			console.info('[deal-review/save]', {
+				dealId,
+				scope: 'lifecycle',
+				targetLifecycle: desiredLifecycle,
+				reviewStateVersion
+			});
 			syncDealState(
 				{
 					...(deal || {}),
@@ -2087,13 +2280,24 @@
 		}
 	}
 
-	async function runExtraction() {
-		if (!dealId || extractionState === 'running') return;
+	async function runExtraction({ fieldKeys = [], scopeLabel = '' } = {}) {
+		if (!dealId || extractionState === 'running' || extractionApplyState === 'running') return;
+
+		const requestedFieldKeys = Array.from(new Set((fieldKeys || []).filter(Boolean)));
+		const resolvedScopeLabel =
+			scopeLabel
+			|| (requestedFieldKeys.length > 0 ? activeStageConfig?.label || 'current step' : 'whole deal');
 
 		extractionState = 'running';
 		extractionError = '';
 		extractionSummary = null;
 		saveMessage = '';
+
+		console.info('[deal-review/extraction] requested', {
+			dealId,
+			scopeLabel: resolvedScopeLabel,
+			fieldKeys: requestedFieldKeys
+		});
 
 		try {
 			const token = await getFreshSessionToken();
@@ -2107,7 +2311,8 @@
 				},
 				body: JSON.stringify({
 					action: 'enrich-deal',
-					dealId
+					dealId,
+					...(requestedFieldKeys.length > 0 ? { fieldKeys: requestedFieldKeys } : {})
 				})
 			});
 			const enrichPayload = await enrichResponse.json().catch(() => ({}));
@@ -2117,61 +2322,228 @@
 			}
 
 			const updates = enrichPayload?.found_fields || {};
-			let appliedCount = 0;
+			const preview = buildExtractionPreview(updates, {
+				scopeLabel: resolvedScopeLabel,
+				fieldKeys: requestedFieldKeys
+			});
 
-			if (Object.keys(updates).length > 0) {
-				const applyResponse = await fetch('/api/deal-cleanup', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`
-					},
-					body: JSON.stringify({
-						action: 'apply-enrichment',
-						dealId,
-						updates
-					})
-				});
-				const applyPayload = await applyResponse.json().catch(() => ({}));
-
-				if (!applyResponse.ok || !applyPayload?.success) {
-					throw new Error(applyPayload?.error || 'The extracted fields could not be applied.');
-				}
-
-				appliedCount = Array.isArray(applyPayload.fields_updated)
-					? applyPayload.fields_updated.length
-					: Object.keys(updates).length;
-
-				if (applyPayload?.data) {
-					syncDealState({
-						...(deal || {}),
-						...applyPayload.data
-					});
-					await loadReviewFieldEvidence({
-						fieldKeys: Object.keys(updates),
-						force: true
-					});
-				}
-			}
-
-			await loadSecVerificationSummary();
-			secStageRefreshKey += 1;
+			extractionPreview = preview.items.length > 0 ? preview : null;
 			extractionSummary = {
-				fieldsFound: Object.keys(updates).length,
-				fieldsApplied: appliedCount,
+				fieldsFound: preview.items.length,
+				fieldsApplied: 0,
 				sources: enrichPayload?.sources || [],
 				steps: enrichPayload?.steps || [],
 				notes: enrichPayload?.notes || ''
 			};
 			extractionState = 'success';
-			saveMessage = appliedCount > 0
-				? `We prefilled ${appliedCount} fields from the uploaded sources. Review them before publishing.`
-				: 'The uploaded sources were processed. Review the deal details before publishing.';
+			await loadSecVerificationSummary();
+			secStageRefreshKey += 1;
+
+			if (preview.items.length > 0) {
+				saveMessage = `Extraction finished for ${resolvedScopeLabel}. Review ${preview.items.length} proposed ${preview.items.length === 1 ? 'field' : 'fields'} before applying them.`;
+			} else {
+				saveMessage = `Extraction finished for ${resolvedScopeLabel}, but no new values were proposed.`;
+			}
+
+			console.info('[deal-review/extraction] preview ready', {
+				dealId,
+				scopeLabel: resolvedScopeLabel,
+				foundCount: preview.items.length,
+				lockedCount: preview.items.filter((item) => item.adminLocked).length
+			});
 		} catch (error) {
 			extractionState = 'error';
 			extractionError = error?.message || 'Failed to extract deal details.';
+			console.warn('[deal-review/extraction] failed', {
+				dealId,
+				scopeLabel: resolvedScopeLabel,
+				message: error?.message || 'unknown_error'
+			});
 		} finally {
 			clearExtractionFlags();
+		}
+	}
+
+	async function applyExtractionPreview({ fieldKeys = [], forceFieldKeys = [] } = {}) {
+		if (!dealId || !extractionPreview || extractionApplyState === 'running') return false;
+		if (dirty) {
+			saveError = 'Save or reset your current unsaved changes before applying extracted values.';
+			revealReviewFeedback();
+			return false;
+		}
+
+		const targetedFieldKeys = Array.from(new Set((fieldKeys || []).filter(Boolean)));
+		const previewItems = extractionPreview.items.filter((item) =>
+			targetedFieldKeys.length === 0 || targetedFieldKeys.includes(item.fieldKey)
+		);
+		if (previewItems.length === 0) return false;
+
+		const forcedFieldKeys = Array.from(new Set((forceFieldKeys || []).filter(Boolean)));
+		if (
+			forcedFieldKeys.length > 0
+			&& browser
+			&& !window.confirm(
+				`Overwrite ${forcedFieldKeys.length} admin-edited ${forcedFieldKeys.length === 1 ? 'field' : 'fields'} with the newly extracted value? This cannot be undone automatically.`
+			)
+		) {
+			return false;
+		}
+
+		extractionApplyState = 'running';
+		saveError = '';
+		extractionError = '';
+		const previousPreview = extractionPreview;
+
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active admin session to apply extracted values.');
+
+			const updates = Object.fromEntries(
+				previewItems.map((item) => [item.rawFieldKey, previousPreview.rawUpdates[item.rawFieldKey]])
+			);
+
+			const applyResponse = await fetch('/api/deal-cleanup', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					action: 'apply-enrichment',
+					dealId,
+					updates,
+					...(forcedFieldKeys.length > 0 ? { forceFieldKeys: forcedFieldKeys } : {})
+				})
+			});
+			const applyPayload = await applyResponse.json().catch(() => ({}));
+
+			if (!applyResponse.ok || !applyPayload?.success) {
+				throw new Error(applyPayload?.error || 'The extracted fields could not be applied.');
+			}
+
+			if (applyPayload?.deal || applyPayload?.data) {
+				syncDealState({
+					...(deal || {}),
+					...(applyPayload.deal || applyPayload.data || {})
+				});
+			}
+
+			const appliedFieldKeys = previewItems.map((item) => item.fieldKey);
+			if (appliedFieldKeys.length > 0) {
+				await loadReviewFieldEvidence({
+					fieldKeys: appliedFieldKeys,
+					force: true
+				});
+			}
+
+			const blockedFieldSet = new Set(
+				(Array.isArray(applyPayload?.blocked_fields) ? applyPayload.blocked_fields : []).filter(Boolean)
+			);
+			const attemptedFieldKeySet = new Set(previewItems.map((item) => item.fieldKey));
+			const remainingItems = previousPreview.items.filter((item) => {
+				if (!attemptedFieldKeySet.has(item.fieldKey)) return true;
+				return blockedFieldSet.has(item.fieldKey);
+			});
+			extractionPreview = buildExtractionPreviewFromItems(previousPreview, remainingItems);
+
+			const appliedCount = Array.isArray(applyPayload?.fields_updated)
+				? applyPayload.fields_updated.length
+				: previewItems.length - blockedFieldSet.size;
+			extractionSummary = {
+				...(extractionSummary || {}),
+				fieldsApplied: appliedCount
+			};
+			saveMessage = blockedFieldSet.size > 0
+				? `Applied ${appliedCount} extracted ${appliedCount === 1 ? 'field' : 'fields'}. ${blockedFieldSet.size} admin-edited ${blockedFieldSet.size === 1 ? 'field was' : 'fields were'} protected and left unchanged.`
+				: `Applied ${appliedCount} extracted ${appliedCount === 1 ? 'field' : 'fields'}.`;
+
+			console.info('[deal-review/extraction] applied', {
+				dealId,
+				appliedCount,
+				blockedCount: blockedFieldSet.size,
+				forcedFieldKeys
+			});
+			return true;
+		} catch (error) {
+			saveError = error?.message || 'The extracted fields could not be applied.';
+			revealReviewFeedback();
+			console.warn('[deal-review/extraction] apply failed', {
+				dealId,
+				message: error?.message || 'unknown_error'
+			});
+			return false;
+		} finally {
+			extractionApplyState = 'idle';
+		}
+	}
+
+	async function resetFieldToExtracted(fieldKey) {
+		if (!dealId || !fieldKey || extractionApplyState === 'running') return false;
+		if (dirty) {
+			saveError = 'Save or reset your current unsaved changes before resetting a field to the extracted value.';
+			revealReviewFeedback();
+			return false;
+		}
+
+		const entry = reviewFieldState[fieldKey];
+		if (!entry?.aiValuePresent) {
+			saveError = 'No extracted value is currently stored for that field.';
+			revealReviewFeedback();
+			return false;
+		}
+
+		if (
+			browser
+			&& !window.confirm(`Reset ${getReviewFieldLabel(fieldKey)} to the current extracted value?`)
+		) {
+			return false;
+		}
+
+		extractionApplyState = 'running';
+		saveError = '';
+
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active admin session to reset extracted values.');
+
+			const response = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify(buildDealPatchBody({
+					reviewFieldAction: {
+						type: 'reset_to_ai',
+						fieldKey
+					}
+				}))
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || !payload?.deal) {
+				throw new Error(resolveDealPatchFailure(payload, 'Could not reset this field to the extracted value.'));
+			}
+
+			syncDealState({
+				...(deal || {}),
+				...payload.deal
+			});
+			await loadReviewFieldEvidence({
+				fieldKeys: [fieldKey],
+				force: true
+			});
+			saveMessage = `${getReviewFieldLabel(fieldKey)} was reset to the extracted value.`;
+			console.info('[deal-review/extraction] reset to ai', {
+				dealId,
+				fieldKey
+			});
+			return true;
+		} catch (error) {
+			saveError = error?.message || 'Could not reset this field to the extracted value.';
+			revealReviewFeedback();
+			return false;
+		} finally {
+			extractionApplyState = 'idle';
 		}
 	}
 
@@ -2259,6 +2631,10 @@
 			return false;
 		}
 
+		if (!movingForward && !confirmDiscardUnsavedChanges()) {
+			return false;
+		}
+
 		if (movingForward) {
 			const shouldSaveBeforeAdvance = dirty || ['intake', 'team', 'sec'].includes(activeStage);
 			const ok = shouldSaveBeforeAdvance ? await saveCurrentStage(activeStage) : true;
@@ -2287,9 +2663,22 @@
 		return true;
 	}
 
-	onMount(async () => {
+	onMount(() => {
 		previousDealId = dealId;
-		await loadDeal();
+		const handleBeforeUnload = (event) => {
+			if (!dirty) return;
+			event.preventDefault();
+			event.returnValue = '';
+		};
+		if (browser) {
+			window.addEventListener('beforeunload', handleBeforeUnload);
+		}
+		void loadDeal();
+		return () => {
+			if (browser) {
+				window.removeEventListener('beforeunload', handleBeforeUnload);
+			}
+		};
 	});
 
 	onDestroy(() => {
@@ -2325,7 +2714,7 @@
 			clearExtractionFlags();
 			return;
 		}
-		void runExtraction();
+		void runExtraction({ scopeLabel: 'whole deal' });
 	});
 
 	$effect(() => {
@@ -2408,15 +2797,16 @@
 		className="deal-review-header"
 	>
 		<div slot="actions" class="header-actions">
-			<button type="button" class="ghost-btn" onclick={() => goto(backHref)}>
+			<button type="button" class="ghost-btn" onclick={navigateBack}>
 				{backLabel}
 			</button>
-				{#if dealId && activeStage !== 'intake'}
-					<a class="ghost-btn" href={`/deal/${dealId}`} target="_blank" rel="noopener">Open Deal</a>
-					<button type="button" class="primary-btn" onclick={saveActiveReviewStage} disabled={loading || saving || teamContactsSaveState === 'running' || !dirty}>
-						{saving || teamContactsSaveState === 'running' ? 'Saving...' : dirty ? 'Save' : 'Saved'}
-					</button>
-				{/if}
+			{#if dealId && activeStage !== 'intake'}
+				<span class={`save-status save-status--${saveStatusTone}`}>{saveStatusLabel}</span>
+				<a class="ghost-btn" href={`/deal/${dealId}`} target="_blank" rel="noopener">Open Deal</a>
+				<button type="button" class="primary-btn" onclick={saveActiveReviewStage} disabled={loading || reviewFooterBusy || !dirty}>
+					{reviewFooterBusy ? 'Working...' : dirty ? 'Save' : 'Saved'}
+				</button>
+			{/if}
 		</div>
 	</PageHeader>
 
@@ -2428,7 +2818,7 @@
 			<p>{loadError}</p>
 			<div class="state-actions">
 				<button type="button" class="ghost-btn" onclick={loadDeal}>Retry</button>
-				<button type="button" class="ghost-btn" onclick={() => goto(backHref)}>{backLabel}</button>
+				<button type="button" class="ghost-btn" onclick={navigateBack}>{backLabel}</button>
 			</div>
 		</div>
 	{:else}
@@ -2704,15 +3094,53 @@
 								<div class="review-stage-controls__eyebrow">{activeStageConfig?.label || 'Review'} Step</div>
 								<h2>{reviewWorkspaceTitle}</h2>
 							</div>
+							<div class="review-stage-controls__actions">
+								{#if currentStageExtractionFieldKeys.length > 0}
+									<button
+										type="button"
+										class="ghost-btn"
+										disabled={reviewFooterBusy}
+										onclick={() => runExtraction({
+											fieldKeys: currentStageExtractionFieldKeys,
+											scopeLabel: activeStageConfig?.label || 'current step'
+										})}
+									>
+										{extractionState === 'running' ? 'Re-extracting...' : 'Re-extract this step'}
+									</button>
+								{/if}
+								{#if hasSourceDocuments}
+									<button
+										type="button"
+										class="ghost-btn"
+										disabled={reviewFooterBusy}
+										onclick={() => runExtraction({ scopeLabel: 'whole deal' })}
+									>
+										{extractionState === 'running' ? 'Working...' : 'Re-extract whole deal'}
+									</button>
+								{/if}
+							</div>
 						</div>
 					{/if}
 
 					{#if saveError}
-						<div class="message-banner message-banner--error">{saveError}</div>
+						<div class="message-banner message-banner--error">
+							<div>{saveError}</div>
+							{#if conflictServerDeal}
+								<div class="message-banner__actions">
+									<button type="button" class="ghost-btn" onclick={loadLatestServerDeal}>Load latest saved version</button>
+								</div>
+							{/if}
+						</div>
 					{/if}
 
 					{#if saveMessage && !(extractionSummary && /prefilled/i.test(saveMessage))}
 						<div class="message-banner message-banner--success">{saveMessage}</div>
+					{/if}
+
+					{#if extractionError}
+						<div class="message-banner message-banner--warning">
+							{extractionError}
+						</div>
 					{/if}
 
 					{#if schemaWarningMessage}
@@ -2725,6 +3153,100 @@
 						<div class="message-banner message-banner--warning">
 							{reviewFieldEvidenceError}
 						</div>
+					{/if}
+
+					{#if extractionPreview}
+						<section class="extraction-preview-card">
+							<div class="extraction-preview-card__header">
+								<div>
+									<div class="extraction-preview-card__eyebrow">Extraction Preview</div>
+									<h3>Nothing changes until you apply these updates</h3>
+									<p>
+										{extractionPreview.items.length} proposed {extractionPreview.items.length === 1 ? 'field' : 'fields'} from {extractionPreview.scopeLabel}. Admin-edited fields stay locked unless you explicitly overwrite them.
+									</p>
+								</div>
+								<div class="extraction-preview-card__actions">
+									<button type="button" class="ghost-btn" disabled={extractionApplyState === 'running'} onclick={() => { extractionPreview = null; }}>
+										Dismiss preview
+									</button>
+									<button type="button" class="ghost-btn" disabled={extractionApplyState === 'running'} onclick={() => applyExtractionPreview()}>
+										{extractionApplyState === 'running' ? 'Applying...' : 'Apply safe updates'}
+									</button>
+									{#if extractionPreviewLockedFieldKeys.length > 0}
+										<button
+											type="button"
+											class="primary-btn"
+											disabled={extractionApplyState === 'running'}
+											onclick={() => applyExtractionPreview({ forceFieldKeys: extractionPreviewLockedFieldKeys })}
+										>
+											Overwrite {extractionPreviewLockedFieldKeys.length} locked {extractionPreviewLockedFieldKeys.length === 1 ? 'field' : 'fields'}
+										</button>
+									{/if}
+								</div>
+							</div>
+
+							<div class="extraction-preview-list">
+								{#each extractionPreview.items as item}
+									<article class="extraction-preview-item">
+										<div class="extraction-preview-item__top">
+											<div>
+												<h4>{item.label}</h4>
+												<div class="extraction-preview-item__meta">
+													<span class="extraction-preview-pill">{fieldStageLabels.get(item.fieldKey) || extractionPreview.scopeLabel}</span>
+													{#if item.adminLocked}
+														<span class="extraction-preview-pill extraction-preview-pill--locked">Admin edit protected</span>
+													{/if}
+												</div>
+											</div>
+											<div class="extraction-preview-item__actions">
+												<button
+													type="button"
+													class="ghost-btn"
+													disabled={extractionApplyState === 'running'}
+													onclick={() => runExtraction({
+														fieldKeys: [item.fieldKey],
+														scopeLabel: item.label
+													})}
+												>
+													Re-extract field
+												</button>
+												<button
+													type="button"
+													class="ghost-btn"
+													disabled={extractionApplyState === 'running'}
+													onclick={() => applyExtractionPreview({
+														fieldKeys: [item.fieldKey],
+														forceFieldKeys: item.adminLocked ? [item.fieldKey] : []
+													})}
+												>
+													Apply this field
+												</button>
+												{#if item.adminLocked && reviewFieldState[item.fieldKey]?.aiValuePresent}
+													<button
+														type="button"
+														class="ghost-btn"
+														disabled={extractionApplyState === 'running'}
+														onclick={() => resetFieldToExtracted(item.fieldKey)}
+													>
+														Reset to extracted value
+													</button>
+												{/if}
+											</div>
+										</div>
+										<div class="extraction-preview-diff">
+											<div>
+												<span>Current</span>
+												<strong>{formatPreviewValue(item.fieldKey, item.currentValue)}</strong>
+											</div>
+											<div>
+												<span>Extracted</span>
+												<strong>{formatPreviewValue(item.fieldKey, item.extractedValue)}</strong>
+											</div>
+										</div>
+									</article>
+								{/each}
+							</div>
+						</section>
 					{/if}
 
 					<div class="review-stage-progress-mobile">
@@ -2757,8 +3279,8 @@
 								onchange={(nextContacts) => {
 									teamContacts = nextContacts;
 									teamContactsError = '';
-									dirty = true;
-									saveMessage = '';
+									logFieldEdit('teamContacts');
+									markDirty();
 								}}
 								ondone={() => saveTeamContacts({ quiet: false, requireComplete: false })}
 								onback={() => navigateToStage(previousStage)}
@@ -3107,7 +3629,7 @@
 												Reset unsaved changes
 											</button>
 											<button type="submit" class="ghost-btn" disabled={reviewFooterBusy}>
-												{reviewFooterBusy ? 'Loading...' : 'Save changes'}
+												{reviewFooterBusy ? 'Working...' : 'Save changes'}
 											</button>
 											{#if activeStage !== 'summary' && nextStage && nextStage !== activeStage}
 												<button type="button" class="primary-btn" disabled={reviewFooterBusy} onclick={continueToNextStage}>
@@ -3143,6 +3665,38 @@
 		align-items: center;
 		gap: 10px;
 		flex-wrap: wrap;
+	}
+
+	.save-status {
+		display: inline-flex;
+		align-items: center;
+		padding: 8px 12px;
+		border-radius: 999px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.save-status--success {
+		background: rgba(22, 122, 82, 0.12);
+		color: #167a52;
+	}
+
+	.save-status--warning {
+		background: rgba(214, 140, 69, 0.12);
+		color: #8c581f;
+	}
+
+	.save-status--pending {
+		background: rgba(31, 81, 89, 0.1);
+		color: #1f5159;
+	}
+
+	.save-status--error {
+		background: rgba(194, 65, 68, 0.1);
+		color: #b42328;
 	}
 
 	.review-layout {
@@ -3511,6 +4065,144 @@
 		flex-wrap: wrap;
 	}
 
+	.extraction-preview-card {
+		padding: 20px;
+		border-radius: 24px;
+		border: 1px solid rgba(31, 81, 89, 0.1);
+		background:
+			linear-gradient(180deg, rgba(245, 250, 247, 0.98), rgba(252, 251, 247, 0.98)),
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.12), transparent 42%);
+		box-shadow: 0 18px 36px rgba(16, 37, 42, 0.05);
+		display: grid;
+		gap: 16px;
+	}
+
+	.extraction-preview-card__header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
+	}
+
+	.extraction-preview-card__eyebrow {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #486f61;
+		margin-bottom: 8px;
+	}
+
+	.extraction-preview-card__header h3 {
+		margin: 0;
+		font-family: var(--font-ui);
+		font-size: 18px;
+		color: var(--text-dark);
+	}
+
+	.extraction-preview-card__header p {
+		margin: 8px 0 0;
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+		max-width: 64ch;
+	}
+
+	.extraction-preview-card__actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.extraction-preview-list {
+		display: grid;
+		gap: 12px;
+	}
+
+	.extraction-preview-item {
+		padding: 16px;
+		border-radius: 18px;
+		border: 1px solid rgba(31, 81, 89, 0.08);
+		background: rgba(255, 255, 255, 0.72);
+		display: grid;
+		gap: 12px;
+	}
+
+	.extraction-preview-item__top {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
+
+	.extraction-preview-item h4 {
+		margin: 0;
+		font-size: 15px;
+		color: var(--text-dark);
+	}
+
+	.extraction-preview-item__meta,
+	.extraction-preview-item__actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.extraction-preview-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 6px 10px;
+		border-radius: 999px;
+		background: rgba(31, 81, 89, 0.08);
+		color: #1f5159;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.extraction-preview-pill--locked {
+		background: rgba(214, 140, 69, 0.16);
+		color: #8c581f;
+	}
+
+	.extraction-preview-diff {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.extraction-preview-diff div {
+		display: grid;
+		gap: 6px;
+		padding: 12px 14px;
+		border-radius: 14px;
+		background: rgba(247, 250, 251, 0.9);
+		border: 1px solid rgba(31, 81, 89, 0.06);
+	}
+
+	.extraction-preview-diff span {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.extraction-preview-diff strong {
+		font-size: 14px;
+		line-height: 1.5;
+		color: var(--text-dark);
+		word-break: break-word;
+	}
+
 	.editor-card--structured {
 		background:
 			linear-gradient(180deg, rgba(252, 251, 247, 0.96), rgba(246, 248, 243, 0.96)),
@@ -3863,6 +4555,14 @@
 		font-weight: 600;
 	}
 
+	.message-banner__actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		margin-top: 10px;
+	}
+
 	.message-banner--error {
 		background: rgba(194, 65, 68, 0.1);
 		color: #b42328;
@@ -3937,11 +4637,22 @@
 		.header-actions,
 		.form-footer,
 		.intake-screen__actions,
-		.review-stage-controls__actions {
+		.review-stage-controls__actions,
+		.extraction-preview-card__actions,
+		.extraction-preview-item__actions,
+		.message-banner__actions {
 			align-items: stretch;
 		}
 
 		.review-stage-controls {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.extraction-preview-card__header,
+		.extraction-preview-item__top,
+		.extraction-preview-diff {
+			grid-template-columns: 1fr;
 			flex-direction: column;
 			align-items: stretch;
 		}

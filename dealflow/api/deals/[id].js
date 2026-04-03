@@ -6,6 +6,15 @@ import { getAdminClient, setCors, ADMIN_EMAILS } from '../_supabase.js';
 import { resolveDealWorkflowMutation, slugify } from '../../src/lib/utils/dealWorkflow.js';
 import { normalizeDealReviewPatch } from '../../src/lib/utils/dealReviewSchema.js';
 import { transformDeals } from '../member/deals/transform.js';
+import {
+	applyReviewFieldStateToDeal,
+	buildAdminReviewFieldStateEntry,
+	clearAdminOverrideReviewFieldStateEntry,
+	getReviewFieldDbColumn,
+	isReviewFieldKey,
+	normalizeReviewFieldStateMap,
+	resolveFinalReviewFieldValue
+} from '../../src/lib/utils/reviewFieldState.js';
 
 const HISTORICAL_RETURN_START_YEAR = 2015;
 const HISTORICAL_RETURN_END_YEAR = new Date().getFullYear() - 1;
@@ -240,6 +249,26 @@ function normalizeValue(key, value) {
   return value;
 }
 
+async function insertReviewFieldEvents(supabase, events = []) {
+  if (!Array.isArray(events) || events.length === 0) return;
+  try {
+    const { error } = await supabase
+      .from('review_field_events')
+      .insert(events);
+    if (error) {
+      console.warn('[deal-review/events] insert failed', {
+        message: error.message,
+        count: events.length
+      });
+    }
+  } catch (error) {
+    console.warn('[deal-review/events] insert threw', {
+      message: error?.message || 'unknown_error',
+      count: events.length
+    });
+  }
+}
+
 function isUuid(value) {
   return /^[0-9a-f-]{36}$/i.test(String(value || '').trim());
 }
@@ -312,8 +341,11 @@ function serializeDealRecord(deal, {
   currentManagementCompany = null,
   availableColumns = new Set()
 } = {}) {
+  const stateAwareDeal = applyReviewFieldStateToDeal(deal);
   const modernLendingReviewSchemaSupported = [
     'review_field_evidence',
+    'review_field_state',
+    'review_state_version',
     'team_contacts',
     'sec_verification_state',
     'current_fund_size',
@@ -328,41 +360,47 @@ function serializeDealRecord(deal, {
   const transformedDeal = transformDeals(
     [
       {
-        ...deal,
-        management_company: currentManagementCompany || deal?.management_company || null
+        ...stateAwareDeal,
+        management_company: currentManagementCompany || stateAwareDeal?.management_company || null
       }
     ],
     [],
     []
   )?.[0] || {};
-  const resolvedCompanyWebsite = currentManagementCompany?.website || deal?.companyWebsite || deal?.mcWebsite || '';
+  const resolvedCompanyWebsite = currentManagementCompany?.website || stateAwareDeal?.companyWebsite || stateAwareDeal?.mcWebsite || '';
+  const reviewFieldState = normalizeReviewFieldStateMap(
+    stateAwareDeal?.review_field_state || stateAwareDeal?.reviewFieldState || {}
+  );
   return {
-    ...deal,
+    ...stateAwareDeal,
     ...transformedDeal,
-    slug: deal?.slug || slugify(deal?.investment_name || ''),
+    slug: stateAwareDeal?.slug || slugify(stateAwareDeal?.investment_name || ''),
     sponsorName:
       transformedDeal?.sponsorName
-      || deal?.sponsor_name
+      || stateAwareDeal?.sponsor_name
       || currentManagementCompany?.operator_name
       || '',
-    managementCompanyId: transformedDeal?.managementCompanyId || deal?.management_company_id || '',
-    dealBranch: transformedDeal?.dealBranch || deal?.deal_branch || '',
-    lifecycleStatus: transformedDeal?.lifecycleStatus || deal?.lifecycle_status || '',
-    isVisibleToUsers: deal?.is_visible_to_users === true,
+    managementCompanyId: transformedDeal?.managementCompanyId || stateAwareDeal?.management_company_id || '',
+    dealBranch: transformedDeal?.dealBranch || stateAwareDeal?.deal_branch || '',
+    lifecycleStatus: transformedDeal?.lifecycleStatus || stateAwareDeal?.lifecycle_status || '',
+    isVisibleToUsers: stateAwareDeal?.is_visible_to_users === true,
     reviewFieldEvidence:
       transformedDeal?.reviewFieldEvidence
-      || deal?.review_field_evidence
+      || stateAwareDeal?.review_field_evidence
       || {},
     reviewFieldEvidenceSupported: availableColumns.has('review_field_evidence'),
+    reviewFieldState,
+    reviewFieldStateSupported: availableColumns.has('review_field_state'),
+    reviewStateVersion: Number(stateAwareDeal?.review_state_version || 0),
     teamContacts:
       transformedDeal?.teamContacts
-      || deal?.team_contacts
+      || stateAwareDeal?.team_contacts
       || [],
     teamContactsSnapshotSupported: availableColumns.has('team_contacts'),
     modernLendingReviewSchemaSupported,
     legacyApprovedReviewCompat:
-      (transformedDeal?.dealBranch || deal?.deal_branch || '') === 'lending_fund'
-      && String(transformedDeal?.lifecycleStatus || deal?.lifecycle_status || '').trim().toLowerCase() === 'approved'
+      (transformedDeal?.dealBranch || stateAwareDeal?.deal_branch || '') === 'lending_fund'
+      && String(transformedDeal?.lifecycleStatus || stateAwareDeal?.lifecycle_status || '').trim().toLowerCase() === 'approved'
       && !modernLendingReviewSchemaSupported,
     mcWebsite: transformedDeal?.mcWebsite || resolvedCompanyWebsite,
     companyWebsite: transformedDeal?.companyWebsite || resolvedCompanyWebsite
@@ -388,10 +426,11 @@ export default async function handler(req, res) {
 
   const {
     supabase,
+    user,
     deal,
-    availableColumns,
-    currentManagementCompany
+    availableColumns
   } = context;
+  let currentManagementCompany = context.currentManagementCompany;
 
   if (req.method === 'GET') {
     return res.status(200).json({
@@ -413,6 +452,133 @@ export default async function handler(req, res) {
     ...body,
     ...normalizedBody
   };
+  const reviewFieldStateSupported = availableColumns.has('review_field_state');
+  const reviewStateVersionSupported = availableColumns.has('review_state_version');
+  const requestedReviewStateVersion =
+    body.reviewStateVersion === undefined || body.reviewStateVersion === null
+      ? null
+      : Number(body.reviewStateVersion);
+  const currentReviewStateVersion = Number(deal?.review_state_version || 0);
+
+  if (
+    reviewStateVersionSupported
+    && requestedReviewStateVersion !== null
+    && requestedReviewStateVersion !== currentReviewStateVersion
+  ) {
+    return res.status(409).json({
+      error: 'This deal was updated somewhere else. Reload the latest version before saving again.',
+      code: 'review_state_conflict',
+      currentVersion: currentReviewStateVersion,
+      deal: serializeDealRecord(deal, { currentManagementCompany, availableColumns })
+    });
+  }
+
+  const reviewFieldAction =
+    candidateBody.reviewFieldAction && typeof candidateBody.reviewFieldAction === 'object'
+      ? candidateBody.reviewFieldAction
+      : null;
+
+  if (reviewFieldAction?.type === 'reset_to_ai') {
+    if (!reviewFieldStateSupported) {
+      return res.status(409).json({
+        error: 'This deal does not support resetting review fields to extracted values yet.'
+      });
+    }
+
+    const requestedFieldKeys = Array.from(
+      new Set(
+        [
+          reviewFieldAction.fieldKey,
+          ...(Array.isArray(reviewFieldAction.fieldKeys) ? reviewFieldAction.fieldKeys : [])
+        ].filter((fieldKey) => isReviewFieldKey(fieldKey))
+      )
+    );
+
+    if (requestedFieldKeys.length === 0) {
+      return res.status(400).json({ error: 'No valid review fields were provided for reset.' });
+    }
+
+    const actor = {
+      email: String(user?.email || '').trim().toLowerCase(),
+      name: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim()
+    };
+    const reviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+    const nextReviewFieldState = { ...reviewFieldState };
+    const updates = {};
+    const eventRows = [];
+    const now = new Date().toISOString();
+
+    for (const fieldKey of requestedFieldKeys) {
+      const columnName = getReviewFieldDbColumn(fieldKey);
+      const previousEntry = reviewFieldState[fieldKey];
+      const previousFinalValue = resolveFinalReviewFieldValue(previousEntry, deal?.[columnName]);
+      const nextEntry = clearAdminOverrideReviewFieldStateEntry(previousEntry, {
+        fallbackValue: deal?.[columnName],
+        at: now
+      });
+      const nextFinalValue = resolveFinalReviewFieldValue(nextEntry, deal?.[columnName]);
+      nextReviewFieldState[fieldKey] = nextEntry;
+
+      if (columnName && availableColumns.has(columnName)) {
+        updates[columnName] = nextFinalValue;
+      }
+
+      eventRows.push({
+        opportunity_id: id,
+        field_key: fieldKey,
+        event_type: 'reset_to_ai',
+        actor_type: 'admin',
+        actor_email: actor.email,
+        actor_name: actor.name,
+        previous_value: previousFinalValue,
+        next_value: nextFinalValue,
+        metadata: {
+          reviewStateVersion: currentReviewStateVersion
+        }
+      });
+    }
+
+    updates.review_field_state = nextReviewFieldState;
+    if (reviewStateVersionSupported) {
+      updates.review_state_version = currentReviewStateVersion + 1;
+    }
+    if (availableColumns.has('updated_at')) {
+      updates.updated_at = now;
+    }
+
+    const { data: updatedDeal, error: updateError } = await supabase
+      .from('opportunities')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('[deal-review/reset-to-ai] update failed', {
+        id,
+        message: updateError.message
+      });
+      return res.status(500).json({ error: 'Failed to reset the selected review fields.' });
+    }
+
+    await insertReviewFieldEvents(supabase, eventRows);
+
+    return res.status(200).json({
+      success: true,
+      deal: serializeDealRecord(
+        {
+          ...updatedDeal,
+          companyWebsite: currentManagementCompany?.website || '',
+          mcWebsite: currentManagementCompany?.website || ''
+        },
+        {
+          currentManagementCompany,
+          availableColumns
+        }
+      )
+    });
+  }
+
   const requestedSponsorName = String(candidateBody.sponsorName || '').trim();
   const requestedCompanyWebsite =
     'companyWebsite' in candidateBody ? String(candidateBody.companyWebsite || '').trim() : undefined;
@@ -499,20 +665,83 @@ export default async function handler(req, res) {
   const updates = {};
   const updated = [];
   const omitted = [];
+  const reviewFieldEvents = [];
+  const actor = {
+    email: String(user?.email || '').trim().toLowerCase(),
+    name: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim()
+  };
+  const existingReviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+  let nextReviewFieldState = { ...existingReviewFieldState };
+  let reviewFieldStateChanged = false;
 
   for (const [camelKey, snakeKey] of Object.entries(FIELD_MAP)) {
     if (camelKey in candidateBody) {
-      if (!availableColumns.has(snakeKey)) {
+      const normalizedNextValue = normalizeValue(camelKey, candidateBody[camelKey]);
+      const stateBackedField = reviewFieldStateSupported && isReviewFieldKey(camelKey);
+
+      if (!availableColumns.has(snakeKey) && !stateBackedField) {
         omitted.push(camelKey);
         continue;
       }
-      updates[snakeKey] = normalizeValue(camelKey, candidateBody[camelKey]);
+
+      if (availableColumns.has(snakeKey)) {
+        updates[snakeKey] = normalizedNextValue;
+      }
       updated.push(camelKey);
+
+      if (stateBackedField) {
+        const previousEntry = nextReviewFieldState[camelKey];
+        const previousFinalValue = resolveFinalReviewFieldValue(previousEntry, deal?.[snakeKey]);
+        const nextEntry = buildAdminReviewFieldStateEntry(previousEntry, {
+          nextValue: normalizedNextValue,
+          fallbackValue: previousFinalValue,
+          actor,
+          at: new Date().toISOString()
+        });
+        nextReviewFieldState = {
+          ...nextReviewFieldState,
+          [camelKey]: nextEntry
+        };
+        reviewFieldStateChanged = true;
+        reviewFieldEvents.push({
+          opportunity_id: id,
+          field_key: camelKey,
+          event_type: 'admin_save',
+          actor_type: 'admin',
+          actor_email: actor.email,
+          actor_name: actor.name,
+          previous_value: previousFinalValue,
+          next_value: normalizedNextValue,
+          metadata: {
+            materializedToColumn: availableColumns.has(snakeKey),
+            reviewStateVersion: currentReviewStateVersion
+          }
+        });
+      }
     }
+  }
+
+  if (reviewFieldStateChanged) {
+    updates.review_field_state = nextReviewFieldState;
   }
 
   if (Object.keys(updates).length === 0 && touchedManagementCompany && availableColumns.has('updated_at')) {
     updates.updated_at = new Date().toISOString();
+  }
+
+  if (omitted.length > 0) {
+    return res.status(409).json({
+      error: `This deal is missing review-schema support for: ${omitted.join(', ')}. The save was blocked to avoid silent data loss.`,
+      code: 'review_schema_mismatch',
+      omitted
+    });
+  }
+
+  const hasMeaningfulPersistenceChange =
+    updated.length > 0 || reviewFieldStateChanged || touchedManagementCompany;
+
+  if (reviewStateVersionSupported && hasMeaningfulPersistenceChange) {
+    updates.review_state_version = currentReviewStateVersion + 1;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -547,6 +776,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to save deal' });
   }
 
+  await insertReviewFieldEvents(supabase, reviewFieldEvents);
+
   const responseDeal = serializeDealRecord(
     {
       ...updatedDeal,
@@ -561,11 +792,6 @@ export default async function handler(req, res) {
       availableColumns
     }
   );
-
-  for (const camelKey of omitted) {
-    if (!(camelKey in candidateBody)) continue;
-    responseDeal[camelKey] = normalizeValue(camelKey, candidateBody[camelKey]);
-  }
 
   return res.status(200).json({
     success: true,

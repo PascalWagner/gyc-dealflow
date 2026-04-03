@@ -17,18 +17,21 @@ NVM must be sourced first: `export NVM_DIR="$HOME/.nvm" ; . "$NVM_DIR/nvm.sh"`
 Run full QA with `/qa` slash command or:
 
 ```bash
-npm run qa:all
+npm run qa:all        # local + deployed
+npm run qa:local      # test your current branch (builds, starts server, runs all suites)
+npm run qa:deployed   # test the live sandbox after deployment
 ```
 
-Individual suites:
+**Local QA** (`qa:local`) builds your code, starts a preview server, and runs:
+- Unit tests (deal card state + subscriptions)
+- Playwright browser smoke (12 tests)
+- Plan wizard browser tests
+- Membership settings browser tests
 
-| Command | What |
-|---------|------|
-| `npm run test:unit` | Unit tests (deal card state + subscriptions) |
-| `npm run test:smoke` | Playwright browser smoke tests (build first) |
-| `npm run qa:sandbox:full` | Live sandbox API tests (read + write) |
-| `npm run qa:sandbox:plan` | Plan wizard browser tests against sandbox |
-| `npm run qa:sandbox:membership` | Membership settings browser tests against sandbox |
+**Deployed QA** (`qa:deployed`) runs against the live sandbox:
+- API tests (routes, auth, deals, profile writes)
+- Plan wizard browser tests
+- Membership settings browser tests
 
 Sandbox URL: `https://sandbox.growyourcashflow.io`
 

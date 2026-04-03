@@ -1,47 +1,52 @@
-Run the full QA suite for the dealflow app. This tests everything end-to-end.
+Run the full QA pipeline: local code first, then deployed sandbox.
 
-## Steps
+## Phase 1: Local QA (your current branch)
 
-1. Source NVM: `export NVM_DIR="$HOME/.nvm" ; . "$NVM_DIR/nvm.sh"`
-2. `cd` to the dealflow repo at `/Users/pascalwagner/Documents/New project/dealflow-sandbox-integration-all-features/dealflow`
-3. Run each suite sequentially, reporting results as you go:
+Source NVM and run:
 
-### Unit tests
 ```
-npm run test:unit
+export NVM_DIR="$HOME/.nvm" ; . "$NVM_DIR/nvm.sh"
+cd "/Users/pascalwagner/Documents/New project/dealflow-sandbox-integration-all-features/dealflow"
+npm run qa:local
 ```
-Runs deal-card-state (7 tests) and subscription-membership (9 tests).
 
-### Playwright browser smoke tests
-```
-npm run build && npm run test:smoke
-```
-Requires a fresh build first. Runs 12 browser tests covering session, impersonation, operators, deal cards, deal review provenance, lending hero, and mobile swipe.
+This builds the app, starts a local preview server, and runs:
+1. Unit tests (deal card state + subscriptions)
+2. Playwright browser smoke tests (12 tests)
+3. Plan wizard browser tests against local server
+4. Membership settings browser tests against local server
 
-### Sandbox live API tests
-```
-npm run qa:sandbox:full
-```
-Tests routes, auth, buy box, goals, deal data, profile writes, and avatar upload against https://sandbox.growyourcashflow.io.
+The server is started and stopped automatically.
 
-### Plan wizard browser tests
-```
-npm run qa:sandbox:plan
-```
-Tests all plan wizard branches (cashflow/growth/tax), onboarding, row overrides, drag-and-drop, and saved-answer hydration against the live sandbox.
+## Phase 2: Deployed QA (sandbox)
 
-### Membership settings browser tests
+After local passes, run against the live sandbox:
+
 ```
-npm run qa:sandbox:membership
+npm run qa:deployed
 ```
-Tests lifetime, renewal, and manage membership scenarios against the live sandbox.
+
+This runs against https://sandbox.growyourcashflow.io:
+1. Sandbox live API tests (routes, auth, buy box, goals, deals)
+2. Sandbox write tests (profile, avatar)
+3. Plan wizard browser tests against sandbox
+4. Membership settings browser tests against sandbox
 
 ## Reporting
 
-After each suite, report pass/fail clearly. If any suite fails, show the specific failure output and continue running the remaining suites. At the end, give a summary table of all suites with pass/fail status.
+After each phase, report pass/fail clearly. If any suite fails, show the failure output and continue running remaining suites. At the end, give a summary showing which suites passed in each phase.
+
+## Run everything
+
+To run both phases in one shot:
+
+```
+npm run qa:all
+```
 
 ## Important
 
 - Do NOT skip any suite.
-- If Playwright browsers fail to launch, report the error but still run the non-browser suites (sandbox live, unit tests).
-- The sandbox URL is https://sandbox.growyourcashflow.io — do not change it.
+- Local QA tests YOUR CODE before deployment.
+- Deployed QA verifies the sandbox matches what was deployed.
+- If Playwright browsers fail to launch, report the error clearly.

@@ -20,6 +20,13 @@ import {
   normalizeReviewFieldEvidenceMap
 } from '../src/lib/utils/reviewFieldEvidence.js';
 import { dealFieldConfig } from '../src/lib/utils/dealReviewSchema.js';
+import {
+  applyReviewFieldStateToDeal,
+  buildAiReviewFieldStateEntry,
+  getReviewFieldKeyForColumn,
+  normalizeReviewFieldStateMap,
+  resolveFinalReviewFieldValue
+} from '../src/lib/utils/reviewFieldState.js';
 
 const EXTRACTION_TEXT_LIMIT = 120000;
 const require = createRequire(import.meta.url);
@@ -804,6 +811,42 @@ function buildClassificationSignals(deal, { ppmText = '', deckText = '' } = {}) 
   };
 }
 
+function filterFoundFieldUpdates(foundFields = {}, requestedFieldKeys = []) {
+  const normalizedFieldKeys = Array.from(new Set((requestedFieldKeys || []).filter(Boolean)));
+  if (normalizedFieldKeys.length === 0) {
+    return foundFields;
+  }
+
+  const requestedSet = new Set(normalizedFieldKeys);
+  return Object.fromEntries(
+    Object.entries(foundFields).filter(([key]) => {
+      const translatedFieldKey = getReviewFieldKeyForColumn(key);
+      return requestedSet.has(key) || requestedSet.has(translatedFieldKey);
+    })
+  );
+}
+
+async function insertReviewFieldEvents(supabase, events = []) {
+  if (!Array.isArray(events) || events.length === 0) return;
+
+  try {
+    const { error } = await supabase
+      .from('review_field_events')
+      .insert(events);
+    if (error) {
+      console.warn('[deal-cleanup/events] insert failed', {
+        message: error.message,
+        count: events.length
+      });
+    }
+  } catch (error) {
+    console.warn('[deal-cleanup/events] insert threw', {
+      message: error?.message || 'unknown_error',
+      count: events.length
+    });
+  }
+}
+
 // ── Build web search prompt ──────────────────────────────────────────────────
 
 function buildWebSearchPrompt(deal, operatorName, missingFields) {
@@ -1159,6 +1202,7 @@ export default async function handler(req, res) {
   if (!auth.authorized) {
     return res.status(403).json({ success: false, error: auth.error });
   }
+  const adminUser = auth.user || null;
 
   const { action } = req.body || {};
 
@@ -1318,7 +1362,7 @@ export default async function handler(req, res) {
 
     // Action: enrich a single deal via multi-step pipeline
     if (action === 'enrich-deal') {
-      const { dealId } = req.body;
+      const { dealId, fieldKeys = [] } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
 
       const { data: deal, error: dealErr } = await supabase
@@ -1348,11 +1392,18 @@ export default async function handler(req, res) {
       // Run the multi-step enrichment pipeline
       const result = await enrichDeal(supabase, deal, operatorName);
 
+      const filteredFoundFields = filterFoundFieldUpdates(result.found_fields, fieldKeys);
+      const filteredConfidence = Object.fromEntries(
+        Object.entries(result.confidence || {}).filter(([fieldKey]) =>
+          Object.prototype.hasOwnProperty.call(filteredFoundFields, fieldKey)
+        )
+      );
+
       return res.status(200).json({
         success: true,
         deal_id: dealId,
-        found_fields: result.found_fields,
-        confidence: result.confidence,
+        found_fields: filteredFoundFields,
+        confidence: filteredConfidence,
         sources: result.sources,
         steps: result.steps,
         notes: result.notes,
@@ -1364,7 +1415,12 @@ export default async function handler(req, res) {
 
     // Action: apply approved enrichments to a deal
     if (action === 'apply-enrichment') {
-      const { dealId, updates } = req.body;
+      const {
+        dealId,
+        updates,
+        overwriteAdmin = false,
+        forceFieldKeys = []
+      } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
       if (!updates || Object.keys(updates).length === 0) {
         return res.status(400).json({ error: 'No updates to apply' });
@@ -1389,6 +1445,10 @@ export default async function handler(req, res) {
       }
 
       const availableColumns = new Set(Object.keys(currentDeal || {}));
+      const reviewFieldStateSupported = availableColumns.has('review_field_state');
+      const reviewStateVersionSupported = availableColumns.has('review_state_version');
+      const actorEmail = String(adminUser?.email || '').trim().toLowerCase();
+      const actorName = String(adminUser?.user_metadata?.full_name || adminUser?.user_metadata?.name || '').trim();
 
       const allowedFields = Array.from(new Set([
         ...QUALITY_FIELDS.map(f => f.key),
@@ -1427,7 +1487,12 @@ export default async function handler(req, res) {
       }
 
       for (const key of Object.keys(safeUpdates)) {
-        if (!availableColumns.has(key) && key !== 'updated_at') {
+        const stateBackedFieldKey = getReviewFieldKeyForColumn(key);
+        if (
+          !availableColumns.has(key)
+          && key !== 'updated_at'
+          && !(reviewFieldStateSupported && stateBackedFieldKey)
+        ) {
           delete safeUpdates[key];
         }
       }
@@ -1436,21 +1501,101 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No valid fields to update' });
       }
 
-      safeUpdates.updated_at = new Date().toISOString();
+      const forcedFieldKeySet = new Set((Array.isArray(forceFieldKeys) ? forceFieldKeys : []).filter(Boolean));
+      const reviewFieldState = normalizeReviewFieldStateMap(currentDeal.review_field_state || {});
+      const nextReviewFieldState = { ...reviewFieldState };
+      const eventRows = [];
+      const appliedFields = [];
+      const blockedFields = [];
+      const storedAiFields = [];
+      const materializedUpdates = {};
+      const now = new Date().toISOString();
+
+      for (const [key, value] of Object.entries(safeUpdates)) {
+        const fieldKey = getReviewFieldKeyForColumn(key);
+        const canTrackReviewField = reviewFieldStateSupported && fieldKey;
+
+        if (!canTrackReviewField) {
+          materializedUpdates[key] = value;
+          appliedFields.push(fieldKey || key);
+          continue;
+        }
+
+        const previousEntry = nextReviewFieldState[fieldKey];
+        const previousFinalValue = resolveFinalReviewFieldValue(previousEntry, currentDeal?.[key]);
+        const shouldForceOverwrite = overwriteAdmin === true || forcedFieldKeySet.has(fieldKey);
+        const nextEntry = buildAiReviewFieldStateEntry(previousEntry, {
+          nextValue: value,
+          overwriteAdmin: shouldForceOverwrite,
+          source: 'ai_extraction',
+          at: now
+        });
+        nextReviewFieldState[fieldKey] = nextEntry;
+        storedAiFields.push(fieldKey);
+
+        const nextFinalValue = resolveFinalReviewFieldValue(nextEntry, currentDeal?.[key]);
+        const wasBlockedByAdmin = previousEntry?.adminOverrideActive === true && !shouldForceOverwrite;
+        const canMaterializeToColumn = availableColumns.has(key);
+
+        if (wasBlockedByAdmin) {
+          blockedFields.push(fieldKey);
+        } else {
+          if (canMaterializeToColumn) {
+            materializedUpdates[key] = nextFinalValue;
+          }
+          appliedFields.push(fieldKey);
+        }
+
+        eventRows.push({
+          opportunity_id: dealId,
+          field_key: fieldKey,
+          event_type: wasBlockedByAdmin ? 'ai_update_blocked_by_admin' : (shouldForceOverwrite ? 'ai_overwrite_admin' : 'ai_apply'),
+          actor_type: 'ai',
+          actor_email: '',
+          actor_name: '',
+          previous_value: previousFinalValue,
+          next_value: value,
+          metadata: {
+            requestedByEmail: actorEmail,
+            requestedByName: actorName,
+            overwriteAdmin: shouldForceOverwrite,
+            materializedToColumn: !wasBlockedByAdmin && canMaterializeToColumn
+          }
+        });
+      }
+
+      if (reviewFieldStateSupported) {
+        materializedUpdates.review_field_state = nextReviewFieldState;
+      }
+      if (reviewStateVersionSupported) {
+        materializedUpdates.review_state_version = Number(currentDeal.review_state_version || 0) + 1;
+      }
+
+      safeUpdates.updated_at = now;
+      materializedUpdates.updated_at = now;
 
       const { data, error } = await supabase
         .from('opportunities')
-        .update(safeUpdates)
+        .update(materializedUpdates)
         .eq('id', dealId)
         .select()
         .single();
 
       if (error) throw error;
 
+      await insertReviewFieldEvents(supabase, eventRows);
+
       return res.status(200).json({
         success: true,
         data,
-        fields_updated: Object.keys(safeUpdates).filter(k => k !== 'updated_at')
+        deal: {
+          ...applyReviewFieldStateToDeal(data),
+          reviewFieldState: normalizeReviewFieldStateMap(data?.review_field_state || {}),
+          reviewStateVersion: Number(data?.review_state_version || 0)
+        },
+        fields_updated: appliedFields,
+        blocked_fields: blockedFields,
+        stored_ai_fields: storedAiFields
       });
     }
 
