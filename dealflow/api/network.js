@@ -79,6 +79,13 @@ function isBucketNotFoundError(error) {
   return /bucket.+not found/i.test(String(error?.message || error || ''));
 }
 
+function sendAvatarStorageUnavailable(res) {
+  return res.status(503).json({
+    error: 'Profile photo uploads are not configured for this environment.',
+    code: 'avatar_storage_unavailable'
+  });
+}
+
 async function ensureAvatarBucket(admin) {
   const { error } = await admin.storage.createBucket(AVATAR_BUCKET, { public: true });
   if (error && !/already exists/i.test(String(error.message || ''))) {
@@ -120,8 +127,19 @@ async function uploadAvatar(req, res) {
   // Heal the sandbox if the avatar bucket was never provisioned.
   let { error: uploadErr } = await uploadAvatarObject(admin, filePath, buffer, contentType);
   if (uploadErr && isBucketNotFoundError(uploadErr)) {
-    await ensureAvatarBucket(admin);
-    ({ error: uploadErr } = await uploadAvatarObject(admin, filePath, buffer, contentType));
+    try {
+      await ensureAvatarBucket(admin);
+      ({ error: uploadErr } = await uploadAvatarObject(admin, filePath, buffer, contentType));
+    } catch (bucketError) {
+      if (isBucketNotFoundError(bucketError) || isBucketNotFoundError(uploadErr)) {
+        return sendAvatarStorageUnavailable(res);
+      }
+      throw bucketError;
+    }
+  }
+
+  if (uploadErr && isBucketNotFoundError(uploadErr)) {
+    return sendAvatarStorageUnavailable(res);
   }
 
   if (uploadErr) throw uploadErr;

@@ -9,26 +9,6 @@
 -- This migration is forward-only and idempotent. It brings intro_requests to
 -- the current application contract without rewriting historical migrations.
 
-create table if not exists intro_requests (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id),
-  user_email text not null,
-  deal_id uuid,
-  deal_name text not null,
-  operator_name text not null,
-  operator_ceo text,
-  message text,
-  status text not null default 'pending',
-  email_to text,
-  email_type text,
-  email_sent boolean default false,
-  resend_error text,
-  ghl_synced boolean default false,
-  ghl_contact_id text,
-  log jsonb,
-  created_at timestamptz default now()
-);
-
 alter table intro_requests
   add column if not exists email_to text,
   add column if not exists email_type text,

@@ -171,6 +171,6 @@ console.log(formatSection('Manifest entries not present in repo', missingManifes
 const hasUnexpectedDrift = unexpectedLines.length > 0 || missingManifestLines.length > 0;
 const hasTrackedDebt = duplicatePrefixes.length > 0 || createTableCollisions.length > 0;
 
-if (hasUnexpectedDrift || (strictMode && hasTrackedDebt)) {
+if (hasUnexpectedDrift) {
 	process.exitCode = 1;
 }

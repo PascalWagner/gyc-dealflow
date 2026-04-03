@@ -1,25 +1,5 @@
--- Migration 042: Create intro_requests table for tracking introduction requests
--- Stores every intro request so Pascal can see history and follow up
-
-CREATE TABLE IF NOT EXISTS intro_requests (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users(id),
-  user_email text NOT NULL,
-  deal_id uuid,
-  deal_name text NOT NULL,
-  operator_name text NOT NULL,
-  operator_ceo text,
-  message text,
-  status text NOT NULL DEFAULT 'pending',
-  email_to text,
-  email_type text,
-  email_sent boolean DEFAULT false,
-  resend_error text,
-  ghl_synced boolean DEFAULT false,
-  ghl_contact_id text,
-  log jsonb,
-  created_at timestamptz DEFAULT now()
-);
+-- Migration 042: Extend intro_requests with the richer request tracking shape
+-- Migration 025 created the table; this one adds the fields needed by the newer flow.
 
 -- Index for quick lookups
 CREATE INDEX IF NOT EXISTS idx_intro_requests_user ON intro_requests(user_id);

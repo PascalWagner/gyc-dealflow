@@ -52,16 +52,6 @@
         "reason": "Stake listings and unified onboarding reused prefix 039."
       }
     },
-    "createTableCollisions": {
-      "public.intro_requests": {
-        "files": [
-          "025_intro_requests.sql",
-          "042_intro_requests.sql",
-          "047_reconcile_intro_requests.sql"
-        ],
-        "status": "needs_reconciliation_migration",
-        "reason": "042 extends the intro_requests table originally created in 025; 047_reconcile_intro_requests.sql is now the forward-only repair for the final shape."
-      }
-    }
+    "createTableCollisions": {}
   }
 }

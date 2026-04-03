@@ -438,6 +438,9 @@
 		});
 		const data = await resp.json().catch(() => ({}));
 		if (!resp.ok || !data?.avatarUrl) {
+			if (data?.code === 'avatar_storage_unavailable') {
+				throw new Error('Profile photo uploads are temporarily unavailable in sandbox.');
+			}
 			throw new Error(data?.error || 'Photo upload failed.');
 		}
 
