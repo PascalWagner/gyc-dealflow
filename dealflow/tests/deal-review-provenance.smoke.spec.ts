@@ -4,6 +4,11 @@ const DEAL_ID = '6706f492-1db4-4925-b562-9c5336217337';
 const MANAGEMENT_COMPANY_ID = '6dc45666-92d6-4690-90bb-e5c05d9099b6';
 const ADMIN_EMAIL = 'info@pascalwagner.com';
 const SESSION_VERSION = 3;
+const DEAL_FIELD_MAP: Record<string, string> = {
+	investmentMinimum: 'investment_minimum',
+	fees: 'fees',
+	lifecycleStatus: 'lifecycle_status'
+};
 
 function base64UrlEncode(value: string) {
 	return Buffer.from(value)
@@ -121,7 +126,9 @@ function buildReadyLendingDeal() {
 				calendarUrl: ''
 			}
 		],
-		review_field_evidence: {}
+		review_field_evidence: {},
+		review_field_state: {},
+		review_state_version: 4
 	};
 }
 
@@ -218,13 +225,19 @@ async function seedSession(page: Page) {
 
 async function installReviewFlowMocks(page: Page, {
 	deal = buildReadyLendingDeal(),
-	evidence = buildStaticTermsEvidence()
+	evidence = buildStaticTermsEvidence(),
+	conflictOnNextDealPatch = false,
+	extractionUpdates = {}
 }: {
 	deal?: Record<string, unknown>;
 	evidence?: Record<string, unknown>;
+	conflictOnNextDealPatch?: boolean;
+	extractionUpdates?: Record<string, unknown>;
 } = {}) {
 	const mutableDeal = structuredClone(deal);
 	const lifecyclePatches: Array<Record<string, unknown>> = [];
+	const dealPatches: Array<Record<string, unknown>> = [];
+	let shouldConflictNextPatch = conflictOnNextDealPatch;
 
 	await page.route('**/api/network**', async (route) => {
 		await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
@@ -250,10 +263,34 @@ async function installReviewFlowMocks(page: Page, {
 		}
 
 		const body = route.request().postDataJSON() as Record<string, unknown>;
+		dealPatches.push(body);
+		if (shouldConflictNextPatch) {
+			shouldConflictNextPatch = false;
+			mutableDeal.review_state_version = Number(mutableDeal.review_state_version || 0) + 1;
+			mutableDeal.investment_minimum = 75000;
+			await route.fulfill({
+				status: 409,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					error: 'This deal was updated somewhere else. Reload the latest version before saving again.',
+					code: 'review_state_conflict',
+					currentVersion: mutableDeal.review_state_version,
+					deal: mutableDeal
+				})
+			});
+			return;
+		}
+
 		if (body.lifecycleStatus) {
 			lifecyclePatches.push(body);
 			mutableDeal.lifecycle_status = body.lifecycleStatus;
 		}
+		for (const [camelKey, snakeKey] of Object.entries(DEAL_FIELD_MAP)) {
+			if (camelKey in body) {
+				mutableDeal[snakeKey] = body[camelKey];
+			}
+		}
+		mutableDeal.review_state_version = Number(mutableDeal.review_state_version || 0) + 1;
 
 		await route.fulfill({
 			status: 200,
@@ -330,6 +367,42 @@ async function installReviewFlowMocks(page: Page, {
 			return;
 		}
 
+		if (body.action === 'enrich-deal') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					success: true,
+					found_fields: extractionUpdates,
+					sources: ['ppm'],
+					steps: ['preview_only'],
+					notes: 'Preview before apply.'
+				})
+			});
+			return;
+		}
+
+		if (body.action === 'apply-enrichment') {
+			const updates = body.updates as Record<string, unknown> || {};
+			for (const [fieldKey, value] of Object.entries(updates)) {
+				mutableDeal[fieldKey] = value;
+			}
+			mutableDeal.review_state_version = Number(mutableDeal.review_state_version || 0) + 1;
+
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					success: true,
+					deal: mutableDeal,
+					fields_updated: Object.keys(updates),
+					blocked_fields: [],
+					stored_ai_fields: Object.keys(updates)
+				})
+			});
+			return;
+		}
+
 		await route.fulfill({
 			status: 200,
 			contentType: 'application/json',
@@ -339,6 +412,7 @@ async function installReviewFlowMocks(page: Page, {
 
 	return {
 		lifecyclePatches,
+		dealPatches,
 		mutableDeal
 	};
 }
@@ -382,5 +456,55 @@ test.describe('deal review provenance smoke', () => {
 
 		await expect(page.getByText(/approved and ready for publishing/i)).toBeVisible();
 		await expect(page.getByText('Failed to save deal')).toHaveCount(0);
+	});
+
+	test('stale saves fail loudly without overwriting the local draft', async ({ page }) => {
+		const { dealPatches } = await installReviewFlowMocks(page, {
+			conflictOnNextDealPatch: true
+		});
+		await seedSession(page);
+
+		await page.goto(`/deal-review?id=${DEAL_ID}&stage=static_terms&from=queue`);
+
+		const minimumInput = page.locator('.field').filter({ hasText: 'Minimum Investment' }).locator('input');
+		await minimumInput.fill('60000');
+		await page.getByRole('button', { name: 'Save changes' }).click();
+
+		await expect(page.getByText(/save was blocked to protect newer data/i)).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Load latest saved version' })).toBeVisible();
+		await expect(minimumInput).toHaveValue(/60,?000/);
+		expect(dealPatches[0]?.reviewStateVersion).toBe(4);
+
+		page.once('dialog', (dialog) => dialog.accept());
+		await page.getByRole('button', { name: 'Load latest saved version' }).click();
+
+		await expect(page.getByText(/loaded the latest saved version/i)).toBeVisible();
+		await expect(minimumInput).toHaveValue(/75/);
+	});
+
+	test('re-extraction previews changes and waits for explicit apply', async ({ page }) => {
+		await installReviewFlowMocks(page, {
+			extractionUpdates: {
+				investment_minimum: 60000,
+				fees: '2% management fee.'
+			}
+		});
+		await seedSession(page);
+
+		await page.goto(`/deal-review?id=${DEAL_ID}&stage=static_terms&from=queue`);
+
+		const minimumInput = page.locator('.field').filter({ hasText: 'Minimum Investment' }).locator('input');
+		await expect(minimumInput).toHaveValue(/50/);
+
+		await page.getByRole('button', { name: 'Re-extract this step' }).click();
+
+		await expect(page.getByText('Nothing changes until you apply these updates')).toBeVisible();
+		await expect(page.locator('.field').filter({ hasText: 'Minimum Investment' })).toBeVisible();
+		await expect(minimumInput).toHaveValue(/50/);
+
+		await page.getByRole('button', { name: 'Apply safe updates' }).click();
+
+		await expect(page.getByText(/Applied 2 extracted fields/i)).toBeVisible();
+		await expect(minimumInput).toHaveValue(/60/);
 	});
 });
