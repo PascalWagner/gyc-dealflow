@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       // Fetch deal stages — use granular toggles to filter by stage
       const { data: publicInvestors } = await supabase
         .from('user_deal_stages')
-        .select('user_id, stage, user_profiles!inner(full_name, share_saved, share_dd, share_invested)')
+        .select('user_id, stage, user_profiles!inner(full_name, avatar_url, share_saved, share_dd, share_invested, share_activity)')
         .eq('deal_id', dealId);
 
       if (publicInvestors) {
@@ -73,12 +73,17 @@ export default async function handler(req, res) {
           const name = row.user_profiles?.full_name;
           if (!name) continue;
           const p = row.user_profiles;
+          const investorInfo = {
+            name,
+            avatarUrl: p.avatar_url || null,
+            visible: p.share_activity !== false
+          };
           if ((row.stage === 'invested' || row.stage === 'portfolio') && p.share_invested) {
-            result.namedInvestors.push(name);
+            result.namedInvestors.push(investorInfo);
           } else if ((row.stage === 'connect' || row.stage === 'decide' || row.stage === 'dd' || row.stage === 'duediligence') && p.share_dd) {
-            result.namedWatchers.push(name);
+            result.namedWatchers.push(investorInfo);
           } else if ((row.stage === 'review' || row.stage === 'saved' || row.stage === 'interested') && p.share_saved) {
-            result.namedWatchers.push(name);
+            result.namedWatchers.push(investorInfo);
           }
         }
       }

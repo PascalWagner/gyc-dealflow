@@ -11,6 +11,7 @@
 	import DealReturnsMiniChart from '$lib/components/DealReturnsMiniChart.svelte';
 	import DealModalLayer from '$lib/components/deal/DealModalLayer.svelte';
 	import SimilarDealsPanel from '$lib/components/deal/SimilarDealsPanel.svelte';
+	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import {
 		canViewAdvancedDealAnalysis,
 		getFreshSessionToken,
@@ -1093,14 +1094,25 @@
 								{@const reviewing = socialProofCounts.reviewing || 0}
 								{@const invested = socialProofCounts.invested || 0}
 								{@const total = reviewing + invested}
+								{@const namedInvestors = socialProof?.namedInvestors || []}
+								{@const visibleInvestors = namedInvestors.filter(inv => typeof inv === 'object' ? inv.visible !== false : true)}
 								{#if total > 0}
 									<div class="hero-social-proof">
 										<div class="sp-avatars">
-											{#each Array(Math.min(total, 3)) as _, i}
-												<div class="sp-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b'][i % 3]}">
-													<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+											{#each visibleInvestors.slice(0, 3) as inv, i}
+												{@const investorName = typeof inv === 'string' ? inv : inv.name}
+												{@const investorAvatar = typeof inv === 'object' ? inv.avatarUrl : null}
+												<div class="sp-avatar-wrap">
+													<UserAvatar name={investorName || ''} avatarUrl={investorAvatar || ''} size="sm" />
 												</div>
 											{/each}
+											{#if visibleInvestors.length === 0}
+												{#each Array(Math.min(total, 3)) as _, i}
+													<div class="sp-avatar-wrap">
+														<UserAvatar name="" size="sm" />
+													</div>
+												{/each}
+											{/if}
 											{#if total > 3}
 												<div class="sp-avatar sp-count">+{total - 3}</div>
 											{/if}
@@ -2116,6 +2128,8 @@
 	.sp-avatars { display: flex; flex-shrink: 0; }
 	.sp-avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #252b3b; background: linear-gradient(135deg, #51BE7B 0%, #2d8a54 100%); color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-left: -8px; position: relative; overflow: hidden; }
 	.sp-avatar:first-child { margin-left: 0; }
+	.sp-avatar-wrap { margin-left: -8px; position: relative; border: 2px solid #252b3b; border-radius: 50%; }
+	.sp-avatar-wrap:first-child { margin-left: 0; }
 	.sp-count { background: rgba(255,255,255,0.15); font-size: 9px; font-weight: 700; letter-spacing: -0.3px; }
 	.sp-text { line-height: 1.4; }
 	.sp-text strong { color: #fff; font-weight: 700; }
