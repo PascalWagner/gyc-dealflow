@@ -3,6 +3,8 @@
 	import InvestorShowcase from '$lib/components/marketing/InvestorShowcase.svelte';
 
 	const primaryCtaHref = '/login?return=/app/plan';
+	const gameplanCallHref = 'https://growyourcashflow.io/introcall';
+	const academyVideoUrl = 'https://www.youtube.com/watch?v=lvcFJcL-c6w';
 	const stats = [
 		{ value: '$100K', label: 'Passive income path', detail: 'Start with the outcome, then build the plan to get there' },
 		{ value: '838', label: 'Live deals', detail: 'Find better deal flow in one place' },
@@ -10,10 +12,18 @@
 		{ value: '1 place', label: 'Plan + diligence', detail: 'Keep your plan, deal notes, and next steps together' }
 	];
 
+	const trustedCompanies = ['Lufthansa', 'Techstars', 'Deloitte', 'General Motors'];
+
 	const heroBullets = [
 		'Find better deal flow',
 		'Do your own diligence with confidence',
 		'Build a real plan for passive income'
+	];
+
+	const videoPoints = [
+		'See the three-step process behind better deal decisions',
+		'Understand how to build an income plan before you wire money',
+		'See why confidence matters more than finding one perfect deal'
 	];
 
 	const problemCards = [
@@ -95,6 +105,45 @@
 		}
 	];
 
+	const proofQuotes = [
+		{
+			quote: "Deployed $200K into my first two deals within 60 days. I'd still be on the sidelines without this.",
+			author: 'Michael R.',
+			role: 'Business Owner, Tampa FL'
+		},
+		{
+			quote: "I vetted my first sponsor in 20 minutes. My advisor said I was crazy. I'm up 11% while his clients are flat.",
+			author: 'Sarah K.',
+			role: 'Physician, Austin TX'
+		},
+		{
+			quote: "$8,200/month in distributions. That's my mortgage, car, and kids' school covered. And I still have my W-2.",
+			author: 'David L.',
+			role: 'Software Executive, Denver CO'
+		}
+	];
+
+	const testimonialVideos = [
+		{
+			id: 'G_mrxiwEldc',
+			name: 'Philip K.',
+			role: 'Account Executive',
+			hook: 'Clear roadmap, less noise'
+		},
+		{
+			id: 'EX43y_vN1Q0',
+			name: 'Kathleen M.',
+			role: 'Customer Success Executive',
+			hook: 'Better questions, more confidence'
+		},
+		{
+			id: 'OQ0xP_YJLZY',
+			name: 'Ian J.',
+			role: 'Healthcare Professional',
+			hook: 'The reps that made it click'
+		}
+	];
+
 	const freeFeatures = [
 		'Build your investor profile',
 		'Set an income goal and your deal rules',
@@ -102,11 +151,11 @@
 		'Save deals and organize what you want to review'
 	];
 
-	const academyFeatures = [
-		'Build a deeper plan with guided help',
-		'Get more review tools and deal support',
-		'Join office hours and Academy resources',
-		'Best for investors making real moves now'
+	const guidedHelpFeatures = [
+		'Get a second set of eyes before you wire money',
+		'Clarify what you are solving for: income, tax relief, or de-risking',
+		'Pressure-test your next deal or your overall plan',
+		'See if deeper support inside Cashflow Academy makes sense'
 	];
 
 	const faqs = [
@@ -116,7 +165,7 @@
 		},
 		{
 			question: 'What is free and what is paid?',
-			answer: 'The free account lets you build your profile, find deals, review managers, and organize what you want to look at. Cashflow Academy is the paid layer for investors who want guided help.'
+			answer: 'The free account lets you build your profile, find deals, review managers, and organize what you want to look at. If you want a second set of eyes, you can book a Deployment Gameplan Call. Some investors later choose deeper support inside Cashflow Academy.'
 		},
 		{
 			question: 'What makes this different from other platforms?',
@@ -235,6 +284,15 @@
 				<p>{stat.detail}</p>
 			</div>
 		{/each}
+	</section>
+
+	<section class="trusted-strip" aria-label="Trusted by investors and executives">
+		<div class="trusted-label">Trusted by 1,000+ accredited investors, including executives at</div>
+		<div class="trusted-logos">
+			{#each trustedCompanies as company, index}
+				<span>{company}</span>{#if index < trustedCompanies.length - 1}<span class="trusted-dot">&bull;</span>{/if}
+			{/each}
+		</div>
 	</section>
 
 	<section class="section" id="problems">
@@ -372,13 +430,63 @@
 	</section>
 
 	<section class="section">
+		<div class="video-proof">
+			<div class="video-proof-copy">
+				<div class="eyebrow">See the process</div>
+				<h2>Watch the system behind better private deal decisions.</h2>
+				<p>
+					This is the thinking behind the platform: most investors do not get hurt because
+					they are reckless. They get hurt because they trust the pitch more than the
+					process.
+				</p>
+				<div class="video-proof-list">
+					{#each videoPoints as point}
+						<div class="free-item">
+							<span class="checkmark">+</span>
+							<span>{point}</span>
+						</div>
+					{/each}
+				</div>
+				<div class="hero-actions">
+					<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
+					<a href={gameplanCallHref} target="_blank" rel="noreferrer" class="btn btn-secondary">
+						Book a Gameplan Call
+					</a>
+				</div>
+			</div>
+
+			<div class="video-proof-frame">
+				<a href={academyVideoUrl} target="_blank" rel="noreferrer" class="video-proof-link">
+					<img
+						src="https://i.ytimg.com/vi/lvcFJcL-c6w/hqdefault.jpg"
+						alt="Watch the Grow Your Cashflow system walkthrough"
+						loading="lazy"
+					>
+					<div class="video-proof-overlay">
+						<div class="play-button" aria-hidden="true">
+							<svg viewBox="0 0 24 24" fill="currentColor">
+								<path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.41-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14Z"></path>
+							</svg>
+						</div>
+						<div>
+							<strong>Watch the overview</strong>
+							<span>See the plan, the diligence flow, and where guided help fits.</span>
+						</div>
+					</div>
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<section class="section">
 		<div class="difference-panel">
 			<div class="difference-copy">
 				<div class="eyebrow">Why this is different</div>
 				<h2>Not another platform that just tells you what to buy.</h2>
 				<p>
-					Most platforms win by curating deals for you. Grow Your Cashflow is built to help
-					you think clearly for yourself. That is the point.
+					Most investors do not lose because they lack opportunity. They lose because they
+					trust the pitch more than the process. Grow Your Cashflow gives you a process you
+					can actually use.
 				</p>
 			</div>
 
@@ -395,6 +503,56 @@
 					</article>
 				{/each}
 			</div>
+		</div>
+	</section>
+
+	<section class="section">
+		<div class="section-heading">
+			<div class="eyebrow">Proof</div>
+			<h2>What this looks like when investors stop guessing and start moving.</h2>
+			<p>
+				Real proof is simple. People get clearer on what fits, ask better questions, and
+				finally make decisions with more confidence.
+			</p>
+		</div>
+
+		<div class="proof-grid">
+			{#each proofQuotes as item}
+				<article class="proof-card">
+					<div class="proof-quote">&ldquo;{item.quote}&rdquo;</div>
+					<div class="proof-author">{item.author}</div>
+					<div class="proof-role">{item.role}</div>
+				</article>
+			{/each}
+		</div>
+
+		<div class="proof-video-grid">
+			{#each testimonialVideos as item}
+				<a
+					href={`https://www.youtube.com/watch?v=${item.id}`}
+					target="_blank"
+					rel="noreferrer"
+					class="proof-video-card"
+				>
+					<div class="proof-video-thumb">
+						<img
+							src={`https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`}
+							alt={`Watch ${item.name}'s story`}
+							loading="lazy"
+						>
+						<div class="proof-video-play" aria-hidden="true">
+							<svg viewBox="0 0 24 24" fill="currentColor">
+								<path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.41-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14Z"></path>
+							</svg>
+						</div>
+					</div>
+					<div class="proof-video-meta">
+						<div class="proof-video-hook">{item.hook}</div>
+						<div class="proof-author">{item.name}</div>
+						<div class="proof-role">{item.role}</div>
+					</div>
+				</a>
+			{/each}
 		</div>
 	</section>
 
@@ -421,11 +579,11 @@
 
 	<section class="section" id="free">
 		<div class="section-heading">
-			<div class="eyebrow">Start free</div>
-			<h2>Use the platform first. Add guidance only if you want it.</h2>
+			<div class="eyebrow">Choose your next step</div>
+			<h2>Start free. Get a second set of eyes only when you need it.</h2>
 			<p>
-				The free product is the front door. Cashflow Academy is the guided layer for
-				investors who want help turning live opportunities into real decisions.
+				Most people should start with the platform. If you want help pressure-testing your
+				next move, book a Gameplan Call and decide from there.
 			</p>
 		</div>
 
@@ -447,17 +605,22 @@
 			</article>
 
 			<article class="pricing-card pricing-card--accent">
-				<div class="pricing-kicker">Cashflow Academy</div>
-				<h3>Need guided help? Academy is the second layer.</h3>
+				<div class="pricing-kicker">Deployment Gameplan Call</div>
+				<h3>Want a second set of eyes before you wire money?</h3>
 				<div class="support-list">
-					{#each academyFeatures as item}
+					{#each guidedHelpFeatures as item}
 						<div class="support-item">
 							<span class="checkmark">+</span>
 							<span>{item}</span>
 						</div>
 					{/each}
 				</div>
-				<div class="tier-note">Start free first. Move into Academy when you want a deeper plan and live support.</div>
+				<div class="hero-actions">
+					<a href={gameplanCallHref} target="_blank" rel="noreferrer" class="btn btn-secondary">
+						Book a Gameplan Call
+					</a>
+				</div>
+				<div class="tier-note">If you want deeper weekly support after the call, that is where Cashflow Academy comes in.</div>
 			</article>
 		</div>
 	</section>
@@ -813,6 +976,44 @@
 		margin-top: 10px;
 	}
 
+	.trusted-strip {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 18px;
+		margin-top: 26px;
+		padding: 16px 20px;
+		border-radius: 24px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: rgba(255, 255, 255, 0.7);
+		box-shadow: 0 12px 28px rgba(20, 20, 19, 0.05);
+	}
+
+	.trusted-label {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		flex-shrink: 0;
+	}
+
+	.trusted-logos {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 10px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+
+	.trusted-dot {
+		color: var(--text-muted);
+	}
+
 	.stat-card,
 	.workflow-card,
 	.problem-card,
@@ -873,14 +1074,16 @@
 
 	.problem-grid,
 	.pricing-grid,
-	.network-grid {
+	.network-grid,
+	.proof-grid {
 		display: grid;
 		gap: 18px;
 		margin-top: 32px;
 	}
 
 	.problem-grid,
-	.network-grid {
+	.network-grid,
+	.proof-grid {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 
@@ -924,6 +1127,106 @@
 		margin: 16px 0 0;
 		font-size: 17px;
 		color: #2b3a40;
+	}
+
+	.video-proof {
+		display: grid;
+		grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+		gap: 24px;
+		align-items: center;
+		padding: 28px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		border-radius: 30px;
+		background: rgba(255, 255, 255, 0.95);
+		box-shadow: 0 18px 40px rgba(20, 20, 19, 0.07);
+	}
+
+	.video-proof-copy p {
+		margin: 18px 0 0;
+	}
+
+	.video-proof-list {
+		display: grid;
+		gap: 12px;
+		margin-top: 22px;
+	}
+
+	.video-proof-frame {
+		min-width: 0;
+	}
+
+	.video-proof-link {
+		position: relative;
+		display: block;
+		overflow: hidden;
+		border-radius: 24px;
+		text-decoration: none;
+		background: linear-gradient(145deg, #0d2327, #173e45);
+		box-shadow: 0 22px 48px rgba(20, 20, 19, 0.12);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.video-proof-link:hover,
+	.proof-video-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 28px 56px rgba(20, 20, 19, 0.12);
+	}
+
+	.video-proof-link img {
+		display: block;
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		object-position: center 35%;
+	}
+
+	.video-proof-overlay {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 18px 20px;
+		background: linear-gradient(180deg, rgba(13, 35, 39, 0), rgba(13, 35, 39, 0.88));
+		margin-top: -110px;
+		color: white;
+	}
+
+	.video-proof-overlay strong,
+	.video-proof-overlay span {
+		display: block;
+		font-family: var(--font-ui);
+	}
+
+	.video-proof-overlay strong {
+		font-size: 16px;
+		font-weight: 800;
+	}
+
+	.video-proof-overlay span {
+		margin-top: 4px;
+		font-size: 14px;
+		line-height: 1.5;
+		color: rgba(255, 255, 255, 0.82);
+	}
+
+	.play-button,
+	.proof-video-play {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 56px;
+		height: 56px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.94);
+		color: #102a2f;
+		flex-shrink: 0;
+		box-shadow: 0 18px 30px rgba(0, 0, 0, 0.18);
+	}
+
+	.play-button svg,
+	.proof-video-play svg {
+		width: 22px;
+		height: 22px;
 	}
 
 	.workflow-grid {
@@ -1165,6 +1468,92 @@
 		padding-left: 20px;
 	}
 
+	.proof-card {
+		padding: 24px;
+		border-radius: 24px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: rgba(255, 255, 255, 0.96);
+		box-shadow: 0 18px 40px rgba(20, 20, 19, 0.06);
+	}
+
+	.proof-video-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 18px;
+		margin-top: 18px;
+	}
+
+	.proof-video-card {
+		overflow: hidden;
+		border-radius: 24px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: rgba(255, 255, 255, 0.96);
+		box-shadow: 0 18px 40px rgba(20, 20, 19, 0.06);
+		text-decoration: none;
+	}
+
+	.proof-video-thumb {
+		position: relative;
+		aspect-ratio: 4 / 3;
+		background: #102a2f;
+	}
+
+	.proof-video-thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center 38%;
+		display: block;
+	}
+
+	.proof-video-play {
+		position: absolute;
+		left: 18px;
+		bottom: 18px;
+		width: 48px;
+		height: 48px;
+	}
+
+	.proof-video-meta {
+		padding: 18px 20px 20px;
+	}
+
+	.proof-video-hook {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--teal);
+	}
+
+	.proof-video-meta .proof-author {
+		margin-top: 10px;
+	}
+
+	.proof-quote {
+		font-family: var(--font-body);
+		font-size: 17px;
+		line-height: 1.7;
+		color: #233237;
+	}
+
+	.proof-author {
+		margin-top: 18px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.proof-role {
+		margin-top: 4px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: #2e7b53;
+	}
+
 	.support-item {
 		display: flex;
 		align-items: flex-start;
@@ -1276,7 +1665,8 @@
 		.hero-section,
 		.workflow-card,
 		.difference-panel,
-		.pricing-grid {
+		.pricing-grid,
+		.video-proof {
 			grid-template-columns: 1fr;
 		}
 
@@ -1286,13 +1676,24 @@
 
 		.problem-grid,
 		.network-grid,
-		.comparison-grid {
+		.comparison-grid,
+		.proof-grid,
+		.proof-video-grid {
 			grid-template-columns: 1fr;
 		}
 
 		.operator-card {
 			flex-direction: column;
 			align-items: flex-start;
+		}
+
+		.trusted-strip {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.video-proof-overlay {
+			margin-top: 0;
 		}
 	}
 
@@ -1333,7 +1734,9 @@
 		.stats-strip,
 		.pipeline-grid,
 		.problem-grid,
-		.network-grid {
+		.network-grid,
+		.proof-grid,
+		.proof-video-grid {
 			grid-template-columns: 1fr;
 		}
 
@@ -1359,6 +1762,11 @@
 		.hero-description,
 		.hero-fine-print {
 			font-size: 16px;
+		}
+
+		.video-proof-overlay {
+			flex-direction: column;
+			align-items: flex-start;
 		}
 
 		.workflow-card,
