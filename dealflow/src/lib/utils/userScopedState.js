@@ -290,19 +290,19 @@ export function readUserScopedString(key, fallback = '') {
 	return value === null ? fallback : value;
 }
 
-export function writeUserScopedJson(key, value) {
+export function writeUserScopedJson(key, value, { email } = {}) {
 	const canonicalKey = canonicalScopedKey(key);
 	if (isStorageScopedKey(canonicalKey)) {
-		writeScopedJson(canonicalKey, value);
+		writeScopedJson(canonicalKey, value, email ? { email } : undefined);
 		return;
 	}
 	persistJson(canonicalKey, value);
 }
 
-export function writeUserScopedString(key, value) {
+export function writeUserScopedString(key, value, { email } = {}) {
 	const canonicalKey = canonicalScopedKey(key);
 	if (isStorageScopedKey(canonicalKey)) {
-		writeScopedString(canonicalKey, value);
+		writeScopedString(canonicalKey, value, email ? { email } : undefined);
 		return;
 	}
 	persistString(canonicalKey, value);
@@ -515,22 +515,23 @@ async function fetchAdminBundle(token, email) {
 }
 
 function applyUserBundle(bundle, buyBox, email) {
-	writeUserScopedJson('gycPortfolio', mapPortfolio(bundle?.portfolio || []));
+	const opts = email ? { email } : undefined;
+	writeUserScopedJson('gycPortfolio', mapPortfolio(bundle?.portfolio || []), opts);
 	writeScopedJson('gycDealStages', mapStages(bundle?.stages || []), { email });
-	writeUserScopedJson('gycGoals', mapGoals(bundle?.goals || []));
-	writeUserScopedJson('gycTaxDocs', mapTaxDocs(bundle?.taxdocs || []));
-	writeUserScopedJson('gycPortfolioPlan', mapPlan(bundle?.plan || []));
+	writeUserScopedJson('gycGoals', mapGoals(bundle?.goals || []), opts);
+	writeUserScopedJson('gycTaxDocs', mapTaxDocs(bundle?.taxdocs || []), opts);
+	writeUserScopedJson('gycPortfolioPlan', mapPlan(bundle?.plan || []), opts);
 
 	if (buyBox && Object.keys(buyBox).length > 0) {
-		writeUserScopedJson('gycBuyBox', buyBox);
-		writeUserScopedJson('gycBuyBoxWizard', buyBox);
+		writeUserScopedJson('gycBuyBox', buyBox, opts);
+		writeUserScopedJson('gycBuyBoxWizard', buyBox, opts);
 		if (buyBox._completedAt) {
-			writeUserScopedString('gycBuyBoxComplete', 'true');
+			writeUserScopedString('gycBuyBoxComplete', 'true', opts);
 		}
 	} else {
-		writeUserScopedJson('gycBuyBox', null);
-		writeUserScopedJson('gycBuyBoxWizard', null);
-		writeUserScopedString('gycBuyBoxComplete', '');
+		writeUserScopedJson('gycBuyBox', null, opts);
+		writeUserScopedJson('gycBuyBoxWizard', null, opts);
+		writeUserScopedString('gycBuyBoxComplete', '', opts);
 	}
 }
 

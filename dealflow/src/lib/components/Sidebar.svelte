@@ -146,7 +146,8 @@
 
 	// User display info
 	const realAdminUser = $derived.by(() => inferAdminRealUser($user));
-	const footerUser = $derived.by(() => (isImpersonating && realAdminUser ? realAdminUser : ($user || {})));
+	// Always show the effective session user (impersonated user when active, real user otherwise)
+	const footerUser = $derived($user || {});
 	const userName = $derived(footerUser?.name || footerUser?.fullName || footerUser?.email?.split('@')[0] || '');
 	const userEmail = $derived(footerUser?.email || '');
 	const userInitials = $derived.by(() => {
