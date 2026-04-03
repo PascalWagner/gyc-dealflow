@@ -4,37 +4,37 @@
 
 	const primaryCtaHref = '/login?return=/app/plan';
 	const stats = [
-		{ value: '838', label: 'Live deals', detail: 'Across income, tax, and growth strategies' },
-		{ value: '455', label: 'Sponsors tracked', detail: 'With operator context in one place' },
-		{ value: '3 min', label: 'To build your plan', detail: 'Answer a few questions and get oriented fast' },
-		{ value: '$0', label: 'To start', detail: 'Free account, no credit card required' }
+		{ value: '838', label: 'Live deals', detail: 'Income, tax, and growth opportunities in one place' },
+		{ value: '455', label: 'Sponsors tracked', detail: 'Operator context before you take the meeting' },
+		{ value: '3 min', label: 'To get oriented', detail: 'Build your buy box fast and start filtering smarter' },
+		{ value: '$0', label: 'To start', detail: 'Free account. No credit card. No sales call required' }
 	];
 
 	const heroBullets = [
-		'Build your buy box before the next sponsor pitch hits your inbox',
-		'See which deals fit your goals instead of reacting to whoever emailed last',
-		'Compare sponsor quality, structure, and fit without juggling 14 tabs'
+		'Stop guessing which private deals actually fit your goals',
+		'Filter sponsor pitches through your own buy box before you ever book a call',
+		'Compare deals, sponsors, and fit without juggling decks, notes, and spreadsheets'
 	];
 
 	const workflowSteps = [
 		{
 			eyebrow: 'Step 1',
 			title: 'Build your investor plan',
-			body: 'Tell the platform what you are actually trying to buy so the workflow starts with your goals, not with someone else\'s deck.',
+			body: 'Tell the platform what you are actually trying to buy so you stop reacting to whoever emailed you last.',
 			points: ['Set your income, tax, or growth target', 'Define check size and timeline', 'Choose asset classes you actually want to review'],
 			kind: 'plan'
 		},
 		{
 			eyebrow: 'Step 2',
 			title: 'See matched deals and sponsors',
-			body: 'Browse live opportunities with more context, then compare deal structure, minimums, and sponsor quality in one place.',
+			body: 'See strongest-fit opportunities first, then compare deal structure, minimums, and sponsor quality in one place.',
 			points: ['See strongest-fit opportunities first', 'Spot what fits and what does not faster', 'Review sponsor context before taking the next meeting'],
 			kind: 'matches'
 		},
 		{
 			eyebrow: 'Step 3',
 			title: 'Move winners into diligence',
-			body: 'Save what looks promising, organize what needs more work, and keep your investing pipeline clean instead of ad hoc.',
+			body: 'Keep the best opportunities moving and stop losing good deals inside a messy, ad hoc pipeline.',
 			points: ['Track saved, review, and connect stages', 'Keep your next moves visible', 'Request intros only when a deal clears your filter'],
 			kind: 'pipeline'
 		}
@@ -50,7 +50,7 @@
 	const faqs = [
 		{
 			question: 'Who is the page for?',
-			answer: 'This page is built for accredited investors, especially business owners, operators, and executives who want a cleaner way to evaluate private deals before wiring capital.'
+			answer: 'This page is built for accredited investors, especially business owners and executives who want a better way to evaluate private deals before wiring capital.'
 		},
 		{
 			question: 'Should Academy be the first thing I do?',
@@ -128,12 +128,11 @@
 
 	<section class="hero-section">
 		<div class="hero-copy">
-			<div class="eyebrow">Private dealflow for accredited investors</div>
-			<h1>Find private deals that fit your goals before you wire your next $50K.</h1>
+			<div class="eyebrow">For accredited investors buying private deals</div>
+			<h1>Stop wiring money into deals that do not fit your goals.</h1>
 			<p class="hero-description">
-				Build your investor plan, see matched opportunities, compare sponsors, and keep
-				your diligence pipeline in one place. The landing page should sell the product, so
-				that is exactly what this page now does.
+				Build your buy box, see best-fit opportunities first, compare sponsors side by side,
+				and move the right deals into diligence with more confidence.
 			</p>
 
 			<div class="hero-actions">
@@ -173,10 +172,10 @@
 	<section class="section" id="workflow">
 		<div class="section-heading">
 			<div class="eyebrow">What you actually do inside</div>
-			<h2>A cleaner investing workflow, not another generic finance homepage.</h2>
+			<h2>Everything the page promises should be visible in the product immediately.</h2>
 			<p>
-				The point of the page is to get people into the product. So every section below shows
-				what they get once they sign up and why that is useful immediately.
+				This is not supposed to feel like another finance content site. It should feel like the
+				fastest way to get clear on what to invest in next and what to ignore.
 			</p>
 		</div>
 
@@ -284,10 +283,10 @@
 		<div class="free-grid">
 			<div class="free-copy">
 				<div class="eyebrow">What is free</div>
-				<h2>Enough product to get real value before anyone asks you to buy anything.</h2>
+				<h2>Get real value first. Buy extra help only if you need it.</h2>
 				<p>
-					This is the right landing-page strategy for conversion: let investors start using the
-					product fast, then earn the right to upsell support later.
+					The highest-converting move here is simple: let investors use the product fast, get
+					oriented, and only then offer the higher-touch support.
 				</p>
 				<div class="free-list">
 					{#each freeFeatures as item}
@@ -306,11 +305,10 @@
 
 			<div class="support-card">
 				<div class="support-kicker">Need Pascal in the room?</div>
-				<h3>Academy belongs lower on the page, not in the hero.</h3>
+				<h3>Academy is the upsell, not the opener.</h3>
 				<p>
-					Start with the software first. If you want hands-on deal review, office hours, and
-					faster decision support, upgrade into Cashflow Academy or 1:1 after you already
-					understand the product.
+					Start with the software first. If you want live deal review, office hours, and faster
+					decision support, then upgrade into Cashflow Academy or 1:1.
 				</p>
 				<div class="support-pills">
 					<span>Free product</span>
@@ -328,7 +326,7 @@
 				<h2>Operators should have a separate path.</h2>
 				<p>
 					If you are a debt fund, private credit manager, or emerging operator raising capital,
-					you should not compete with the investor CTA. Apply separately to list offerings and
+					you should not compete with the investor CTA. Apply separately to list offerings or
 					book a pitch slot.
 				</p>
 			</div>
@@ -339,7 +337,7 @@
 	<section class="section section-faq">
 		<div class="section-heading section-heading--narrow">
 			<div class="eyebrow">FAQ</div>
-			<h2>Questions that matter before someone clicks Start free.</h2>
+			<h2>Questions people ask right before they decide whether this is worth trying.</h2>
 		</div>
 
 		<div class="faq-list">
@@ -355,10 +353,10 @@
 	<section class="section section-cta">
 		<div class="cta-panel">
 			<div class="eyebrow">Start using it</div>
-			<h2>Build your plan, see your matches, and decide what deserves diligence.</h2>
+			<h2>Build your buy box, see your matches, and stop guessing what to do next.</h2>
 			<p>
-				The page should convert by making the next step obvious. So the next step is simple:
-				create a free account and start using the product.
+				If the page does its job, the next move is obvious: create a free account and start
+				filtering deals through your own plan instead of gut feel.
 			</p>
 			<div class="hero-actions hero-actions--center">
 				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
@@ -372,12 +370,18 @@
 	:global(body) {
 		margin: 0;
 		background:
-			radial-gradient(circle at top left, rgba(81, 190, 123, 0.08), transparent 26%),
-			linear-gradient(180deg, #faf9f5 0%, #f4f4ee 100%);
-		color: var(--text-dark);
+			radial-gradient(circle at top left, rgba(81, 190, 123, 0.09), transparent 26%),
+			linear-gradient(180deg, #f8f6ef 0%, #f1efe7 100%);
+		color: #121615;
 	}
 
 	.marketing-page {
+		--text-dark: #121615;
+		--text-secondary: #445359;
+		--text-muted: #617279;
+		--teal: #123840;
+		--primary: #51be7b;
+		--primary-hover: #43ab6a;
 		width: min(100%, 1320px);
 		margin: 0 auto;
 		padding: 24px;
@@ -399,9 +403,9 @@
 		padding: 14px 18px;
 		border: 1px solid rgba(221, 229, 232, 0.94);
 		border-radius: 999px;
-		background: rgba(250, 249, 245, 0.9);
+		background: rgba(248, 246, 239, 0.96);
 		backdrop-filter: blur(18px);
-		box-shadow: 0 16px 34px rgba(20, 20, 19, 0.05);
+		box-shadow: 0 16px 34px rgba(20, 20, 19, 0.07);
 	}
 
 	.nav-logo,
@@ -540,16 +544,17 @@
 	h2,
 	h3 {
 		margin: 0;
-		font-family: var(--font-headline);
-		font-weight: 400;
-		line-height: 0.98;
-		letter-spacing: -0.02em;
+		font-family: var(--font-ui);
+		font-weight: 800;
+		line-height: 0.94;
+		letter-spacing: -0.045em;
+		color: var(--text-dark);
 	}
 
 	h1 {
 		margin-top: 18px;
-		font-size: clamp(3.2rem, 5vw, 5.5rem);
-		max-width: 11ch;
+		font-size: clamp(3.3rem, 5vw, 5.6rem);
+		max-width: 8.6ch;
 	}
 
 	h2 {
@@ -559,7 +564,7 @@
 	}
 
 	h3 {
-		font-size: clamp(1.8rem, 2.2vw, 2.6rem);
+		font-size: clamp(1.8rem, 2.2vw, 2.5rem);
 	}
 
 	p,
@@ -567,15 +572,17 @@
 	.hero-fine-print,
 	.stat-card p,
 	.faq-item p {
-		font-family: var(--font-body);
+		font-family: var(--font-ui);
 		font-size: 18px;
-		line-height: 1.62;
+		line-height: 1.58;
 		color: var(--text-secondary);
 	}
 
 	.hero-description {
 		max-width: 36rem;
 		margin: 18px 0 0;
+		font-size: 20px;
+		color: #223036;
 	}
 
 	.hero-actions {
@@ -617,6 +624,8 @@
 	.hero-fine-print {
 		margin: 14px 0 0;
 		font-size: 15px;
+		font-weight: 700;
+		color: #2b3b40;
 	}
 
 	.hero-bullets {
@@ -666,8 +675,8 @@
 	.cta-panel {
 		border: 1px solid rgba(221, 229, 232, 0.94);
 		border-radius: 28px;
-		background: rgba(255, 255, 255, 0.84);
-		box-shadow: 0 18px 40px rgba(20, 20, 19, 0.05);
+		background: rgba(255, 255, 255, 0.94);
+		box-shadow: 0 18px 40px rgba(20, 20, 19, 0.07);
 	}
 
 	.stat-card {
@@ -675,10 +684,11 @@
 	}
 
 	.stat-value {
-		font-family: var(--font-headline);
+		font-family: var(--font-ui);
 		font-size: 40px;
 		line-height: 1;
 		color: var(--text-dark);
+		font-weight: 800;
 	}
 
 	.stat-label {
@@ -688,12 +698,13 @@
 		font-weight: 800;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: var(--text-muted);
+		color: #34454a;
 	}
 
 	.stat-card p {
 		margin: 10px 0 0;
 		font-size: 15px;
+		color: #58686d;
 	}
 
 	.section {
@@ -706,6 +717,7 @@
 
 	.section-heading p {
 		margin: 18px 0 0;
+		max-width: 42rem;
 	}
 
 	.section-heading--narrow {
@@ -734,11 +746,13 @@
 	.workflow-card li {
 		margin-top: 10px;
 		font-size: 16px;
+		color: #223036;
 	}
 
 	.workflow-copy p {
 		margin: 16px 0 0;
 		font-size: 17px;
+		color: #2b3a40;
 	}
 
 	.mini-window {
@@ -987,7 +1001,7 @@
 		padding: 22px 24px;
 		border-radius: 24px;
 		border: 1px solid rgba(221, 229, 232, 0.94);
-		background: rgba(255, 255, 255, 0.82);
+		background: rgba(255, 255, 255, 0.96);
 	}
 
 	.faq-item summary {
@@ -1017,6 +1031,7 @@
 		flex-direction: column;
 		text-align: center;
 		padding: 40px 28px;
+		background: rgba(255, 255, 255, 0.97);
 	}
 
 	.cta-panel p {
