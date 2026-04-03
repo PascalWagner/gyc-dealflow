@@ -80,17 +80,6 @@
 		<div class="opp-header">
 			<div class="opp-label">Your Plan</div>
 			<div class="opp-header-right">
-				<div class="opp-goal-pills">
-					{#each allGoals as g}
-						<button
-							class="opp-goal-pill"
-							class:active={goal === g}
-							onclick={() => onSetGoal?.(g)}
-						>
-							{goalLabels[g]}
-						</button>
-					{/each}
-				</div>
 				<button class="opp-edit-link" onclick={() => onOpenBuyBox?.()}>Edit &rarr;</button>
 			</div>
 		</div>
@@ -282,26 +271,29 @@
 	.opp-plan-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 20px;
-		margin-bottom: 12px;
+		gap: 12px;
+		margin-bottom: 8px;
 	}
 	.opp-plan-left {
-		padding: 16px;
+		padding: 12px 14px;
 		background: var(--bg-cream);
 		border-radius: var(--radius-sm, 6px);
 	}
 	.opp-plan-right {
-		padding: 16px;
+		padding: 12px 14px;
 		background: var(--bg-cream);
 		border-radius: var(--radius-sm, 6px);
 	}
 
 	.opp-goal-display {
-		margin-bottom: 12px;
+		margin-bottom: 8px;
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
 	}
 	.opp-goal-amount {
 		font-family: var(--font-ui);
-		font-size: 22px;
+		font-size: 20px;
 		font-weight: 800;
 		color: var(--text-dark);
 		letter-spacing: -0.3px;
@@ -311,15 +303,14 @@
 		font-size: 12px;
 		font-weight: 600;
 		color: var(--text-muted);
-		text-transform: lowercase;
 	}
 
 	.opp-progress-bar {
-		height: 8px;
+		height: 6px;
 		background: var(--border-light);
-		border-radius: 4px;
+		border-radius: 3px;
 		overflow: hidden;
-		margin-bottom: 6px;
+		margin-bottom: 4px;
 		display: flex;
 	}
 	.opp-progress-fill {
@@ -335,17 +326,20 @@
 		transition: width 0.5s ease;
 	}
 	.opp-progress-meta {
-		margin-bottom: 2px;
+		margin-bottom: 1px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 	}
 	.opp-progress-pct {
 		font-family: var(--font-ui);
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 800;
 		color: var(--text-dark);
 	}
 	.opp-progress-detail {
 		font-family: var(--font-body);
-		font-size: 12px;
+		font-size: 11px;
 		color: var(--text-muted);
 	}
 	.opp-goal-hint {
@@ -374,25 +368,25 @@
 	/* Right column - projection */
 	.opp-invest-label {
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 12px;
 		font-weight: 600;
 		color: var(--text-secondary);
-		margin-bottom: 10px;
+		margin-bottom: 6px;
 	}
 	.opp-invest-stat {
 		font-family: var(--font-ui);
-		font-size: 18px;
+		font-size: 17px;
 		font-weight: 800;
 		color: var(--primary);
-		margin-bottom: 8px;
+		margin-bottom: 6px;
 		letter-spacing: -0.3px;
 	}
 	.opp-invest-progress {
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 12px;
 		font-weight: 600;
 		color: var(--text-dark);
-		margin-bottom: 6px;
+		margin-bottom: 4px;
 	}
 	.opp-invest-slot {
 		display: inline-block;

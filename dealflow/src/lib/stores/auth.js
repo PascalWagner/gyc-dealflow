@@ -305,6 +305,31 @@ export async function bootstrapProtectedRouteSession({
 		}
 	}
 
+	// TOS acceptance gate — only for /app/* routes
+	const CURRENT_TOS_VERSION = '1.0';
+	const UNGATED_PATHS = ['/login', '/terms', '/privacy', '/accept-terms', '/onboarding', '/gp-onboarding'];
+	if (browser && normalizedReturnPath.startsWith('/app') && !UNGATED_PATHS.some(p => normalizedReturnPath.startsWith(p))) {
+		const tosOk = activeSession.tosAccepted === true && activeSession.tosVersion === CURRENT_TOS_VERSION;
+		if (!tosOk) {
+			// Check API
+			try {
+				const tosResp = await fetch('/api/user-agreement', {
+					headers: { 'Authorization': `Bearer ${activeSession.token}` }
+				});
+				if (tosResp.ok) {
+					const tosData = await tosResp.json();
+					if (tosData.hasCurrentVersion) {
+						patchStoredSessionUser({ tosAccepted: true, tosVersion: CURRENT_TOS_VERSION });
+					} else {
+						return { ok: false, redirect: `/accept-terms?return=${encodeURIComponent(normalizedReturnPath)}`, session: activeSession };
+					}
+				}
+			} catch {
+				// Non-blocking — allow through if API is down
+			}
+		}
+	}
+
 	return { ok: true, redirect: null, session: activeSession };
 }
 

@@ -66,13 +66,14 @@ export default async function handler(req, res) {
     const {
       email, signatoryName, signatoryEmail, signatoryTitle, offeringType,
       acceptedTos, acceptedListing, acceptedDataAccuracy, acceptedRecording,
+      acceptedDataProcessing,
       agreementText, agreementTextHash
     } = req.body || {};
 
     if (!email || !signatoryName || !signatoryEmail) {
       return res.status(400).json({ error: 'Email, signatoryName, and signatoryEmail required' });
     }
-    if (!acceptedTos || !acceptedListing || !acceptedDataAccuracy || !acceptedRecording) {
+    if (!acceptedTos || !acceptedListing || !acceptedDataAccuracy || !acceptedRecording || !acceptedDataProcessing) {
       return res.status(400).json({ error: 'All required terms must be accepted' });
     }
     if (!agreementText) {
@@ -160,6 +161,7 @@ export default async function handler(req, res) {
           accepted_listing: acceptedListing === true,
           accepted_data_accuracy: acceptedDataAccuracy === true,
           accepted_recording: acceptedRecording === true,
+          accepted_data_processing: acceptedDataProcessing === true,
           ip_address: ip,
           user_agent: userAgent,
           signatory_name: signatoryName,

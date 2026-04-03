@@ -44,12 +44,30 @@ export default async function handler(req, res) {
     let callerProfile = null;
     const token = (req.headers.authorization || '').replace('Bearer ', '');
     if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) {
+      let userId = null;
+      try {
+        const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+        if (user) {
+          userId = user.id;
+        } else {
+          // Fallback: decode JWT payload for expired tokens to still identify the user
+          try {
+            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+            if (payload?.sub) userId = payload.sub;
+          } catch {}
+        }
+      } catch {
+        // Last resort: decode JWT payload
+        try {
+          const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+          if (payload?.sub) userId = payload.sub;
+        } catch {}
+      }
+      if (userId) {
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('share_saved, share_dd, share_invested')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single();
         callerProfile = profile;
       }

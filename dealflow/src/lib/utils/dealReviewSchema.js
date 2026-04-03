@@ -68,15 +68,22 @@ export const RISK_TAG_OPTIONS = [
 	'Refinancing',
 	'Interest Rate',
 	'Sponsor',
-	'Underwriting',
+	'Key Personnel',
 	'Execution',
 	'Regulatory',
 	'Valuation',
 	'Counterparty',
 	'Tax',
 	'Operational',
-	'Reporting',
-	'Other'
+	'Insufficient Cash Flow',
+	'Transfer Restrictions',
+	'Unspecified Investments',
+	'Litigation',
+	'Limited Recourse',
+	'Economic/Market Conditions',
+	'Capital Call Risk',
+	'Nonperforming Loans',
+	'Environmental'
 ];
 export const COUNTRY_OPTIONS = ['United States', 'Canada', 'Mexico', 'Other'];
 export const STATE_OPTIONS = [

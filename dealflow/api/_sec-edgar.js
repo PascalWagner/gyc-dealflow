@@ -721,6 +721,59 @@ export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}, options = 
 	return { updates, is506b };
 }
 
+export async function fetchAllFilingsForCik(cik, opportunityId, supabase) {
+	const normalizedCik = String(cik || '').replace(/^0+/, '');
+	if (!normalizedCik) throw new Error('CIK is required');
+
+	const searchUrl = `${EFTS_SEARCH_URL}?q=*&forms=D,D/A&ciks=${normalizedCik}`;
+	const resp = await fetch(searchUrl, {
+		headers: { 'User-Agent': EDGAR_USER_AGENT }
+	});
+	if (!resp.ok) throw new Error(`EDGAR CIK search failed: ${resp.status}`);
+	const data = await resp.json();
+
+	const hits = (data.hits && data.hits.hits) || [];
+	if (hits.length === 0) return 0;
+
+	let upsertCount = 0;
+
+	for (const hit of hits) {
+		const source = hit._source || {};
+		const accession = String(source.adsh || '').trim();
+		const hitCik = ((source.ciks && source.ciks[0]) || '').replace(/^0+/, '');
+		const fileDate = source.file_date || null;
+
+		if (!accession) continue;
+
+		try {
+			const { xml, url } = await fetchFilingXml(hitCik || normalizedCik, accession);
+			const parsed = parseFormD(xml);
+
+			await upsertParsedSecFiling({
+				supabase,
+				opportunityId: opportunityId || null,
+				accession,
+				cik: parsed.cik || hitCik || normalizedCik,
+				parsed,
+				xml,
+				url,
+				fileDate
+			});
+
+			upsertCount += 1;
+		} catch (err) {
+			console.warn(`Failed to fetch/store filing ${accession} for CIK ${normalizedCik}:`, err.message);
+		}
+
+		// EDGAR rate limit: ~10 req/sec, 150ms delay keeps us safe
+		if (hits.indexOf(hit) < hits.length - 1) {
+			await new Promise((resolve) => setTimeout(resolve, 150));
+		}
+	}
+
+	return upsertCount;
+}
+
 export async function applySecFilingToDeal({
 	supabase,
 	deal,

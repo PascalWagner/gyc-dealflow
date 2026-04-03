@@ -90,8 +90,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const parentQuery = applyPublishedCatalogQuery(
-      supabase
+    let baseQuery = supabase
         .from('opportunities')
         .select(`
           *,
@@ -104,8 +103,15 @@ export default async function handler(req, res) {
         `)
         .is('parent_deal_id', null)
         .not('investment_name', 'eq', '')
-        .order('added_date', { ascending: false })
-    , viewerContext, { supportsSubmittedByEmail });
+        .order('added_date', { ascending: false });
+
+    // Filter by management company if requested
+    const mgmtCompanyId = req.query?.managementCompanyId;
+    if (mgmtCompanyId && /^[0-9a-f-]{36}$/i.test(mgmtCompanyId)) {
+      baseQuery = baseQuery.eq('management_company_id', mgmtCompanyId);
+    }
+
+    const parentQuery = applyPublishedCatalogQuery(baseQuery, viewerContext, { supportsSubmittedByEmail });
 
     const { data: parentDeals, error: parentError } = await parentQuery;
     if (parentError) throw parentError;

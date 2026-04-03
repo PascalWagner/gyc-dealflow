@@ -124,7 +124,13 @@ test('single-deal transform derives lending review values from legacy columns wh
 	assert.equal(deal.maxAllowedLeverage, 3);
 	assert.equal(deal.fundFoundedYear, 2011);
 	assert.equal(deal.snapshotAsOfDate, '2025-09-01');
-	assert.deepEqual(deal.riskTags, ['Leverage', 'Liquidity', 'Credit Loss', 'Underwriting']);
+	// riskTags now includes expanded taxonomy: Underwriting→Execution merge, + structure-based inference for lending
+	assert.ok(deal.riskTags.includes('Leverage'), 'should include Leverage');
+	assert.ok(deal.riskTags.includes('Liquidity'), 'should include Liquidity');
+	assert.ok(deal.riskTags.includes('Credit Loss'), 'should include Credit Loss');
+	assert.ok(deal.riskTags.includes('Execution'), 'Underwriting merged into Execution');
+	assert.ok(deal.riskTags.includes('Interest Rate'), 'lending funds auto-add Interest Rate');
+	assert.ok(deal.riskTags.includes('Nonperforming Loans'), 'lending funds auto-add Nonperforming Loans');
 	assert.equal(deal.historicalReturn2025, 0.0913);
 	assert.equal(deal.teamContactsSnapshotSupported, false);
 });

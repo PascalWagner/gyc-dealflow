@@ -181,6 +181,15 @@
 								{:else}
 									<div class="ad-empty"><p>No SEC filing data matched for this deal.</p></div>
 								{/if}
+								{#if deal?.issuerEntity}
+									<div class="struct-row"><span class="struct-label">Issuer Entity</span><span class="struct-value">{deal.issuerEntity}</span></div>
+								{/if}
+								{#if deal?.gpEntity}
+									<div class="struct-row"><span class="struct-label">GP Entity</span><span class="struct-value">{deal.gpEntity}</span></div>
+								{/if}
+								{#if deal?.secVerificationState}
+									<div class="struct-row"><span class="struct-label">Verification</span><span class="struct-value">{deal.secVerificationState}</span></div>
+								{/if}
 								{#if deal?.addedDate}
 									{@const months = Math.round((Date.now() - new Date(deal.addedDate).getTime()) / (1000 * 60 * 60 * 24 * 30.44))}
 									<div class="struct-row"><span class="struct-label">In Database</span><span class="struct-value">{months} month{months !== 1 ? 's' : ''}</span></div>

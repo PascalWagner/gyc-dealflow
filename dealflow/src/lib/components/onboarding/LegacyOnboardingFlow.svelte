@@ -77,7 +77,7 @@
 	let teamContacts = $state([]);
 	let teamContactsError = $state('');
 		let offeringType = $state('506c');
-		let consents = $state({ tos: false, listing: false, accuracy: false, recording: false });
+		let consents = $state({ tos: false, listing: false, accuracy: false, recording: false, dataProcessing: false });
 		let sigName = $state('');
 		let sigTitle = $state('');
 		let agreementSigned = $state(false);
@@ -191,7 +191,7 @@
 		return '';
 	});
 
-	let canSignAgreement = $derived(consents.tos && consents.listing && consents.accuracy && consents.recording && sigName.trim().length > 0);
+	let canSignAgreement = $derived(consents.tos && consents.listing && consents.accuracy && consents.recording && consents.dataProcessing && sigName.trim().length > 0);
 	let currentUserTeamContact = $derived.by(() => (
 		buildFallbackTeamContacts({
 			user: {
@@ -892,7 +892,7 @@
 		try {
 			const response = await fetch('/api/gp-agreement', {
 					method: 'POST', headers,
-					body: JSON.stringify({ email: $user.email, signatoryName: sigName.trim(), signatoryEmail: $user.email, signatoryTitle: sigTitle.trim(), offeringType, acceptedTos: consents.tos, acceptedListing: consents.listing, acceptedDataAccuracy: consents.accuracy, acceptedRecording: consents.recording, agreementText, agreementTextHash: hash })
+					body: JSON.stringify({ email: $user.email, signatoryName: sigName.trim(), signatoryEmail: $user.email, signatoryTitle: sigTitle.trim(), offeringType, acceptedTos: consents.tos, acceptedListing: consents.listing, acceptedDataAccuracy: consents.accuracy, acceptedRecording: consents.recording, acceptedDataProcessing: consents.dataProcessing, agreementText, agreementTextHash: hash })
 				});
 			const payload = await response.json().catch(() => ({}));
 			if (!response.ok) {
@@ -1203,7 +1203,8 @@
 						tos: currentAgreement.accepted_tos === true,
 						listing: currentAgreement.accepted_listing === true,
 						accuracy: currentAgreement.accepted_data_accuracy === true,
-						recording: currentAgreement.accepted_recording === true
+						recording: currentAgreement.accepted_recording === true,
+						dataProcessing: currentAgreement.accepted_data_processing === true
 					};
 				}
 				if (data.dealCount > 0) dealUploaded = true;
@@ -1894,7 +1895,7 @@
 					</div>
 					<div class="agreement-scroll" bind:this={agreementScrollEl}>
 						<h3>Grow Your Cashflow &mdash; Operator Listing Agreement</h3>
-						<p><em>Version 1.0 &mdash; Effective Date: March 2026</em></p>
+						<p><em>Version 1.1 &mdash; Effective Date: April 2026</em></p>
 						<p>This Operator Listing Agreement ("Agreement") is entered into between you ("Operator") and Grow Your Cashflow LLC ("GYC"), governing your use of the GYC Dealflow Platform ("Platform") as a deal sponsor, operator, or fund manager.</p>
 						<p>By checking the boxes below and providing your electronic signature, you acknowledge that you have read, understand, and agree to be bound by the following terms.</p>
 						<h3>1. Platform Terms of Service</h3>
@@ -1905,11 +1906,13 @@
 						<p>If you participate in a GYC live deal presentation event, you consent to the session being recorded and shared with investors in the GYC database.</p>
 						<h3>4. Data Accuracy &amp; Representations</h3>
 						<p>You represent that all information you provide is truthful, accurate, and not misleading, and that you are authorized to distribute the offering materials.</p>
-						<h3>5. Regulatory Compliance</h3>
+						<h3>5. Data Processing &amp; Confidentiality</h3>
+						<p>GYC may process, store, and analyze deal data including terms, projections, communications, and performance metrics to operate and improve the Platform. GYC will not share raw proprietary documents (PPMs, subscription agreements) with third parties without your consent. Aggregated, anonymized market data may be used in platform features without individual attribution. You retain ownership of all materials you upload to the Platform.</p>
+						<h3>6. Regulatory Compliance</h3>
 						<p>GYC is not a broker-dealer and does not provide investment advice.</p>
-						<h3>6. Limitation of Liability</h3>
+						<h3>7. Limitation of Liability</h3>
 						<p>GYC shall not be liable for any investment losses or failed capital raises.</p>
-						<h3>7. Term &amp; Termination</h3>
+						<h3>8. Term &amp; Termination</h3>
 						<p>This Agreement remains in effect for as long as you have an active operator account on the Platform.</p>
 					</div>
 					<div class="consent-checks">
@@ -1928,6 +1931,10 @@
 						<button type="button" class="consent-row" aria-pressed={consents.recording} onclick={() => toggleConsent('recording')}>
 							<div class="consent-box" class:checked={consents.recording}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
 							<div class="consent-text">I consent to <strong>recording and distribution</strong> of any live presentation events I participate in.</div>
+						</button>
+						<button type="button" class="consent-row" aria-pressed={consents.dataProcessing} onclick={() => toggleConsent('dataProcessing')}>
+							<div class="consent-box" class:checked={consents.dataProcessing}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+							<div class="consent-text">I acknowledge GYC's <strong>data processing practices</strong> and agree that aggregated, anonymized data may be used in platform features.</div>
 						</button>
 					</div>
 						<div class="signature-section">

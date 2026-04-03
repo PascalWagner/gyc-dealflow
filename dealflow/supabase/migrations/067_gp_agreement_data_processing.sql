@@ -1,0 +1,2 @@
+ALTER TABLE gp_agreements
+  ADD COLUMN IF NOT EXISTS accepted_data_processing BOOLEAN NOT NULL DEFAULT FALSE;

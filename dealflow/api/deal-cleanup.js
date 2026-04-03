@@ -89,6 +89,8 @@ const QUALITY_FIELDS = [
   { key: 'instrument', label: 'Instrument' },
   { key: 'management_company_id', label: 'Operator' },
   { key: 'status', label: 'Status' },
+  { key: 'risk_notes', label: 'Risk Notes' },
+  { key: 'risk_tags', label: 'Risk Tags' },
 ];
 
 function getMissingFields(deal) {
@@ -355,7 +357,10 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "issuerAddress": "Issuer mailing or business address exactly as stated",
   "issuerPhone": "Issuer phone number exactly as stated",
   "relatedPeople": "Array of people named in the PPM with role context, e.g. [{\"name\": \"Michael C. Anderson\", \"role\": \"President\"}]",
-  "status": "One of: open, closed, coming_soon, evergreen, fully_funded, completed"
+  "status": "One of: open, closed, coming_soon, evergreen, fully_funded, completed",
+  "sourceRiskFactors": "Array of risk factors from the Risk Factors section. For each risk: {\"tag\": \"one of [Leverage, Liquidity, Credit Loss, Concentration, Refinancing, Interest Rate, Sponsor, Key Personnel, Execution, Regulatory, Valuation, Counterparty, Tax, Operational, Insufficient Cash Flow, Transfer Restrictions, Unspecified Investments, Litigation, Limited Recourse, Economic/Market Conditions, Capital Call Risk, Nonperforming Loans, Environmental]\", \"title\": \"Short LP-friendly title\", \"quote\": \"Key sentence from the document\", \"source\": \"PPM §X / page Y\"}. Skip boilerplate risks (terrorism, pandemics, acts of God, general economic uncertainty, cybersecurity, force majeure). Focus on risks SPECIFIC to this deal.",
+  "riskTags": "Array of risk tag strings from the standardized list: [Leverage, Liquidity, Credit Loss, Concentration, Refinancing, Interest Rate, Sponsor, Key Personnel, Execution, Regulatory, Valuation, Counterparty, Tax, Operational, Insufficient Cash Flow, Transfer Restrictions, Unspecified Investments, Litigation, Limited Recourse, Economic/Market Conditions, Capital Call Risk, Nonperforming Loans, Environmental]. Include ONLY tags that apply to this specific deal.",
+  "riskNotes": "2-4 sentence LP-facing summary of the key risks. Write for an accredited investor — be specific about what could go wrong. Do NOT copy PPM legalese."
 }
 
 IMPORTANT:

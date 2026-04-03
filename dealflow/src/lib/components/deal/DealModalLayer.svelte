@@ -156,6 +156,9 @@
 				<div class="modal-body-text">
 					We'll connect you with {introOperatorName} for <strong>{deal.investmentName}</strong>. Pascal will make a personal email introduction on your behalf.
 				</div>
+				<div class="modal-intro-disclaimer">
+					This introduction is a courtesy. GYC does not endorse, recommend, or guarantee any investment or operator.
+				</div>
 				<div class="modal-field">
 					<label class="modal-label" for="intro-message">Message to Operator (optional)</label>
 					<textarea
@@ -594,6 +597,13 @@
 		font-family: var(--font-body);
 		font-size: 11px;
 		color: var(--text-muted);
+	}
+	.modal-intro-disclaimer {
+		font-size: 11px;
+		font-family: var(--font-body);
+		color: var(--text-muted);
+		line-height: 1.5;
+		padding: 8px 0 4px;
 	}
 
 	.modal-success {

@@ -140,6 +140,9 @@
 	// Goal Path
 	let userGoal = $state(null);
 
+	// Other deals from same sponsor
+	let sponsorDeals = $state([]);
+
 	// Deck Viewer Modal
 	let showDeckViewer = $state(false);
 
@@ -917,6 +920,31 @@
 			.then(stats => { if (stats) socialProof = stats; })
 			.catch(() => {});
 
+		// Load other deals from same sponsor (uses similar deals data if available, else fetches)
+		if (deal.managementCompanyId || deal.managementCompany) {
+			// Filter from existing similar deals list first
+			const mgmtId = deal.managementCompanyId;
+			const mgmtName = (deal.managementCompany || '').toLowerCase();
+			if (similarDeals.length > 0) {
+				sponsorDeals = similarDeals.filter(sd =>
+					sd.id !== deal.id && (
+						(mgmtId && (sd.managementCompanyId === mgmtId || sd.management_company_id === mgmtId)) ||
+						(mgmtName && ((sd.managementCompany || sd.management_company || '').toLowerCase() === mgmtName))
+					)
+				);
+			}
+			// If no matches from similar deals, try API
+			if (sponsorDeals.length === 0 && mgmtId) {
+				fetch(`/api/deals?managementCompanyId=${encodeURIComponent(mgmtId)}`, { headers })
+					.then(r => r.ok ? r.json() : null)
+					.then(data => {
+						const deals = data?.deals || data || [];
+						sponsorDeals = (Array.isArray(deals) ? deals : []).filter(d => d.id !== deal.id);
+					})
+					.catch(() => {});
+			}
+		}
+
 		// Load deck-viewed and intro-requested state
 		deckViewed = !!readScopedDealString(deal?.id, 'gycDeckViewed');
 		introRequested = hasRequestedDealIntroduction(deal.id);
@@ -1424,6 +1452,32 @@ shareDropdownOpen = false;
 						</div>
 					</div>
 
+					<!-- Other Deals from This Sponsor -->
+					{#if sponsorDeals.length > 0}
+						<div class="section flow-order-32">
+							<div class="section-header">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+								<span class="section-title">Other Deals from {deal.managementCompany || 'This Sponsor'}</span>
+							</div>
+							<div class="section-body">
+								<div class="sponsor-deals-grid">
+									{#each sponsorDeals as sd}
+										<a href="/deal/{sd.slug || sd.id}" class="sponsor-deal-card">
+											<div class="sponsor-deal-name">{sd.investmentName || sd.investment_name}</div>
+											<div class="sponsor-deal-meta">
+												{#if sd.assetClass || sd.asset_class}<span>{sd.assetClass || sd.asset_class}</span>{/if}
+												{#if sd.status}<span class="sponsor-deal-status">{sd.status}</span>{/if}
+											</div>
+											{#if sd.targetIRR || sd.target_irr}
+												<div class="sponsor-deal-return">Target IRR: {fmt(sd.targetIRR || sd.target_irr, 'pct')}</div>
+											{/if}
+										</a>
+									{/each}
+								</div>
+							</div>
+						</div>
+					{/if}
+
 					<!-- SEC Filing now in Analysis Dashboard -->
 
 					<!-- Fees now in Analysis Dashboard -->
@@ -1525,74 +1579,44 @@ shareDropdownOpen = false;
 									Based on {fmt(cfInvestment, 'money')} invested at {fmt(cfYieldRate, 'pct')} {cfYieldLabel} over {cfHold}{cfIsEvergreen && cfHold === 5 ? '+ years' : ' years'}.{#if hasHistoricalReturns} Projection uses historical average return.{/if} Projections are illustrative only.
 								</div>
 
-								<div class="cf-toggle">
-									<button class:active={cfView === 'chart'} onclick={() => cfView = 'chart'}>Chart</button>
-									<button class:active={cfView === 'table'} onclick={() => cfView = 'table'}>Table</button>
+								<div class="cf-table-wrap ly-table-scroll">
+									<table class="cf-table">
+										<thead>
+											<tr>
+												<th>Year</th><th>Capital</th><th>Distributions</th><th>% CoC</th><th>Cumulative</th>
+											</tr>
+										</thead>
+										<tbody>
+											{#each cfRows as row, i}
+												{@const investment = cfInvestment}
+												<tr class:cf-total-row={i === cfRows.length - 1}>
+													<td>Year {row.year}</td>
+													<td>
+														{#if i === 0}
+															<span class="cf-cap-out">({fmt(investment, 'money')})</span>
+														{:else if row.capReturn > 0}
+															<span class="cf-cap-in">{fmt(row.capReturn, 'money')}</span>
+														{:else}
+															&mdash;
+														{/if}
+													</td>
+													<td class="cf-highlight">{fmt(row.dist, 'money')}</td>
+													<td class="cf-highlight">{investment > 0 ? ((row.dist / investment) * 100).toFixed(1) : '0.0'}%</td>
+													<td>{fmt(row.cumDist + (i === cfRows.length - 1 ? row.capReturn : 0), 'money')}</td>
+												</tr>
+											{/each}
+										</tbody>
+										<tfoot>
+											<tr class="cf-summary-row">
+												<td><div class="cf-summary-value">{fmt(cfInvestment, 'money')}</div><div class="cf-summary-label">Invested</div></td>
+												<td></td>
+												<td><div class="cf-summary-value green">{fmt(cfRows[cfRows.length-1]?.cumDist || 0, 'money')}</div><div class="cf-summary-label">Total Distributions</div></td>
+												<td>{#if cfAvgCoC > 0}<div class="cf-summary-value green">{cfAvgCoC.toFixed(1)}%</div><div class="cf-summary-label">Avg CoC</div>{/if}</td>
+												<td><div class="cf-summary-value">{fmt(cfTotalCash, 'money')}</div><div class="cf-summary-label">Total Cash</div></td>
+											</tr>
+										</tfoot>
+									</table>
 								</div>
-
-								{#if cfView === 'chart'}
-									<div class="cf-chart-wrap">
-										{#each cfRows as row, i}
-											<div class="cf-bar-row">
-												<div class="cf-bar-label">Yr {row.year}</div>
-												<div class="cf-bar-track">
-													<div class="cf-bar-dist" style="width: {((row.dist) / cfMaxBar) * 100}%"></div>
-													{#if row.capReturn > 0}
-														<div class="cf-bar-cap" style="width: {(row.capReturn / cfMaxBar) * 100}%; left: {(row.dist / cfMaxBar) * 100}%"></div>
-													{/if}
-												</div>
-												<div class="cf-bar-value">{fmt(row.dist + row.capReturn, 'money')}</div>
-											</div>
-										{/each}
-										<div class="cf-legend">
-											<span class="cf-legend-item"><span class="cf-legend-dot dist"></span>Distributions</span>
-											{#if cfRows.some(r => r.capReturn > 0)}
-												<span class="cf-legend-item"><span class="cf-legend-dot cap"></span>Capital Return</span>
-											{/if}
-										</div>
-									</div>
-								{:else}
-										<div class="cf-table-wrap ly-table-scroll">
-										<table class="cf-table">
-											<thead>
-												<tr>
-													<th>Year</th><th>Capital</th><th>Distributions</th><th>% CoC</th><th>Total Cash</th><th>Cumulative</th>
-												</tr>
-											</thead>
-											<tbody>
-												{#each cfRows as row, i}
-													{@const investment = cfInvestment}
-													<tr class:cf-total-row={i === cfRows.length - 1}>
-														<td>Year {row.year}</td>
-														<td>
-															{#if i === 0}
-																<span class="cf-cap-out">({fmt(investment, 'money')})</span>
-															{:else if row.capReturn > 0}
-																<span class="cf-cap-in">{fmt(row.capReturn, 'money')}</span>
-															{:else}
-																&mdash;
-															{/if}
-														</td>
-														<td class="cf-highlight">{fmt(row.dist, 'money')}</td>
-														<td class="cf-highlight">{investment > 0 ? ((row.dist / investment) * 100).toFixed(1) : '0.0'}%</td>
-														<td>{fmt(row.dist + row.capReturn, 'money')}</td>
-														<td>{fmt(row.cumDist + (i === cfRows.length - 1 ? row.capReturn : 0), 'money')}</td>
-													</tr>
-												{/each}
-											</tbody>
-											<tfoot>
-												<tr class="cf-summary-row">
-													<td><div class="cf-summary-value">{fmt(cfInvestment, 'money')}</div><div class="cf-summary-label">Invested</div></td>
-													<td></td>
-													<td><div class="cf-summary-value green">{fmt(cfRows[cfRows.length-1]?.cumDist || 0, 'money')}</div><div class="cf-summary-label">Total Distributions</div></td>
-													<td>{#if cfAvgCoC > 0}<div class="cf-summary-value green">{cfAvgCoC.toFixed(1)}%</div><div class="cf-summary-label">Avg CoC</div>{/if}</td>
-													<td><div class="cf-summary-value">{fmt(cfTotalCash, 'money')}</div><div class="cf-summary-label">Total Cash</div></td>
-													<td></td>
-												</tr>
-											</tfoot>
-										</table>
-									</div>
-								{/if}
 							</div>
 							{/if}
 						</div>
@@ -2184,6 +2208,15 @@ shareDropdownOpen = false;
 	.metric-locked .metric-label { color: #3b82f6; font-size: 11px; margin: 0; }
 	.two-col-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px; }
 	.canonical-lower-flow { display: flex; flex-direction: column; }
+
+	/* Sponsor Deals Grid */
+	.sponsor-deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+	.sponsor-deal-card { display: block; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); background: var(--bg-card); text-decoration: none; color: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
+	.sponsor-deal-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+	.sponsor-deal-name { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 6px; line-height: 1.3; }
+	.sponsor-deal-meta { display: flex; gap: 8px; align-items: center; font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+	.sponsor-deal-status { text-transform: capitalize; }
+	.sponsor-deal-return { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); }
 	.flow-order-10 { order: 10; }
 	.flow-order-20 { order: 20; }
 		.flow-order-30 { order: 30; }

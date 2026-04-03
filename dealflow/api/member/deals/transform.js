@@ -23,10 +23,19 @@ const RISK_TAG_KEYWORDS = [
 	{ option: 'Liquidity', patterns: [/\bliquid/i, /\bredemption\b/i, /\bavailable capital\b/i] },
 	{ option: 'Credit Loss', patterns: [/\bcredit loss\b/i, /\bdefault\b/i, /\bforeclos/i, /\breo\b/i] },
 	{ option: 'Concentration', patterns: [/\bconcentration\b/i, /\bstate exposure\b/i] },
-	{ option: 'Underwriting', patterns: [/\bunderwriting\b/i, /\bcollateral\b/i, /\bltv\b/i] },
-	{ option: 'Execution', patterns: [/\bexpansion\b/i, /\bnew market\b/i] },
+	{ option: 'Refinancing', patterns: [/\brefinanc/i, /\bmaturity risk\b/i] },
+	{ option: 'Interest Rate', patterns: [/\binterest rate\b/i, /\brate risk\b/i, /\bfloating rate\b/i] },
+	{ option: 'Execution', patterns: [/\bexpansion\b/i, /\bnew market\b/i, /\bunderwriting\b/i, /\bcollateral\b/i, /\bltv\b/i] },
 	{ option: 'Regulatory', patterns: [/\bregulation\b/i, /\bregulatory\b/i, /\b506\(/i] },
-	{ option: 'Operational', patterns: [/\bservic/i, /\boperations?\b/i] }
+	{ option: 'Operational', patterns: [/\bservic/i, /\boperations?\b/i, /\breporting\b/i] },
+	{ option: 'Key Personnel', patterns: [/\bkey (?:person|man|personnel)\b/i, /\bsole manager\b/i] },
+	{ option: 'Nonperforming Loans', patterns: [/\bnonperform/i, /\bnon-perform/i, /\bnpl\b/i, /\bdelinquen/i] },
+	{ option: 'Capital Call Risk', patterns: [/\bcapital call\b/i] },
+	{ option: 'Transfer Restrictions', patterns: [/\btransfer restrict/i, /\bnon-transferab/i] },
+	{ option: 'Litigation', patterns: [/\blitigation\b/i, /\blawsuit\b/i] },
+	{ option: 'Environmental', patterns: [/\benvironmental\b/i, /\bhazardous\b/i] },
+	{ option: 'Limited Recourse', patterns: [/\blimited recourse\b/i, /\bnon-recourse\b/i] },
+	{ option: 'Insufficient Cash Flow', patterns: [/\binsufficient.*cash\b/i, /\bcash flow risk\b/i] }
 ];
 const MONTH_INDEX = {
 	january: '01',
@@ -110,18 +119,54 @@ function inferExposureTypes(deal) {
 function inferRiskTags(deal) {
 	const source = [
 		...(Array.isArray(deal?.highlighted_risks) ? deal.highlighted_risks : []),
-		...(Array.isArray(deal?.source_risk_factors) ? deal.source_risk_factors : []),
+		...(Array.isArray(deal?.source_risk_factors) ? deal.source_risk_factors.map(r => typeof r === 'object' ? JSON.stringify(r) : r) : []),
 		deal?.risk_notes,
 		deal?.downside_notes,
 		deal?.key_dates
 	].filter(Boolean).join(' ');
-	const matches = [];
+	const matches = new Set();
 	for (const candidate of RISK_TAG_KEYWORDS) {
 		if (candidate.patterns.some((pattern) => pattern.test(source))) {
-			matches.push(candidate.option);
+			matches.add(candidate.option);
 		}
 	}
-	return matches;
+
+	// Structure-based risk inference
+	const assetClass = normalizeString(deal?.asset_class);
+	const strategy = normalizeString(deal?.strategy);
+	const dealType = normalizeString(deal?.deal_type);
+	const holdPeriod = Number(deal?.hold_period_years) || 0;
+
+	// Lending fund → auto-add lending-specific risks
+	const dealBranch = normalizeString(deal?.deal_branch);
+	const isLending = assetClass === 'lending' || strategy === 'lending'
+		|| assetClass.includes('debt') || assetClass.includes('credit')
+		|| dealBranch.includes('lending');
+	if (isLending) {
+		matches.add('Interest Rate');
+		matches.add('Nonperforming Loans');
+		matches.add('Credit Loss');
+	}
+
+	// Long hold period → liquidity + transfer restrictions
+	if (holdPeriod >= 5) {
+		matches.add('Liquidity');
+		matches.add('Transfer Restrictions');
+	}
+
+	// High leverage indicators
+	const leverage = Number(deal?.current_leverage);
+	if (leverage > 1.5) {
+		matches.add('Leverage');
+		matches.add('Refinancing');
+	}
+
+	// Fund type → capital call risk if not evergreen
+	if (dealType === 'fund' && normalizeString(deal?.status) !== 'evergreen') {
+		matches.add('Capital Call Risk');
+	}
+
+	return [...matches];
 }
 
 function inferFundFoundedYear(deal) {
