@@ -1,4 +1,5 @@
 <script>
+	import FieldEvidence from '$lib/components/deal-review/FieldEvidence.svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import {
 		dealFieldConfig,
@@ -14,6 +15,9 @@
 		form = {},
 		fieldErrors = {},
 		fieldWarnings = {},
+		fieldEvidence = {},
+		documentUrls = {},
+		evidenceLoading = false,
 		labelOverrides = {},
 		variant = '',
 		onupdate = () => {},
@@ -86,6 +90,13 @@
 								{#if dealFieldConfig[fieldKey]?.helperText}
 									<div class="field-helper">{dealFieldConfig[fieldKey].helperText}</div>
 								{/if}
+								<FieldEvidence
+									fieldKey={fieldKey}
+									evidence={fieldEvidence[fieldKey] || []}
+									value={form[fieldKey]}
+									documentUrls={documentUrls}
+									loading={evidenceLoading}
+								/>
 								{#if fieldErrors[fieldKey]}
 									<div class="field-feedback field-feedback--error">{fieldErrors[fieldKey]}</div>
 								{:else if fieldWarnings[fieldKey]}
@@ -115,6 +126,13 @@
 								{#if dealFieldConfig[fieldKey]?.helperText}
 									<div class="field-helper">{dealFieldConfig[fieldKey].helperText}</div>
 								{/if}
+								<FieldEvidence
+									fieldKey={fieldKey}
+									evidence={fieldEvidence[fieldKey] || []}
+									value={form[fieldKey]}
+									documentUrls={documentUrls}
+									loading={evidenceLoading}
+								/>
 								{#if fieldErrors[fieldKey]}
 									<div class="field-feedback field-feedback--error">{fieldErrors[fieldKey]}</div>
 								{:else if fieldWarnings[fieldKey]}
@@ -138,6 +156,13 @@
 								{#if dealFieldConfig[fieldKey]?.helperText}
 									<div class="field-helper">{dealFieldConfig[fieldKey].helperText}</div>
 								{/if}
+								<FieldEvidence
+									fieldKey={fieldKey}
+									evidence={fieldEvidence[fieldKey] || []}
+									value={form[fieldKey]}
+									documentUrls={documentUrls}
+									loading={evidenceLoading}
+								/>
 								{#if fieldErrors[fieldKey]}
 									<div class="field-feedback field-feedback--error">{fieldErrors[fieldKey]}</div>
 								{:else if fieldWarnings[fieldKey]}
@@ -159,6 +184,13 @@
 								{#if dealFieldConfig[fieldKey]?.helperText}
 									<div class="field-helper">{dealFieldConfig[fieldKey].helperText}</div>
 								{/if}
+								<FieldEvidence
+									fieldKey={fieldKey}
+									evidence={fieldEvidence[fieldKey] || []}
+									value={form[fieldKey]}
+									documentUrls={documentUrls}
+									loading={evidenceLoading}
+								/>
 								{#if fieldErrors[fieldKey]}
 									<div class="field-feedback field-feedback--error">{fieldErrors[fieldKey]}</div>
 								{:else if fieldWarnings[fieldKey]}
@@ -171,6 +203,9 @@
 								value={form[fieldKey]}
 								error={fieldErrors[fieldKey] || ''}
 								warning={fieldWarnings[fieldKey] || ''}
+								evidence={fieldEvidence[fieldKey] || []}
+								documentUrls={documentUrls}
+								evidenceLoading={evidenceLoading}
 								onupdate={(nextValue) => onupdate(fieldKey, nextValue)}
 								onaction={fieldKey === 'slug' ? onaction : null}
 							/>

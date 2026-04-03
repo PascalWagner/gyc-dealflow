@@ -308,7 +308,7 @@
 		}
 
 		if (activeTab === 'deals' && result.data?.id) {
-			await goto(`/deal-review?id=${encodeURIComponent(result.data.id)}&from=queue&step=intake`);
+			await goto(`/deal-review?id=${encodeURIComponent(result.data.id)}&from=queue&stage=intake`);
 			return;
 		}
 
@@ -412,7 +412,15 @@
 	}
 
 	function openDealEditor(row) {
-		goto(`/deal-review?id=${encodeURIComponent(row.id)}&from=queue&step=intake`);
+		const params = new URLSearchParams({
+			id: row.id,
+			from: 'queue'
+		});
+		if (['approved', 'published', 'do_not_publish'].includes(row?.lifecycleStatus)) {
+			params.set('stage', 'summary');
+			params.set('allowSummary', '1');
+		}
+		goto(`/deal-review?${params.toString()}`);
 	}
 
 	function formatSubmissionSummary(row) {

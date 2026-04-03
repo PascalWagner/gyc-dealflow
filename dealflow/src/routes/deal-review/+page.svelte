@@ -61,6 +61,18 @@
 		mergeStateCodeLists,
 		STATE_NAME_BY_CODE
 	} from '$lib/utils/investing-geography.js';
+	import {
+		canPreviewDealReviewSummary,
+		preservesFullReviewAccessForLifecycle,
+		resolveSummaryLifecycleSyncTarget,
+		resolveSummaryReadinessLabel,
+		resolveSummaryReadinessTone
+	} from '$lib/utils/reviewSummaryState.js';
+	import {
+		fieldRequiresSourceCitation,
+		getMissingRequiredEvidenceFieldKeys,
+		normalizeReviewFieldEvidenceMap
+	} from '$lib/utils/reviewFieldEvidence.js';
 	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
 
 	function listFromValue(value) {
@@ -116,10 +128,11 @@
 		}
 		const params = new URLSearchParams({ id: dealId });
 		params.set('stage', stage);
-		if (stage === 'intake') params.set('step', 'intake');
 		if (from) params.set('from', from);
 		if (extract) params.set('extract', '1');
-		if (stage === 'summary' && allowSummary) params.set('allowSummary', '1');
+		if (stage === 'summary' && (allowSummary || allowSummaryPreview || preservesFullReviewAccess)) {
+			params.set('allowSummary', '1');
+		}
 		return `/deal-review?${params.toString()}`;
 	}
 
@@ -372,6 +385,50 @@
 		return fieldKeys.filter((fieldKey) => !hasMeaningfulReviewValue(form[fieldKey]));
 	}
 
+	function hasSourceCitationInputs() {
+		return Boolean(
+			getDocumentUrl('deck')
+			|| getDocumentUrl('ppm')
+			|| deal?.sec_filing_id
+			|| deal?.secFilingId
+		);
+	}
+
+	function getStageMissingEvidenceFieldKeys(stageId, { requireLoadedEvidence = false, source = onboardingSource } = {}) {
+		if (!hasSourceCitationInputs()) return [];
+
+		let fieldKeys = getEvidenceFieldKeysForStage(stageId).filter((fieldKey) => fieldRequiresSourceCitation(fieldKey));
+		if (requireLoadedEvidence) {
+			fieldKeys = fieldKeys.filter((fieldKey) => reviewFieldEvidenceKnownKeys.has(fieldKey));
+		}
+		if (fieldKeys.length === 0) return [];
+
+		return getMissingRequiredEvidenceFieldKeys({
+			fieldKeys,
+			source,
+			evidence: reviewFieldEvidence
+		});
+	}
+
+	function getStagePendingEvidenceFieldKeys(stageId, { source = onboardingSource } = {}) {
+		if (!hasSourceCitationInputs()) return [];
+
+		return getEvidenceFieldKeysForStage(stageId)
+			.filter((fieldKey) => fieldRequiresSourceCitation(fieldKey))
+			.filter((fieldKey) => hasMeaningfulReviewValue(readReviewFieldValue(source, fieldKey)))
+			.filter((fieldKey) => !reviewFieldEvidenceKnownKeys.has(fieldKey));
+	}
+
+	function isStageEvidencePending(stageId, options = {}) {
+		return getStagePendingEvidenceFieldKeys(stageId, options).length > 0;
+	}
+
+	function summarizeFieldLabels(fieldKeys = []) {
+		const labels = fieldKeys.map((fieldKey) => dealFieldConfig[fieldKey]?.label || fieldKey);
+		if (labels.length <= 3) return labels.join(', ');
+		return `${labels.slice(0, 2).join(', ')}, +${labels.length - 2} more`;
+	}
+
 	function getLendingPublishRules() {
 		const classificationFields = ['dealType', 'offeringType', 'offeringStatus', 'availableTo', 'investmentStrategy', 'underlyingExposureTypes', 'investingStates', 'shortSummary'];
 		const staticTermFields = ['investmentMinimum', 'holdPeriod', 'redemption', 'distributions', 'financials', 'lpGpSplit'];
@@ -444,23 +501,33 @@
 
 	function isReviewStageComplete(stage) {
 		if (!stage) return false;
+		let baseComplete = false;
 		if (branchInfo.branch !== 'lending_fund') {
-			if (stage.id === 'intake') return hasSourceDocuments;
-			if (stage.id === 'sec') return secGateResolved;
-			if (stage.id === 'team') return teamContactsValidation.valid;
-			return (stage.rules || []).every((rule) => rule.satisfied);
+			if (stage.id === 'intake') {
+				baseComplete = hasSourceDocuments;
+			} else if (stage.id === 'sec') {
+				baseComplete = secGateResolved;
+			} else if (stage.id === 'team') {
+				baseComplete = teamContactsValidation.valid;
+			} else {
+				baseComplete = (stage.rules || []).every((rule) => rule.satisfied);
+			}
+			if (!baseComplete) return false;
+			return getStageMissingEvidenceFieldKeys(stage.id, { requireLoadedEvidence: true }).length === 0;
 		}
 
 		switch (stage.id) {
 			case 'intake':
-				return hasSourceDocuments
+				baseComplete = hasSourceDocuments
 					&& hasMeaningfulReviewValue(form.investmentName)
 					&& hasMeaningfulReviewValue(form.sponsor?.name)
 					&& hasMeaningfulReviewValue(form.companyWebsite);
+				break;
 			case 'sec':
-				return secCanAdvance;
+				baseComplete = secCanAdvance;
+				break;
 			case 'classification':
-				return hasMeaningfulReviewValue(form.dealType)
+				baseComplete = hasMeaningfulReviewValue(form.dealType)
 					&& hasMeaningfulReviewValue(form.offeringType)
 					&& hasMeaningfulReviewValue(form.offeringStatus)
 					&& hasMeaningfulReviewValue(form.availableTo)
@@ -468,19 +535,23 @@
 					&& hasMeaningfulReviewValue(form.underlyingExposureTypes)
 					&& hasMeaningfulReviewValue(form.investingStates)
 					&& hasMeaningfulReviewValue(form.shortSummary);
+				break;
 			case 'static_terms':
-				return hasMeaningfulReviewValue(form.investmentMinimum)
+				baseComplete = hasMeaningfulReviewValue(form.investmentMinimum)
 					&& hasMeaningfulReviewValue(form.holdPeriod)
 					&& hasMeaningfulReviewValue(form.redemption)
 					&& hasMeaningfulReviewValue(form.distributions)
 					&& hasMeaningfulReviewValue(form.financials)
 					&& hasMeaningfulReviewValue(form.lpGpSplit);
+				break;
 			case 'fees':
-				return hasMeaningfulReviewValue(form.fees);
+				baseComplete = hasMeaningfulReviewValue(form.fees);
+				break;
 			case 'historical_performance':
-				return HISTORICAL_RETURN_YEARS.some((year) => hasMeaningfulReviewValue(form[`historicalReturn${year}`]));
+				baseComplete = HISTORICAL_RETURN_YEARS.some((year) => hasMeaningfulReviewValue(form[`historicalReturn${year}`]));
+				break;
 			case 'portfolio_snapshot':
-				return hasMeaningfulReviewValue(form.snapshotAsOfDate)
+				baseComplete = hasMeaningfulReviewValue(form.snapshotAsOfDate)
 					&& hasMeaningfulReviewValue(form.fundAUM)
 					&& hasMeaningfulReviewValue(form.currentFundSize)
 					&& hasMeaningfulReviewValue(form.offeringSize)
@@ -489,17 +560,26 @@
 					&& hasMeaningfulReviewValue(form.maxAllowedLtv)
 					&& hasMeaningfulReviewValue(form.currentLeverage)
 					&& hasMeaningfulReviewValue(form.maxAllowedLeverage);
+				break;
 			case 'sponsor_trust':
-				return hasMeaningfulReviewValue(form.firmFoundedYear) && hasMeaningfulReviewValue(form.fundFoundedYear);
+				baseComplete = hasMeaningfulReviewValue(form.firmFoundedYear) && hasMeaningfulReviewValue(form.fundFoundedYear);
+				break;
 			case 'team':
-				return teamContactsValidation.valid;
+				baseComplete = teamContactsValidation.valid;
+				break;
 			case 'risks':
-				return hasMeaningfulReviewValue(form.riskTags);
+				baseComplete = hasMeaningfulReviewValue(form.riskTags);
+				break;
 			case 'summary':
-				return secCanAdvance && teamContactsValidation.valid;
+				baseComplete = secCanAdvance && teamContactsValidation.valid;
+				break;
 			default:
-				return true;
+				baseComplete = true;
+				break;
 		}
+
+		if (!baseComplete) return false;
+		return getStageMissingEvidenceFieldKeys(stage.id, { requireLoadedEvidence: true }).length === 0;
 	}
 
 	function getStageFieldGroups(stage) {
@@ -581,6 +661,9 @@
 	let classificationSignalsDealId = $state('');
 	let classificationSignalsAppliedKey = $state('');
 	let classificationSignalsAppliedMessage = $state('');
+	let reviewFieldEvidenceState = $state('idle');
+	let reviewFieldEvidenceLoadedKeys = $state([]);
+	let reviewFieldEvidenceError = $state('');
 	let sourceRiskFactors = $state([]);
 	let highlightedRisks = $state([]);
 	let riskFactorDraft = $state('');
@@ -589,7 +672,6 @@
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
 	const requestedStage = $derived($page.url.searchParams.get('stage') || '');
-	const reviewStep = $derived($page.url.searchParams.get('step') === 'intake' ? 'intake' : 'review');
 	const shouldAutoExtract = $derived($page.url.searchParams.get('extract') === '1');
 	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
 	const cameFromQueue = $derived($page.url.searchParams.get('from') === 'queue');
@@ -637,6 +719,10 @@
 	const secStatus = $derived(secVerificationContext?.view?.currentStatus || 'pending');
 	const secGateResolved = $derived(isResolvedSecVerificationStatus(secStatus));
 	const secCanAdvance = $derived(secGateResolved || secStatus === 'skipped');
+	const currentLifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
+	const preservesFullReviewAccess = $derived(
+		preservesFullReviewAccessForLifecycle(currentLifecycleStatus)
+	);
 	const hasSourceDocuments = $derived(
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
 	);
@@ -644,7 +730,13 @@
 		Boolean(deckFile || ppmFile || hasSourceDocuments)
 	);
 	const canOpenSummaryPreview = $derived(
-		allowSummaryPreview && hasSourceDocuments && secCanAdvance && teamContactsValidation.valid
+		canPreviewDealReviewSummary({
+			allowSummaryPreview,
+			lifecycleStatus: currentLifecycleStatus,
+			hasSourceDocuments,
+			secCanAdvance,
+			teamContactsValid: teamContactsValidation.valid
+		})
 	);
 	const summaryPublishReady = $derived(
 		(branchInfo.branch === 'lending_fund'
@@ -658,13 +750,16 @@
 		return incompleteStage?.id || 'summary';
 	});
 	const furthestUnlockedStage = $derived.by(() => {
-		if (!deal) return reviewStep === 'intake' ? 'intake' : 'sec';
+		if (!deal) return requestedStage || 'intake';
 		if (branchInfo.branch === 'lending_fund') return firstIncompleteStage;
 		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) return 'risks';
 		return firstIncompleteStage;
 	});
 	const unlockedStageIds = $derived.by(() => {
-		if (!deal) return reviewStep === 'intake' ? ['intake'] : ['sec'];
+		if (!deal) return requestedStage ? [requestedStage] : ['intake'];
+		if (preservesFullReviewAccess) {
+			return reviewStages.map((stage) => stage.id);
+		}
 		if (firstIncompleteStage === 'summary') {
 			return reviewStages.map((stage) => stage.id);
 		}
@@ -699,8 +794,8 @@
 		return unlockedIds;
 	});
 	const activeStage = $derived.by(() => {
-		if (reviewStep === 'intake') return 'intake';
 		if (requestedStage === 'summary' && canOpenSummaryPreview) return 'summary';
+		if (!requestedStage) return firstIncompleteStage;
 		if (branchInfo.branch !== 'lending_fund' && !isValidOnboardingStage(requestedStage)) return firstIncompleteStage;
 		if (branchInfo.branch === 'lending_fund' && !reviewStages.some((stage) => stage.id === requestedStage)) return firstIncompleteStage;
 		return unlockedStageIds.includes(requestedStage) ? requestedStage : firstIncompleteStage;
@@ -734,9 +829,9 @@
 			)
 			.map((stage) => stage.id)
 	);
-	const sidebarCurrentStage = $derived(reviewStep === 'intake' ? 'intake' : activeStage);
-	const sidebarCompletedStages = $derived(reviewStep === 'intake' ? [] : completedStageIds);
-	const sidebarAccessibleStages = $derived(reviewStep === 'intake' ? ['intake'] : unlockedStageIds);
+	const sidebarCurrentStage = $derived(activeStage);
+	const sidebarCompletedStages = $derived(completedStageIds);
+	const sidebarAccessibleStages = $derived(unlockedStageIds);
 	const reviewWorkspaceTitle = $derived(activeStageConfig?.title || 'Review extracted deal details');
 	const backHref = $derived($isAdmin ? '/app/admin/manage' : ($isGP ? '/gp-dashboard' : '/app/deals'));
 	const backLabel = $derived($isAdmin ? 'Back to Queue' : ($isGP ? 'Back to Dashboard' : 'Back to Deals'));
@@ -771,6 +866,27 @@
 			}
 		}
 		return ids;
+	});
+	const reviewDocumentUrls = $derived({
+		deckUrl: getDocumentUrl('deck') || form.deckUrl,
+		ppmUrl: getDocumentUrl('ppm') || form.ppmUrl,
+		subAgreementUrl: deal?.subAgreementUrl || deal?.sub_agreement_url || ''
+	});
+	const reviewFieldEvidence = $derived(
+		normalizeReviewFieldEvidenceMap(deal?.reviewFieldEvidence || deal?.review_field_evidence || {})
+	);
+	const reviewFieldEvidenceKnownKeys = $derived.by(() =>
+		new Set([
+			...reviewFieldEvidenceLoadedKeys,
+			...Object.keys(reviewFieldEvidence)
+		])
+	);
+	const summaryEvidencePending = $derived.by(() => {
+		if (loading || !deal || activeStage !== 'summary' || !hasSourceCitationInputs()) return false;
+		return reviewStages.some((stage) =>
+			!['intake', 'summary', 'team', 'sec'].includes(stage.id)
+			&& isStageEvidencePending(stage.id)
+		);
 	});
 	const summaryRelevantWarningFieldKeys = $derived.by(() => {
 		const keys = new Set();
@@ -844,6 +960,39 @@
 		const stageId = getRuleTargetStage(rule);
 		const stageLabel = getStageLabel(stageId);
 		return stageLabel ? `Open ${stageLabel}` : 'Open';
+	}
+
+	function getPublishRuleState(rule) {
+		const stageId = rule?.stageId || '';
+		if (stageId && isStageEvidencePending(stageId)) return 'pending';
+		if (stageId) {
+			const stage = reviewStages.find((candidate) => candidate.id === stageId);
+			if (stage) {
+				return isReviewStageComplete(stage) ? 'ready' : 'blocked';
+			}
+		}
+		return rule?.satisfied ? 'ready' : 'blocked';
+	}
+
+	function getPublishRuleSummary(rule) {
+		const stageId = rule?.stageId || '';
+		if (stageId && isStageEvidencePending(stageId)) {
+			const pendingCount = getStagePendingEvidenceFieldKeys(stageId).length;
+			return `${pendingCount} citation${pendingCount === 1 ? ' is' : 's are'} still loading`;
+		}
+		if (stageId) {
+			const missingCitationFieldKeys = getStageMissingEvidenceFieldKeys(stageId, { requireLoadedEvidence: true });
+			if (missingCitationFieldKeys.length > 0) {
+				return `${missingCitationFieldKeys.length} citation${missingCitationFieldKeys.length === 1 ? ' is' : 's are'} still missing`;
+			}
+		}
+		return rule?.satisfied ? 'Ready' : `${rule?.missingFieldKeys?.length || 0} fields still missing`;
+	}
+
+	function getPublishRuleStatusLabel(rule) {
+		const state = getPublishRuleState(rule);
+		if (state === 'pending') return 'Checking';
+		return state === 'ready' ? 'Ready' : 'Needs review';
 	}
 
 	function markDirty() {
@@ -1036,6 +1185,10 @@
 		manualBranch = nextDeal?.deal_branch || nextDeal?.dealBranch || manualBranch || '';
 		sourceRiskFactors = listFromDealValue(nextDeal, 'source_risk_factors', 'sourceRiskFactors');
 		highlightedRisks = listFromDealValue(nextDeal, 'highlighted_risks', 'highlightedRisks');
+		reviewFieldEvidenceLoadedKeys = Object.keys(
+			normalizeReviewFieldEvidenceMap(nextDeal?.reviewFieldEvidence || nextDeal?.review_field_evidence || {})
+		);
+		reviewFieldEvidenceError = '';
 		dirty = false;
 		saveError = '';
 		if (clearSaveMessage) {
@@ -1058,7 +1211,6 @@
 		const params = new URLSearchParams({ id: dealId });
 		params.set('stage', stage);
 		if (from) params.set('from', from);
-		if (stage === 'intake') params.set('step', 'intake');
 		if (extract) params.set('extract', '1');
 		return `/deal-review?${params.toString()}`;
 	}
@@ -1359,7 +1511,9 @@
 			}
 
 			suggestionWarnings = Array.isArray(suggestionPayload?.warnings) ? suggestionPayload.warnings : [];
-			const mergedState = mergeSuggestedTeamContacts(teamContacts, suggestionPayload?.contacts || []);
+			const mergedState = mergeSuggestedTeamContacts(teamContacts, suggestionPayload?.contacts || [], {
+				appendUnmatched: 'required_roles_only'
+			});
 			teamContacts = normalizeTeamContacts(mergedState.contacts, {
 				ensureOne: false,
 				preserveEmpty: true
@@ -1525,7 +1679,7 @@
 	}
 
 	async function loadSecVerificationSummary({ force = false } = {}) {
-		if (!dealId || reviewStep === 'intake') return;
+		if (!dealId) return;
 		if (!force && secVerificationLoadState === 'running') return;
 		secVerificationLoadState = 'running';
 		try {
@@ -1611,6 +1765,88 @@
 		return getOnboardingStageFieldKeys(stage, branchInfo.branch);
 	}
 
+	function getEvidenceFieldKeysForStage(stage = activeStage) {
+		if (!stage || ['intake', 'summary', 'team', 'sec'].includes(stage)) return [];
+		return Array.from(new Set(getStageFieldGroups(stage).flatMap((group) =>
+			Array.isArray(group?.fieldKeys) ? group.fieldKeys : []
+		)));
+	}
+
+	function buildMissingCitationValidation(stage = activeStage) {
+		const missingFieldKeys = getStageMissingEvidenceFieldKeys(stage, {
+			requireLoadedEvidence: false
+		});
+		if (missingFieldKeys.length === 0) return null;
+		return {
+			fieldKeys: missingFieldKeys,
+			message: `Save supporting citations for ${summarizeFieldLabels(missingFieldKeys)} before this stage counts as complete.`
+		};
+	}
+
+	function applyMissingCitationErrors(stage, missingFieldKeys = []) {
+		const stageFieldKeys = getEvidenceFieldKeysForStage(stage);
+		fieldErrors = {
+			...fieldErrors,
+			...Object.fromEntries(stageFieldKeys.map((fieldKey) => [fieldKey, ''])),
+			...Object.fromEntries(
+				missingFieldKeys.map((fieldKey) => [
+					fieldKey,
+					'Add a saved supporting citation for this value or clear it before continuing.'
+				])
+			)
+		};
+	}
+
+	async function loadReviewFieldEvidence({ fieldKeys = [], force = false } = {}) {
+		if (!dealId || !deal || (reviewFieldEvidenceState === 'running' && !force)) return;
+		if (!getDocumentUrl('deck') && !getDocumentUrl('ppm') && !deal?.sec_filing_id && !deal?.secFilingId) return;
+
+		const requestedFieldKeys = Array.from(new Set((fieldKeys || []).filter(Boolean)));
+		if (requestedFieldKeys.length === 0) return;
+		if (!force && requestedFieldKeys.every((fieldKey) => reviewFieldEvidenceLoadedKeys.includes(fieldKey))) return;
+
+		reviewFieldEvidenceState = 'running';
+		reviewFieldEvidenceError = '';
+
+		try {
+			const token = await getFreshSessionToken();
+			if (!token) throw new Error('You need an active session to inspect source citations.');
+
+			const response = await fetch('/api/deal-cleanup', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					action: 'review-field-evidence',
+					dealId,
+					fieldKeys: requestedFieldKeys,
+					persist: true
+				})
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || !payload?.success) {
+				throw new Error(payload?.error || 'Could not load field-level source citations.');
+			}
+
+			deal = {
+				...(deal || {}),
+				...(payload?.deal || {}),
+				reviewFieldEvidence: payload?.review_field_evidence || payload?.field_evidence || deal?.reviewFieldEvidence || {},
+				review_field_evidence: payload?.review_field_evidence || deal?.review_field_evidence || {}
+			};
+			reviewFieldEvidenceLoadedKeys = Array.from(new Set([
+				...reviewFieldEvidenceLoadedKeys,
+				...requestedFieldKeys
+			]));
+			reviewFieldEvidenceState = 'success';
+		} catch (error) {
+			reviewFieldEvidenceState = 'error';
+			reviewFieldEvidenceError = error?.message || 'Could not load field-level source citations.';
+		}
+	}
+
 	async function loadDeal() {
 		if (!dealId) {
 			loadError = 'Pick a deal from Manage Data to start review.';
@@ -1647,7 +1883,7 @@
 		}
 	}
 
-	async function saveDeal({ quiet = false, stage = activeStage } = {}) {
+	async function saveDeal({ quiet = false, stage = activeStage, enforceEvidence = false } = {}) {
 		if (!dealId || saving) return false;
 
 		const scopedFieldKeys = getSaveFieldKeysForStage(stage);
@@ -1735,6 +1971,22 @@
 				},
 				{ clearSaveMessage: true }
 			);
+			if (Array.isArray(scopedFieldKeys) && scopedFieldKeys.length > 0) {
+				await loadReviewFieldEvidence({
+					fieldKeys: scopedFieldKeys,
+					force: true
+				});
+				const missingCitationValidation = buildMissingCitationValidation(stage);
+				if (missingCitationValidation) {
+					applyMissingCitationErrors(stage, missingCitationValidation.fieldKeys);
+					saveError = missingCitationValidation.message;
+					saveMessage = quiet
+						? ''
+						: 'Deal saved, but this stage still needs supporting citations before it can be marked complete.';
+					revealReviewFeedback();
+					return !enforceEvidence;
+				}
+			}
 			if (!quiet) {
 				saveMessage = 'Deal saved.';
 			}
@@ -1756,7 +2008,15 @@
 
 		const desiredLifecycle =
 			targetLifecycle || (summaryPublishReady ? 'approved' : 'in_review');
-		if (!desiredLifecycle || desiredLifecycle === currentLifecycle) return true;
+		if (!desiredLifecycle) return true;
+		if (desiredLifecycle === currentLifecycle) {
+			if (!quiet) {
+				saveMessage = desiredLifecycle === 'approved'
+					? 'Deal is already approved and ready for publishing.'
+					: 'Deal is already marked In Review.';
+			}
+			return true;
+		}
 
 		lifecycleSyncState = 'running';
 		try {
@@ -1867,6 +2127,10 @@
 						...(deal || {}),
 						...applyPayload.data
 					});
+					await loadReviewFieldEvidence({
+						fieldKeys: Object.keys(updates),
+						force: true
+					});
 				}
 			}
 
@@ -1896,6 +2160,12 @@
 			await saveIntakeDetails();
 			return true;
 		}
+		if (stage === 'summary') {
+			return await syncReviewLifecycleStatus({
+				quiet: false,
+				targetLifecycle: summaryPublishReady ? 'approved' : 'in_review'
+			});
+		}
 		if (stage === 'team') {
 			return await saveTeamContacts({ quiet: true, requireComplete: true });
 		}
@@ -1912,17 +2182,23 @@
 			}
 			return true;
 		}
-		return await saveDeal({ quiet: true, stage });
+		return await saveDeal({ quiet: true, stage, enforceEvidence: true });
 	}
 
 	async function saveActiveReviewStage() {
 		if (activeStage === 'intake') {
 			return await saveIntakeDetails();
 		}
+		if (activeStage === 'summary') {
+			return await syncReviewLifecycleStatus({
+				quiet: false,
+				targetLifecycle: summaryPublishReady ? 'approved' : 'in_review'
+			});
+		}
 		if (activeStage === 'team') {
 			return await saveTeamContacts({ quiet: false, requireComplete: false });
 		}
-		return await saveDeal({ stage: activeStage });
+		return await saveDeal({ stage: activeStage, enforceEvidence: false });
 	}
 
 	async function continueToNextStage() {
@@ -2013,6 +2289,9 @@
 		classificationSignalsDealId = '';
 		classificationSignalsAppliedKey = '';
 		classificationSignalsAppliedMessage = '';
+		reviewFieldEvidenceState = 'idle';
+		reviewFieldEvidenceLoadedKeys = [];
+		reviewFieldEvidenceError = '';
 		void loadDeal();
 	});
 
@@ -2030,7 +2309,25 @@
 	});
 
 	$effect(() => {
-		if (!browser || loading || !dealId || loadError) return;
+		if (loading || !deal || activeStage === 'summary') return;
+		const stageFieldKeys = getEvidenceFieldKeysForStage(activeStage);
+		if (stageFieldKeys.length === 0) return;
+		if (stageFieldKeys.every((fieldKey) => reviewFieldEvidenceLoadedKeys.includes(fieldKey))) return;
+		void loadReviewFieldEvidence({ fieldKeys: stageFieldKeys });
+	});
+
+	$effect(() => {
+		if (loading || !deal || activeStage !== 'summary') return;
+		const allEvidenceFieldKeys = Array.from(new Set(
+			reviewStages.flatMap((stage) => getEvidenceFieldKeysForStage(stage.id))
+		));
+		if (allEvidenceFieldKeys.length === 0) return;
+		if (allEvidenceFieldKeys.every((fieldKey) => reviewFieldEvidenceLoadedKeys.includes(fieldKey))) return;
+		void loadReviewFieldEvidence({ fieldKeys: allEvidenceFieldKeys });
+	});
+
+	$effect(() => {
+		if (!browser || loading || !dealId || !deal || loadError) return;
 		const targetHref = getStageHref(activeStage, {
 			from: cameFromQueue ? 'queue' : cameFromIntake ? 'intake' : '',
 			extract: shouldAutoExtract && !autoExtractionHandled,
@@ -2046,7 +2343,7 @@
 	});
 
 	$effect(() => {
-		if (!dealId || loading || activeStage !== 'sec' || reviewStep === 'intake') return;
+		if (!dealId || loading || activeStage !== 'sec') return;
 		if (secVerificationContext || secVerificationLoadState === 'running') return;
 		void loadSecVerificationSummary();
 	});
@@ -2070,10 +2367,12 @@
 
 	$effect(() => {
 		if (!dealId || loading || activeStage !== 'summary' || lifecycleSyncState === 'running') return;
-		const currentLifecycle = resolveDealLifecycleStatus(deal || {});
-		if (currentLifecycle === 'published' || currentLifecycle === 'do_not_publish') return;
-		const desiredLifecycle = summaryPublishReady ? 'approved' : 'in_review';
-		if (desiredLifecycle === currentLifecycle) return;
+		const desiredLifecycle = resolveSummaryLifecycleSyncTarget({
+			currentLifecycleStatus,
+			summaryPublishReady,
+			summaryEvidencePending
+		});
+		if (!desiredLifecycle) return;
 		void syncReviewLifecycleStatus({ quiet: true, targetLifecycle: desiredLifecycle });
 	});
 </script>
@@ -2368,7 +2667,7 @@
 					currentStage={sidebarCurrentStage}
 					completedStages={sidebarCompletedStages}
 					accessibleStages={sidebarAccessibleStages}
-					onselect={() => {}}
+					onselect={(stageId) => navigateToStage(stageId)}
 					deckUrl={getDocumentUrl('deck') || form.deckUrl}
 					ppmUrl={getDocumentUrl('ppm') || form.ppmUrl}
 					subAgreementUrl={deal?.subAgreementUrl || deal?.sub_agreement_url || ''}
@@ -2399,6 +2698,12 @@
 					{#if schemaWarningMessage}
 						<div class="message-banner message-banner--warning">
 							{schemaWarningMessage}
+						</div>
+					{/if}
+
+					{#if reviewFieldEvidenceError}
+						<div class="message-banner message-banner--warning">
+							{reviewFieldEvidenceError}
 						</div>
 					{/if}
 
@@ -2441,17 +2746,20 @@
 								/>
 						{/key}
 					{:else if activeStage === 'historical_performance'}
-						<LendingFundReviewSectionStage
-							eyebrow={activeStageConfig?.label || 'Review'}
-							title={activeStageConfig?.title || 'Historical performance'}
-							description={activeStageConfig?.description || ''}
-							sections={activeStageConfig?.sections || []}
-							form={form}
-							fieldErrors={fieldErrors}
-							fieldWarnings={fieldWarnings}
-							onupdate={updateField}
-							labelOverrides={{}}
-						/>
+							<LendingFundReviewSectionStage
+								eyebrow={activeStageConfig?.label || 'Review'}
+								title={activeStageConfig?.title || 'Historical performance'}
+								description={activeStageConfig?.description || ''}
+								sections={activeStageConfig?.sections || []}
+								form={form}
+								fieldErrors={fieldErrors}
+								fieldWarnings={fieldWarnings}
+								fieldEvidence={reviewFieldEvidence}
+								documentUrls={reviewDocumentUrls}
+								evidenceLoading={reviewFieldEvidenceState === 'running'}
+								onupdate={updateField}
+								labelOverrides={{}}
+							/>
 					{:else if ['classification', 'static_terms', 'fees', 'portfolio_snapshot', 'sponsor_trust'].includes(activeStage)}
 							{#if branchInfo.branch === 'lending_fund'}
 								{#if activeStage === 'classification'}
@@ -2524,6 +2832,9 @@
 									form={form}
 									fieldErrors={fieldErrors}
 									fieldWarnings={fieldWarnings}
+									fieldEvidence={reviewFieldEvidence}
+									documentUrls={reviewDocumentUrls}
+									evidenceLoading={reviewFieldEvidenceState === 'running'}
 									variant="lending_fund"
 									labelOverrides={activeStage === 'static_terms'
 										? {
@@ -2568,6 +2879,9 @@
 								branch={manualBranch || branchInfo.branch}
 								fieldErrors={fieldErrors}
 								fieldWarnings={fieldWarnings}
+								fieldEvidence={reviewFieldEvidence}
+								documentUrls={reviewDocumentUrls}
+								evidenceLoading={reviewFieldEvidenceState === 'running'}
 								onupdate={updateField}
 								onaction={generateSlug}
 							/>
@@ -2582,6 +2896,9 @@
 								form={form}
 								fieldErrors={fieldErrors}
 								fieldWarnings={fieldWarnings}
+								fieldEvidence={reviewFieldEvidence}
+								documentUrls={reviewDocumentUrls}
+								evidenceLoading={reviewFieldEvidenceState === 'running'}
 								variant="lending_fund"
 								labelOverrides={{ riskTags: 'Risks', riskNotes: 'Risk Notes', downsideNotes: 'Downside Notes' }}
 								onupdate={updateField}
@@ -2599,8 +2916,8 @@
 									<h2>Summary and publish readiness</h2>
 									<p>Review each stage, confirm the source-backed risks, and only publish when the record is actually trustworthy.</p>
 								</div>
-								<span class={`readiness-badge tone-${summaryPublishReady ? 'ready' : 'blocked'}`}>
-									{summaryPublishReady ? 'Ready to publish' : 'Still blocked'}
+								<span class={`readiness-badge tone-${resolveSummaryReadinessTone({ summaryPublishReady, summaryEvidencePending })}`}>
+									{resolveSummaryReadinessLabel({ summaryPublishReady, summaryEvidencePending })}
 								</span>
 							</div>
 
@@ -2673,17 +2990,18 @@
 										</div>
 									</button>
 									{#each onboardingFlow.publishRules as rule}
+										{@const publishRuleState = getPublishRuleState(rule)}
 										<button
 											type="button"
-											class={`check-row check-row--interactive ${rule.satisfied ? 'is-ready' : 'is-blocked'}`}
+											class={`check-row check-row--interactive ${publishRuleState === 'ready' ? 'is-ready' : publishRuleState === 'pending' ? 'is-pending' : 'is-blocked'}`}
 											onclick={() => navigateToStage(getRuleTargetStage(rule))}
 										>
 											<div class="check-row__copy">
 												<strong>{rule.label}</strong>
-												<span>{rule.satisfied ? 'Ready' : `${rule.missingFieldKeys.length} fields still missing`}</span>
+												<span>{getPublishRuleSummary(rule)}</span>
 											</div>
 											<div class="check-row__meta">
-												<span class="check-row__status">{rule.satisfied ? 'Ready' : 'Needs review'}</span>
+												<span class="check-row__status">{getPublishRuleStatusLabel(rule)}</span>
 												<span class="check-row__action">{getRuleActionLabel(rule)}</span>
 											</div>
 										</button>
@@ -2742,6 +3060,9 @@
 											value={form[fieldKey]}
 											error={fieldErrors[fieldKey] || ''}
 											warning={fieldWarnings[fieldKey] || ''}
+											evidence={reviewFieldEvidence[fieldKey] || []}
+											documentUrls={reviewDocumentUrls}
+											evidenceLoading={reviewFieldEvidenceState === 'running'}
 											onupdate={(nextValue) => updateField(fieldKey, nextValue)}
 											onaction={fieldKey === 'slug' ? generateSlug : null}
 										/>
@@ -3442,6 +3763,11 @@
 		background: rgba(81, 190, 123, 0.08);
 	}
 
+	.check-row.is-pending {
+		border-color: rgba(214, 140, 69, 0.18);
+		background: rgba(214, 140, 69, 0.08);
+	}
+
 	.check-row.is-blocked {
 		border-color: rgba(175, 66, 47, 0.14);
 		background: rgba(175, 66, 47, 0.06);
@@ -3550,6 +3876,11 @@
 	.readiness-badge.tone-ready {
 		background: rgba(22, 122, 82, 0.14);
 		color: #167a52;
+	}
+
+	.readiness-badge.tone-pending {
+		background: rgba(214, 140, 69, 0.16);
+		color: #8c581f;
 	}
 
 	.readiness-badge.tone-blocked {

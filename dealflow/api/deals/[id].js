@@ -452,6 +452,7 @@ export default async function handler(req, res) {
   const responseDeal = {
     ...updatedDeal,
     slug: updatedDeal?.slug || slugify(updatedDeal?.investment_name || ''),
+    reviewFieldEvidence: updatedDeal?.review_field_evidence || {},
     mcWebsite: resolvedCompanyWebsite,
     companyWebsite: resolvedCompanyWebsite
   };

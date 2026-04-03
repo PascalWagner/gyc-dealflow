@@ -17,6 +17,17 @@ const STATE_CODE_BY_NAME = Object.fromEntries(
 export function getDealStateCodes(deal) {
 	if (!deal) return [];
 
+	const explicitStates = [];
+	for (const value of Array.isArray(deal.investingStates) ? deal.investingStates : []) {
+		const normalized = normalizeStateCode(value);
+		if (normalized && !explicitStates.includes(normalized)) explicitStates.push(normalized);
+	}
+	for (const value of Array.isArray(deal.investing_states) ? deal.investing_states : []) {
+		const normalized = normalizeStateCode(value);
+		if (normalized && !explicitStates.includes(normalized)) explicitStates.push(normalized);
+	}
+	if (explicitStates.length > 0) return explicitStates;
+
 	const matches = [];
 	const addMatch = (value) => {
 		const code = normalizeStateCode(value);
@@ -26,9 +37,14 @@ export function getDealStateCodes(deal) {
 	addMatch(deal.state);
 	addMatch(deal.regionState);
 
-	const geography = [deal.investingGeography, deal.location, deal.address, deal.propertyAddress]
+	const geography = [deal.investingGeography, deal.investing_geography, deal.location, deal.address, deal.propertyAddress]
 		.filter(Boolean)
 		.join(' | ');
+	const explicitTextStates = extractExplicitStateCodes(geography);
+	if (explicitTextStates.length > 0) {
+		for (const stateCode of explicitTextStates) addMatch(stateCode);
+		return matches;
+	}
 	for (const [code, name] of Object.entries(STATE_NAME_BY_CODE)) {
 		if (new RegExp(`\\b${code}\\b`, 'i').test(geography) || new RegExp(`\\b${name}\\b`, 'i').test(geography)) {
 			addMatch(code);
@@ -194,6 +210,24 @@ function normalizeStateCode(value) {
 	const normalized = String(value).trim();
 	if (STATE_NAME_BY_CODE[normalized.toUpperCase()]) return normalized.toUpperCase();
 	return STATE_CODE_BY_NAME[normalized.toLowerCase()] || null;
+}
+
+function extractExplicitStateCodes(text) {
+	const raw = String(text || '');
+	if (!raw) return [];
+
+	const matches = [];
+	for (const [code, name] of Object.entries(STATE_NAME_BY_CODE)) {
+		const pattern = new RegExp(`\\b${name}\\b`, 'gi');
+		for (const match of raw.matchAll(pattern)) {
+			matches.push({ code, index: match.index ?? 0 });
+		}
+	}
+
+	return matches
+		.sort((left, right) => left.index - right.index)
+		.map((match) => match.code)
+		.filter((code, index, array) => array.indexOf(code) === index);
 }
 
 function extractFeeValue(text, patterns) {

@@ -87,3 +87,55 @@ test('suggested operator details merge into an edited operator contact with the 
 	assert.equal(investorRelations?.email, 'info@pascalwagner.com');
 	assert.equal(investorRelations?.isInvestorRelations, true);
 });
+
+test('unmatched supporting suggestions can be suppressed while still allowing required role suggestions', () => {
+	const existingContacts = [
+		{
+			id: 'operator-1',
+			firstName: 'Michael',
+			lastName: 'Anderson',
+			email: 'test@test.com',
+			role: 'CEO',
+			isPrimary: true,
+			isInvestorRelations: false
+		},
+		{
+			id: 'ir-1',
+			firstName: 'Michael',
+			lastName: 'Anderson',
+			email: 'info@pascalwagner.com',
+			role: 'Investor Relations',
+			isPrimary: false,
+			isInvestorRelations: true
+		}
+	];
+
+	const suggestedContacts = [
+		{
+			id: 'junk-1',
+			firstName: 'Microsoft',
+			lastName: 'Word',
+			role: 'Capital Fund',
+			isPrimary: false,
+			isInvestorRelations: false,
+			sourceType: 'ai'
+		},
+		{
+			id: 'junk-2',
+			firstName: 'Windows',
+			lastName: 'User',
+			role: 'Capital Fund',
+			isPrimary: false,
+			isInvestorRelations: false,
+			sourceType: 'ai'
+		}
+	];
+
+	const result = mergeSuggestedTeamContacts(existingContacts, suggestedContacts, {
+		appendUnmatched: 'required_roles_only'
+	});
+
+	assert.equal(result.contacts.length, 2);
+	assert.equal(result.contacts.some((contact) => contact.firstName === 'Microsoft'), false);
+	assert.equal(result.contacts.some((contact) => contact.firstName === 'Windows'), false);
+});

@@ -1,4 +1,5 @@
 <script>
+	import FieldEvidence from '$lib/components/deal-review/FieldEvidence.svelte';
 	import {
 		COUNTRY_OPTIONS,
 		formatDealReviewFieldDisplay,
@@ -10,6 +11,9 @@
 		value,
 		error = '',
 		warning = '',
+		evidence = [],
+		documentUrls = {},
+		evidenceLoading = false,
 		onupdate = () => {},
 		onaction = null
 	} = $props();
@@ -196,6 +200,7 @@
 		{#if field.helperText}
 			<div class="field-helper">{field.helperText}</div>
 		{/if}
+		<FieldEvidence fieldKey={field?.key} evidence={evidence} value={value} documentUrls={documentUrls} loading={evidenceLoading} />
 		{#if error}
 			<div class="field-feedback field-feedback--error">{error}</div>
 		{:else if warning}
@@ -235,6 +240,7 @@
 		{#if field.helperText}
 			<div class="field-helper">{field.helperText}</div>
 		{/if}
+		<FieldEvidence fieldKey={field?.key} evidence={evidence} value={value} documentUrls={documentUrls} loading={evidenceLoading} />
 		{#if error}
 			<div class="field-feedback field-feedback--error">{error}</div>
 		{:else if warning}
@@ -264,6 +270,7 @@
 		{#if field.helperText}
 			<div class="field-helper">{field.helperText}</div>
 		{/if}
+		<FieldEvidence fieldKey={field?.key} evidence={evidence} value={value} documentUrls={documentUrls} loading={evidenceLoading} />
 		{#if error}
 			<div class="field-feedback field-feedback--error">{error}</div>
 		{:else if warning}
@@ -288,6 +295,7 @@
 		{#if field.helperText}
 			<div class="field-helper">{field.helperText}</div>
 		{/if}
+		<FieldEvidence fieldKey={field?.key} evidence={evidence} value={value} documentUrls={documentUrls} loading={evidenceLoading} />
 		{#if error}
 			<div class="field-feedback field-feedback--error">{error}</div>
 		{:else if warning}
@@ -306,6 +314,7 @@
 		{#if field.helperText}
 			<div class="field-helper">{field.helperText}</div>
 		{/if}
+		<FieldEvidence fieldKey={field?.key} evidence={evidence} value={value} documentUrls={documentUrls} loading={evidenceLoading} />
 		{#if error}
 			<div class="field-feedback field-feedback--error">{error}</div>
 		{:else if warning}
@@ -325,6 +334,7 @@
 		{#if field.helperText}
 			<div class="field-helper">{field.helperText}</div>
 		{/if}
+		<FieldEvidence fieldKey={field?.key} evidence={evidence} value={value} documentUrls={documentUrls} loading={evidenceLoading} />
 		{#if error}
 			<div class="field-feedback field-feedback--error">{error}</div>
 		{:else if warning}
@@ -354,6 +364,7 @@
 		{#if field.helperText}
 			<div class="field-helper">{field.helperText}</div>
 		{/if}
+		<FieldEvidence fieldKey={field?.key} evidence={evidence} value={value} documentUrls={documentUrls} loading={evidenceLoading} />
 		{#if error}
 			<div class="field-feedback field-feedback--error">{error}</div>
 		{:else if warning}
