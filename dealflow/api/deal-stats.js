@@ -68,6 +68,7 @@ export default async function handler(req, res) {
         .select('user_id, stage, user_profiles!inner(full_name, avatar_url, share_saved, share_dd, share_invested, share_activity)')
         .eq('deal_id', dealId);
 
+      console.log('[deal-stats] callerOptedIn:', callerOptedIn, 'publicInvestors:', publicInvestors?.length, 'raw:', JSON.stringify(publicInvestors?.slice(0, 3)));
       if (publicInvestors) {
         for (const row of publicInvestors) {
           const name = row.user_profiles?.full_name;
