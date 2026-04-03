@@ -933,18 +933,22 @@
 		saving = true;
 		saveMsg = '';
 		const stored = browser ? getStoredSessionUser() : null;
+		// Use the displayed annualTargetAmount (computed from wizard or defaults) as fallback
+		// when wizardData.targetAmount is not explicitly set (e.g. flow skipped target step)
+		const effectiveTarget = wizardData.targetAmount || annualTargetAmount || 0;
+		const goalKey = wizardData.goal || 'cashflow';
 		const payload = {
-			goal: goalLabels[wizardData.goal] || wizardData.goal,
-			targetCashFlow: wizardData.goal === 'cashflow' ? wizardData.targetAmount : undefined,
-			targetIncome: wizardData.goal === 'cashflow' ? wizardData.targetAmount : undefined,
-			targetGrowth: wizardData.goal === 'growth' ? wizardData.targetAmount : undefined,
-			targetTaxSavings: wizardData.goal === 'tax' ? wizardData.targetAmount : undefined,
-			growthCapital: wizardData.goal === 'growth' ? wizardData.targetAmount : undefined,
-			taxableIncome: wizardData.goal === 'tax' ? wizardData.targetAmount : undefined,
+			goal: goalLabels[goalKey] || goalKey,
+			targetCashFlow: goalKey === 'cashflow' ? effectiveTarget : undefined,
+			targetIncome: goalKey === 'cashflow' ? effectiveTarget : undefined,
+			targetGrowth: goalKey === 'growth' ? effectiveTarget : undefined,
+			targetTaxSavings: goalKey === 'tax' ? effectiveTarget : undefined,
+			growthCapital: goalKey === 'growth' ? effectiveTarget : undefined,
+			taxableIncome: goalKey === 'tax' ? effectiveTarget : undefined,
 			investableCapital: wizardData.investableCapital,
 			assetClasses: wizardData.assetClasses,
 			dealTypes: wizardData.dealTypes,
-			_branch: wizardData.goal
+			_branch: goalKey
 		};
 
 		if (browser) {
@@ -1721,6 +1725,14 @@
 				}
 				syncPlanState();
 				dismissPassiveWizardRouteIfPlanExists();
+				// Auto-save if plan exists but target was never persisted to API
+				if (hasPlan && !saving) {
+					const bb = plan || wizardData;
+					const hasPersistedTarget = bb?.targetCashFlow || bb?.targetIncome || bb?.targetGrowth || bb?.growthCapital || bb?.taxableIncome || bb?.targetTaxSavings;
+					if (!hasPersistedTarget) {
+						void savePlan();
+					}
+				}
 			} catch (error) {
 				console.warn('Failed to load plan:', error);
 			} finally {
