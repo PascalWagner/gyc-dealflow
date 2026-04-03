@@ -4,76 +4,76 @@
 
 	const primaryCtaHref = '/login?return=/app/plan';
 	const stats = [
-		{ value: '838', label: 'Live deals', detail: 'Income, tax, and growth opportunities in one place' },
-		{ value: '455', label: 'Sponsors tracked', detail: 'Operator context before you take the meeting' },
-		{ value: '3 min', label: 'To get oriented', detail: 'Build your buy box fast and start filtering smarter' },
-		{ value: '$0', label: 'To start', detail: 'Free account. No credit card. No sales call required' }
+		{ value: '838', label: 'Live deals', detail: 'See good deals in one place' },
+		{ value: '455', label: 'Fund managers', detail: 'Know who runs the deal before you take a call' },
+		{ value: '3 min', label: 'To start', detail: 'Set your rules fast and sort deals with less guessing' },
+		{ value: '$0', label: 'To join', detail: 'Free account. No card. No sales call' }
 	];
 
 	const heroBullets = [
-		'Stop guessing which private deals actually fit your goals',
-		'Filter sponsor pitches through your own buy box before you ever book a call',
-		'Compare deals, sponsors, and fit without juggling decks, notes, and spreadsheets'
+		'Know what fits before you book a call',
+		'See deals, fund managers, and key details in one place',
+		'Save the best deals and keep your next steps clear'
 	];
 
 	const workflowSteps = [
 		{
 			eyebrow: 'Step 1',
-			title: 'Build your investor plan',
-			body: 'Tell the platform what you are actually trying to buy so you stop reacting to whoever emailed you last.',
-			points: ['Set your income, tax, or growth target', 'Define check size and timeline', 'Choose asset classes you actually want to review'],
+			title: 'Set your plan',
+			body: 'Tell the app what you want so it can sort deals for you.',
+			points: ['Pick income, tax help, or growth', 'Set your check size and timing', 'Choose the deal types you want to see'],
 			kind: 'plan'
 		},
 		{
 			eyebrow: 'Step 2',
-			title: 'See matched deals and sponsors',
-			body: 'See strongest-fit opportunities first, then compare deal structure, minimums, and sponsor quality in one place.',
-			points: ['See strongest-fit opportunities first', 'Spot what fits and what does not faster', 'Review sponsor context before taking the next meeting'],
+			title: 'Find deals that fit',
+			body: 'See the best fits first, then compare the deal, the manager, and the minimum in one place.',
+			points: ['See the best fits first', 'Spot what fits and what does not fast', 'Check the manager before the next call'],
 			kind: 'matches'
 		},
 		{
 			eyebrow: 'Step 3',
-			title: 'Move winners into diligence',
-			body: 'Keep the best opportunities moving and stop losing good deals inside a messy, ad hoc pipeline.',
-			points: ['Track saved, review, and connect stages', 'Keep your next moves visible', 'Request intros only when a deal clears your filter'],
+			title: 'Save the best ones',
+			body: 'Keep the good deals moving and stop losing track of what to do next.',
+			points: ['Save deals you want to review', 'See what needs a closer look', 'Ask for intros when you are ready'],
 			kind: 'pipeline'
 		}
 	];
 
 	const freeFeatures = [
-		'Create a free account and build a starter investor profile',
-		'Browse live deals and compare sponsors in one place',
-		'Save deals and organize your research pipeline',
-		'Use the product first before you decide if you want more'
+		'Make a free account',
+		'Set up your investor profile',
+		'Browse live deals and fund managers',
+		'Save deals and track what you want to review'
 	];
 
 	const memberFeatures = [
-		'Unlock the full plan builder and deployment roadmap',
-		'See deeper deal analysis and more advanced diligence tools',
-		'Access office hours, member resources, and implementation support',
-		'Best fit when you are actively deploying and want more depth'
+		'Build your full plan step by step',
+		'Get deeper deal notes and review tools',
+		'Join office hours and member lessons',
+		'Best for people ready to put money to work now'
 	];
 
 	const faqs = [
 		{
 			question: 'Who is the page for?',
-			answer: 'This page is built for accredited investors, especially business owners and executives who want a better way to evaluate private deals before wiring capital.'
+			answer: 'This page is best for accredited investors who want a simple way to find and compare private deals.'
 		},
 		{
-			question: 'What is free versus member?',
-			answer: 'Free is for getting oriented: create an account, browse deals, compare sponsors, and organize your pipeline. Member is for investors actively deploying capital who want the full plan builder, deeper diligence, and additional support.'
+			question: 'What is free and what is paid?',
+			answer: 'Free lets you look around, save deals, and learn the app. Member gives you the full plan, deeper deal review, and more help.'
 		},
 		{
 			question: 'When should I upgrade?',
-			answer: 'Start free first. Upgrade when you are actively evaluating live deals, want deeper analysis, and need more structure around what to buy, when to buy it, and what to avoid.'
+			answer: 'Start free. Upgrade when you are close to making a move and want more help.'
 		},
 		{
-			question: 'What about operators or fund managers?',
-			answer: 'Operators have a separate path. They should go to the operator page instead of the investor funnel so the main landing page stays focused on getting investors into the product.'
+			question: 'What if I run a fund or deal?',
+			answer: 'If you run a fund or deal, use the operator page. That side is built for managers, not investors.'
 		},
 		{
-			question: 'Is this a broker-dealer or investment advisor?',
-			answer: 'No. Grow Your Cashflow is a technology and education platform. The workflow is built with regulated infrastructure in mind, but the landing page is optimized around product use, not individualized advice.'
+			question: 'Is this giving me personal advice?',
+			answer: 'No. It helps you learn, compare deals, and stay organized. It is not personal investment advice.'
 		}
 	];
 
@@ -90,15 +90,15 @@
 </script>
 
 <svelte:head>
-	<title>Find Private Deals That Fit Your Goals | Grow Your Cashflow</title>
+	<title>Find Better Private Deals Before You Send Money | Grow Your Cashflow</title>
 	<meta
 		name="description"
-		content="Build your investor plan, browse live private deals, compare sponsors, and start using Grow Your Cashflow for free."
+		content="Set your plan, browse live private deals, compare fund managers, and start using Grow Your Cashflow for free."
 	>
-	<meta property="og:title" content="Find Private Deals That Fit Your Goals | Grow Your Cashflow">
+	<meta property="og:title" content="Find Better Private Deals Before You Send Money | Grow Your Cashflow">
 	<meta
 		property="og:description"
-		content="Start free, build your plan, see matched deals, and compare sponsors before you wire your next check."
+		content="Start free, set your plan, see deals that fit, and compare fund managers before you send money."
 	>
 	<meta property="og:type" content="website">
 </svelte:head>
@@ -108,9 +108,9 @@
 		<div class="nav">
 			<a href="/" class="nav-logo">Grow Your Cashflow</a>
 			<div class="nav-links">
-				<a href="#workflow" onclick={(event) => scrollToAnchor(event, '#workflow')}>Workflow</a>
-				<a href="#free" onclick={(event) => scrollToAnchor(event, '#free')}>What is free</a>
-				<a href="/for-operators">For operators</a>
+				<a href="#workflow" onclick={(event) => scrollToAnchor(event, '#workflow')}>How it works</a>
+				<a href="#free" onclick={(event) => scrollToAnchor(event, '#free')}>Free vs member</a>
+				<a href="/for-operators">For fund managers</a>
 			</div>
 			<div class="nav-actions">
 				<a href="/login" class="nav-login" data-sveltekit-reload>Log in</a>
@@ -129,9 +129,9 @@
 		</div>
 
 		<div class:open={mobileMenuOpen} class="nav-mobile">
-			<a href="#workflow" onclick={(event) => scrollToAnchor(event, '#workflow')}>Workflow</a>
-			<a href="#free" onclick={(event) => scrollToAnchor(event, '#free')}>What is free</a>
-			<a href="/for-operators">For operators</a>
+			<a href="#workflow" onclick={(event) => scrollToAnchor(event, '#workflow')}>How it works</a>
+			<a href="#free" onclick={(event) => scrollToAnchor(event, '#free')}>Free vs member</a>
+			<a href="/for-operators">For fund managers</a>
 			<a href="/login" data-sveltekit-reload>Log in</a>
 			<a href={primaryCtaHref} class="nav-cta" data-sveltekit-reload>Start free</a>
 		</div>
@@ -139,21 +139,21 @@
 
 	<section class="hero-section">
 		<div class="hero-copy">
-			<div class="eyebrow">For accredited investors buying private deals</div>
-			<h1>Stop wiring money into private deals that <span>do not fit your goals.</span></h1>
+			<div class="eyebrow">For investors</div>
+			<h1>Find the right private deals <span>before you send money.</span></h1>
 			<p class="hero-description">
-				Build your buy box, see best-fit opportunities first, compare sponsors side by side,
-				and move the right deals into diligence with more confidence.
+				Set your rules, see deals that fit, compare fund managers, and save the best ones in
+				one place.
 			</p>
 
 			<div class="hero-actions">
 				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
 				<a href="#workflow" class="btn btn-secondary" onclick={(event) => scrollToAnchor(event, '#workflow')}>
-					See the workflow
+					See how it works
 				</a>
 			</div>
 
-			<div class="hero-fine-print">Free account. No credit card. Build your buy box in minutes.</div>
+			<div class="hero-fine-print">Free account. No card. Set your rules in minutes.</div>
 
 			<div class="hero-bullets">
 				{#each heroBullets as bullet}
@@ -182,11 +182,11 @@
 
 	<section class="section" id="workflow">
 		<div class="section-heading">
-			<div class="eyebrow">What you actually do inside</div>
-			<h2>How you go from random sponsor pitches to a real investing process.</h2>
+			<div class="eyebrow">What you do inside</div>
+			<h2>Turn random deal emails into a clear plan.</h2>
 			<p>
-				The job of the product is simple: help you get clear on what deserves attention, what
-				does not fit, and what should move into real diligence.
+				The job of the app is simple: show you what fits, what does not, and what to look at
+				next.
 			</p>
 		</div>
 
@@ -213,43 +213,43 @@
 
 						{#if step.kind === 'plan'}
 							<div class="mini-window-body">
-								<div class="mini-kicker">Investor plan</div>
-								<div class="mini-title">$120K / year passive income</div>
+								<div class="mini-kicker">Your plan</div>
+								<div class="mini-title">$120K / year income</div>
 								<div class="chip-row">
 									<span>Debt funds</span>
-									<span>Self storage</span>
+									<span>Storage</span>
 									<span>$100K checks</span>
 								</div>
 								<div class="metric-stack">
 									<div class="metric-row">
-										<div>Timeline</div>
+										<div>When</div>
 										<strong>3 to 5 years</strong>
 									</div>
 									<div class="metric-row">
-										<div>Priority</div>
-										<strong>Cash flow first</strong>
+										<div>First goal</div>
+										<strong>Income first</strong>
 									</div>
 									<div class="metric-row">
-										<div>Risk posture</div>
+										<div>Risk</div>
 										<strong>Moderate</strong>
 									</div>
 								</div>
 							</div>
 						{:else if step.kind === 'matches'}
 							<div class="mini-window-body">
-								<div class="mini-kicker">Matches</div>
+								<div class="mini-kicker">Best fits</div>
 								<div class="mini-list">
 									<div class="mini-match">
 										<div>
 											<strong>Blue Mesa Income Fund IV</strong>
-											<small>11.2% cash yield</small>
+											<small>11.2% cash income</small>
 										</div>
 										<span>97%</span>
 									</div>
 									<div class="mini-match">
 										<div>
 											<strong>North Harbor Storage Fund</strong>
-											<small>8.5% pref + 17.0% IRR</small>
+											<small>8.5% base + 17% target return</small>
 										</div>
 										<span>93%</span>
 									</div>
@@ -264,22 +264,22 @@
 							</div>
 						{:else}
 							<div class="mini-window-body">
-								<div class="mini-kicker">Pipeline</div>
+								<div class="mini-kicker">Next steps</div>
 								<div class="pipeline-grid">
 									<div class="pipeline-column">
-										<div class="pipeline-label">Saved</div>
+										<div class="pipeline-label">Save</div>
 										<div class="pipeline-count">12</div>
-										<p>Worth a second look</p>
+										<p>Worth a look</p>
 									</div>
 									<div class="pipeline-column">
-										<div class="pipeline-label">Review</div>
+										<div class="pipeline-label">Look</div>
 										<div class="pipeline-count">4</div>
-										<p>Needs diligence</p>
+										<p>Look closer</p>
 									</div>
 									<div class="pipeline-column">
-										<div class="pipeline-label">Connect</div>
+										<div class="pipeline-label">Intro</div>
 										<div class="pipeline-count">2</div>
-										<p>Ready for intros</p>
+										<p>Ready to meet</p>
 									</div>
 								</div>
 							</div>
@@ -294,10 +294,10 @@
 		<div class="free-grid">
 			<div class="free-copy">
 				<div class="eyebrow">Start free</div>
-				<h2>Use the product first. Upgrade only when deeper diligence will actually help.</h2>
+				<h2>Start free. Pay only when you need more help.</h2>
 				<p>
-					Most investors should start free. Get oriented, build conviction that the workflow
-					helps, and only then decide whether you want the full member layer.
+					Most people should start free. Use the app first. If you like it and want more
+					help, move up to member.
 				</p>
 				<div class="free-list">
 					{#each freeFeatures as item}
@@ -315,12 +315,11 @@
 			</div>
 
 			<div class="support-card">
-				<div class="support-kicker">Become a member</div>
-				<h3>Upgrade when you want full planning, deeper diligence, and more support.</h3>
+				<div class="support-kicker">Member</div>
+				<h3>Need more help? Go member.</h3>
 				<p>
-					Cashflow Academy is the member layer of the business. It is not the opener. The
-					product is the opener. Membership is for people actively deploying who want extra
-					depth and support around real opportunities.
+					Cashflow Academy is the paid layer. Most people should not start there. Start
+					with the app. Go member when you want a full plan, deeper reviews, and live help.
 				</p>
 				<div class="support-list">
 					{#each memberFeatures as item}
@@ -330,7 +329,7 @@
 						</div>
 					{/each}
 				</div>
-				<div class="tier-note">For most people: start free, then upgrade once the extra depth will pay for itself.</div>
+				<div class="tier-note">For most people: start free, then pay for more help only when you need it.</div>
 			</div>
 		</div>
 	</section>
@@ -338,22 +337,21 @@
 	<section class="section">
 		<div class="operator-card">
 			<div>
-				<div class="eyebrow">For operators</div>
-				<h2>Raising capital? Start on the operator side.</h2>
+				<div class="eyebrow">For fund managers</div>
+				<h2>Raising money? Go to the operator side.</h2>
 				<p>
-					If you are a debt fund, private credit manager, or emerging operator raising capital,
-					you should not land in the same funnel as investors. Use the operator path to list
-					offerings, book pitch slots, and get in front of the right LPs.
+					If you run a fund or deal, do not go through the investor path. Use the operator
+					side to list deals, book a pitch spot, and get in front of the right people.
 				</p>
 			</div>
-			<a href="/for-operators" class="btn btn-secondary btn-secondary--dark">For operators</a>
+			<a href="/for-operators" class="btn btn-secondary btn-secondary--dark">For fund managers</a>
 		</div>
 	</section>
 
 	<section class="section section-faq">
 		<div class="section-heading section-heading--narrow">
 			<div class="eyebrow">FAQ</div>
-			<h2>Common questions before you create a free account.</h2>
+			<h2>Questions people ask before they start.</h2>
 		</div>
 
 		<div class="faq-list">
@@ -368,11 +366,10 @@
 
 	<section class="section section-cta">
 		<div class="cta-panel">
-			<div class="eyebrow">Start using it</div>
-			<h2>Build your buy box, see your matches, and stop guessing what to do next.</h2>
+			<div class="eyebrow">Start now</div>
+			<h2>Make a free account and find deals that fit.</h2>
 			<p>
-				If the page does its job, the next move is obvious: create a free account and start
-				filtering deals through your own plan instead of gut feel.
+				Set your rules, sort deals fast, and stop guessing what to do next.
 			</p>
 			<div class="hero-actions hero-actions--center">
 				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>

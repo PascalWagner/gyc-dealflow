@@ -2,39 +2,39 @@
 	let { mode = 'hero' } = $props();
 
 	const planStats = [
-		{ label: 'Primary goal', value: '$120K/yr passive income' },
+		{ label: 'Goal', value: '$120K/yr income' },
 		{ label: 'Check size', value: '$100K to $150K' },
-		{ label: 'Focus', value: 'Debt, self storage, multifamily' }
+		{ label: 'Want to see', value: 'Debt, storage, apartments' }
 	];
 
 	const matchedDeals = [
 		{
 			name: 'Blue Mesa Income Fund IV',
 			sponsor: 'Blue Mesa Capital',
-			match: '97% match',
-			yield: '11.2% cash yield',
+			match: '97% fit',
+			yield: '11.2% cash income',
 			status: 'Open'
 		},
 		{
 			name: 'North Harbor Storage Fund',
 			sponsor: 'North Harbor Partners',
-			match: '93% match',
-			yield: '8.5% pref + 17.0% IRR',
+			match: '93% fit',
+			yield: '8.5% base + 17% target return',
 			status: 'Review'
 		},
 		{
 			name: 'Summit Credit Opportunities',
 			sponsor: 'Summit Credit',
-			match: '91% match',
-			yield: '10.4% target yield',
+			match: '91% fit',
+			yield: '10.4% target income',
 			status: 'New'
 		}
 	];
 
 	const sponsorChecks = [
-		{ label: 'Structure', value: '506(c) Form D on file' },
-		{ label: 'Track record', value: '$420M AUM, 12 realized deals' },
-		{ label: 'Focus', value: 'Private credit and income strategies' }
+		{ label: 'Filing', value: '506(c) filed' },
+		{ label: 'Past deals', value: '$420M managed, 12 closed deals' },
+		{ label: 'Focus', value: 'Private credit and income deals' }
 	];
 </script>
 
@@ -44,7 +44,7 @@
 	<div class="showcase-grid"></div>
 
 	<div class="floating-pill floating-pill--top">838 live deals</div>
-	<div class="floating-pill floating-pill--bottom">455 sponsors tracked</div>
+	<div class="floating-pill floating-pill--bottom">455 managers tracked</div>
 
 	<section class="window window--main">
 		<div class="window-chrome">
@@ -53,13 +53,13 @@
 			<span></span>
 		</div>
 		<div class="window-body">
-			<div class="window-kicker">Investor plan</div>
+			<div class="window-kicker">Your plan</div>
 			<div class="window-heading-row">
 				<div>
-					<h3>Build your buy box first</h3>
-					<p>See opportunities through your own goals, timeline, and check size.</p>
+					<h3>Set your rules first</h3>
+					<p>See deals that match your goals, time, and check size.</p>
 				</div>
-				<div class="goal-chip">Free workflow</div>
+				<div class="goal-chip">Free</div>
 			</div>
 
 			<div class="plan-grid">
@@ -73,29 +73,29 @@
 
 			<div class="roadmap-shell">
 				<div class="roadmap-header">
-					<div class="roadmap-title">Recommended sequence</div>
-					<div class="roadmap-note">Start with income and diversification</div>
+					<div class="roadmap-title">Start here</div>
+					<div class="roadmap-note">Income first</div>
 				</div>
 				<div class="roadmap-track">
 					<div class="roadmap-step roadmap-step--active">
 						<span>1</span>
 						<div>
 							<strong>Debt funds</strong>
-							<small>Cash flow first</small>
+							<small>Income first</small>
 						</div>
 					</div>
 					<div class="roadmap-step">
 						<span>2</span>
 						<div>
-							<strong>Storage / multifamily</strong>
-							<small>Blend yield and upside</small>
+							<strong>Storage / apartments</strong>
+							<small>Mix cash and growth</small>
 						</div>
 					</div>
 					<div class="roadmap-step">
 						<span>3</span>
 						<div>
-							<strong>Tax-advantaged plays</strong>
-							<small>Add selectively</small>
+							<strong>Tax deals</strong>
+							<small>Add later</small>
 						</div>
 					</div>
 				</div>
@@ -110,8 +110,8 @@
 			<span></span>
 		</div>
 		<div class="window-body window-body--dense">
-			<div class="window-kicker">Matched deals</div>
-			<h3 class="side-heading">What deserves diligence now</h3>
+			<div class="window-kicker">Best matches</div>
+			<h3 class="side-heading">What looks good right now</h3>
 			<div class="match-list">
 				{#each matchedDeals as deal}
 					<div class="match-card">
@@ -137,12 +137,12 @@
 			<span></span>
 		</div>
 		<div class="window-body window-body--dense">
-			<div class="window-kicker">Sponsor snapshot</div>
+			<div class="window-kicker">Manager</div>
 			<div class="sponsor-header">
 				<div class="sponsor-mark">NC</div>
 				<div>
 					<h3>North Harbor Partners</h3>
-					<p>Income-oriented operator review</p>
+					<p>Quick fund check</p>
 				</div>
 			</div>
 			<div class="sponsor-checks">
