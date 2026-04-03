@@ -79,8 +79,17 @@ export default async function handler(req, res) {
       submissionKind
     } = req.body;
 
-    if (!filedata || !filename) {
-      return res.status(400).json({ error: 'File data and filename are required' });
+    // Support two modes:
+    // 1. Base64 mode: filedata + filename (for files < 3.5 MB)
+    // 2. Direct-upload mode: storagePath + filename (file already in storage)
+    const storagePath = req.body.storagePath;
+    const isDirectUpload = !filedata && storagePath;
+
+    if (!filedata && !storagePath) {
+      return res.status(400).json({ error: 'File data or storage path is required' });
+    }
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename is required' });
     }
 
     const supabase = getAdminClient();
@@ -110,23 +119,32 @@ export default async function handler(req, res) {
       }
     }
     const cleanDealName = (dealName || 'Unknown').replace(/[^a-zA-Z0-9\s\-]/g, '').trim();
-    const storagePath = `deals/${dealId || 'unlinked'}/${cleanDealName} - ${filename}`;
+    const effectiveStoragePath = isDirectUpload
+      ? storagePath
+      : `deals/${dealId || 'unlinked'}/${cleanDealName} - ${filename}`;
 
-    // 1. Decode base64 and upload to Supabase Storage
-    const fileBuffer = Buffer.from(filedata, 'base64');
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('deal-decks')
-      .upload(storagePath, fileBuffer, {
-        contentType: guessContentType(filename),
-        upsert: true
-      });
+    let fileBuffer = null;
 
-    if (uploadError) throw uploadError;
+    if (isDirectUpload) {
+      // File was already uploaded directly to storage — just generate the signed URL
+      console.log('Direct upload mode: file already in storage at', effectiveStoragePath);
+    } else {
+      // 1. Decode base64 and upload to Supabase Storage
+      fileBuffer = Buffer.from(filedata, 'base64');
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('deal-decks')
+        .upload(effectiveStoragePath, fileBuffer, {
+          contentType: guessContentType(filename),
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+    }
 
     // Get a signed URL (valid for 1 year)
     const { data: urlData } = await supabase.storage
       .from('deal-decks')
-      .createSignedUrl(storagePath, 60 * 60 * 24 * 365);
+      .createSignedUrl(effectiveStoragePath, 60 * 60 * 24 * 365);
 
     const deckUrl = urlData?.signedUrl || '';
 
@@ -238,8 +256,26 @@ export default async function handler(req, res) {
 
     if (isPdf) {
       try {
+        // For direct uploads, download the file from storage for extraction
+        let extractBuffer = fileBuffer;
+        if (!extractBuffer && isDirectUpload) {
+          try {
+            const { data: dlData, error: dlError } = await supabase.storage
+              .from('deal-decks')
+              .download(effectiveStoragePath);
+            if (!dlError && dlData) {
+              extractBuffer = Buffer.from(await dlData.arrayBuffer());
+            }
+          } catch (dlErr) {
+            console.warn('Could not download file for extraction:', dlErr.message);
+          }
+        }
+        if (!extractBuffer) {
+          console.warn('No file buffer available for extraction, skipping');
+          throw new Error('No file buffer for extraction');
+        }
         // AI extraction with fallback chain (Claude → OpenAI → Grok)
-        const { extracted, method } = await extractFromPdf(fileBuffer);
+        const { extracted, method } = await extractFromPdf(extractBuffer);
 
         if (extracted) {
           const fieldsFound = Object.keys(extracted).filter(k => extracted[k] !== null && extracted[k] !== undefined);

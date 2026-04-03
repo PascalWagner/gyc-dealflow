@@ -1464,7 +1464,7 @@
 	}
 
 	async function uploadDocument({ base64, file, docType, actor }) {
-		if (!file || !base64) {
+		if (!file) {
 			return { payload: null, warning: null };
 		}
 		if (!actor.session?.token) {
@@ -1474,15 +1474,69 @@
 			};
 		}
 
+		const dealName = docType === 'ppm'
+			? `${form.investmentName || deal?.investmentName || deal?.investment_name || 'Deal'} - PPM`
+			: form.investmentName || deal?.investmentName || deal?.investment_name || 'Deal';
+		const authHeaders = { Authorization: `Bearer ${actor.session.token}` };
+
+		// For large files (>3.5 MB), upload directly to storage to avoid Vercel body limit
+		const DIRECT_UPLOAD_THRESHOLD = 3.5 * 1024 * 1024;
+		if (file.size > DIRECT_UPLOAD_THRESHOLD) {
+			try {
+				// Step 1: Get a signed upload URL
+				const urlResp = await fetch('/api/deck-upload-url', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', ...authHeaders },
+					body: JSON.stringify({ dealId, dealName, filename: file.name, docType })
+				});
+				const urlData = await urlResp.json().catch(() => ({}));
+				if (!urlResp.ok || !urlData.signedUrl) {
+					return { payload: null, warning: urlData?.error || 'Could not get upload URL for large file.' };
+				}
+
+				// Step 2: Upload file directly to Supabase Storage
+				const storageResp = await fetch(urlData.signedUrl, {
+					method: 'PUT',
+					headers: { 'Content-Type': urlData.contentType || 'application/octet-stream' },
+					body: file
+				});
+				if (!storageResp.ok) {
+					const errText = await storageResp.text().catch(() => '');
+					return { payload: null, warning: `Storage upload failed (${storageResp.status}): ${errText}` };
+				}
+
+				// Step 3: Call deck-upload with metadata only (no filedata) to link + enrich
+				const metaResp = await fetch('/api/deck-upload', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', ...authHeaders },
+					body: JSON.stringify({
+						dealId,
+						dealName,
+						storagePath: urlData.path,
+						filename: file.name,
+						docType,
+						userEmail: actor.actorEmail,
+						userName: actor.actorName,
+						companyId: actor.managementCompanyId || ''
+					})
+				});
+				const metaData = await metaResp.json().catch(() => ({}));
+				if (metaResp.ok) return { payload: metaData, warning: null };
+				return { payload: metaData, warning: metaData?.error || `Could not link the ${docType.toUpperCase()} file.` };
+			} catch (err) {
+				return { payload: null, warning: `Upload failed: ${err.message}` };
+			}
+		}
+
+		// Standard base64 upload for small files
+		if (!base64) return { payload: null, warning: null };
+
 		const response = await fetch('/api/deck-upload', {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${actor.session.token}`
-			},
+			headers: { 'Content-Type': 'application/json', ...authHeaders },
 			body: JSON.stringify({
 				dealId,
-				dealName: docType === 'ppm' ? `${form.investmentName || deal?.investmentName || deal?.investment_name || 'Deal'} - PPM` : form.investmentName || deal?.investmentName || deal?.investment_name || 'Deal',
+				dealName,
 				filedata: base64,
 				filename: file.name,
 				docType,

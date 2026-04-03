@@ -2,6 +2,7 @@
   "framework": "sveltekit",
   "functions": {
     "api/deck-upload.js": { "maxDuration": 60 },
+    "api/deck-upload-url.js": { "maxDuration": 10 },
     "api/portfolio-upload.js": { "maxDuration": 60 },
     "api/portfolio-extract.js": { "maxDuration": 60 },
     "api/ghl-sync.js": { "maxDuration": 120 }
