@@ -64,7 +64,6 @@
 		buildFeeRows,
 		buildGeographyLabel,
 		buildInvestClearlyPreview,
-		buildKeyRiskItems,
 		buildOperatorTrackRecordRows,
 		buildSecFilingSummary,
 		getDealStateCodes
@@ -113,7 +112,7 @@
 	let shareDropdownOpen = $state(false);
 	let socialProof = $state(null);
 	let similarDeals = $state(initialComparables?.similarDeals || []);
-	const eligibleSimilarDeals = $derived.by(() => filterComparableDeals(similarDeals));
+	const eligibleSimilarDeals = $derived.by(() => filterComparableDeals(similarDeals, deal));
 
 	// Stress Test sliders
 	let stInvestment = $state(0);
@@ -358,8 +357,6 @@
 		fits: ['Benchmark alignment unlocks for members.'],
 		warnings: ['This section combines returns, fees, and sponsor context into one evaluation layer.']
 	});
-	const keyRiskItems = $derived.by(() => buildKeyRiskItems(deal, dealFit, isStale));
-
 	function setBgCheckSectionVisible(value) {
 		bgCheckSectionVisible = value;
 	}
@@ -1801,13 +1798,14 @@
 								</div>
 							</div>
 						{/if}
-						<div class:blurred={!hasMemberAccess}>
-								<SimilarDealsPanel
-									{deal}
-									{similarDeals}
-									{dealOperatorName}
-								{fmt}
-							/>
+							<div class:blurred={!hasMemberAccess}>
+									<SimilarDealsPanel
+										{deal}
+										similarDeals={eligibleSimilarDeals}
+										hasFilteredComparables={similarDeals.length > 0 && eligibleSimilarDeals.length === 0}
+										{dealOperatorName}
+									{fmt}
+								/>
 						</div>
 					</div>
 				</div>
@@ -2323,9 +2321,10 @@
 	.canonical-lower-flow { display: flex; flex-direction: column; }
 	.flow-order-10 { order: 10; }
 	.flow-order-20 { order: 20; }
-	.flow-order-30 { order: 30; }
-	.flow-order-40 { order: 40; }
-	.flow-order-50 { order: 50; }
+		.flow-order-30 { order: 30; }
+		.flow-order-40 { order: 40; }
+		.flow-order-45 { order: 45; }
+		.flow-order-50 { order: 50; }
 	.flow-order-60 { order: 60; }
 	.flow-order-70 { order: 70; }
 	.flow-order-80 { order: 80; }
@@ -2334,12 +2333,102 @@
 	.flow-order-110 { order: 110; }
 	.flow-order-120 { order: 120; }
 	.flow-order-130 { order: 130; }
-	.section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px; box-shadow: none; overflow: hidden; }
-	.section-header { padding: 16px 20px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; }
-	.section-header svg { color: var(--primary); flex-shrink: 0; }
-	.section-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.15px; }
-	.section-body { padding: 24px; }
-	.details-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+		.section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px; box-shadow: none; overflow: hidden; }
+		.section-header { padding: 16px 20px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; }
+		.section-header svg { color: var(--primary); flex-shrink: 0; }
+		.section-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.15px; }
+		.section-body { padding: 24px; }
+		.historical-returns-range {
+			margin-left: auto;
+			display: inline-flex;
+			align-items: center;
+			padding: 4px 10px;
+			border-radius: 999px;
+			background: rgba(81,190,123,0.08);
+			border: 1px solid rgba(81,190,123,0.18);
+			font-family: var(--font-ui);
+			font-size: 10px;
+			font-weight: 700;
+			letter-spacing: 0.35px;
+			text-transform: uppercase;
+			color: var(--primary);
+		}
+		.historical-returns-body {
+			padding-top: 18px;
+		}
+		.historical-returns-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.85fr);
+			gap: 18px;
+			align-items: stretch;
+		}
+		.historical-returns-chart-card {
+			padding: 18px 20px 16px;
+			border-radius: 14px;
+			background: linear-gradient(160deg, #102128 0%, #17333a 52%, #214650 100%);
+			border: 1px solid rgba(255,255,255,0.06);
+			box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+			min-height: 230px;
+		}
+		.historical-returns-summary {
+			display: grid;
+			align-content: start;
+			gap: 12px;
+			padding: 18px;
+			border-radius: 14px;
+			border: 1px solid var(--border-light);
+			background: linear-gradient(180deg, rgba(248,248,246,0.85) 0%, rgba(255,255,255,0.98) 100%);
+		}
+		.historical-returns-kicker {
+			font-family: var(--font-ui);
+			font-size: 10px;
+			font-weight: 800;
+			letter-spacing: 0.45px;
+			text-transform: uppercase;
+			color: var(--primary);
+		}
+		.historical-returns-headline {
+			font-family: var(--font-headline);
+			font-size: 28px;
+			line-height: 1.1;
+			letter-spacing: -0.5px;
+			color: var(--text-dark);
+		}
+		.historical-returns-copy {
+			margin: 0;
+			font-family: var(--font-body);
+			font-size: 13px;
+			line-height: 1.65;
+			color: var(--text-secondary);
+		}
+		.historical-returns-stat-row {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+			gap: 10px;
+		}
+		.historical-returns-stat {
+			padding: 12px;
+			border-radius: 12px;
+			background: var(--bg-card);
+			border: 1px solid var(--border-light);
+		}
+		.historical-returns-stat span {
+			display: block;
+			font-family: var(--font-ui);
+			font-size: 10px;
+			font-weight: 700;
+			letter-spacing: 0.4px;
+			text-transform: uppercase;
+			color: var(--text-muted);
+			margin-bottom: 6px;
+		}
+		.historical-returns-stat strong {
+			font-family: var(--font-ui);
+			font-size: 16px;
+			font-weight: 800;
+			color: var(--text-dark);
+		}
+		.details-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
 	.detail-item {}
 	.detail-item-wide { grid-column: 1 / -1; }
 	.detail-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 4px; }
@@ -2384,21 +2473,25 @@
 	.operator-deal-stats { display: flex; gap: 16px; align-items: center; }
 	.operator-deal-stat { font-family: var(--font-ui); font-size: 11px; color: var(--text-secondary); }
 	.operator-deal-stat strong { font-size: 15px; font-weight: 800; color: var(--text-dark); }
-	.investclearly-preview-pill {
-		display: inline-flex;
-		align-items: center;
+		.investclearly-preview-pill {
+			display: inline-flex;
+			align-items: center;
 		padding: 3px 8px;
 		border-radius: 999px;
 		background: rgba(37, 99, 235, 0.1);
 		color: #2563eb;
 		font-family: var(--font-ui);
 		font-size: 10px;
-		font-weight: 800;
-		text-transform: uppercase;
-		letter-spacing: 0.45px;
-	}
-	.investclearly-summary {
-		margin-left: auto;
+			font-weight: 800;
+			text-transform: uppercase;
+			letter-spacing: 0.45px;
+		}
+		.investclearly-preview-pill.coming-soon {
+			background: rgba(15,23,42,0.06);
+			color: var(--text-dark);
+		}
+		.investclearly-summary {
+			margin-left: auto;
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
@@ -2419,11 +2512,19 @@
 		font-weight: 700;
 		color: var(--text-dark);
 	}
-	.investclearly-body {
-		padding-top: 18px;
-	}
-	.investclearly-intro {
-		margin-bottom: 14px;
+		.investclearly-body {
+			padding-top: 18px;
+			position: relative;
+		}
+		.investclearly-preview-surface {
+			position: relative;
+			filter: blur(10px);
+			transform: scale(0.995);
+			pointer-events: none;
+			user-select: none;
+		}
+		.investclearly-intro {
+			margin-bottom: 14px;
 		padding: 10px 12px;
 		border-radius: 10px;
 		background: rgba(81,190,123,0.05);
@@ -2572,17 +2673,54 @@
 		letter-spacing: -0.15px;
 		line-height: 1.35;
 	}
-	.investclearly-review-body {
-		margin-top: 8px;
-		font-family: var(--font-body);
+		.investclearly-review-body {
+			margin-top: 8px;
+			font-family: var(--font-body);
 		font-size: 13px;
 		line-height: 1.55;
 		color: var(--text-secondary);
 		display: -webkit-box;
-		-webkit-line-clamp: 5;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
+			-webkit-line-clamp: 5;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+		}
+		.investclearly-coming-soon-overlay {
+			position: absolute;
+			inset: 18px 24px 24px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 12px;
+			padding: 24px;
+			border-radius: 16px;
+			background: linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(248,248,246,0.84) 100%);
+			border: 1px solid rgba(15,23,42,0.08);
+			backdrop-filter: blur(10px);
+			-webkit-backdrop-filter: blur(10px);
+			text-align: center;
+		}
+		.investclearly-coming-soon-badge {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 8px 14px;
+			border-radius: 999px;
+			background: var(--text-dark);
+			color: #fff;
+			font-family: var(--font-ui);
+			font-size: 11px;
+			font-weight: 800;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+		.investclearly-coming-soon-copy {
+			max-width: 420px;
+			font-family: var(--font-body);
+			font-size: 14px;
+			line-height: 1.6;
+			color: var(--text-dark);
+		}
 	.deal-map-container { height: 260px; border-radius: 8px; overflow: hidden; z-index: 0; }
 	.deal-map-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 180px; background: var(--bg-cream); border-radius: 8px; }
 	.deal-map-spinner { width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -2898,6 +3036,7 @@
 		.floating-compare-badge { bottom: calc(var(--deal-mobile-tab-bar-offset) + 88px); }
 		.metrics-strip { grid-template-columns: repeat(3, 1fr); }
 		.details-grid { grid-template-columns: repeat(3, 1fr); }
+		.historical-returns-grid { grid-template-columns: 1fr; }
 		.investclearly-review-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	}
 	@media (max-width: 900px) {
@@ -2934,23 +3073,25 @@
 		.data-completeness-hint { display: none; }
 		.data-completeness { padding: 10px 14px; gap: 10px; }
 		.data-completeness-label { font-size: 11px; }
-		.metrics-strip { grid-template-columns: repeat(2, 1fr); }
-		.details-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-		.deal-name { font-size: 24px; }
-		.deal-header { padding: 24px 20px; }
-		.section-body { padding: 20px 18px; }
-		.section-header { padding: 16px 18px; }
-		.summary-row { flex-direction: column; gap: 4px; }
-		.summary-label { min-width: 0; }
-		.investclearly-summary {
-			margin-left: 0;
-			width: 100%;
-			justify-content: flex-start;
-		}
-		.investclearly-review-list { grid-template-columns: 1fr; }
-		.investclearly-review-photo {
-			width: 64px;
-			height: 80px;
+			.metrics-strip { grid-template-columns: repeat(2, 1fr); }
+			.details-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+			.deal-name { font-size: 24px; }
+			.deal-header { padding: 24px 20px; }
+			.section-body { padding: 20px 18px; }
+			.section-header { padding: 16px 18px; }
+			.historical-returns-headline { font-size: 24px; }
+			.summary-row { flex-direction: column; gap: 4px; }
+			.summary-label { min-width: 0; }
+			.investclearly-summary {
+				margin-left: 0;
+				width: 100%;
+				justify-content: flex-start;
+			}
+			.investclearly-review-list { grid-template-columns: 1fr; }
+			.investclearly-coming-soon-overlay { inset: 14px 18px 18px; padding: 18px; }
+			.investclearly-review-photo {
+				width: 64px;
+				height: 80px;
 			border-radius: 16px;
 		}
 		.investclearly-reviewer-name-row {

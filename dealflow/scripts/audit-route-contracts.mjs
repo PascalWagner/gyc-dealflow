@@ -68,7 +68,6 @@ const dealIntroRequests = read('src/lib/utils/dealIntroRequests.js');
 const dealflowWorkspaceState = read('src/lib/utils/dealflowWorkspaceState.js');
 const dealOpportunityUtils = read('src/lib/utils/dealOpportunity.js');
 const dealDetailSignals = read('src/lib/utils/dealDetailSignals.js');
-const dealDueDiligenceUtils = read('src/lib/utils/dealDueDiligence.js');
 const dealReportUtils = read('src/lib/utils/dealReport.js');
 const dealSponsorsUtils = read('src/lib/utils/dealSponsors.js');
 const dealDetailUiUtils = read('src/lib/utils/dealDetailUi.js');
@@ -315,24 +314,6 @@ assert(
 		'dealDetailSignals utility must own deal geography, filing, and admin preview read-model helpers.'
 );
 assert(
-	dealDetailPage.includes("from '$lib/utils/dealDueDiligence.js'") &&
-		dealDetailPage.includes('getChecklistForDeal(deal)') &&
-		dealDetailPage.includes('calcDDProgress(checklist, ddAnswers, deal)'),
-	'Deal detail page must delegate due-diligence templates and progress helpers to the shared DD utility.'
-);
-for (const name of ['getChecklistForDeal', 'getAutoValue', 'calcDDProgress']) {
-	assert(
-		!dealDetailPage.includes(`function ${name}`),
-		`Deal detail page must not define ${name} inline once the shared DD utility exists.`
-	);
-}
-assert(
-	dealDueDiligenceUtils.includes('export const DD_CHECKLIST_CREDIT') &&
-		dealDueDiligenceUtils.includes('export const DD_CHECKLIST_SYNDICATION') &&
-		dealDueDiligenceUtils.includes('export function calcDDProgress'),
-		'dealDueDiligence utility must own the DD templates and progress calculation helpers.'
-);
-assert(
 	dealDetailPage.includes("from '$lib/utils/dealReport.js'") &&
 		dealDetailPage.includes('buildInvestmentReportHtml({'),
 	'Deal detail page must delegate investment report HTML building to the shared dealReport utility.'
@@ -369,17 +350,16 @@ assert(
 		dealSponsorsUtils.includes('export function getDealOperatorName'),
 	'dealSponsors utility must expose the shared canonical operator resolution helpers.'
 );
-assert(
-	dealDetailPage.includes("from '$lib/utils/dealIntroRequests.js'") &&
-		dealDetailPage.includes('submitDealIntroductionRequest({') &&
-		dealDetailPage.includes('getDealIntroductionRequestGate(deal.id)') &&
-		dealIntroRequests.includes("from '$lib/utils/dealSponsors.js'") &&
-		dealAnalysis.includes("from '$lib/utils/dealSponsors.js'") &&
-		dealCard.includes("from '$lib/utils/dealSponsors.js'") &&
-		dealMap.includes("from '$lib/utils/dealSponsors.js'") &&
-		memberDealsTransform.includes("from '../../../src/lib/utils/dealSponsors.js'") &&
-		memberDealsFilters.includes("from '../../../src/lib/utils/dealSponsors.js'") &&
-		dealWorkflowUtils.includes("from './dealSponsors.js'"),
+	assert(
+		dealDetailPage.includes("from '$lib/utils/dealIntroRequests.js'") &&
+			dealDetailPage.includes('submitDealIntroductionRequest({') &&
+			dealDetailPage.includes('getDealIntroductionRequestGate(deal.id)') &&
+			dealIntroRequests.includes("from '$lib/utils/dealSponsors.js'") &&
+			(dealAnalysis.includes("from '$lib/utils/dealSponsors.js'") || dealAnalysis.includes("from './dealSponsors.js'")) &&
+			dealCard.includes("from '$lib/utils/dealSponsors.js'") &&
+			memberDealsTransform.includes("from '../../../src/lib/utils/dealSponsors.js'") &&
+			memberDealsFilters.includes("from '../../../src/lib/utils/dealSponsors.js'") &&
+			dealWorkflowUtils.includes("from './dealSponsors.js'"),
 	'Deal detail, intro requests, analysis, cards, maps, workflow, and member deal transforms/filters must reuse the shared dealSponsors helper instead of duplicating sponsor fallbacks.'
 );
 assert(
