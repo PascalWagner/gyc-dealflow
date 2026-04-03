@@ -106,6 +106,13 @@ export default async function handler(req, res) {
       }
     }
 
+    // Temporary debug info for investor avatar investigation
+    result._debug = {
+      callerOptedIn: !!callerOptedIn,
+      callerProfile: callerProfile ? { share_saved: callerProfile.share_saved, share_dd: callerProfile.share_dd, share_invested: callerProfile.share_invested, share_activity: callerProfile.share_activity } : null,
+      stageRowCount: stageRows?.length ?? -1,
+      profileCount: Object.keys(profilesByUserId || {}).length
+    };
     return res.status(200).json(result);
   } catch (err) {
     console.error('Deal stats error:', err);
