@@ -62,6 +62,13 @@
 		STATE_NAME_BY_CODE
 	} from '$lib/utils/investing-geography.js';
 	import {
+		canPreviewDealReviewSummary,
+		preservesFullReviewAccessForLifecycle,
+		resolveSummaryLifecycleSyncTarget,
+		resolveSummaryReadinessLabel,
+		resolveSummaryReadinessTone
+	} from '$lib/utils/reviewSummaryState.js';
+	import {
 		fieldRequiresSourceCitation,
 		getMissingRequiredEvidenceFieldKeys,
 		normalizeReviewFieldEvidenceMap
@@ -714,7 +721,7 @@
 	const secCanAdvance = $derived(secGateResolved || secStatus === 'skipped');
 	const currentLifecycleStatus = $derived(resolveDealLifecycleStatus(deal || {}));
 	const preservesFullReviewAccess = $derived(
-		['approved', 'published', 'do_not_publish'].includes(currentLifecycleStatus)
+		preservesFullReviewAccessForLifecycle(currentLifecycleStatus)
 	);
 	const hasSourceDocuments = $derived(
 		Boolean(deal?.deckUrl || deal?.deck_url || deal?.ppmUrl || deal?.ppm_url)
@@ -723,10 +730,13 @@
 		Boolean(deckFile || ppmFile || hasSourceDocuments)
 	);
 	const canOpenSummaryPreview = $derived(
-		(allowSummaryPreview || preservesFullReviewAccess)
-		&& hasSourceDocuments
-		&& secCanAdvance
-		&& teamContactsValidation.valid
+		canPreviewDealReviewSummary({
+			allowSummaryPreview,
+			lifecycleStatus: currentLifecycleStatus,
+			hasSourceDocuments,
+			secCanAdvance,
+			teamContactsValid: teamContactsValidation.valid
+		})
 	);
 	const summaryPublishReady = $derived(
 		(branchInfo.branch === 'lending_fund'
@@ -2357,12 +2367,12 @@
 
 	$effect(() => {
 		if (!dealId || loading || activeStage !== 'summary' || lifecycleSyncState === 'running') return;
-		if (summaryEvidencePending) return;
-		const currentLifecycle = currentLifecycleStatus;
-		if (currentLifecycle === 'published' || currentLifecycle === 'do_not_publish') return;
-		if (currentLifecycle === 'approved' && !summaryPublishReady) return;
-		const desiredLifecycle = summaryPublishReady ? 'approved' : 'in_review';
-		if (desiredLifecycle === currentLifecycle) return;
+		const desiredLifecycle = resolveSummaryLifecycleSyncTarget({
+			currentLifecycleStatus,
+			summaryPublishReady,
+			summaryEvidencePending
+		});
+		if (!desiredLifecycle) return;
 		void syncReviewLifecycleStatus({ quiet: true, targetLifecycle: desiredLifecycle });
 	});
 </script>
@@ -2906,8 +2916,8 @@
 									<h2>Summary and publish readiness</h2>
 									<p>Review each stage, confirm the source-backed risks, and only publish when the record is actually trustworthy.</p>
 								</div>
-								<span class={`readiness-badge tone-${summaryEvidencePending ? 'pending' : summaryPublishReady ? 'ready' : 'blocked'}`}>
-									{summaryEvidencePending ? 'Checking citations...' : summaryPublishReady ? 'Ready to publish' : 'Still blocked'}
+								<span class={`readiness-badge tone-${resolveSummaryReadinessTone({ summaryPublishReady, summaryEvidencePending })}`}>
+									{resolveSummaryReadinessLabel({ summaryPublishReady, summaryEvidencePending })}
 								</span>
 							</div>
 
