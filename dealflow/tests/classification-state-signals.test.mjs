@@ -6,9 +6,14 @@ import {
 } from '../src/lib/utils/investing-geography.js';
 import {
 	buildDealReviewPayload,
+	buildDealReviewCompletenessModel,
 	createDealReviewFormFromDeal,
 	normalizeDealReviewPatch
 } from '../src/lib/utils/dealReviewSchema.js';
+
+function assertCloseTo(actual, expected, epsilon = 1e-9) {
+	assert.ok(Math.abs(actual - expected) <= epsilon, `expected ${actual} to be within ${epsilon} of ${expected}`);
+}
 
 test('document geography signals merge PPM and deck states into a stable union', () => {
 	const ppmText = `
@@ -152,4 +157,45 @@ test('normalized review patches derive geography from selected states when no di
 	assert.deepEqual(errors, {});
 	assert.deepEqual(values.investingStates, ['AZ', 'CO', 'TX', 'TN', 'GA', 'UT', 'NC', 'AL']);
 	assert.equal(values.investingGeography, 'AZ, CO, TX, TN, GA, UT, NC, AL, United States');
+});
+
+test('historical return payload saves percent-point values without scaling them down', () => {
+	const { payload, errors } = buildDealReviewPayload(
+		{
+			historicalReturn2024: '11.11',
+			targetIRR: '11.11'
+		},
+		{
+			includeFieldKeys: ['historicalReturn2024', 'targetIRR']
+		}
+	);
+
+	assert.deepEqual(errors, {});
+	assert.equal(payload.historicalReturn2024, 11.11);
+	assertCloseTo(payload.targetIRR, 0.1111);
+});
+
+test('normalized review patches keep historical returns in percent points', () => {
+	const { values, errors } = normalizeDealReviewPatch({
+		historicalReturn2024: '11.11',
+		preferredReturn: '11.11'
+	});
+
+	assert.deepEqual(errors, {});
+	assert.equal(values.historicalReturn2024, 11.11);
+	assertCloseTo(values.preferredReturn, 0.1111);
+});
+
+test('deal review completeness model preserves historical return percent-point values', () => {
+	const completeness = buildDealReviewCompletenessModel(
+		{
+			investmentName: 'Example Deal',
+			historicalReturn2024: '11.11',
+			targetIRR: '11.11'
+		},
+		{}
+	);
+
+	assert.equal(completeness.historicalReturn2024, 11.11);
+	assertCloseTo(completeness.targetIRR, 0.1111);
 });

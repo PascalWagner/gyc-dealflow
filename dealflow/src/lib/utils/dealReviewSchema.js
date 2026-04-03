@@ -423,6 +423,10 @@ function parsePercentInput(value) {
 	return Math.abs(numericValue) > 1 ? numericValue / 100 : numericValue;
 }
 
+function parseReviewPercentageInput(fieldKey, value) {
+	return normalizeReturnFieldKey(fieldKey) ? parseLooseNumber(value) : parsePercentInput(value);
+}
+
 export function parseLocationValue(value) {
 	if (value && typeof value === 'object' && !Array.isArray(value)) {
 		return {
@@ -1725,7 +1729,7 @@ export function buildDealReviewPayload(form, options = {}) {
 		}
 
 		if (field.type === 'percentage') {
-			payload[field.key] = parsePercentInput(rawValue);
+			payload[field.key] = parseReviewPercentageInput(field.key, rawValue);
 			if (String(rawValue || '').trim() && payload[field.key] === null) {
 				errors[field.key] = 'Enter a valid percentage.';
 			}
@@ -1809,7 +1813,7 @@ export function normalizeDealReviewPatch(body = {}) {
 		}
 
 		if (field.type === 'percentage') {
-			const parsed = parsePercentInput(value);
+			const parsed = parseReviewPercentageInput(field.key, value);
 			normalized[field.key] = parsed;
 			if (value !== null && value !== '' && parsed === null) {
 				errors[field.key] = 'Enter a valid percentage.';
@@ -1934,7 +1938,7 @@ export function buildDealReviewCompletenessModel(form, existingDeal) {
 		totalInvestors: parseLooseNumber(form.totalInvestors),
 		...Object.fromEntries(HISTORICAL_RETURN_YEARS.map((year) => [
 			`historicalReturn${year}`,
-			parsePercentInput(form[`historicalReturn${year}`])
+			parseReviewPercentageInput(`historicalReturn${year}`, form[`historicalReturn${year}`])
 		])),
 		operatorBackground: form.operatorBackground,
 		keyDates: form.keyDates,
