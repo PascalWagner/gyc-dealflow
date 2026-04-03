@@ -1,5 +1,10 @@
 import { ghlFetch } from '../_supabase.js';
 import { requireAnyServerEnv } from '../_env.js';
+import {
+  capitalToRangeLabel,
+  goalTypeForValue,
+  rangeLabelToCapital
+} from '../../src/lib/utils/investorGoals.js';
 
 const GHL_GOALS_FIELD_MAP = {
   goal_type: 'contact.primary_investment_objective',
@@ -45,6 +50,12 @@ export function hasMeaningfulGoalsRow(goal = null) {
     goal.timeline,
     goal.tax_reduction
   ].some((value) => hasMeaningfulGhlValue(value));
+}
+
+function optionalNumber(value) {
+  if (!hasMeaningfulGhlValue(value)) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
 export async function getGhlCustomFieldMap() {
@@ -136,14 +147,27 @@ export function findHydratedGhlFieldValue(contact, matchers = []) {
   return normalizeFieldValue(match?.value);
 }
 
-function capitalToRange(num) {
-  const n = Number(num);
-  if (!n || Number.isNaN(n)) return null;
-  if (n < 100000) return '<$100k';
-  if (n < 250000) return '$100k - $249k';
-  if (n < 500000) return '$249k - $499k';
-  if (n < 1000000) return '$500k - $999k';
-  return '$1M+';
+export function buildCanonicalGoalsFromGhlContact(contact, { userId = null } = {}) {
+  const goalType = findHydratedGhlFieldValue(contact, 'contact.primary_investment_objective');
+  const currentIncome = findHydratedGhlFieldValue(contact, 'contact.current_passive_income');
+  const targetIncome = findHydratedGhlFieldValue(contact, 'contact.target_passive_income');
+  const capitalAvailable = findHydratedGhlFieldValue(contact, 'contact.capital_12_month');
+  const timeline = findHydratedGhlFieldValue(contact, 'contact.investment_timeline');
+  const taxReduction = findHydratedGhlFieldValue(contact, 'contact.tax_offset_target');
+
+  if (![goalType, currentIncome, targetIncome, capitalAvailable, timeline, taxReduction].some(hasMeaningfulGhlValue)) {
+    return null;
+  }
+
+  return {
+    ...(userId ? { user_id: userId } : {}),
+    goal_type: goalTypeForValue(goalType) || goalType || 'passive_income',
+    current_income: optionalNumber(currentIncome),
+    target_income: optionalNumber(targetIncome),
+    capital_available: hasMeaningfulGhlValue(capitalAvailable) ? rangeLabelToCapital(capitalAvailable) || null : null,
+    timeline: hasMeaningfulGhlValue(timeline) ? String(timeline) : '',
+    tax_reduction: optionalNumber(taxReduction)
+  };
 }
 
 export async function syncGoalsToGhl(email, goalsRow) {
@@ -162,7 +186,7 @@ export async function syncGoalsToGhl(email, goalsRow) {
       const value = goalsRow[column];
       if (value !== undefined && value !== null && value !== '') {
         if (column === 'capital_available') {
-          const rangeLabel = capitalToRange(value);
+          const rangeLabel = capitalToRangeLabel(value);
           if (rangeLabel) customField[ghlKey] = rangeLabel;
         } else {
           customField[ghlKey] = String(value);

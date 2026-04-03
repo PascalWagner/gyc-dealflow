@@ -29,6 +29,10 @@ import {
   getGhlContactByEmail,
   hasMeaningfulGhlValue
 } from './userdata/ghl.js';
+import {
+  goalLabelForBranch,
+  normalizeGoalBranchValue
+} from '../src/lib/utils/investorGoals.js';
 
 // GHL field mapping (for sync): Supabase column → GHL custom field key
 // Only active v3 wizard fields — v1/v2 dead fields removed
@@ -105,21 +109,6 @@ for (const [wiz, col] of Object.entries(WIZARD_TO_COLUMN)) {
 }
 
 const ARRAY_COLUMNS = new Set(['asset_classes', 'strategies', 'deal_types']);
-const GOAL_TYPE_TO_BRANCH = {
-  passive_income: 'cashflow',
-  build_wealth: 'growth',
-  reduce_taxes: 'tax'
-};
-const BRANCH_TO_GOAL_LABEL = {
-  cashflow: 'Cash Flow (income now)',
-  growth: 'Equity Growth (wealth later)',
-  tax: 'Tax Optimization (tax shield now)'
-};
-const GOAL_LABEL_TO_BRANCH = {
-  'cash flow (income now)': 'cashflow',
-  'equity growth (wealth later)': 'growth',
-  'tax optimization (tax shield now)': 'tax'
-};
 
 function decodeNestedJson(value) {
   let current = value;
@@ -190,15 +179,13 @@ function mergeWizardFallback(primary = {}, fallback = {}) {
 
 function normalizeGoalBranch(wizardBuyBox = {}) {
   const next = { ...wizardBuyBox };
-  const branch = String(next._branch || next.branch || '').trim().toLowerCase();
-  const normalizedGoal = String(next.goal || '').trim().toLowerCase();
-  const resolvedBranch = branch || GOAL_LABEL_TO_BRANCH[normalizedGoal] || '';
+  const resolvedBranch = normalizeGoalBranchValue(next._branch || next.branch || next.goal);
 
   if (resolvedBranch) {
     next._branch = resolvedBranch;
     next.branch = resolvedBranch;
     if (!next.goal) {
-      next.goal = BRANCH_TO_GOAL_LABEL[resolvedBranch] || resolvedBranch;
+      next.goal = goalLabelForBranch(resolvedBranch) || resolvedBranch;
     }
   }
 
@@ -245,14 +232,12 @@ function applyGoalsOverlay(wizardBuyBox, goalsRow) {
   if (!goalsRow) return wizardBuyBox;
 
   const next = { ...wizardBuyBox };
-  const branch = GOAL_TYPE_TO_BRANCH[String(goalsRow.goal_type || '').trim().toLowerCase()]
-    || String(next._branch || '').trim().toLowerCase()
-    || '';
+  const branch = normalizeGoalBranchValue(goalsRow.goal_type || next._branch || next.branch || next.goal);
 
   if (branch) {
     next._branch = branch;
     next.branch = branch;
-    next.goal = BRANCH_TO_GOAL_LABEL[branch] || next.goal || branch;
+    next.goal = goalLabelForBranch(branch) || next.goal || branch;
   }
 
   if (goalsRow.current_income !== undefined && goalsRow.current_income !== null) {

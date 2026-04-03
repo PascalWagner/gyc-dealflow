@@ -8,9 +8,8 @@ import {
 import { READ_TYPES, TABLE_MAP } from './constants.js';
 import { findTargetUserIdByEmail, isMissingTableError, normalizeEmail } from './identity.js';
 import {
-  findHydratedGhlFieldValue,
+  buildCanonicalGoalsFromGhlContact,
   getGhlContactByEmail,
-  hasMeaningfulGhlValue,
   hasMeaningfulGoalsRow
 } from './ghl.js';
 
@@ -18,45 +17,8 @@ async function backfillGoalsFromGhl({ supabase, table, user }) {
   try {
     const contact = await getGhlContactByEmail(user.email, { hydrateFields: true });
     if (!contact) return null;
-
-    const goalType = findHydratedGhlFieldValue(contact, 'contact.primary_investment_objective');
-    const currentIncome = findHydratedGhlFieldValue(contact, 'contact.current_passive_income');
-    const targetIncome = findHydratedGhlFieldValue(contact, 'contact.target_passive_income');
-    const capitalAvailable = findHydratedGhlFieldValue(contact, 'contact.capital_12_month');
-    const timeline = findHydratedGhlFieldValue(contact, 'contact.investment_timeline');
-    const taxReduction = findHydratedGhlFieldValue(contact, 'contact.tax_offset_target');
-
-    if (![goalType, currentIncome, targetIncome, capitalAvailable, timeline, taxReduction].some(hasMeaningfulGhlValue)) {
-      return null;
-    }
-
-    const GOAL_TYPE_MAP = {
-      'Cash Flow (income now)': 'passive_income',
-      'Equity Growth (wealth later)': 'build_wealth',
-      'Tax Optimization (tax shield now)': 'reduce_taxes'
-    };
-
-    function rangeToCapital(label) {
-      if (!label || typeof label !== 'string') return 0;
-      const ranges = {
-        '<$100k': 50000,
-        '$100k - $249k': 175000,
-        '$249k - $499k': 375000,
-        '$500k - $999k': 750000,
-        '$1M+': 2000000
-      };
-      return ranges[label] || Number(label) || 0;
-    }
-
-    const seedGoals = {
-      user_id: user.id,
-      goal_type: GOAL_TYPE_MAP[goalType] || goalType || 'passive_income',
-      current_income: Number(currentIncome || 0),
-      target_income: Number(targetIncome || 0),
-      capital_available: rangeToCapital(capitalAvailable),
-      timeline: String(timeline || '5'),
-      tax_reduction: Number(taxReduction || 0)
-    };
+    const seedGoals = buildCanonicalGoalsFromGhlContact(contact, { userId: user.id });
+    if (!seedGoals) return null;
 
     const { data: seeded } = await supabase
       .from(table)

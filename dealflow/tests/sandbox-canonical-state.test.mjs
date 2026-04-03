@@ -59,6 +59,23 @@ test('buildCanonicalGoalsFromContact maps hydrated GHL fields into canonical goa
 	});
 });
 
+test('buildCanonicalGoalsFromContact preserves a goal-only seed without inventing numeric values', () => {
+	const goals = buildCanonicalGoalsFromContact({
+		customFieldsHydrated: [
+			{ fieldKey: 'contact.primary_investment_objective', value: 'Cash Flow (income now)' }
+		]
+	});
+
+	assert.deepEqual(goals, {
+		goal_type: 'passive_income',
+		current_income: null,
+		target_income: null,
+		capital_available: null,
+		timeline: '',
+		tax_reduction: null
+	});
+});
+
 test('buildCanonicalBuyBoxFromContact maps hydrated GHL fields into canonical buy box state', () => {
 	const buyBox = buildCanonicalBuyBoxFromContact(contactFixture);
 	assert.equal(buyBox.goal, 'Cash Flow (income now)');

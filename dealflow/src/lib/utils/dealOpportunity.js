@@ -1,4 +1,5 @@
 import { buildGoalProjection } from '$lib/utils/dealAnalysis.js';
+import { normalizeGoalBranchValue } from '$lib/utils/investorGoals.js';
 
 const COMPLETENESS_KEYS = [
 	'investmentName',
@@ -80,12 +81,7 @@ export function buildBuyBoxLite(deal) {
 }
 
 export function normalizeGoalBranch(value) {
-	const normalized = String(value || '').trim().toLowerCase();
-	if (!normalized) return null;
-	if (normalized === 'cashflow' || normalized.includes('cash')) return 'cashflow';
-	if (normalized === 'growth' || normalized.includes('growth') || normalized.includes('equity')) return 'growth';
-	if (normalized === 'tax' || normalized.includes('tax')) return 'tax';
-	return null;
+	return normalizeGoalBranchValue(value) || null;
 }
 
 export function resolveGoalBranch({ userGoal, buyBox } = {}) {

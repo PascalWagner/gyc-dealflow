@@ -73,8 +73,28 @@ async function run() {
 
 	assert.equal(buyBoxPayload?.success, true, 'Expected buy box payload to declare success');
 	assert.ok(buyBoxPayload?.buyBox, 'Expected buy box payload to include buyBox');
+	assert.ok(
+		buyBoxPayload?.buyBox?._completedAt,
+		'Expected buy box payload to include a completed timestamp'
+	);
+	assert.ok(
+		String(buyBoxPayload?.buyBox?._branch || buyBoxPayload?.buyBox?.branch || '').trim(),
+		'Expected buy box payload to include a canonical branch'
+	);
 	assert.ok(goalsRecords.length > 0, 'Expected goals payload to include at least one row');
+	assert.ok(
+		goalsRecords.some((record) => String(record?.goal_type || '').trim()),
+		'Expected goals payload to include a goal_type'
+	);
 	assert.equal(dealPayload?.deal?.lifecycleStatus || dealPayload?.deal?.lifecycle_status, 'approved');
+	assert.ok(
+		Array.isArray(dealPayload?.deal?.riskTags) && dealPayload.deal.riskTags.length > 0,
+		'Expected deal payload to include normalized risk tags'
+	);
+	assert.ok(
+		typeof (dealPayload?.deal?.currentAvgLoanLtv ?? null) === 'number',
+		'Expected deal payload to include currentAvgLoanLtv'
+	);
 
 	const summary = {
 		baseUrl: BASE_URL,
@@ -91,6 +111,9 @@ async function run() {
 			completedAt: buyBoxPayload?.buyBox?._completedAt || null
 		},
 		goalsRows: goalsRecords.length,
+		goals: {
+			goalType: goalsRecords.find((record) => String(record?.goal_type || '').trim())?.goal_type || null
+		},
 		deal: {
 			id: dealPayload?.deal?.id || null,
 			lifecycleStatus: dealPayload?.deal?.lifecycleStatus || dealPayload?.deal?.lifecycle_status || null,
