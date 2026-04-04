@@ -389,9 +389,10 @@ export default async function handler(req, res) {
         });
         if (verifyErr) throw verifyErr;
 
-        // Get tier & GP info via lookup path
+        // Get tier, profile & GP info via lookup path
         const ghl = await getGhlTier(normalizedEmail);
         const gpInfo = await detectGpInfo(adminSupabase, normalizedEmail);
+        const { profile: bypassProfile, subscriptions: bypassSubs } = await loadUserProfileContext(adminSupabase, verifyData.user.id, { email: normalizedEmail });
 
         return res.status(200).json(buildAuthResponse({
           email: normalizedEmail,
@@ -403,7 +404,9 @@ export default async function handler(req, res) {
           tags: ghl.tags,
           contactId: ghl.contactId,
           authUser: verifyData.user,
+          profile: bypassProfile,
           gpInfo,
+          subscriptions: bypassSubs,
           extra: { bypass: true }
         }));
       } catch (e) {
