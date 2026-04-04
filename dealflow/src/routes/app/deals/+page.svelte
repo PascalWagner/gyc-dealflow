@@ -26,7 +26,7 @@
 		MAX_COMPARE_DEALS,
 		STAGE_META
 	} from '$lib/stores/deals.js';
-	import { accessTier, getStoredSessionUser } from '$lib/stores/auth.js';
+	import { accessTier, ensureSessionUserToken, getStoredSessionUser, setStoredSessionUser } from '$lib/stores/auth.js';
 	import {
 		buildDealCardCompareAnalyticsPayload,
 		buildDealCardFooterAnalyticsPayload,
@@ -713,10 +713,26 @@
 			[deal.id]: action.id
 		};
 
-		const result = await dealStages.setStage(deal.id, action.next);
+		let result = await dealStages.setStage(deal.id, action.next);
+
+		// If the stage sync failed (e.g. expired token), try refreshing the session and retrying once
+		if (!result?.ok) {
+			try {
+				const tokenState = await ensureSessionUserToken(getStoredSessionUser());
+				if (tokenState?.refreshed && tokenState?.session) {
+					setStoredSessionUser(tokenState.session);
+					result = await dealStages.setStage(deal.id, action.next);
+				}
+			} catch {}
+		}
 
 		if (!result?.ok) {
-			showPageNotice(result?.error?.message || 'We could not update that pipeline stage. Please try again.');
+			const rawMsg = result?.error?.message || '';
+			const isServerError = rawMsg.toLowerCase().includes('internal server error') || rawMsg.toLowerCase().includes('failed to save');
+			const friendlyMsg = isServerError
+				? 'Something went wrong saving your choice. Please reload the page and try again.'
+				: rawMsg || 'We could not update that pipeline stage. Please try again.';
+			showPageNotice(friendlyMsg);
 		} else if (result.nextStage === 'review' || result.nextStage === 'invested') {
 			notifySuccess();
 		}

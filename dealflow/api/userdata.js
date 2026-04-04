@@ -54,6 +54,11 @@ export default async function handler(req, res) {
     if (err instanceof RequestValidationError) {
       return sendValidationError(res, err);
     }
+    const isAuthError = /jwt|token|expired|auth/i.test(err?.message || '');
+    if (isAuthError) {
+      console.warn(`Userdata auth error (${req.method}):`, err.message);
+      return res.status(401).json({ error: 'Your session has expired. Please reload the page to continue.' });
+    }
     console.error(`Error in userdata API (${req.method}):`, err);
     return res.status(500).json({ error: 'Internal server error', message: err.message });
   }
