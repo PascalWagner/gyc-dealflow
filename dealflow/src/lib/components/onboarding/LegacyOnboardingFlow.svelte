@@ -1288,23 +1288,26 @@
 					}
 					if (!reviewMode && data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
 				}
-				if (!reviewMode && data.profile?.onboardingComplete && !agreementStatus.hasCurrentAgreement) {
-					selectedRole = 'gp';
-					agreementError = 'A current signed operator listing agreement is required before you can access the GP workflow.';
-					goToStep('step6');
-					return;
-				}
+				// Only resume at a previous step if user has completed onboarding before
+				// (If onboardingCompletedAt was wiped, always start fresh at step 0)
+				if (data.profile?.onboardingCompletedAt) {
+					if (!reviewMode && data.profile?.onboardingComplete && !agreementStatus.hasCurrentAgreement) {
+						selectedRole = 'gp';
+						agreementError = 'A current signed operator listing agreement is required before you can access the GP workflow.';
+						goToStep('step6');
+						return;
+					}
 
-				// DB steps -> UI steps
-				const stepMap = { 0: 'step0', 1: 'step2', 2: 'step5', 3: 'step6', 4: 'step7', 5: 'step8', 6: 'step10' };
-				const resumeStep = $page.url.searchParams.get('resumeStep');
-				if (resumeStep) {
-					goToStep('step' + resumeStep);
-				} else if (!reviewMode && step >= 4 && !agreementStatus.hasCurrentAgreement) {
-					agreementError = 'A current signed operator listing agreement is required before you can continue.';
-					goToStep('step6');
-				} else if (!reviewMode && step > 0 && stepMap[step]) {
-					goToStep(stepMap[step]);
+					const stepMap = { 0: 'step0', 1: 'step2', 2: 'step5', 3: 'step6', 4: 'step7', 5: 'step8', 6: 'step10' };
+					const resumeStep = $page.url.searchParams.get('resumeStep');
+					if (resumeStep) {
+						goToStep('step' + resumeStep);
+					} else if (!reviewMode && step >= 4 && !agreementStatus.hasCurrentAgreement) {
+						agreementError = 'A current signed operator listing agreement is required before you can continue.';
+						goToStep('step6');
+					} else if (!reviewMode && step > 0 && stepMap[step]) {
+						goToStep(stepMap[step]);
+					}
 				}
 		} catch (err) {
 			console.error('Load onboarding state error:', err);
