@@ -89,6 +89,13 @@
 					user.set(activeSession);
 				}
 
+				// Onboarding gate: redirect to /onboarding if not completed
+				if (!activeSession.onboardingCompletedAt) {
+					const returnPath = `${$page.url.pathname}${$page.url.search}`;
+					goto(`/onboarding?return=${encodeURIComponent(returnPath)}`, { replaceState: true }).catch(() => {});
+					return;
+				}
+
 				const hydration = await hydrateUserScopedData({
 					email: activeSession.email,
 					token: activeSession.token,

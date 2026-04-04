@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       // Get user profile
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('id, full_name, email, gp_type, management_company_id, gp_verified, gp_onboarding_step, gp_onboarding_complete, onboarding_role, presentation_interest')
+        .select('id, full_name, email, gp_type, management_company_id, gp_verified, gp_onboarding_step, gp_onboarding_complete, onboarding_role, presentation_interest, tos_accepted_at, onboarding_completed_at')
         .eq('email', email.toLowerCase())
         .single();
 
@@ -99,7 +99,9 @@ export default async function handler(req, res) {
           onboardingStep: profile.gp_onboarding_step || 0,
           onboardingComplete: profile.gp_onboarding_complete || false,
           onboardingRole: profile.onboarding_role,
-          presentationInterest: profile.presentation_interest
+          presentationInterest: profile.presentation_interest,
+          tosAcceptedAt: profile.tos_accepted_at || null,
+          onboardingCompletedAt: profile.onboarding_completed_at || null
         },
         company,
         teamContacts,
@@ -163,7 +165,16 @@ export default async function handler(req, res) {
         }
       }
 
-      // Step: role-select (Phase 0)
+      // Step: tos-accept (Phase 1 — TOS acceptance during onboarding)
+      if (step === 'tos-accept') {
+        await supabase
+          .from('user_profiles')
+          .update({ tos_accepted_at: new Date().toISOString() })
+          .eq('id', profile.id);
+        return res.status(200).json({ success: true, tosAcceptedAt: new Date().toISOString() });
+      }
+
+      // Step: role-select (Phase 2)
       if (step === 'role-select') {
         await supabase
           .from('user_profiles')
@@ -299,7 +310,8 @@ export default async function handler(req, res) {
             .from('user_profiles')
             .update({
               onboarding_role: 'lp',
-              gp_onboarding_step: 1
+              gp_onboarding_step: 1,
+              onboarding_completed_at: new Date().toISOString()
             })
             .eq('id', profile.id);
           return res.status(200).json({ success: true, step: 1, role: 'lp' });
@@ -309,7 +321,8 @@ export default async function handler(req, res) {
           .from('user_profiles')
           .update({
             gp_onboarding_step: 6,
-            gp_onboarding_complete: true
+            gp_onboarding_complete: true,
+            onboarding_completed_at: new Date().toISOString()
           })
           .eq('id', profile.id);
         return res.status(200).json({ success: true, step: 6 });
@@ -320,7 +333,7 @@ export default async function handler(req, res) {
         // They'll be redirected to the buy box wizard; just mark complete
         await supabase
           .from('user_profiles')
-          .update({ gp_onboarding_complete: true, gp_onboarding_step: 6 })
+          .update({ gp_onboarding_complete: true, gp_onboarding_step: 6, onboarding_completed_at: new Date().toISOString() })
           .eq('id', profile.id);
         return res.status(200).json({ success: true, step: 6, redirectToBuyBox: true });
       }

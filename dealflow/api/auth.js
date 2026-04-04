@@ -197,6 +197,8 @@ function buildAuthResponse({
     investment_experience: safeProfile.investment_experience || '',
     onboardingRole: safeProfile.onboarding_role || null,
     gpOnboardingComplete: safeProfile.gp_onboarding_complete || false,
+    onboardingCompletedAt: safeProfile.onboarding_completed_at || null,
+    tosAcceptedAt: safeProfile.tos_accepted_at || null,
     autoRenew: safeProfile.auto_renew !== false,
     cardLast4: safeProfile.card_last4 || null,
     cardBrand: safeProfile.card_brand || null,

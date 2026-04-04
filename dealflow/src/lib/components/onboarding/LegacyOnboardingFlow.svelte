@@ -368,7 +368,35 @@
 			const u = { ...$user, name: firstName + ' ' + lastName, firstName, lastName };
 		user.set(u);
 
-		goToStep('step1');
+		goToStep('step_tos');
+	}
+
+	// ===== Step TOS: Terms of Service =====
+	let tosConsents = $state({ tos: false, privacy: false, disclaimer: false });
+	let tosSaving = $state(false);
+	let tosError = $state('');
+	const canAcceptTos = $derived(tosConsents.tos && tosConsents.privacy && tosConsents.disclaimer && !tosSaving);
+
+	async function acceptTos() {
+		if (!canAcceptTos) return;
+		tosSaving = true;
+		tosError = '';
+		try {
+			const resp = await fetch('/api/gp-onboarding', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({ email: $user.email, step: 'tos-accept', data: {} })
+			});
+			if (!resp.ok) {
+				const data = await resp.json().catch(() => ({}));
+				throw new Error(data.error || 'Failed to save');
+			}
+			goToStep('step1');
+		} catch (e) {
+			tosError = e.message || 'Something went wrong.';
+		} finally {
+			tosSaving = false;
+		}
 	}
 
 	// ===== Step 1: Role =====
@@ -653,8 +681,19 @@
 			writeUserScopedString('gycBuyBoxComplete', 'true');
 			writeUserScopedString('gycOnboardingComplete', 'true');
 
-			const u = { ...$user, onboardingComplete: true, onboardingRole: 'lp', sharePortfolio: lpNetworkVisible, avatar_url: lpPhotoUrl || $user?.avatar_url || '' };
+			const u = { ...$user, onboardingComplete: true, onboardingCompletedAt: new Date().toISOString(), onboardingRole: 'lp', sharePortfolio: lpNetworkVisible, avatar_url: lpPhotoUrl || $user?.avatar_url || '' };
 			user.set(u);
+			// Persist to localStorage so the /app layout gate passes
+			if (browser) {
+				try {
+					const raw = localStorage.getItem('gycUser');
+					if (raw) {
+						const parsed = JSON.parse(raw);
+						parsed.onboardingCompletedAt = u.onboardingCompletedAt;
+						localStorage.setItem('gycUser', JSON.stringify(parsed));
+					}
+				} catch {}
+			}
 
 			await goto(lpDealsRedirect());
 		} catch (error) {
@@ -1313,6 +1352,45 @@
 					<span></span>
 					<button class="btn-primary" onclick={saveName} disabled={!firstName.trim() || !lastName.trim()}>
 						Continue
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		<!-- ===== STEP TOS: Terms of Service ===== -->
+		{#if currentStep === 'step_tos'}
+			<div class="step active">
+				<div class="step-header">
+					<div class="step-title">Before we continue</div>
+					<div class="step-subtitle">Please review and accept our terms to use the platform.</div>
+				</div>
+				<div class="step-body">
+					<div class="tos-checks">
+						<button type="button" class="consent-row" aria-pressed={tosConsents.tos} onclick={() => tosConsents.tos = !tosConsents.tos}>
+							<div class="consent-box" class:checked={tosConsents.tos}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+							<div class="consent-text">I have read and agree to the <a href="/terms" target="_blank" rel="noopener"><strong>Terms of Service</strong></a></div>
+						</button>
+						<button type="button" class="consent-row" aria-pressed={tosConsents.privacy} onclick={() => tosConsents.privacy = !tosConsents.privacy}>
+							<div class="consent-box" class:checked={tosConsents.privacy}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+							<div class="consent-text">I have read and agree to the <a href="/privacy" target="_blank" rel="noopener"><strong>Privacy Policy</strong></a></div>
+						</button>
+						<button type="button" class="consent-row" aria-pressed={tosConsents.disclaimer} onclick={() => tosConsents.disclaimer = !tosConsents.disclaimer}>
+							<div class="consent-box" class:checked={tosConsents.disclaimer}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+							<div class="consent-text">I understand that GYC is <strong>not an investment advisor</strong> and I am responsible for my own investment decisions.</div>
+						</button>
+					</div>
+					{#if tosError}
+						<div class="step-error">{tosError}</div>
+					{/if}
+				</div>
+				<div class="step-footer">
+					<button class="btn-secondary" onclick={() => goToStep('step0', true)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+						Back
+					</button>
+					<button class="btn-primary" onclick={acceptTos} disabled={!canAcceptTos}>
+						{tosSaving ? 'Saving...' : 'I Agree — Continue'}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
 				</div>
