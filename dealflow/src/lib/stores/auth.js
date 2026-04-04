@@ -26,6 +26,7 @@ import {
 	restoreScopedUserState
 } from '$lib/utils/userScopedState.js';
 import { normalizePrivacyProfile } from '$lib/utils/dealflow-contract.js';
+import { safeJsonParse } from '$lib/utils/primitives.js';
 
 // ===== Supabase Client =====
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://nntzqyufmtypfjpusflm.supabase.co';
@@ -34,14 +35,6 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 export const supabase = browser && SUPABASE_ANON_KEY
 	? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 	: null;
-
-function safeJsonParse(value, fallback = null) {
-	try {
-		return JSON.parse(value);
-	} catch {
-		return fallback;
-	}
-}
 
 function isInlineImageUrl(value) {
 	return typeof value === 'string' && value.startsWith('data:image/');

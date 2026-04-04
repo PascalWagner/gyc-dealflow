@@ -2,6 +2,7 @@ import { browser } from '$app/environment';
 import {
 	getStoredSessionUser
 } from '$lib/stores/auth.js';
+export { firstDefined } from './primitives.js';
 import {
 	readUserScopedJson,
 	readUserScopedString,
@@ -33,14 +34,6 @@ export function writeScopedDealString(dealId, prefix, value) {
 	writeUserScopedString(scopedDealKey(dealId, prefix), value);
 }
 
-export function firstDefined(...values) {
-	for (const value of values) {
-		if (value === undefined || value === null) continue;
-		if (typeof value === 'string' && !value.trim()) continue;
-		return value;
-	}
-	return null;
-}
 
 export function bgStatusClass(s) {
 	return s === 'clear' ? 'bg-clear' : s === 'flagged' ? 'bg-flagged' : 'bg-pending';
