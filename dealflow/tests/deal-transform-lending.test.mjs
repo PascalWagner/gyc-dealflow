@@ -65,7 +65,7 @@ test('single-deal transform preserves lending review fields needed by the review
 	assert.equal(deal.redemptionNotes, '30-day written notice; paid from available capital.');
 	assert.equal(deal.taxForm, 'K-1');
 	assert.equal(deal.additionalTermNotes, 'No maximum offering amount disclosed in the 2021 PPM.');
-	assert.equal(deal.historicalReturn2025, 0.0913);
+	assert.equal(deal.historicalReturn2025, 0.0913); // explicit DB value preserved
 	assert.deepEqual(deal.riskTags, ['Leverage', 'Liquidity']);
 	assert.equal(deal.teamContactsSnapshotSupported, true);
 	assert.deepEqual(deal.teamContacts, [{ first_name: 'Michael', last_name: 'Anderson' }]);
@@ -131,7 +131,7 @@ test('single-deal transform derives lending review values from legacy columns wh
 	assert.ok(deal.riskTags.includes('Execution'), 'Underwriting merged into Execution');
 	assert.ok(deal.riskTags.includes('Interest Rate'), 'lending funds auto-add Interest Rate');
 	assert.ok(deal.riskTags.includes('Nonperforming Loans'), 'lending funds auto-add Nonperforming Loans');
-	assert.equal(deal.historicalReturn2025, 0.0913);
+	assert.equal(deal.historicalReturn2025, null); // cash_yield fallback removed — only explicit DB returns shown
 	assert.equal(deal.teamContactsSnapshotSupported, false);
 });
 

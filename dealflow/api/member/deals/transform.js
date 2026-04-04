@@ -466,17 +466,9 @@ export function transformDeals(parentDeals, childShareClasses, sponsorRows) {
 			sponsors: normalizedSponsors
 		};
 
-		const fallbackHistoricalReturnYear = HISTORICAL_RETURN_YEARS[HISTORICAL_RETURN_YEARS.length - 1] || null;
-		const fallbackHistoricalReturnValue = deal.cash_yield ?? deal.cash_on_cash ?? null;
 		for (const year of HISTORICAL_RETURN_YEARS) {
 			const explicitReturn = deal[`historical_return_${year}`];
-			if (explicitReturn != null) {
-				normalizedDeal[`historicalReturn${year}`] = explicitReturn;
-				continue;
-			}
-
-			normalizedDeal[`historicalReturn${year}`] =
-				year === fallbackHistoricalReturnYear ? fallbackHistoricalReturnValue : null;
+			normalizedDeal[`historicalReturn${year}`] = explicitReturn != null ? explicitReturn : null;
 		}
 
 		return {

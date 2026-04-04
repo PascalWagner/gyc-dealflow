@@ -154,7 +154,14 @@
 					token: accessToken,
 					refreshToken: refreshToken || ''
 				});
-				window.location.href = dest;
+				// New users who haven't started onboarding should go to /onboarding
+				// onboardingRole is set during onboarding (lp or gp); null means never onboarded
+				const hasOnboarded = data.onboardingRole || data.gpOnboardingComplete || data.isAdmin || data.gpType;
+				if (!hasOnboarded && !dest.startsWith('/onboarding') && !dest.startsWith('/gp-onboarding')) {
+					window.location.href = '/onboarding';
+				} else {
+					window.location.href = dest;
+				}
 			})
 			.catch(() => {
 				storeUser({

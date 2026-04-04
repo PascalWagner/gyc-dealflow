@@ -324,12 +324,7 @@
 	const investClearlyPreview = $derived.by(() => buildInvestClearlyPreview(deal));
 	const goalBranch = $derived.by(() => resolveGoalBranch({ userGoal, buyBox }));
 	const goalProgress = $derived.by(() => buildGoalProgress({ deal, buyBox, goalBranch }));
-	const historicalReturns = $derived.by(() => {
-		const all = getDealHistoricalReturns(deal);
-		// Exclude current year — only show completed full calendar years
-		const currentYear = new Date().getFullYear();
-		return all.filter(p => p.year < currentYear);
-	});
+	const historicalReturns = $derived.by(() => getDealHistoricalReturns(deal));
 	const hasHistoricalReturns = $derived(historicalReturns.length >= 2);
 	const latestHistoricalReturn = $derived(historicalReturns.length ? historicalReturns[historicalReturns.length - 1] : null);
 	const historicalReturnAverage = $derived.by(() => {
@@ -1482,11 +1477,6 @@ shareDropdownOpen = false;
 											</div>
 											<div class="historical-returns-summary">
 												<div class="historical-returns-kicker">Actual annual returns to LPs</div>
-												{#if latestHistoricalReturn}
-													<div class="historical-returns-headline">
-														{latestHistoricalReturn.year}: {latestHistoricalReturn.value.toFixed(2)}%
-													</div>
-												{/if}
 												<p class="historical-returns-copy">
 													Use this as the backward-looking proof point for the fund. The projected LP cash-flow card below remains forward-looking and assumption-based.
 												</p>
