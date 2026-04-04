@@ -42,7 +42,7 @@
 
 	function getReturnDestination() {
 		const value = (returnUrl || '').trim();
-		if (!value.startsWith('/') || value.startsWith('//')) return '/app/deals';
+		if (!value.startsWith('/') || value.startsWith('//')) return '/app/dashboard';
 		return value;
 	}
 

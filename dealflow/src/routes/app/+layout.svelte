@@ -98,19 +98,19 @@
 						});
 						if (checkResp.ok) {
 							const checkData = await checkResp.json();
-							if (checkData.profile?.onboardingCompletedAt || checkData.profile?.onboardingRole) {
+							if (checkData.profile?.onboardingCompletedAt) {
 								// Already completed — update session and proceed
 								const stored = localStorage.getItem('gycUser');
 								if (stored) {
 									try {
 										const parsed = JSON.parse(stored);
-										parsed.onboardingCompletedAt = checkData.profile.onboardingCompletedAt || new Date().toISOString();
+										parsed.onboardingCompletedAt = checkData.profile.onboardingCompletedAt;
 										localStorage.setItem('gycUser', JSON.stringify(parsed));
 									} catch {}
 								}
 							} else {
-								const returnPath = `${$page.url.pathname}${$page.url.search}`;
-								goto(`/onboarding?return=${encodeURIComponent(returnPath)}`, { replaceState: true }).catch(() => {});
+								// Not completed — redirect to onboarding
+								goto('/onboarding', { replaceState: true }).catch(() => {});
 								return;
 							}
 						}

@@ -51,15 +51,15 @@ function normalizeSiteOrigin(candidate) {
 }
 
 function normalizeReturnPath(candidate) {
-  if (!candidate) return '/app/deals';
+  if (!candidate) return '/app/dashboard';
 
   try {
     const value = decodeURIComponent(String(candidate));
-    if (!value.startsWith('/')) return '/app/deals';
-    if (value.startsWith('//')) return '/app/deals';
+    if (!value.startsWith('/')) return '/app/dashboard';
+    if (value.startsWith('//')) return '/app/dashboard';
     return value;
   } catch {
-    return '/app/deals';
+    return '/app/dashboard';
   }
 }
 
