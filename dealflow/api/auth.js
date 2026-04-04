@@ -601,7 +601,7 @@ export default async function handler(req, res) {
         user_metadata: { ...meta, otp_code: null, otp_expires: null }
       });
 
-      // Generate a magic link token to create a session
+      // Generate a magic link and verify it to create a real session
       const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
         type: 'magiclink',
         email: normalizedEmail
@@ -611,9 +611,19 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Session creation failed' });
       }
 
-      // Extract the access token from the link data
-      const accessToken = linkData?.properties?.access_token;
-      const refreshToken = linkData?.properties?.refresh_token;
+      // Verify the hashed token to get a real access_token + refresh_token
+      const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
+        token_hash: linkData.properties.hashed_token,
+        type: 'magiclink'
+      });
+
+      if (verifyErr) {
+        console.error('[AUTH] OTP session verify failed:', verifyErr.message);
+        return res.status(500).json({ error: 'Session creation failed' });
+      }
+
+      const accessToken = verifyData?.session?.access_token || '';
+      const refreshToken = verifyData?.session?.refresh_token || '';
 
       // Do the lookup to get full user data
       const ghl = await getGhlTier(normalizedEmail);
