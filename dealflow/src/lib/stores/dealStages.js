@@ -6,10 +6,7 @@
  */
 import { browser } from '$app/environment';
 import { derived, get, writable } from 'svelte/store';
-import {
-	getFreshSessionToken,
-	getStoredSessionToken
-} from '$lib/stores/auth.js';
+import { apiDelete, apiPost } from '$lib/api/client.js';
 import {
 	applyAdminImpersonationToPayload,
 	currentSessionEmail,
@@ -77,34 +74,18 @@ function setStageInMap(stageMap, dealId, stage) {
 
 async function syncStageToBackend(dealId, stage, skippedFromStage = null) {
 	if (!browser) return;
-	const token = await getFreshSessionToken() || getStoredSessionToken();
-	if (!token) return;
 
 	if (stage === 'filter') {
-		const response = await fetch('/api/userdata', {
-			method: 'DELETE',
-			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-			body: JSON.stringify(applyAdminImpersonationToPayload({ type: 'stages', dealId }))
-		});
-		if (!response.ok) {
-			const data = await response.json().catch(() => ({}));
-			throw new Error(data?.error || 'Failed to clear deal stage');
-		}
+		const { ok, error } = await apiDelete('/api/userdata', applyAdminImpersonationToPayload({ type: 'stages', dealId }));
+		if (!ok) throw new Error(error || 'Failed to clear deal stage');
 		return;
 	}
 
 	const stageData = { 'Deal ID': dealId, 'Stage': stage };
 	if (skippedFromStage != null) stageData['Skipped From Stage'] = skippedFromStage;
 
-	const response = await fetch('/api/userdata', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-		body: JSON.stringify(applyAdminImpersonationToPayload({ type: 'stages', data: stageData }))
-	});
-	if (!response.ok) {
-		const data = await response.json().catch(() => ({}));
-		throw new Error(data?.error || 'Failed to save deal stage');
-	}
+	const { ok, error } = await apiPost('/api/userdata', applyAdminImpersonationToPayload({ type: 'stages', data: stageData }));
+	if (!ok) throw new Error(error || 'Failed to save deal stage');
 }
 
 // browseTotalCount is set by memberDeals.js and imported here so stageCounts

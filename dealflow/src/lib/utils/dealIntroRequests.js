@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { getStoredSessionUser } from '$lib/stores/auth.js';
+import { apiPost } from '$lib/api/client.js';
 import {
 	readUserScopedJson,
 	readUserScopedString,
@@ -78,53 +79,34 @@ export async function submitDealIntroductionRequest({ deal, message = '' }) {
 	}
 
 	const stored = getStoredSessionUser() || {};
-	if (!stored?.token) {
-		return { success: false, error: 'Missing session token.' };
-	}
-
 	const operator = getDealOperatorInfo(deal);
 
-	try {
-		const response = await fetch('/api/intro-request', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${stored.token}`
-			},
-			body: JSON.stringify({
-				dealId: deal.id,
-				dealName: deal.investmentName,
-				operatorName: operator.name,
-				operatorCeo: operator.ceo || '',
-				managementCompanyId: operator.managementCompanyId || '',
-				message
-			})
-		});
-		const data = await response.json().catch(() => ({}));
+	const { ok, data } = await apiPost('/api/intro-request', {
+		dealId: deal.id,
+		dealName: deal.investmentName,
+		operatorName: operator.name,
+		operatorCeo: operator.ceo || '',
+		managementCompanyId: operator.managementCompanyId || '',
+		message
+	});
 
-		if (!response.ok || !data?.success) {
-			return {
-				success: false,
-				error: data?.error || 'Something went wrong. Please try again.'
-			};
-		}
-
-		persistIntroRequestState({
-			deal,
-			operatorName: operator.name || 'the operator',
-			userEmail: stored.email || ''
-		});
-
-		return {
-			success: true,
-			operatorName: operator.name || 'the operator',
-			operatorCeo: operator.ceo || '',
-			managementCompanyId: operator.managementCompanyId || ''
-		};
-	} catch {
+	if (!ok || !data?.success) {
 		return {
 			success: false,
-			error: 'Something went wrong. Please try again.'
+			error: data?.error || 'Something went wrong. Please try again.'
 		};
 	}
+
+	persistIntroRequestState({
+		deal,
+		operatorName: operator.name || 'the operator',
+		userEmail: stored.email || ''
+	});
+
+	return {
+		success: true,
+		operatorName: operator.name || 'the operator',
+		operatorCeo: operator.ceo || '',
+		managementCompanyId: operator.managementCompanyId || ''
+	};
 }
