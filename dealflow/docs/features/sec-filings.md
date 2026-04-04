@@ -144,7 +144,12 @@ The display components read from `opportunities` columns, **not** from `sec_fili
 **Detection:** Deals always show as stale; EDGAR rate limit may be hit
 **Prevention:** `refreshSecFilingsForDeal` sets this automatically
 
-### 5. Adding a `$lib/` import to `_sec-edgar.js`
+### 5. Stripping leading zeros from CIK before the EFTS search URL
+**Symptom:** `fetchAllFilingsForCik` returns 0 filings for every CIK — EDGAR responds with 0 hits even for valid CIKs
+**Detection:** `tests/sec-filing-sync.test.mjs` — "fetchAllFilingsForCik uses zero-padded CIK in EFTS search URL"
+**Note:** EDGAR EFTS requires the zero-padded 10-digit form (`ciks=0001622059`), not the stripped form (`ciks=1622059`). The DB-normalized CIK (no leading zeros) is correct for storage; only the EFTS search URL needs padding.
+
+### 6. Adding a `$lib/` import to `_sec-edgar.js`
 **Symptom:** `api/sec-verification.js`, `api/deals/[id].js`, and any API route that imports `_sec-edgar.js` crash at cold-start
 **Detection:** `tests/api-serverless-compat.test.mjs` (if `_sec-edgar.js` is added to the scan list)
 **Prevention:** `_sec-edgar.js` is in `api/` and runs as plain Node.js — never add `$lib/` imports
@@ -195,11 +200,19 @@ The display components read from `opportunities` columns, **not** from `sec_fili
 
 | Type | File | What it covers |
 |------|------|----------------|
-| Unit | `tests/sec-filing-sync.test.mjs` | `buildDealUpdatesFromSecFiling` field mapping, `markLatestFilingForCik` contract (newest row returned, null when empty, throws on empty CIK, CIK normalization) |
+| Unit | `tests/sec-filing-sync.test.mjs` | `buildDealUpdatesFromSecFiling` field mapping; `markLatestFilingForCik` contract (newest row, null when empty, throws on empty CIK, CIK normalization); `fetchAllFilingsForCik` uses zero-padded CIK in EFTS URL (regression); `refreshSecFilingsForDeal` does not select non-existent columns (regression) |
 | Smoke | `tests/deal-review.smoke.spec.ts` | Deal Review page loads without error; 500 shows friendly message (catches API crashes from bad imports) |
 | Gap | — | No integration test for full `fetchAllFilingsForCik` loop against real EDGAR (requires network) |
 | Gap | — | No test for `refreshSecFilingsForDeal` end-to-end (requires real Supabase client) |
 | Gap | — | No test that DB index `idx_one_latest_per_cik` prevents duplicates (migration test) |
+
+### Bugs caught by tests (do not remove these tests)
+
+| Test | Bug it prevents |
+|---|---|
+| `fetchAllFilingsForCik uses zero-padded CIK` | EFTS returned 0 results for every CIK when leading zeros were stripped |
+| `fetchAllFilingsForCik pads short CIKs correctly` | Same as above, for shorter CIKs |
+| `refreshSecFilingsForDeal does not select non-existent columns` | Supabase 42703 error (column does not exist) was swallowed as "Deal not found" |
 
 ---
 

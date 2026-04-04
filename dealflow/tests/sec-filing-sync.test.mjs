@@ -189,3 +189,104 @@ test('markLatestFilingForCik strips leading zeros from CIK', async () => {
 	await markLatestFilingForCik('0001234567', supabase);
 	assert.equal(capturedCik, '1234567');
 });
+
+// ---------------------------------------------------------------------------
+// Regression tests: bugs discovered during live execution (April 2026)
+// ---------------------------------------------------------------------------
+
+import { fetchAllFilingsForCik, EFTS_SEARCH_URL } from '../api/_sec-edgar.js';
+
+/**
+ * Regression: EDGAR EFTS requires zero-padded 10-digit CIK.
+ * fetchAllFilingsForCik was stripping leading zeros before building the URL
+ * (normalizedCik = '1622059'), resulting in 0 hits from EFTS for every search.
+ * The padded form ('0001622059') is what EFTS expects.
+ *
+ * Fixed: paddedCik = normalizedCik.padStart(10, '0') used in search URL.
+ */
+test('fetchAllFilingsForCik uses zero-padded CIK in EFTS search URL', async () => {
+	let capturedUrl = null;
+
+	// Intercept the fetch call to inspect the URL without hitting the network
+	const origFetch = globalThis.fetch;
+	globalThis.fetch = async (url, opts) => {
+		capturedUrl = String(url);
+		// Return empty hits so the function exits cleanly
+		return {
+			ok: true,
+			json: async () => ({ hits: { hits: [] } })
+		};
+	};
+
+	try {
+		await fetchAllFilingsForCik('1622059', null, {});
+	} finally {
+		globalThis.fetch = origFetch;
+	}
+
+	assert.ok(capturedUrl, 'fetch was called');
+	// Must use padded CIK, not the stripped form
+	assert.ok(capturedUrl.includes('ciks=0001622059'), `URL should use padded CIK 0001622059, got: ${capturedUrl}`);
+	assert.ok(!capturedUrl.includes('ciks=1622059&') && !capturedUrl.endsWith('ciks=1622059'),
+		`URL must NOT use un-padded CIK 1622059, got: ${capturedUrl}`);
+});
+
+test('fetchAllFilingsForCik pads short CIKs correctly', async () => {
+	let capturedUrl = null;
+	const origFetch = globalThis.fetch;
+	globalThis.fetch = async (url) => {
+		capturedUrl = String(url);
+		return { ok: true, json: async () => ({ hits: { hits: [] } }) };
+	};
+	try {
+		await fetchAllFilingsForCik('12345', null, {});
+	} finally {
+		globalThis.fetch = origFetch;
+	}
+	assert.ok(capturedUrl.includes('ciks=0000012345'), `Short CIK should be padded to 10 digits, got: ${capturedUrl}`);
+});
+
+/**
+ * Regression: refreshSecFilingsForDeal previously selected non-existent columns
+ * (issuer_entity, sec_entity_name) from opportunities, causing Supabase to return
+ * a 42703 "column does not exist" error that was then reported as "Deal not found".
+ *
+ * Fixed: only select columns that exist on the opportunities table.
+ * We test this by verifying the SELECT clause does NOT request those columns.
+ */
+import { refreshSecFilingsForDeal } from '../api/_sec-edgar.js';
+
+test('refreshSecFilingsForDeal does not select non-existent columns (issuer_entity, sec_entity_name)', async () => {
+	let capturedSelectCols = null;
+
+	// Mock supabase — capture what columns are selected, return "deal not found" after
+	const supabase = {
+		from(table) {
+			if (table === 'opportunities') {
+				return {
+					select(cols) {
+						capturedSelectCols = cols;
+						return {
+							eq() { return this; },
+							single: async () => ({ data: null, error: { message: 'intentional test stop' } })
+						};
+					}
+				};
+			}
+			return { select() { return this; }, eq() { return this; } };
+		}
+	};
+
+	// Will throw because we returned null deal — that's expected, we just want the SELECT cols
+	try {
+		await refreshSecFilingsForDeal('fake-deal-id', supabase);
+	} catch (e) {
+		// Expected — we stopped at the deal lookup
+	}
+
+	assert.ok(capturedSelectCols !== null, 'SELECT was called');
+	assert.ok(!capturedSelectCols.includes('issuer_entity'),
+		`issuer_entity is not a real column and must not be selected. Got: ${capturedSelectCols}`);
+	assert.ok(!capturedSelectCols.includes('sec_entity_name'),
+		`sec_entity_name is not a real column and must not be selected. Got: ${capturedSelectCols}`);
+});
