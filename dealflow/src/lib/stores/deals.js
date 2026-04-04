@@ -2,6 +2,7 @@ import { browser } from '$app/environment';
 import { derived, get, writable } from 'svelte/store';
 import {
 	ensureSessionUserToken,
+	getFreshSessionToken,
 	getStoredSessionToken,
 	getStoredSessionUser,
 	setStoredSessionUser
@@ -796,7 +797,8 @@ export async function loadMoreMemberDeals(options = {}) {
 async function syncStageToBackend(dealId, stage, skippedFromStage = null) {
 	if (!browser) return;
 
-	const token = getStoredSessionToken();
+	// Use a fresh token — the stored one may have expired since page load
+	const token = await getFreshSessionToken() || getStoredSessionToken();
 	if (!token) return;
 
 	if (stage === 'filter') {

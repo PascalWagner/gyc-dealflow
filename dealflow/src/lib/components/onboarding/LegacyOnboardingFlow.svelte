@@ -320,7 +320,12 @@
 	}
 
 	function lpSnapshotHasStepValue(snapshot, key) {
-		return Object.prototype.hasOwnProperty.call(snapshot || {}, key);
+		if (!Object.prototype.hasOwnProperty.call(snapshot || {}, key)) return false;
+		const value = snapshot[key];
+		if (value === null || value === undefined) return false;
+		if (typeof value === 'string' && value.trim() === '') return false;
+		if (Array.isArray(value) && value.length === 0) return false;
+		return true;
 	}
 
 	function inferLpResumeStep(snapshot = readLpWizardSnapshot()) {
@@ -640,12 +645,24 @@
 
 	function showLpComplete() {
 		lpCompletionError = '';
+		// Guard: if required fields are still missing, send the user back to the first incomplete step
+		const resumeStep = inferLpResumeStep();
+		if (resumeStep !== 'stepLpComplete') {
+			goToStep(resumeStep);
+			return;
+		}
 		goToStep('stepLpComplete');
 	}
 
 	async function completeLpOnboarding() {
 		if (lpCompletionSaving) return;
 		if (!lpGoal || !lpAccreditation.length || lpReProfessional === null || lpAssetClasses.length === 0 || lpStrategies.length === 0 || !lpMaxCheckSize || !lpNetworkAnswered) {
+			// Redirect back to the first unanswered step instead of just showing an error
+			const resumeStep = inferLpResumeStep();
+			if (resumeStep !== 'stepLpComplete') {
+				goToStep(resumeStep);
+				return;
+			}
 			lpCompletionError = 'Finish the remaining setup questions before completing onboarding.';
 			return;
 		}
@@ -1309,8 +1326,27 @@
 						goToStep(stepMap[step]);
 					}
 				}
+
+				// Fallback: server doesn't have a role or GP company, but user may have local LP wizard progress
+				if (!reviewMode && !data.company && step === 0 && !data.profile?.onboardingCompletedAt) {
+					const localSnapshot = readLpWizardSnapshot();
+					if (localSnapshot && (localSnapshot.goal || localSnapshot._branch || localSnapshot.lpMaxCheckSize)) {
+						selectedRole = 'lp';
+						hydrateLpWizardSnapshot(localSnapshot);
+						goToStep(inferLpResumeStep(localSnapshot));
+						return;
+					}
+				}
 		} catch (err) {
 			console.error('Load onboarding state error:', err);
+			// Fallback: if the server call failed but we have local LP wizard progress, resume from it
+			const fallbackSnapshot = readLpWizardSnapshot();
+			if (fallbackSnapshot && (fallbackSnapshot.goal || fallbackSnapshot._branch || fallbackSnapshot.lpMaxCheckSize)) {
+				selectedRole = 'lp';
+				hydrateLpWizardSnapshot(fallbackSnapshot);
+				goToStep(inferLpResumeStep(fallbackSnapshot));
+				return;
+			}
 		}
 
 		// Deep link hash / query
@@ -1785,7 +1821,7 @@
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 						Back
 					</button>
-					<button class="btn-primary" onclick={completeLpOnboarding} style="min-width:220px;" disabled={lpCompletionSaving || !lpGoal}>
+					<button class="btn-primary" onclick={completeLpOnboarding} style="min-width:220px;" disabled={lpCompletionSaving}>
 						<span>{lpCompletionSaving ? 'Saving...' : completionBtnText}</span>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
