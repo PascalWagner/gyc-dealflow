@@ -524,12 +524,28 @@ export default async function handler(req, res) {
         row.completed_at = new Date().toISOString();
       }
 
-      // Upsert
-      const { data: saved, error } = await supabase
+      // Upsert (retry without missing columns if schema is out of sync)
+      let { data: saved, error } = await supabase
         .from('user_buy_box')
         .upsert(row, { onConflict: 'user_id' })
         .select()
         .single();
+
+      if (error && error.message?.includes('column') && error.message?.includes('does not exist')) {
+        // Schema mismatch — remove offending column and retry
+        const match = error.message.match(/'([^']+)'/);
+        if (match) {
+          console.warn(`[BUYBOX] Removing missing column '${match[1]}' and retrying`);
+          delete row[match[1]];
+          const retry = await supabase
+            .from('user_buy_box')
+            .upsert(row, { onConflict: 'user_id' })
+            .select()
+            .single();
+          saved = retry.data;
+          error = retry.error;
+        }
+      }
 
       if (error) throw error;
 
