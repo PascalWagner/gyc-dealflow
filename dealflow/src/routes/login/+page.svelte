@@ -21,6 +21,14 @@
 	let signInFailed = $state(false);
 	let returnUrl = $derived($page.url.searchParams.get('return'));
 
+	// OTP fallback state
+	let otpMode = $state(false);
+	let otpEmail = $state('');
+	let otpCode = $state('');
+	let otpVerifying = $state(false);
+	let otpError = $state('');
+	let otpSent = $state(false);
+
 	function decodeBase64UrlJson(value) {
 		if (!value) return null;
 		const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -128,15 +136,27 @@
 		const authErrorDesc = hashParams.get('error_description') || searchParams.get('error_description');
 		if (authError || authErrorCode) {
 			console.warn('[AUTH] Callback error:', { authError, authErrorCode, authErrorDesc });
-			if (authErrorCode === 'otp_expired') {
-				error = 'Your login link has expired. This can happen if your email provider scanned the link before you clicked it. Please request a new one.';
-			} else {
-				error = authErrorDesc?.replace(/\+/g, ' ') || 'Login failed. Please try again.';
-			}
+
 			// Clean up the URL hash so the error doesn't persist on refresh
 			if (window.history.replaceState) {
 				const cleanUrl = window.location.pathname + window.location.search;
 				window.history.replaceState(null, '', cleanUrl);
+			}
+
+			if (authErrorCode === 'otp_expired' || authErrorCode === 'otp_disabled') {
+				// Auto-trigger OTP fallback — get email from the return param context or ask
+				// Try to extract email from sb param or localStorage
+				const lastEmail = localStorage.getItem('gyc-last-login-email') || '';
+				if (lastEmail) {
+					otpEmail = lastEmail;
+					otpMode = true;
+					sendOtpFallback(lastEmail);
+				} else {
+					// Can't auto-send — show form asking for email with explanation
+					error = 'Your login link expired. Please enter your email to receive a quick verification code instead.';
+				}
+			} else {
+				error = authErrorDesc?.replace(/\+/g, ' ') || 'Login failed. Please try again.';
 			}
 			return;
 		}
@@ -203,6 +223,8 @@
 			return;
 		}
 		loading = true;
+		// Store email for OTP fallback recovery
+		localStorage.setItem('gyc-last-login-email', trimmed);
 
 		try {
 			const controller = new AbortController();
@@ -243,11 +265,68 @@
 		loading = false;
 	}
 
+	async function sendOtpFallback(targetEmail) {
+		otpError = '';
+		otpSent = false;
+		try {
+			const resp = await fetch('/api/auth', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'send-otp', email: targetEmail })
+			});
+			const data = await resp.json();
+			if (data.error) {
+				otpError = data.error;
+			} else {
+				otpSent = true;
+			}
+		} catch {
+			otpError = 'Failed to send code. Please try again.';
+		}
+	}
+
+	async function verifyOtp() {
+		if (!otpCode.trim() || otpCode.trim().length < 6) {
+			otpError = 'Please enter the 6-digit code from your email.';
+			return;
+		}
+		otpVerifying = true;
+		otpError = '';
+		try {
+			const resp = await fetch('/api/auth', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'verify-otp', email: otpEmail, code: otpCode.trim() })
+			});
+			const data = await resp.json();
+			if (data.error) {
+				otpError = data.error;
+				otpVerifying = false;
+				return;
+			}
+			// Success — store session and redirect
+			storeUser({
+				...data,
+				email: otpEmail,
+				name: data.name || otpEmail.split('@')[0],
+				token: data.token || '',
+				refreshToken: data.refreshToken || ''
+			});
+			window.location.href = getReturnDestination();
+		} catch {
+			otpError = 'Verification failed. Please try again.';
+			otpVerifying = false;
+		}
+	}
+
 	function resetForm() {
 		sent = false;
 		loading = false;
 		email = '';
 		error = '';
+		otpMode = false;
+		otpCode = '';
+		otpError = '';
 	}
 
 	function onKeydown(event) {
@@ -294,7 +373,38 @@
 				<span class="brand-text">Grow Your Cashflow</span>
 			</a>
 
-			{#if signingIn}
+			{#if otpMode}
+				<div class="status-card">
+					<h2>Enter your verification code</h2>
+					<p>
+						Your login link expired — this can happen if your email provider scanned it first.
+						We sent a 6-digit code to <strong>{otpEmail}</strong>.
+					</p>
+					<div class="otp-input-row">
+						<input
+							type="text"
+							class="field-input otp-input"
+							placeholder="000000"
+							maxlength="6"
+							inputmode="numeric"
+							autocomplete="one-time-code"
+							bind:value={otpCode}
+							onkeydown={(e) => { if (e.key === 'Enter') verifyOtp(); }}
+						/>
+						<button class="submit-button" type="button" onclick={verifyOtp} disabled={otpVerifying || otpCode.trim().length < 6}>
+							{otpVerifying ? 'Verifying...' : 'Verify'}
+						</button>
+					</div>
+					{#if otpError}
+						<div class="error-message">{otpError}</div>
+					{/if}
+					<div class="otp-help">
+						<button class="text-button" type="button" onclick={() => sendOtpFallback(otpEmail)}>Resend code</button>
+						<span class="otp-divider">or</span>
+						<button class="text-button" type="button" onclick={resetForm}>Start over</button>
+					</div>
+				</div>
+			{:else if signingIn}
 				<div class="status-card">
 					<h2>{signInFailed ? 'Sign-in failed' : 'Signing you in'}</h2>
 					<p>
@@ -554,6 +664,30 @@
 		font-size: 14px;
 		font-weight: 700;
 		color: #b42318;
+	}
+
+	.otp-input-row {
+		display: flex;
+		gap: 10px;
+		margin-top: 16px;
+	}
+	.otp-input {
+		flex: 1;
+		text-align: center;
+		font-size: 24px;
+		font-weight: 800;
+		letter-spacing: 8px;
+		font-family: var(--font-ui, system-ui);
+	}
+	.otp-help {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-top: 14px;
+		font-size: 13px;
+	}
+	.otp-divider {
+		color: var(--text-muted, #999);
 	}
 
 	.submit-button,

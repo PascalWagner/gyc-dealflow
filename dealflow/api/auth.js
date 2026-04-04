@@ -512,6 +512,140 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── Send OTP Code (fallback when magic link expired) ────────────────
+  if (action === 'send-otp') {
+    if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
+    console.log(`[AUTH] OTP code requested for ${normalizedEmail}`);
+
+    try {
+      // Generate a 6-digit OTP and send via Resend
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+      // Store OTP in Supabase (simple key-value in user metadata)
+      // First ensure user exists
+      let { data: userData } = await adminSupabase.auth.admin.listUsers();
+      let user = (userData?.users || []).find(u => u.email?.toLowerCase() === normalizedEmail);
+      if (!user) {
+        const { data: created } = await adminSupabase.auth.admin.createUser({
+          email: normalizedEmail,
+          email_confirm: true
+        });
+        user = created?.user;
+      }
+
+      if (user) {
+        await adminSupabase.auth.admin.updateUser(user.id, {
+          user_metadata: { ...user.user_metadata, otp_code: otp, otp_expires: expiresAt }
+        });
+      }
+
+      // Send via Resend
+      const resendKey = process.env.RESEND_API_KEY;
+      if (!resendKey) {
+        return res.status(500).json({ error: 'Email service not configured' });
+      }
+
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'GYC Deals <login@growyourcashflow.io>',
+          to: normalizedEmail,
+          subject: `Your verification code: ${otp}`,
+          html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+            <h2 style="margin:0 0 8px;">Your verification code</h2>
+            <p style="color:#666;margin:0 0 24px;">Enter this code to sign in to GYC Deals</p>
+            <div style="font-size:36px;font-weight:800;letter-spacing:8px;text-align:center;padding:24px;background:#f5f5f3;border-radius:12px;margin-bottom:24px;">${otp}</div>
+            <p style="color:#999;font-size:13px;">This code expires in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+          </div>`
+        })
+      });
+
+      console.log(`[AUTH] OTP code sent to ${normalizedEmail}`);
+      return res.status(200).json({ success: true });
+    } catch (e) {
+      console.error('[AUTH] OTP send failed:', e.message);
+      return res.status(500).json({ error: 'Failed to send code' });
+    }
+  }
+
+  // ── Verify OTP Code ────────────────────────────────────────────────
+  if (action === 'verify-otp') {
+    if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
+    const code = String(req.body?.code || '').trim();
+    if (!code || code.length < 6) return res.status(400).json({ error: 'Invalid code' });
+    console.log(`[AUTH] OTP verify for ${normalizedEmail}`);
+
+    try {
+      // Look up user and check stored OTP
+      let { data: userData } = await adminSupabase.auth.admin.listUsers();
+      const user = (userData?.users || []).find(u => u.email?.toLowerCase() === normalizedEmail);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      const meta = user.user_metadata || {};
+      if (!meta.otp_code || !meta.otp_expires) {
+        return res.status(400).json({ error: 'No code was sent. Please request a new one.' });
+      }
+      if (Date.now() > meta.otp_expires) {
+        return res.status(400).json({ error: 'Code expired. Please request a new one.' });
+      }
+      if (meta.otp_code !== code) {
+        return res.status(400).json({ error: 'Incorrect code. Please try again.' });
+      }
+
+      // Code is valid — clear it and generate a session token
+      await adminSupabase.auth.admin.updateUser(user.id, {
+        user_metadata: { ...meta, otp_code: null, otp_expires: null }
+      });
+
+      // Generate a magic link token to create a session
+      const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: normalizedEmail
+      });
+
+      if (linkErr) {
+        return res.status(500).json({ error: 'Session creation failed' });
+      }
+
+      // Extract the access token from the link data
+      const accessToken = linkData?.properties?.access_token;
+      const refreshToken = linkData?.properties?.refresh_token;
+
+      // Do the lookup to get full user data
+      const ghl = await getGhlTier(normalizedEmail);
+      const isAdmin = isAdminEmail(normalizedEmail);
+      const resolvedTier = canonicalizeTier(ghl.tier, normalizedEmail);
+      const gpInfo = await detectGpInfo(adminSupabase, normalizedEmail);
+
+      const { profile: existingProfile, subscriptions } = await loadUserProfileContext(adminSupabase, user.id, {
+        email: normalizedEmail
+      });
+
+      const response = buildAuthResponse({
+        email: normalizedEmail,
+        name: ghl.name || user.user_metadata?.full_name,
+        token: accessToken || '',
+        refreshToken: refreshToken || '',
+        tier: resolvedTier,
+        isAdmin,
+        tags: ghl.tags,
+        contactId: ghl.contactId,
+        authUser: user,
+        profile: existingProfile,
+        gpInfo,
+        subscriptions
+      });
+
+      console.log(`[AUTH] OTP verified successfully for ${normalizedEmail}`);
+      return res.status(200).json(response);
+    } catch (e) {
+      console.error('[AUTH] OTP verify failed:', e.message);
+      return res.status(500).json({ error: 'Verification failed: ' + e.message });
+    }
+  }
+
   // ── Lookup (for existing magic link flow compatibility) ────────────
   if (action === 'lookup') {
     if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
