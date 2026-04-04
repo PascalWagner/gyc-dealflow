@@ -21,7 +21,7 @@ export {
 	COUNTRY_OPTIONS,
 	STATE_OPTIONS,
 	HISTORICAL_RETURN_YEARS
-} from '$lib/constants/dealEnums.js';
+} from '../constants/dealEnums.js';
 import {
 	DEAL_ASSET_CLASS_OPTIONS,
 	DEAL_TYPE_OPTIONS,
@@ -47,7 +47,7 @@ import {
 	INSTRUMENT_ALIASES,
 	DEBT_POSITION_ALIASES,
 	TAX_FORM_ALIASES
-} from '$lib/constants/dealEnums.js';
+} from '../constants/dealEnums.js';
 
 function buildHistoricalReturnFieldConfig(year) {
 	return {

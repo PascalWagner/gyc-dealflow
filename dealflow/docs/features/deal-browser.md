@@ -51,12 +51,16 @@ Main deal discovery interface. Shows deal cards in a filterable grid with pipeli
 - [ ] Save action POSTs correct deal ID and stage to API
 
 ## Test Coverage
-| Type | File | Count |
-|------|------|-------|
-| Unit | scripts/test-deal-card-state.mjs | ~15 |
-| Gap | No smoke tests for deal browser | — |
-| Gap | No E2E for filter + save flow | — |
-| Gap | No test for daily limit enforcement | — |
+| Type | File | What it covers |
+|------|------|----------------|
+| Unit | scripts/test-deal-card-state.mjs | ~15 deal card state transitions |
+| Smoke | tests/session-persona.smoke.spec.ts | Save Deal button visible + enabled on desktop |
+| Smoke | tests/session-persona.smoke.spec.ts | Save Deal click stays on /app/deals (no nav) |
+| Smoke | tests/session-persona.smoke.spec.ts | Stage sync 500 error shows friendly notice, not "Internal server error" |
+| Smoke | tests/session-persona.smoke.spec.ts | Mobile viewport: footer action produces no error banner |
+| Gap | — | No E2E for filter + search flow |
+| Gap | — | No test for daily limit enforcement (free tier) |
+| Gap | — | No test for intro request happy path |
 
 ## Dependencies
 - Requires: auth (session, tier for gating), onboarding (buy box preferences)
