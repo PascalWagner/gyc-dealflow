@@ -19,6 +19,30 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ action: 'magic-link', email: trimmed, siteUrl: window.location.origin, returnTo: '/app/dashboard' })
 			});
+			const data = await resp.json();
+			// If bypass login (sandbox), redirect immediately
+			if (data.bypass && data.token) {
+				const { setStoredSessionUser } = await import('$lib/stores/auth.js');
+				const { buildAccessModel, normalizeEmail, SESSION_VERSION } = await import('$lib/auth/access-model.js');
+				const accessModel = buildAccessModel({
+					tier: data.tier || 'free',
+					isAdmin: data.isAdmin || false,
+					tags: data.tags || [],
+					email: trimmed
+				});
+				setStoredSessionUser({
+					sessionVersion: SESSION_VERSION,
+					email: normalizeEmail(trimmed),
+					name: data.name || trimmed.split('@')[0],
+					fullName: data.fullName || data.name || '',
+					token: data.token,
+					refreshToken: data.refreshToken || '',
+					...accessModel,
+					onboardingCompletedAt: data.onboardingCompletedAt || null
+				});
+				window.location.href = '/app/dashboard';
+				return;
+			}
 			heroSent = true;
 		} catch {
 			heroSent = true;
@@ -273,20 +297,26 @@
 				clear plan.
 			</p>
 
-			<form class="hero-email-form" onsubmit={(e) => { e.preventDefault(); handleHeroEmail(); }}>
-				<input
-					type="email"
-					class="hero-email-input"
-					placeholder="Enter your email"
-					bind:value={heroEmail}
-					autocomplete="email"
-				/>
-				<button type="submit" class="btn btn-primary hero-email-btn" disabled={heroLoading}>
-					{heroLoading ? 'Sending...' : 'Get Started'}
-				</button>
-			</form>
-
-			<div class="hero-fine-print">No password needed. We'll send you a secure magic link.</div>
+			{#if heroSent}
+				<div class="hero-sent">
+					<div class="hero-sent-badge">Sent</div>
+					<p>Check your email for a login link. We sent it to <strong>{heroEmail}</strong>.</p>
+				</div>
+			{:else}
+				<form class="hero-email-form" onsubmit={(e) => { e.preventDefault(); handleHeroEmail(); }}>
+					<input
+						type="email"
+						class="hero-email-input"
+						placeholder="Enter your email"
+						bind:value={heroEmail}
+						autocomplete="email"
+					/>
+					<button type="submit" class="btn btn-primary hero-email-btn" disabled={heroLoading}>
+						{heroLoading ? 'Sending...' : 'Get Started'}
+					</button>
+				</form>
+				<div class="hero-fine-print">No password needed. We'll send you a secure magic link.</div>
+			{/if}
 
 			<div class="hero-bullets">
 				{#each heroBullets as bullet}
@@ -951,6 +981,30 @@
 	.hero-email-btn {
 		white-space: nowrap;
 		flex-shrink: 0;
+	}
+	.hero-sent {
+		margin-top: 28px;
+		padding: 20px 24px;
+		background: rgba(81, 190, 123, 0.08);
+		border: 1px solid rgba(81, 190, 123, 0.2);
+		border-radius: 12px;
+		max-width: 440px;
+	}
+	.hero-sent-badge {
+		display: inline-block;
+		padding: 3px 10px;
+		background: var(--primary);
+		color: #fff;
+		border-radius: 6px;
+		font-size: 12px;
+		font-weight: 700;
+		margin-bottom: 8px;
+	}
+	.hero-sent p {
+		font-size: 15px;
+		color: var(--text-dark);
+		margin: 0;
+		line-height: 1.5;
 	}
 
 	.btn {
