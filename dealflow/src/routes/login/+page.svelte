@@ -130,33 +130,74 @@
 		const hashParams = new URLSearchParams(window.location.hash.substring(1));
 		const searchParams = new URLSearchParams(window.location.search);
 
-		// Check for auth errors from Supabase callback (e.g. expired magic link)
+		// ── 1. Check for OTP-in-link (primary flow) ──────────────────────
+		const urlOtp = searchParams.get('otp');
+		const urlEmail = searchParams.get('email');
+		if (urlOtp && urlEmail) {
+			console.log('[AUTH] OTP-in-link detected for', urlEmail);
+			signingIn = true;
+			otpEmail = urlEmail;
+
+			// Clean URL immediately so code isn't visible in address bar
+			if (window.history.replaceState) {
+				const cleanUrl = new URL(window.location.href);
+				cleanUrl.searchParams.delete('otp');
+				cleanUrl.searchParams.delete('email');
+				window.history.replaceState(null, '', cleanUrl.pathname + cleanUrl.search);
+			}
+
+			// Auto-verify the code
+			fetch('/api/auth', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'verify-otp', email: urlEmail, code: urlOtp })
+			})
+				.then(r => r.json())
+				.then(data => {
+					if (data.error) {
+						console.warn('[AUTH] OTP auto-verify failed:', data.error);
+						signingIn = false;
+						// Show manual code entry as fallback
+						otpMode = true;
+						otpError = data.error.includes('expired')
+							? 'This link expired. Enter the code from your email or request a new one.'
+							: data.error;
+						return;
+					}
+					console.log('[AUTH] OTP auto-verify success — logging in');
+					storeUser({
+						...data,
+						email: urlEmail,
+						name: data.name || urlEmail.split('@')[0],
+						token: data.token || '',
+						refreshToken: data.refreshToken || ''
+					});
+					window.location.href = getReturnDestination();
+				})
+				.catch(() => {
+					signingIn = false;
+					otpMode = true;
+					otpError = 'Verification failed. Please enter the code manually.';
+				});
+			return;
+		}
+
+		// ── 2. Check for legacy magic link callback (backward compat) ────
 		const authError = hashParams.get('error') || searchParams.get('error');
 		const authErrorCode = hashParams.get('error_code') || searchParams.get('error_code');
 		const authErrorDesc = hashParams.get('error_description') || searchParams.get('error_description');
 		if (authError || authErrorCode) {
 			console.warn('[AUTH] Callback error:', { authError, authErrorCode, authErrorDesc });
-
-			// Clean up the URL hash so the error doesn't persist on refresh
 			if (window.history.replaceState) {
-				const cleanUrl = window.location.pathname + window.location.search;
-				window.history.replaceState(null, '', cleanUrl);
+				window.history.replaceState(null, '', window.location.pathname + window.location.search);
 			}
-
-			if (authErrorCode === 'otp_expired' || authErrorCode === 'otp_disabled') {
-				// Auto-trigger OTP fallback — get email from the return param context or ask
-				// Try to extract email from sb param or localStorage
-				const lastEmail = localStorage.getItem('gyc-last-login-email') || '';
-				if (lastEmail) {
-					otpEmail = lastEmail;
-					otpMode = true;
-					sendOtpFallback(lastEmail);
-				} else {
-					// Can't auto-send — show form asking for email with explanation
-					error = 'Your login link expired. Please enter your email to receive a quick verification code instead.';
-				}
+			const lastEmail = localStorage.getItem('gyc-last-login-email') || '';
+			if (lastEmail) {
+				otpEmail = lastEmail;
+				otpMode = true;
+				otpError = 'Your login link expired. Enter the code from your email or request a new one.';
 			} else {
-				error = authErrorDesc?.replace(/\+/g, ' ') || 'Login failed. Please try again.';
+				error = 'Login link expired. Please enter your email to try again.';
 			}
 			return;
 		}
@@ -166,8 +207,8 @@
 		const type = hashParams.get('type') || searchParams.get('type');
 		if (!accessToken || type !== 'magiclink') return;
 
+		// Legacy magic link flow (for any old links still in inboxes)
 		signingIn = true;
-
 		let userEmail = '';
 		try {
 			const payload = decodeBase64UrlJson(accessToken.split('.')[1]);
@@ -180,7 +221,7 @@
 			return;
 		}
 
-		console.log('[AUTH] Magic link callback — exchanging token for', userEmail);
+		console.log('[AUTH] Legacy magic link callback for', userEmail);
 		const dest = getReturnDestination();
 
 		fetch('/api/auth', {
@@ -190,7 +231,6 @@
 		})
 			.then((response) => response.json())
 			.then((data) => {
-				console.log('[AUTH] Lookup success — storing session, redirecting to', dest);
 				storeUser({
 					...data,
 					email: userEmail,
@@ -200,8 +240,7 @@
 				});
 				window.location.href = dest;
 			})
-			.catch((err) => {
-				console.warn('[AUTH] Lookup failed, storing minimal session:', err?.message);
+			.catch(() => {
 				storeUser({
 					email: userEmail,
 					name: userEmail.split('@')[0],
@@ -420,8 +459,30 @@
 					<div class="success-badge">Sent</div>
 					<h2>Check your email</h2>
 					<p>
-						We sent a secure login link to <strong>{email.trim()}</strong>.
+						We sent a login link to <strong>{email.trim()}</strong>. Click the button in the email to log in instantly.
 					</p>
+					<p class="sent-fallback-hint">
+						Can't find it? Check spam. You can also enter the 6-digit code from the email below.
+					</p>
+					<div class="otp-input-row">
+						<input
+							type="text"
+							class="field-input otp-input"
+							placeholder="000000"
+							maxlength="6"
+							inputmode="numeric"
+							autocomplete="one-time-code"
+							bind:value={otpCode}
+							onfocus={() => { otpEmail = email.trim(); }}
+							onkeydown={(e) => { if (e.key === 'Enter') { otpEmail = email.trim(); verifyOtp(); } }}
+						/>
+						<button class="submit-button" type="button" onclick={() => { otpEmail = email.trim(); verifyOtp(); }} disabled={otpVerifying || otpCode.trim().length < 6}>
+							{otpVerifying ? 'Verifying...' : 'Verify'}
+						</button>
+					</div>
+					{#if otpError}
+						<div class="error-message">{otpError}</div>
+					{/if}
 					<button class="text-button" type="button" onclick={resetForm}>Use a different email</button>
 				</div>
 			{:else}
@@ -688,6 +749,11 @@
 	}
 	.otp-divider {
 		color: var(--text-muted, #999);
+	}
+	.sent-fallback-hint {
+		font-size: 13px;
+		color: #6b7280;
+		margin-top: 16px;
 	}
 
 	.submit-button,

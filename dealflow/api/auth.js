@@ -412,58 +412,55 @@ export default async function handler(req, res) {
       }
     }
 
-    // Generate magic link server-side and send via Resend
-    // (Supabase's built-in OTP email requires SMTP config we don't have)
+    // Generate OTP code and embed in a 1-click login link
+    // Scanner-proof: scanners can hit the URL but can't execute the JS that verifies the code
     const siteOrigin = normalizeSiteOrigin(req.body?.siteUrl || req.headers.origin || DEFAULT_SITE_URL);
     const returnTo = normalizeReturnPath(req.body?.returnTo);
-    const redirectUrl = new URL('/login', siteOrigin);
-    if (returnTo) {
-      redirectUrl.searchParams.set('return', returnTo);
-    }
-    const redirectTo = redirectUrl.toString();
 
     try {
-      // Try generateLink — if user doesn't exist, create them first then retry.
-      let { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email: normalizedEmail
-      });
-
-      if (linkErr) {
-        // User likely doesn't exist — create and retry
-        const { error: createErr } = await adminSupabase.auth.admin.createUser({
+      // Ensure user exists in Supabase Auth
+      let { data: userData } = await adminSupabase.auth.admin.listUsers();
+      let user = (userData?.users || []).find(u => u.email?.toLowerCase() === normalizedEmail);
+      if (!user) {
+        const { data: created, error: createErr } = await adminSupabase.auth.admin.createUser({
           email: normalizedEmail,
           email_confirm: true
         });
         if (createErr && !createErr.message?.includes('already')) {
           return res.status(500).json({ error: createErr.message });
         }
-        // Retry generateLink
-        const retry = await adminSupabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: normalizedEmail
-        });
-        linkData = retry.data;
-        linkErr = retry.error;
-        if (linkErr) return res.status(500).json({ error: linkErr.message });
+        user = created?.user;
+        if (!user) {
+          // User was created but we need to re-fetch
+          const refetch = await adminSupabase.auth.admin.listUsers();
+          user = (refetch.data?.users || []).find(u => u.email?.toLowerCase() === normalizedEmail);
+        }
       }
 
-      // Use the action_link from Supabase but rewrite redirect_to
-      let confirmUrl = linkData.properties?.action_link;
-      if (!confirmUrl) {
-        // Fallback: build URL from hashed token
-        confirmUrl = `${SUPABASE_URL}/auth/v1/verify?token=${linkData.properties.hashed_token}&type=magiclink&redirect_to=${encodeURIComponent(redirectTo)}`;
-      } else {
-        // Replace the redirect_to in the action_link
-        const u = new URL(confirmUrl);
-        u.searchParams.set('redirect_to', redirectTo);
-        confirmUrl = u.toString();
+      // Generate 6-digit OTP
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+      // Store OTP in user metadata
+      if (user) {
+        await adminSupabase.auth.admin.updateUser(user.id, {
+          user_metadata: { ...(user.user_metadata || {}), otp_code: otp, otp_expires: expiresAt }
+        });
       }
+
+      // Build the 1-click login URL with OTP embedded
+      const loginUrl = new URL('/login', siteOrigin);
+      loginUrl.searchParams.set('otp', otp);
+      loginUrl.searchParams.set('email', normalizedEmail);
+      if (returnTo && returnTo !== '/app/deals') {
+        loginUrl.searchParams.set('return', returnTo);
+      }
+      const confirmUrl = loginUrl.toString();
 
       // Send via Resend
       const resendKey = process.env.RESEND_API_KEY;
       if (!resendKey) {
-        console.error('[AUTH] RESEND_API_KEY not set — cannot send magic link');
+        console.error('[AUTH] RESEND_API_KEY not set');
         return res.status(500).json({ error: 'Email service not configured' });
       }
 
@@ -473,22 +470,24 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           from: 'Grow Your Cashflow <deals@growyourcashflow.io>',
           to: normalizedEmail,
-          subject: 'Your GYC Dealflow Login Link',
+          subject: 'Log in to GYC Deals',
           html: `<div style="max-width:520px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <div style="background:#0A1E21;padding:32px 24px;text-align:center;border-radius:12px 12px 0 0;">
+  <div style="background:#1F5159;padding:32px 24px;text-align:center;border-radius:12px 12px 0 0;">
     <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Grow Your Cashflow</div>
-    <div style="font-size:12px;font-weight:600;color:#51BE7B;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Dealflow Portal</div>
+    <div style="font-size:12px;font-weight:600;color:#51BE7B;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Dealflow Platform</div>
   </div>
   <div style="background:#ffffff;padding:36px 32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
     <p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;line-height:1.6;">Hi,</p>
-    <p style="font-size:16px;color:#1a1a1a;margin:0 0 8px;line-height:1.6;">Your secure login link is ready. Click below to access your deal database.</p>
-    <p style="font-size:13px;color:#6b7280;margin:0 0 28px;line-height:1.5;">838 deals across 19 asset classes from 455 sponsors &mdash; updated daily.</p>
-    <div style="text-align:center;margin:0 0 28px;">
-      <a href="${confirmUrl}" style="display:inline-block;background:#1F5159;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px;">Log In to Dealflow</a>
+    <p style="font-size:16px;color:#1a1a1a;margin:0 0 24px;line-height:1.6;">Click below to log in to your deal database.</p>
+    <div style="text-align:center;margin:0 0 24px;">
+      <a href="${confirmUrl}" style="display:inline-block;background:#51BE7B;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px;">Log in to your account</a>
     </div>
-    <p style="font-size:13px;color:#6b7280;margin:0;text-align:center;line-height:1.5;">
-      <em>This link expires in 15 minutes.</em><br>
-      If you didn't request this, you can safely ignore this email.
+    <p style="font-size:13px;color:#6b7280;margin:0 0 20px;text-align:center;line-height:1.5;">
+      Or enter this code manually:
+    </p>
+    <div style="font-size:32px;font-weight:800;letter-spacing:8px;text-align:center;padding:16px;background:#f5f5f3;border-radius:10px;color:#1a1a1a;margin:0 0 20px;">${otp}</div>
+    <p style="font-size:12px;color:#9ca3af;margin:0;text-align:center;line-height:1.5;">
+      This code expires in 15 minutes. If you didn't request this, ignore this email.
     </p>
   </div>
   <div style="background:#f9fafb;padding:16px 24px;text-align:center;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:none;">
@@ -500,15 +499,15 @@ export default async function handler(req, res) {
 
       if (!sendResp.ok) {
         const errText = await sendResp.text().catch(() => 'unknown');
-        console.error('[AUTH] Resend magic link failed:', errText);
+        console.error('[AUTH] Login email send failed:', errText);
         return res.status(500).json({ error: 'Failed to send login email' });
       }
 
-      console.log(`[AUTH] Magic link sent successfully to ${normalizedEmail}`);
-      return res.status(200).json({ success: true, message: 'Magic link sent' });
+      console.log(`[AUTH] Login email sent to ${normalizedEmail} (OTP-in-link)`);
+      return res.status(200).json({ success: true, message: 'Login email sent' });
     } catch (e) {
-      console.error('[AUTH] Magic link generation failed:', e.message);
-      return res.status(500).json({ error: 'Failed to generate login link: ' + e.message });
+      console.error('[AUTH] Login email generation failed:', e.message);
+      return res.status(500).json({ error: 'Failed to generate login email: ' + e.message });
     }
   }
 
