@@ -661,14 +661,32 @@
 		display: flex;
 		gap: 10px;
 		margin-top: 16px;
+		align-items: stretch;
 	}
 	.otp-input {
 		flex: 1;
+		min-width: 0;
 		text-align: center;
 		font-size: 24px;
 		font-weight: 800;
 		letter-spacing: 8px;
 		font-family: var(--font-ui, system-ui);
+	}
+	.otp-input-row .submit-button {
+		width: auto;
+		flex-shrink: 0;
+		margin-top: 0;
+		padding: 15px 20px;
+		white-space: nowrap;
+	}
+	@media (max-width: 400px) {
+		.otp-input-row {
+			flex-direction: column;
+		}
+		.otp-input-row .submit-button {
+			width: 100%;
+			margin-top: 8px;
+		}
 	}
 	.otp-help {
 		display: flex;

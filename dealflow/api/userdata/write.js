@@ -214,7 +214,18 @@ export async function handleUserdataPost(req, res, supabase, user) {
       .upsert(fields, { onConflict: 'user_id,deal_id' })
       .select()
       .single();
-    if (error) throw error;
+    if (error) {
+      // Check constraint violation (e.g. invalid stage value) — surface as 422 not 500
+      const msg = error.message || '';
+      if (msg.includes('violates check constraint') || error.code === '23514') {
+        return res.status(422).json({ error: 'Invalid stage value. Please reload and try again.' });
+      }
+      // FK violation (deal or user not found)
+      if (msg.includes('violates foreign key constraint') || error.code === '23503') {
+        return res.status(422).json({ error: 'Deal not found. Please reload and try again.' });
+      }
+      throw error;
+    }
     result = upserted;
   } else if (type === 'goals') {
     const { data: upserted, error } = await db
