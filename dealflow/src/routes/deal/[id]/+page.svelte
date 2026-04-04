@@ -145,6 +145,7 @@
 
 	// Deck Viewer Modal
 	let showDeckViewer = $state(false);
+	let shareDropdownOpen = $state(false);
 
 	// Public auth intercept modal
 	let showAuthModal = $state(false);
