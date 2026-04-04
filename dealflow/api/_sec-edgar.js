@@ -732,7 +732,10 @@ export async function fetchAllFilingsForCik(cik, opportunityId, supabase) {
 	const normalizedCik = String(cik || '').replace(/^0+/, '');
 	if (!normalizedCik) throw new Error('CIK is required');
 
-	const searchUrl = `${EFTS_SEARCH_URL}?q=*&forms=D,D/A&ciks=${normalizedCik}`;
+	// EDGAR EFTS requires zero-padded 10-digit CIK for the ciks= parameter.
+	// Stripping leading zeros causes 0 results even for valid CIKs.
+	const paddedCik = normalizedCik.padStart(10, '0');
+	const searchUrl = `${EFTS_SEARCH_URL}?forms=D,D/A&ciks=${paddedCik}`;
 	const resp = await fetch(searchUrl, {
 		headers: { 'User-Agent': EDGAR_USER_AGENT }
 	});
@@ -853,11 +856,11 @@ export async function refreshSecFilingsForDeal(dealId, supabase) {
 	// Resolve CIK: try deal.sec_cik first, fall back to existing sec_filings row
 	const { data: deal, error: dealError } = await supabase
 		.from('opportunities')
-		.select('id, sec_cik, investment_name, management_company_id, issuer_entity, sec_entity_name, instrument')
+		.select('id, sec_cik, investment_name, management_company_id, instrument')
 		.eq('id', dealId)
 		.single();
 
-	if (dealError || !deal) throw new Error(`Deal not found: ${dealId}`);
+	if (dealError || !deal) throw new Error(`Deal not found: ${dealId} — ${dealError?.message}`);
 
 	let cik = deal.sec_cik;
 	if (!cik) {
