@@ -34,6 +34,7 @@
 	let dealWorkflowRows = $state([]);
 	let dealFilter = $state('all');
 	let rowActionPendingId = $state(null);
+	let hasEverLoaded = $state(false);
 	const DEAL_QUEUE_CACHE_TTL_MS = 15 * 1000;
 
 	const showCreateButton = $derived.by(() => {
@@ -144,29 +145,34 @@
 	}
 
 	async function loadData() {
-		loading = true;
-		qualityStats = null;
 		const search = searchQuery.trim();
 
 		if (activeTab === 'deals') {
 			const cachedState = primeDealQueueFromCache(search);
 			if (cachedState.fresh) {
+				hasEverLoaded = true;
 				return;
 			}
+			// Only show loading spinner if no cached data exists
+			if (!cachedState.hasCached) loading = true;
 			try {
 				const result = await adminFetch({ action: 'list-deals-workflow', search });
 				if (result.success) {
 					dealWorkflowRows = result.data || [];
 					persistDealQueueCache(search);
-				} else {
-					dealWorkflowRows = cachedState.hasCached ? dealWorkflowRows : [];
+				} else if (!cachedState.hasCached) {
+					dealWorkflowRows = [];
 				}
 			} catch {
-				dealWorkflowRows = cachedState.hasCached ? dealWorkflowRows : [];
+				if (!cachedState.hasCached) dealWorkflowRows = [];
 			}
 			loading = false;
+			hasEverLoaded = true;
 			return;
 		}
+
+		loading = true;
+		qualityStats = null;
 
 		if (activeTab === 'intros') {
 			try {
@@ -489,34 +495,43 @@
 				</section>
 
 				<div class="stats-grid">
-					<div class="stat-card">
-						<div class="stat-label">Total Deals</div>
-						<div class="stat-value">{dealStats.totalDeals}</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-label">Draft</div>
-						<div class="stat-value">{dealStats.draft}</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-label">In Review</div>
-						<div class="stat-value">{dealStats.inReview}</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-label">Approved</div>
-						<div class="stat-value">{dealStats.approved}</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-label">Published</div>
-						<div class="stat-value">{dealStats.published}</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-label">Do Not Publish</div>
-						<div class="stat-value">{dealStats.doNotPublish}</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-label">Archived</div>
-						<div class="stat-value">{dealStats.archived}</div>
-					</div>
+					{#if loading && !hasEverLoaded}
+						{#each ['Total Deals', 'Draft', 'In Review', 'Approved', 'Published', 'Do Not Publish', 'Archived'] as label}
+							<div class="stat-card">
+								<div class="stat-label">{label}</div>
+								<div class="stat-value stat-loading">—</div>
+							</div>
+						{/each}
+					{:else}
+						<div class="stat-card">
+							<div class="stat-label">Total Deals</div>
+							<div class="stat-value">{dealStats.totalDeals}</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Draft</div>
+							<div class="stat-value">{dealStats.draft}</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">In Review</div>
+							<div class="stat-value">{dealStats.inReview}</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Approved</div>
+							<div class="stat-value">{dealStats.approved}</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Published</div>
+							<div class="stat-value">{dealStats.published}</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Do Not Publish</div>
+							<div class="stat-value">{dealStats.doNotPublish}</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-label">Archived</div>
+							<div class="stat-value">{dealStats.archived}</div>
+						</div>
+					{/if}
 				</div>
 
 				<div class="filter-row">
@@ -528,11 +543,11 @@
 					{/each}
 				</div>
 
-				{#if loading}
+				{#if loading && !hasEverLoaded}
 					<div class="loading-msg">
 						<div class="sk-bar"></div>
 					</div>
-				{:else if filteredDealRows.length === 0}
+				{:else if filteredDealRows.length === 0 && hasEverLoaded}
 					<div class="empty-msg">No deals match the current search or filter.</div>
 				{:else}
 					<div class="table-card">
@@ -859,6 +874,10 @@
 		font-size: 26px;
 		font-weight: 800;
 		color: var(--text-dark);
+	}
+	.stat-loading {
+		color: var(--text-muted);
+		opacity: 0.5;
 	}
 
 	.filter-row {
