@@ -1273,19 +1273,21 @@
 
 				const step = data.profile?.onboardingStep || 0;
 
-				if (!reviewMode && data.profile?.onboardingComplete && agreementStatus.hasCurrentAgreement) {
-					// GP completed — ensure onboarding_completed_at is set before redirecting to /app
-					await ensureOnboardingCompleted(data.profile);
-					goto('/gp-dashboard');
-					return;
+				// Only skip onboarding steps if user has onboardingCompletedAt set
+				// (If it was wiped to force re-onboarding, always start from step 0)
+				if (data.profile?.onboardingCompletedAt) {
+					if (!reviewMode && data.profile?.onboardingComplete && agreementStatus.hasCurrentAgreement) {
+						await ensureOnboardingCompleted(data.profile);
+						goto('/gp-dashboard');
+						return;
+					}
+					if (!reviewMode && data.profile?.onboardingRole === 'lp') {
+						await ensureOnboardingCompleted(data.profile);
+						goto('/app/dashboard');
+						return;
+					}
+					if (!reviewMode && data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
 				}
-				if (!reviewMode && data.profile?.onboardingRole === 'lp') {
-					// LP already selected role — ensure onboarding_completed_at is set before redirecting to /app
-					await ensureOnboardingCompleted(data.profile);
-					goto('/app/dashboard');
-					return;
-				}
-				if (!reviewMode && data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
 				if (!reviewMode && data.profile?.onboardingComplete && !agreementStatus.hasCurrentAgreement) {
 					selectedRole = 'gp';
 					agreementError = 'A current signed operator listing agreement is required before you can access the GP workflow.';
