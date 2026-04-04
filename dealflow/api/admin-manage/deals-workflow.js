@@ -6,6 +6,40 @@ import {
 	resolveDealWorkflowMutation
 } from '../../src/lib/utils/dealWorkflow.js';
 
+// Only return the fields the manage page actually uses.
+// Full rows from buildDealWorkflowRecord can exceed 10MB for large deal sets,
+// which causes localStorage.setItem to throw QuotaExceededError and break caching.
+const WORKFLOW_LIST_KEYS = [
+	'id',
+	'dealName',
+	'sponsorName',
+	'slug',
+	'lifecycleStatus',
+	'isVisibleToUsers',
+	'catalogState',
+	'catalogStateLabel',
+	'submissionIntent',
+	'submissionIntentLabel',
+	'submissionSurface',
+	'submissionSurfaceLabel',
+	'submittedByRole',
+	'submittedByRoleLabel',
+	'submittedByName',
+	'submittedByEmail',
+	'updatedAt',
+	'completenessScore',
+	'hasBlockingIssues',
+	'readinessLabel',
+	'readyToPublish',
+	'visibilityDisabledReason'
+];
+
+function pickWorkflowListFields(row) {
+	const out = {};
+	for (const key of WORKFLOW_LIST_KEYS) out[key] = row[key];
+	return out;
+}
+
 async function listDealsWorkflow(supabase, body) {
 	const search = String(body?.search || '').trim();
 
@@ -45,8 +79,10 @@ async function listDealsWorkflow(supabase, body) {
 
 	rows.sort(compareDealWorkflowRecords);
 
+	const projectedRows = rows.map(pickWorkflowListFields);
+
 	return {
-		data: rows,
+		data: projectedRows,
 		total: rows.length,
 		stats: {
 			totalDeals: rows.length,
