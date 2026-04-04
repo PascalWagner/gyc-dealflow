@@ -2,8 +2,29 @@
 	import { browser } from '$app/environment';
 	import InvestorShowcase from '$lib/components/marketing/InvestorShowcase.svelte';
 
-	const primaryCtaHref = '/login?return=/app/plan';
+	const primaryCtaHref = '/login?return=/app/dashboard';
 	const gameplanCallHref = 'https://growyourcashflow.io/introcall';
+
+	let heroEmail = $state('');
+	let heroLoading = $state(false);
+	let heroSent = $state(false);
+
+	async function handleHeroEmail() {
+		const trimmed = heroEmail.trim();
+		if (!trimmed || !trimmed.includes('@')) return;
+		heroLoading = true;
+		try {
+			const resp = await fetch('/api/auth', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'magic-link', email: trimmed, siteUrl: window.location.origin, returnTo: '/app/dashboard' })
+			});
+			heroSent = true;
+		} catch {
+			heroSent = true;
+		}
+		heroLoading = false;
+	}
 	const academyVideoUrl = 'https://www.youtube.com/watch?v=lvcFJcL-c6w';
 	const stats = [
 		{ value: '$100K', label: 'Passive income path', detail: 'Start with the outcome, then build the plan to get there' },
@@ -194,7 +215,7 @@
 </script>
 
 <svelte:head>
-	<title>Version A | Build Your Path to $100K in Passive Income | Grow Your Cashflow</title>
+	<title>Build Your Path to $100K in Passive Income | Grow Your Cashflow</title>
 	<meta
 		name="description"
 		content="Grow Your Cashflow is the investor network for accredited investors who want better deal flow, stronger diligence, and a clear path to passive income."
@@ -243,18 +264,6 @@
 		</div>
 	</nav>
 
-	<section class="variant-banner" aria-label="Landing page versions">
-		<div>
-			<div class="variant-label">Saved concept</div>
-			<strong>Version A</strong>
-			<span>This is the current product-forward proof version.</span>
-		</div>
-		<div class="variant-links">
-			<a href="/landing-a" class="variant-link variant-link--active">Version A</a>
-			<a href="/landing-b" class="variant-link">Version B</a>
-		</div>
-	</section>
-
 	<section class="hero-section">
 		<div class="hero-copy">
 			<div class="eyebrow">The investor network for private deals</div>
@@ -264,14 +273,20 @@
 				clear plan.
 			</p>
 
-			<div class="hero-actions">
-				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
-				<a href="#workflow" class="btn btn-secondary" onclick={(event) => scrollToAnchor(event, '#workflow')}>
-					See how it works
-				</a>
-			</div>
+			<form class="hero-email-form" onsubmit={(e) => { e.preventDefault(); handleHeroEmail(); }}>
+				<input
+					type="email"
+					class="hero-email-input"
+					placeholder="Enter your email"
+					bind:value={heroEmail}
+					autocomplete="email"
+				/>
+				<button type="submit" class="btn btn-primary hero-email-btn" disabled={heroLoading}>
+					{heroLoading ? 'Sending...' : 'Get Started'}
+				</button>
+			</form>
 
-			<div class="hero-fine-print">Free account. No card. Built for accredited investors.</div>
+			<div class="hero-fine-print">No password needed. We'll send you a secure magic link.</div>
 
 			<div class="hero-bullets">
 				{#each heroBullets as bullet}
@@ -911,6 +926,31 @@
 
 	.hero-actions--center {
 		justify-content: center;
+	}
+
+	.hero-email-form {
+		display: flex;
+		gap: 10px;
+		margin-top: 28px;
+		max-width: 440px;
+	}
+	.hero-email-input {
+		flex: 1;
+		padding: 14px 18px;
+		border: 1.5px solid rgba(20, 20, 19, 0.12);
+		border-radius: 10px;
+		font-family: var(--font-body);
+		font-size: 16px;
+		background: #fff;
+		outline: none;
+	}
+	.hero-email-input:focus {
+		border-color: var(--primary);
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12);
+	}
+	.hero-email-btn {
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.btn {
