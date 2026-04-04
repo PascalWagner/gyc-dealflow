@@ -123,9 +123,9 @@ async function main() {
 	// ── Step 3: Run suites ──
 	const suites = [
 		{
-			label: 'Unit tests',
+			label: 'Unit tests (all)',
 			command: 'npm',
-			args: ['run', 'test:unit']
+			args: ['run', 'test:unit:all']
 		},
 		{
 			label: 'Playwright smoke (12 browser tests)',

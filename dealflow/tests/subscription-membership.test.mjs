@@ -7,16 +7,7 @@ import {
 	isSubscriptionActive
 } from '../src/lib/subscriptions/subscription-model.js';
 import { buildGhlSubscriptionFromContact, buildLegacySubscriptionFromProfile } from '../api/_subscriptions.js';
-
-function withFixedNow(isoDate, callback) {
-	const originalNow = Date.now;
-	Date.now = () => new Date(isoDate).getTime();
-	try {
-		callback();
-	} finally {
-		Date.now = originalNow;
-	}
-}
+import { withFixedNow } from './fixtures/time.mjs';
 
 test('active subscription remains active and preserves renewal date', () => {
 	withFixedNow('2026-06-01T00:00:00.000Z', () => {
