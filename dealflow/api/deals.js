@@ -17,6 +17,7 @@ import {
   supportsOpportunitySubmittedByEmail
 } from './_deal-access.js';
 import { transformDeals } from './member/deals/transform.js';
+import { captureApiError } from './_sentry.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -192,6 +193,7 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('Error fetching deals:', err);
+    captureApiError(err, { endpoint: `${req.method} /api/deals`, dealId: req.query?.id });
     return res.status(500).json({ error: 'Failed to fetch deals', message: err.message });
   }
 }

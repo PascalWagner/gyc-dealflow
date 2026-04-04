@@ -11,6 +11,7 @@ import { getUserClient, verifyAdmin, setCors } from './_supabase.js';
 import { RequestValidationError, sendValidationError } from './_validation.js';
 import { handleUserdataAdminGet, handleUserdataGet } from './userdata/read.js';
 import { handleUserdataDelete, handleUserdataPost } from './userdata/write.js';
+import { captureApiError } from './_sentry.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -25,6 +26,7 @@ export default async function handler(req, res) {
       return await handleUserdataAdminGet(req, res);
     } catch (err) {
       console.error('Admin userdata fetch failed:', err);
+      captureApiError(err, { endpoint: 'GET /api/userdata (admin)', email: req.query?.email });
       return res.status(500).json({ error: 'Internal server error', message: err.message });
     }
   }
@@ -60,6 +62,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Your session has expired. Please reload the page to continue.' });
     }
     console.error(`Error in userdata API (${req.method}):`, err);
+    captureApiError(err, { endpoint: `${req.method} /api/userdata`, userId: user?.id });
     return res.status(500).json({ error: 'Internal server error', message: err.message });
   }
 }

@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { getFreshSessionToken, user } from '$lib/stores/auth.js';
+	import * as analytics from '$lib/analytics.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
@@ -514,6 +515,7 @@
 		if (!browser) return;
 		if (!option?.checkout_url) return;
 		showRenewalChooser = false;
+		analytics.track('membership_upgrade_started', { plan: option.label || option.name || 'unknown' });
 		window.open(option.checkout_url, '_blank', 'noopener');
 	}
 

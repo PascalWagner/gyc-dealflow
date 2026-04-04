@@ -8,6 +8,7 @@ import { filterDeals, paginateDeals } from './deals/filters.js';
 import { normalizeMemberDealsQuery } from './deals/query.js';
 import { fetchMemberDealDataset } from './deals/repository.js';
 import { transformDeals } from './deals/transform.js';
+import { captureApiError } from '../_sentry.js';
 
 export default async function handler(req, res) {
 	setCors(res);
@@ -67,6 +68,7 @@ export default async function handler(req, res) {
 		});
 	} catch (error) {
 		console.error('member/deals error:', error);
+		captureApiError(error, { endpoint: 'GET /api/member/deals', email: viewerContext?.email });
 		return res.status(500).json({ error: 'Failed to load deals', message: error.message });
 	}
 }

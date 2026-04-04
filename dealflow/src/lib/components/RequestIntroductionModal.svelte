@@ -4,6 +4,7 @@
 		getDealOperatorInfo,
 		submitDealIntroductionRequest
 	} from '$lib/utils/dealIntroRequests.js';
+	import * as analytics from '$lib/analytics.js';
 
 	let {
 		deal = null,
@@ -51,6 +52,11 @@
 
 		if (result.success) {
 			introSuccess = true;
+			analytics.track('intro_requested', {
+				dealId: deal.id,
+				dealName: deal.investmentName,
+				operatorName: result.operatorName
+			});
 			onsuccess({
 				dealId: deal.id,
 				operatorName: result.operatorName

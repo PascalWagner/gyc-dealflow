@@ -18,6 +18,7 @@ export function makeSessionUser(email, overrides = {}) {
 		isAdmin: overrides.isAdmin ?? false,
 		token: overrides.token || fakeJwt(email),
 		refreshToken: overrides.refreshToken || `refresh-${email}`,
+		onboardingCompletedAt: overrides.onboardingCompletedAt ?? new Date().toISOString(),
 		...overrides
 	};
 }

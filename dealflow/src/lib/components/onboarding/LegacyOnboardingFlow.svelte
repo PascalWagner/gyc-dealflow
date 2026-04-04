@@ -13,6 +13,7 @@
 	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import * as analytics from '$lib/analytics.js';
 	import { normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import {
 		buildFallbackTeamContacts,
@@ -737,6 +738,7 @@
 				} catch {}
 			}
 
+			analytics.track('onboarding_complete', { goal: lpGoal, role: 'lp', tier: $accessTier });
 			await goto(lpDealsRedirect());
 		} catch (error) {
 			console.warn('LP onboarding save error:', error);

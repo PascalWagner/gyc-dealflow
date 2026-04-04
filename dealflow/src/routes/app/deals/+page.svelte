@@ -66,6 +66,7 @@
 	} from '$lib/utils/dealflowCache.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import * as analytics from '$lib/analytics.js';
 
 	const DEALFLOW_UI_STATE_KEY = 'app/deals/workspace';
 
@@ -733,8 +734,16 @@
 				? 'Something went wrong saving your choice. Please reload the page and try again.'
 				: rawMsg || 'We could not update that pipeline stage. Please try again.';
 			showPageNotice(friendlyMsg);
-		} else if (result.nextStage === 'review' || result.nextStage === 'invested') {
-			notifySuccess();
+		} else {
+			analytics.track('deal_stage_changed', {
+				dealId: deal.id,
+				dealName: deal.investmentName || deal.investment_name,
+				fromStage: currentTab,
+				toStage: result.nextStage
+			});
+			if (result.nextStage === 'review' || result.nextStage === 'invested') {
+				notifySuccess();
+			}
 		}
 
 		const nextPending = { ...pendingFooterActionByDealId };

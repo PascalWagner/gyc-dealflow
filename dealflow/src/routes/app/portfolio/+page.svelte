@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 	import { getStoredSessionToken, isMember } from '$lib/stores/auth.js';
+	import * as analytics from '$lib/analytics.js';
 	import AddDealModal from '$lib/components/AddDealModal.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
@@ -513,6 +514,10 @@
 					.filter((investment) => investment.id !== draftInvestment.id)
 					.concat([synced])
 			);
+			analytics.track('portfolio_updated', {
+				action: existingDetailIdx >= 0 ? 'edited' : 'added',
+				investmentName: draftInvestment.investmentName
+			});
 		} catch (error) {
 			console.warn('Portfolio save sync failed:', error);
 		}

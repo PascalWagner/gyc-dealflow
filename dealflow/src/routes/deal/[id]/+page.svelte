@@ -90,6 +90,7 @@
 	import { buildInvestmentReportHtml } from '$lib/utils/dealReport.js';
 	import { getDealOperator } from '$lib/utils/dealSponsors.js';
 	import { getDealHistoricalReturns, isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
+	import * as analytics from '$lib/analytics.js';
 
 	let { data } = $props();
 	function getInitialDeal() {
@@ -1006,6 +1007,14 @@
 
 		// Set document title
 		document.title = `${deal.investmentName} - GYC Dealflow`;
+
+		analytics.track('deal_viewed', {
+			dealId: deal.id,
+			dealName: deal.investmentName,
+			assetClass: deal.assetClass,
+			dealType: deal.dealType,
+			operator: deal.managementCompany || deal.management_company?.operator_name
+		});
 	});
 
 	// Close share dropdown on outside click

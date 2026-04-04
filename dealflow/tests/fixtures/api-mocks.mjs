@@ -324,6 +324,32 @@ export async function installCoreApiMocks(page, overrides = {}) {
 		});
 	});
 
+	await page.route('**/api/gp-onboarding**', async (route) => {
+		if (await fulfillOverride(route, '/api/gp-onboarding')) return;
+		const email = decodeAuthEmail(route.request().headers().authorization);
+		if (route.request().method() === 'GET') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					profile: {
+						onboardingRole: 'lp',
+						onboardingStep: 0,
+						onboardingComplete: true,
+						onboardingCompletedAt: new Date().toISOString()
+					},
+					company: null,
+					teamContacts: [],
+					dealCount: 0,
+					hasBuyBox: true,
+					agreementStatus: { hasCurrentAgreement: false, agreement: null }
+				})
+			});
+			return;
+		}
+		await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+	});
+
 	await page.route('**/api/buybox**', async (route) => {
 		if (await fulfillOverride(route, '/api/buybox')) return;
 		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ buyBox: {} }) });

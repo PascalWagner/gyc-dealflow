@@ -11,6 +11,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { setCors, ADMIN_EMAILS, deriveTier, rateLimit, ghlFetch } from './_supabase.js';
 import { getMembershipSummary } from './_subscriptions.js';
+import { captureApiError } from './_sentry.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -411,6 +412,7 @@ export default async function handler(req, res) {
         }));
       } catch (e) {
         console.error('[AUTH BYPASS] Failed:', e.message);
+        captureApiError(e, { endpoint: 'POST /api/auth', method: 'bypass', email: normalizedEmail });
         return res.status(500).json({ error: 'Bypass login failed: ' + e.message });
       }
     }
@@ -510,6 +512,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: 'Login email sent' });
     } catch (e) {
       console.error('[AUTH] Login email generation failed:', e.message);
+      captureApiError(e, { endpoint: 'POST /api/auth', method: 'magic-link', email: normalizedEmail });
       return res.status(500).json({ error: 'Failed to generate login email: ' + e.message });
     }
   }
@@ -654,6 +657,7 @@ export default async function handler(req, res) {
       return res.status(200).json(response);
     } catch (e) {
       console.error('[AUTH] OTP verify failed:', e.message);
+      captureApiError(e, { endpoint: 'POST /api/auth', method: 'verify-otp' });
       return res.status(500).json({ error: 'Verification failed: ' + e.message });
     }
   }
