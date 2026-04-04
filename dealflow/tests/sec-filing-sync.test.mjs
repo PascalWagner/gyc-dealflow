@@ -93,6 +93,25 @@ test('buildDealUpdatesFromSecFiling does not overwrite existing instrument', () 
 	assert.equal('instrument' in updates, false);
 });
 
+test('buildDealUpdatesFromSecFiling sets investment_minimum from filing when deal has none', () => {
+	const { updates } = buildDealUpdatesFromSecFiling(
+		{ id: 'deal-1', investment_minimum: null },
+		{ minimum_investment: 100000, federal_exemptions: [] }
+	);
+	assert.equal(updates.investment_minimum, 100000);
+});
+
+test('buildDealUpdatesFromSecFiling does not overwrite a manually set investment_minimum', () => {
+	// Regression: DLP Lending Fund minimum was manually raised to $500K but
+	// every SEC sync reset it to $100K (the Form D registered value).
+	const { updates } = buildDealUpdatesFromSecFiling(
+		{ id: 'deal-1', investment_minimum: 500000 },
+		{ minimum_investment: 100000, federal_exemptions: [] }
+	);
+	assert.equal('investment_minimum' in updates, false,
+		'SEC filing must not overwrite a manually curated investment_minimum');
+});
+
 // ---------------------------------------------------------------------------
 // New tests: markLatestFilingForCik contract (via mocked Supabase)
 // ---------------------------------------------------------------------------

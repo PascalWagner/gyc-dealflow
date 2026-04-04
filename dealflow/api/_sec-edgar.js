@@ -695,7 +695,10 @@ export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}, options = 
 	if (is506b) updates.offering_type = '506(b)';
 	else if (is506c) updates.offering_type = '506(c)';
 	updates.is_506b = is506b;
-	if (filing.minimum_investment) updates.investment_minimum = filing.minimum_investment;
+	// Only set investment_minimum from SEC filing if the deal doesn't already have one.
+	// Manually curated minimums (e.g. raised from $100K to $500K) must never be overwritten
+	// by the raw Form D value, which reflects the SEC-registered minimum, not our pricing.
+	if (filing.minimum_investment && !deal.investment_minimum) updates.investment_minimum = filing.minimum_investment;
 	if (filing.date_of_first_sale) updates.date_of_first_sale = filing.date_of_first_sale;
 	if (filing.filing_date) updates.sec_latest_filing_date = filing.filing_date;
 	if (filing.total_offering_amount) updates.offering_size = filing.total_offering_amount;
