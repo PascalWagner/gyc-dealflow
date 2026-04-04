@@ -37,6 +37,7 @@
     "deploy:sandbox": "bash scripts/deploy-sandbox.sh",
     "promote:sandbox": "bash scripts/promote-sandbox.sh",
     "test:smoke": "playwright test -c playwright.config.ts",
+    "setup-hooks": "cd .. && git config core.hooksPath dealflow/.githooks && echo 'Pre-commit hooks installed.'",
     "cap:sync": "npx cap sync ios",
     "cap:open": "npx cap open ios",
     "db:migrate": "npx supabase db push",
