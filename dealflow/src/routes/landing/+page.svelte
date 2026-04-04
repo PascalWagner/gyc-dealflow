@@ -23,23 +23,9 @@
 			// If bypass login (sandbox), redirect immediately
 			if (data.bypass && data.token) {
 				const { setStoredSessionUser } = await import('$lib/stores/auth.js');
-				const { buildAccessModel, normalizeEmail, SESSION_VERSION } = await import('$lib/auth/access-model.js');
-				const accessModel = buildAccessModel({
-					tier: data.tier || 'free',
-					isAdmin: data.isAdmin || false,
-					tags: data.tags || [],
-					email: trimmed
-				});
-				setStoredSessionUser({
-					sessionVersion: SESSION_VERSION,
-					email: normalizeEmail(trimmed),
-					name: data.name || trimmed.split('@')[0],
-					fullName: data.fullName || data.name || '',
-					token: data.token,
-					refreshToken: data.refreshToken || '',
-					...accessModel,
-					onboardingCompletedAt: data.onboardingCompletedAt || null
-				});
+				const { buildStoredSessionUser } = await import('$lib/auth/session-builder.js');
+				const userData = buildStoredSessionUser({ ...data, email: trimmed });
+				if (userData) setStoredSessionUser(userData);
 				window.location.href = '/app/dashboard';
 				return;
 			}
