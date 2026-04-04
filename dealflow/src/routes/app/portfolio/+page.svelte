@@ -521,31 +521,54 @@
 
 	async function deleteInvestment(id) {
 		if (!confirm('Remove this investment from your holdings?')) return;
+
+		// Find the portfolio entry to get the real dealId
+		const entry = portfolio.find(inv => inv.id === id);
+		const realDealId = entry?.dealId || '';
 		const existingInvestment = portfolioDetails.find((investment) => investment.id === id);
+
+		// 1. Remove from local portfolioDetails (localStorage)
 		if (existingInvestment) {
 			savePortfolioDetails(portfolioDetails.filter(i => i.id !== id));
 			try {
 				await deletePortfolioRecord(existingInvestment);
 			} catch (error) {
-				console.warn('Portfolio delete sync failed:', error);
+				console.warn('Portfolio detail delete failed:', error);
 			}
 		}
-		// Also remove the deal stage (moves deal out of 'invested' pipeline)
-		const dealId = id;
-		try {
-			const token = getStoredSessionToken();
-			if (token) {
-				await fetch('/api/userdata', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-					body: JSON.stringify({ type: 'stages', action: 'delete', dealId })
-				});
+
+		// 2. Remove the deal stage (DELETE method, correct dealId)
+		if (realDealId) {
+			try {
+				const token = getStoredSessionToken();
+				if (token) {
+					const resp = await fetch('/api/userdata', {
+						method: 'DELETE',
+						headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+						body: JSON.stringify({ type: 'stages', dealId: realDealId })
+					});
+					if (!resp.ok) {
+						console.warn('Stage delete failed:', resp.status);
+					}
+				}
+			} catch (error) {
+				console.warn('Stage delete failed:', error);
 			}
-		} catch (error) {
-			console.warn('Stage delete failed:', error);
 		}
+
+		// 3. Also remove from local dealStages cache so it doesn't reappear
+		if (realDealId && browser) {
+			try {
+				const raw = localStorage.getItem('gycDealStages') || '{}';
+				const stages = JSON.parse(raw);
+				if (stages[realDealId]) {
+					delete stages[realDealId];
+					localStorage.setItem('gycDealStages', JSON.stringify(stages));
+				}
+			} catch {}
+		}
+
 		if (editingId === id) closeInlineEditor();
-		// Reload the page to reflect the removal
 		if (browser) window.location.reload();
 	}
 
