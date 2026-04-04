@@ -520,16 +520,33 @@
 	}
 
 	async function deleteInvestment(id) {
-		if (!confirm('Delete these saved portfolio details? The deal will stay here until its stage changes from Invested.')) return;
+		if (!confirm('Remove this investment from your holdings?')) return;
 		const existingInvestment = portfolioDetails.find((investment) => investment.id === id);
-		if (!existingInvestment) return;
-		savePortfolioDetails(portfolioDetails.filter(i => i.id !== id));
-		if (editingId === id) closeInlineEditor();
-		try {
-			await deletePortfolioRecord(existingInvestment);
-		} catch (error) {
-			console.warn('Portfolio delete sync failed:', error);
+		if (existingInvestment) {
+			savePortfolioDetails(portfolioDetails.filter(i => i.id !== id));
+			try {
+				await deletePortfolioRecord(existingInvestment);
+			} catch (error) {
+				console.warn('Portfolio delete sync failed:', error);
+			}
 		}
+		// Also remove the deal stage (moves deal out of 'invested' pipeline)
+		const dealId = id;
+		try {
+			const token = getStoredSessionToken();
+			if (token) {
+				await fetch('/api/userdata', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+					body: JSON.stringify({ type: 'stages', action: 'delete', dealId })
+				});
+			}
+		} catch (error) {
+			console.warn('Stage delete failed:', error);
+		}
+		if (editingId === id) closeInlineEditor();
+		// Reload the page to reflect the removal
+		if (browser) window.location.reload();
 	}
 
 	function parseDollar(value) {
@@ -841,9 +858,7 @@
 										</div>
 
 										<div class="holding-editor-actions">
-											{#if hasPersistedDetails}
-												<button class="btn-danger" onclick={() => deleteInvestment(editingId)}>Delete Line Item</button>
-											{/if}
+											<button class="btn-danger" onclick={() => deleteInvestment(editingId)}>Remove Investment</button>
 											<div class="holding-editor-actions-spacer"></div>
 											<button class="btn-cancel" onclick={closeInlineEditor}>Cancel</button>
 											<button class="btn-primary" onclick={saveInvestment}>{hasPersistedDetails ? 'Save Changes' : 'Save Line Item'}</button>
