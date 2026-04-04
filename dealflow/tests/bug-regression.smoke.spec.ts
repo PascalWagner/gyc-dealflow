@@ -237,3 +237,163 @@ test.describe('BUG-2 regression: OTP input usable on mobile', () => {
 		}
 	});
 });
+
+// ────────────────────────────────────────────────────────────
+// BUG-3: Admin Manage Deals page shows 0 deals on initial load
+// ────────────────────────────────────────────────────────────
+//
+// Root cause: persistDealQueueCache writes ~10MB of deal JSON to localStorage,
+// triggering QuotaExceededError. The exception was caught by the outer try/catch
+// in loadData() which then reset dealWorkflowRows = [].
+//
+// Fix:
+//   1. writeScopedStaleCache now silently catches localStorage write errors
+//      (in-memory cache is still populated for within-session navigations).
+//   2. persistDealQueueCache is now called outside the main try/catch so that
+//      a storage failure never resets dealWorkflowRows.
+
+const MOCK_DEAL_ROWS = [
+	{
+		id: 'wf-deal-1',
+		investment_name: 'Alpha Fund',
+		slug: 'alpha-fund',
+		dealName: 'Alpha Fund',
+		sponsorName: 'Alpha Capital',
+		lifecycleStatus: 'draft',
+		isVisibleToUsers: false,
+		catalogState: 'not_published',
+		catalogStateLabel: 'Not Published',
+		submissionIntent: 'interested',
+		submissionIntentLabel: 'Evaluating',
+		submissionSurface: 'admin',
+		submissionSurfaceLabel: 'Admin',
+		submittedByRole: 'admin',
+		submittedByRoleLabel: 'Admin',
+		submittedByName: 'Admin User',
+		submittedByEmail: 'admin@example.com',
+		updatedAt: new Date().toISOString(),
+		completenessScore: 40,
+		hasBlockingIssues: true,
+		readinessLabel: 'Incomplete',
+		readyToPublish: false,
+		visibilityDisabledReason: null
+	},
+	{
+		id: 'wf-deal-2',
+		investment_name: 'Beta REIT',
+		slug: 'beta-reit',
+		dealName: 'Beta REIT',
+		sponsorName: 'Beta Realty',
+		lifecycleStatus: 'in_review',
+		isVisibleToUsers: false,
+		catalogState: 'not_published',
+		catalogStateLabel: 'Not Published',
+		submissionIntent: 'interested',
+		submissionIntentLabel: 'Evaluating',
+		submissionSurface: 'admin',
+		submissionSurfaceLabel: 'Admin',
+		submittedByRole: 'admin',
+		submittedByRoleLabel: 'Admin',
+		submittedByName: 'Admin User',
+		submittedByEmail: 'admin@example.com',
+		updatedAt: new Date().toISOString(),
+		completenessScore: 72,
+		hasBlockingIssues: false,
+		readinessLabel: 'Ready',
+		readyToPublish: true,
+		visibilityDisabledReason: null
+	}
+];
+
+const MOCK_WF_RESPONSE = {
+	success: true,
+	data: MOCK_DEAL_ROWS,
+	total: 2,
+	stats: { totalDeals: 2, draft: 1, inReview: 1, approved: 0, published: 0, doNotPublish: 0, archived: 0 }
+};
+
+test.describe('BUG-3 regression: admin manage deals page shows deals on initial load', () => {
+	test.beforeEach(async ({ page }) => {
+		await installCoreApiMocks(page);
+	});
+
+	test('deals tab shows rows on initial page load', async ({ page }) => {
+		await page.route('**/api/admin-manage', async (route) => {
+			if (route.request().method() === 'POST') {
+				await route.fulfill({
+					status: 200,
+					contentType: 'application/json',
+					body: JSON.stringify(MOCK_WF_RESPONSE)
+				});
+				return;
+			}
+			await route.continue();
+		});
+
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}));
+
+		await page.goto('/app/admin/manage');
+
+		// The stats grid should reflect the 2 mock deals
+		await expect(page.locator('.stat-value').first()).toContainText('2', { timeout: 8000 });
+
+		// Deal rows should be visible — no empty state
+		await expect(page.locator('.empty-msg')).not.toBeVisible({ timeout: 8000 });
+		await expect(page.locator('.workflow-table tbody tr')).toHaveCount(2);
+	});
+
+	test('deals tab shows rows even when localStorage.setItem throws QuotaExceededError', async ({ page }) => {
+		await page.route('**/api/admin-manage', async (route) => {
+			if (route.request().method() === 'POST') {
+				await route.fulfill({
+					status: 200,
+					contentType: 'application/json',
+					body: JSON.stringify(MOCK_WF_RESPONSE)
+				});
+				return;
+			}
+			await route.continue();
+		});
+
+		// Simulate localStorage quota exceeded for the admin deal queue cache key
+		await page.addInitScript(() => {
+			const original = Storage.prototype.setItem;
+			Storage.prototype.setItem = function(key: string, value: string) {
+				if (key.includes('gycAdminDealQueueV1')) {
+					throw new DOMException('QuotaExceededError: simulated storage full', 'QuotaExceededError');
+				}
+				return original.call(this, key, value);
+			};
+		});
+
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}));
+
+		await page.goto('/app/admin/manage');
+
+		// Even with storage failures, deals should still be displayed
+		await expect(page.locator('.workflow-table tbody tr')).toHaveCount(2, { timeout: 8000 });
+		await expect(page.locator('.empty-msg')).not.toBeVisible();
+	});
+
+	test('non-admin is redirected away from manage page', async ({ page }) => {
+		await seedSession(page, makeSessionUser('member@example.com', {
+			name: 'Regular Member',
+			fullName: 'Regular Member',
+			tier: 'academy',
+			isAdmin: false
+		}));
+
+		await page.goto('/app/admin/manage');
+		await expect(page).toHaveURL(/\/app\/deals/, { timeout: 8000 });
+	});
+});

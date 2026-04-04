@@ -164,12 +164,16 @@
 				const result = await adminFetch({ action: 'list-deals-workflow', search });
 				if (result.success) {
 					dealWorkflowRows = result.data || [];
-					persistDealQueueCache(search);
 				} else if (!cachedState.hasCached) {
 					dealWorkflowRows = [];
 				}
 			} catch {
 				if (!cachedState.hasCached) dealWorkflowRows = [];
+			}
+			// Persist cache outside the try/catch so a storage write failure
+			// (e.g. QuotaExceededError on large datasets) never wipes dealWorkflowRows
+			if (dealWorkflowRows.length > 0) {
+				try { persistDealQueueCache(search); } catch {}
 			}
 			loading = false;
 			hasEverLoaded = true;

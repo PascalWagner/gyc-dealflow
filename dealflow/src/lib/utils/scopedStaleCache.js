@@ -47,6 +47,10 @@ export function writeScopedStaleCache(baseKey, value, { email = currentSessionEm
 	};
 	const memoryKey = buildMemoryKey(baseKey, email);
 	memoryCache.set(memoryKey, record);
-	writeScopedJson(baseKey, record, { email });
+	try {
+		writeScopedJson(baseKey, record, { email });
+	} catch {
+		// localStorage quota exceeded — in-memory cache is still populated
+	}
 	return cloneSerializable(record);
 }
