@@ -102,6 +102,8 @@
 			investment_experience: data?.investment_experience || '',
 			onboardingRole: data?.onboardingRole || null,
 			gpOnboardingComplete: data?.gpOnboardingComplete || false,
+			onboardingCompletedAt: data?.onboardingCompletedAt || null,
+			tosAcceptedAt: data?.tosAcceptedAt || null,
 			subscriptions: data?.subscriptions || {},
 			autoRenew: data?.autoRenew ?? data?.auto_renew ?? true,
 			cardLast4: data?.cardLast4 || data?.card_last4 || null,
@@ -119,6 +121,26 @@
 	onMount(() => {
 		const hashParams = new URLSearchParams(window.location.hash.substring(1));
 		const searchParams = new URLSearchParams(window.location.search);
+
+		// Check for auth errors from Supabase callback (e.g. expired magic link)
+		const authError = hashParams.get('error') || searchParams.get('error');
+		const authErrorCode = hashParams.get('error_code') || searchParams.get('error_code');
+		const authErrorDesc = hashParams.get('error_description') || searchParams.get('error_description');
+		if (authError || authErrorCode) {
+			console.warn('[AUTH] Callback error:', { authError, authErrorCode, authErrorDesc });
+			if (authErrorCode === 'otp_expired') {
+				error = 'Your login link has expired. This can happen if your email provider scanned the link before you clicked it. Please request a new one.';
+			} else {
+				error = authErrorDesc?.replace(/\+/g, ' ') || 'Login failed. Please try again.';
+			}
+			// Clean up the URL hash so the error doesn't persist on refresh
+			if (window.history.replaceState) {
+				const cleanUrl = window.location.pathname + window.location.search;
+				window.history.replaceState(null, '', cleanUrl);
+			}
+			return;
+		}
+
 		const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
 		const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
 		const type = hashParams.get('type') || searchParams.get('type');
@@ -138,6 +160,7 @@
 			return;
 		}
 
+		console.log('[AUTH] Magic link callback — exchanging token for', userEmail);
 		const dest = getReturnDestination();
 
 		fetch('/api/auth', {
@@ -147,6 +170,7 @@
 		})
 			.then((response) => response.json())
 			.then((data) => {
+				console.log('[AUTH] Lookup success — storing session, redirecting to', dest);
 				storeUser({
 					...data,
 					email: userEmail,
@@ -156,7 +180,8 @@
 				});
 				window.location.href = dest;
 			})
-			.catch(() => {
+			.catch((err) => {
+				console.warn('[AUTH] Lookup failed, storing minimal session:', err?.message);
 				storeUser({
 					email: userEmail,
 					name: userEmail.split('@')[0],

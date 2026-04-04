@@ -363,6 +363,7 @@ export default async function handler(req, res) {
   // ── Magic Link ─────────────────────────────────────────────────────
   if (action === 'magic-link') {
     if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
+    console.log(`[AUTH] Magic link requested for ${normalizedEmail} from ${req.headers.origin || 'unknown'}`);
 
     // Sandbox/preview bypass: skip email for specific test accounts only outside production.
     if (shouldUseAuthBypass(normalizedEmail)) {
@@ -503,6 +504,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to send login email' });
       }
 
+      console.log(`[AUTH] Magic link sent successfully to ${normalizedEmail}`);
       return res.status(200).json({ success: true, message: 'Magic link sent' });
     } catch (e) {
       console.error('[AUTH] Magic link generation failed:', e.message);
@@ -513,6 +515,7 @@ export default async function handler(req, res) {
   // ── Lookup (for existing magic link flow compatibility) ────────────
   if (action === 'lookup') {
     if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
+    console.log(`[AUTH] Lookup requested for ${normalizedEmail}`);
 
     // Check if user exists in Supabase
     const user = await findUserRecordByEmail(adminSupabase, normalizedEmail);
