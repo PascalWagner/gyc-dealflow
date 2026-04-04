@@ -2,8 +2,53 @@
 	import { browser } from '$app/environment';
 	import InvestorShowcase from '$lib/components/marketing/InvestorShowcase.svelte';
 
-	const primaryCtaHref = '/login?return=/app/plan';
+	const primaryCtaHref = '/login?return=/app/dashboard';
 	const gameplanCallHref = 'https://growyourcashflow.io/introcall';
+
+	let heroEmail = $state('');
+	let heroLoading = $state(false);
+	let heroSent = $state(false);
+
+	async function handleHeroEmail() {
+		const trimmed = heroEmail.trim();
+		if (!trimmed || !trimmed.includes('@')) return;
+		heroLoading = true;
+		try {
+			const resp = await fetch('/api/auth', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'magic-link', email: trimmed, siteUrl: window.location.origin, returnTo: '/app/dashboard' })
+			});
+			const data = await resp.json();
+			// If bypass login (sandbox), redirect immediately
+			if (data.bypass && data.token) {
+				const { setStoredSessionUser } = await import('$lib/stores/auth.js');
+				const { buildAccessModel, normalizeEmail, SESSION_VERSION } = await import('$lib/auth/access-model.js');
+				const accessModel = buildAccessModel({
+					tier: data.tier || 'free',
+					isAdmin: data.isAdmin || false,
+					tags: data.tags || [],
+					email: trimmed
+				});
+				setStoredSessionUser({
+					sessionVersion: SESSION_VERSION,
+					email: normalizeEmail(trimmed),
+					name: data.name || trimmed.split('@')[0],
+					fullName: data.fullName || data.name || '',
+					token: data.token,
+					refreshToken: data.refreshToken || '',
+					...accessModel,
+					onboardingCompletedAt: data.onboardingCompletedAt || null
+				});
+				window.location.href = '/app/dashboard';
+				return;
+			}
+			heroSent = true;
+		} catch {
+			heroSent = true;
+		}
+		heroLoading = false;
+	}
 	const academyVideoUrl = 'https://www.youtube.com/watch?v=lvcFJcL-c6w';
 	const stats = [
 		{ value: '$100K', label: 'Passive income path', detail: 'Start with the outcome, then build the plan to get there' },
@@ -252,14 +297,26 @@
 				clear plan.
 			</p>
 
-			<div class="hero-actions">
-				<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
-				<a href="#workflow" class="btn btn-secondary" onclick={(event) => scrollToAnchor(event, '#workflow')}>
-					See how it works
-				</a>
-			</div>
-
-			<div class="hero-fine-print">Free account. No card. Built for accredited investors.</div>
+			{#if heroSent}
+				<div class="hero-sent">
+					<div class="hero-sent-badge">Sent</div>
+					<p>Check your email for a login link. We sent it to <strong>{heroEmail}</strong>.</p>
+				</div>
+			{:else}
+				<form class="hero-email-form" onsubmit={(e) => { e.preventDefault(); handleHeroEmail(); }}>
+					<input
+						type="email"
+						class="hero-email-input"
+						placeholder="Enter your email"
+						bind:value={heroEmail}
+						autocomplete="email"
+					/>
+					<button type="submit" class="btn btn-primary hero-email-btn" disabled={heroLoading}>
+						{heroLoading ? 'Sending...' : 'Get Started'}
+					</button>
+				</form>
+				<div class="hero-fine-print">No password needed. We'll send you a secure magic link.</div>
+			{/if}
 
 			<div class="hero-bullets">
 				{#each heroBullets as bullet}
@@ -901,6 +958,55 @@
 		justify-content: center;
 	}
 
+	.hero-email-form {
+		display: flex;
+		gap: 10px;
+		margin-top: 28px;
+		max-width: 440px;
+	}
+	.hero-email-input {
+		flex: 1;
+		padding: 14px 18px;
+		border: 1.5px solid rgba(20, 20, 19, 0.12);
+		border-radius: 10px;
+		font-family: var(--font-body);
+		font-size: 16px;
+		background: #fff;
+		outline: none;
+	}
+	.hero-email-input:focus {
+		border-color: var(--primary);
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.12);
+	}
+	.hero-email-btn {
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.hero-sent {
+		margin-top: 28px;
+		padding: 20px 24px;
+		background: rgba(81, 190, 123, 0.08);
+		border: 1px solid rgba(81, 190, 123, 0.2);
+		border-radius: 12px;
+		max-width: 440px;
+	}
+	.hero-sent-badge {
+		display: inline-block;
+		padding: 3px 10px;
+		background: var(--primary);
+		color: #fff;
+		border-radius: 6px;
+		font-size: 12px;
+		font-weight: 700;
+		margin-bottom: 8px;
+	}
+	.hero-sent p {
+		font-size: 15px;
+		color: var(--text-dark);
+		margin: 0;
+		line-height: 1.5;
+	}
+
 	.btn {
 		padding: 14px 22px;
 	}
@@ -974,6 +1080,72 @@
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 16px;
 		margin-top: 10px;
+	}
+
+	.variant-banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 18px;
+		margin-top: 18px;
+		padding: 16px 18px;
+		border-radius: 24px;
+		border: 1px solid rgba(221, 229, 232, 0.94);
+		background: rgba(255, 255, 255, 0.84);
+		box-shadow: 0 12px 28px rgba(20, 20, 19, 0.05);
+	}
+
+	.variant-banner strong,
+	.variant-banner span,
+	.variant-link,
+	.variant-label {
+		font-family: var(--font-ui);
+	}
+
+	.variant-banner strong {
+		display: block;
+		font-size: 16px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.variant-banner span {
+		display: block;
+		margin-top: 4px;
+		font-size: 14px;
+		color: var(--text-secondary);
+	}
+
+	.variant-label {
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.variant-links {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.variant-link {
+		padding: 10px 14px;
+		border-radius: 999px;
+		border: 1px solid rgba(20, 20, 19, 0.08);
+		background: rgba(255, 255, 255, 0.76);
+		text-decoration: none;
+		font-size: 13px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.variant-link--active {
+		background: rgba(81, 190, 123, 0.16);
+		border-color: rgba(81, 190, 123, 0.24);
+		color: #245738;
 	}
 
 	.trusted-strip {
@@ -1694,6 +1866,11 @@
 
 		.video-proof-overlay {
 			margin-top: 0;
+		}
+
+		.variant-banner {
+			flex-direction: column;
+			align-items: flex-start;
 		}
 	}
 

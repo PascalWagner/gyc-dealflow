@@ -125,7 +125,7 @@
 
 			<div class="nav-actions">
 				<div class="version-switch" aria-label="Landing page versions">
-					<a href="/landing-a">Version A</a>
+					<a href="/landing">Version A</a>
 					<a href="/landing-b" class="active">Version B</a>
 				</div>
 				<a href={primaryCtaHref} class="nav-cta" data-sveltekit-reload>Start free</a>
@@ -144,7 +144,7 @@
 		</div>
 
 		<div class:open={mobileMenuOpen} class="nav-mobile">
-			<a href="/landing-a">Version A</a>
+			<a href="/landing">Version A</a>
 			<a href="/landing-b">Version B</a>
 			<a href="#desk" onclick={(event) => scrollToAnchor(event, '#desk')}>How it works</a>
 			<a href="#proof" onclick={(event) => scrollToAnchor(event, '#proof')}>Proof</a>
@@ -390,7 +390,7 @@
 			you want the brand to feel like a serious investing institution from day one.
 		</p>
 		<div class="hero-actions hero-actions-center">
-			<a href="/landing-a" class="btn btn-secondary">Compare with Version A</a>
+			<a href="/landing" class="btn btn-secondary">Compare with Version A</a>
 			<a href={primaryCtaHref} class="btn btn-primary" data-sveltekit-reload>Start free</a>
 		</div>
 	</section>

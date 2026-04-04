@@ -148,7 +148,7 @@
 				<a href="#how-it-works" onclick={(event) => scrollToAnchor(event, '#how-it-works')}>How it works</a>
 				<a href="#why-this-works" onclick={(event) => scrollToAnchor(event, '#why-this-works')}>Why this works</a>
 				<a href="#faq" onclick={(event) => scrollToAnchor(event, '#faq')}>FAQ</a>
-				<a href="/landing-a">For investors</a>
+				<a href="/landing">For investors</a>
 			</div>
 			<div class="nav-actions">
 				<a href="/login" class="nav-login" data-sveltekit-reload>Log in</a>
@@ -170,7 +170,7 @@
 			<a href="#how-it-works" onclick={(event) => scrollToAnchor(event, '#how-it-works')}>How it works</a>
 			<a href="#why-this-works" onclick={(event) => scrollToAnchor(event, '#why-this-works')}>Why this works</a>
 			<a href="#faq" onclick={(event) => scrollToAnchor(event, '#faq')}>FAQ</a>
-			<a href="/landing-a">For investors</a>
+			<a href="/landing">For investors</a>
 			<a href="/login" data-sveltekit-reload>Log in</a>
 			<a href="/login?return=/app/dashboard" class="nav-cta" data-sveltekit-reload>Get started</a>
 		</div>
