@@ -74,7 +74,6 @@
 				hydrateDealStagesFromCache();
 				announceUserScopedStateUpdate();
 				user.set(sessionUser);
-				sessionReady = true;
 				authChecked = true;
 				clearTimeout(authTimeout);
 
@@ -89,9 +88,8 @@
 					user.set(activeSession);
 				}
 
-				// Onboarding gate: redirect to /onboarding if not completed
+				// ── Onboarding gate (BEFORE sessionReady — app shell must not render yet) ──
 				if (!activeSession.onboardingCompletedAt) {
-					// Check API before redirecting — session may be stale
 					try {
 						const checkResp = await fetch(`/api/gp-onboarding?email=${encodeURIComponent(activeSession.email)}`, {
 							headers: { 'Authorization': `Bearer ${activeSession.token}` }
@@ -99,25 +97,28 @@
 						if (checkResp.ok) {
 							const checkData = await checkResp.json();
 							if (checkData.profile?.onboardingCompletedAt) {
-								// Already completed — update session and proceed
-								const stored = localStorage.getItem('gycUser');
-								if (stored) {
-									try {
-										const parsed = JSON.parse(stored);
-										parsed.onboardingCompletedAt = checkData.profile.onboardingCompletedAt;
-										localStorage.setItem('gycUser', JSON.stringify(parsed));
-									} catch {}
-								}
+								// Already completed — patch session and continue to render
+								try {
+									const raw = localStorage.getItem('gycUser');
+									if (raw) {
+										const p = JSON.parse(raw);
+										p.onboardingCompletedAt = checkData.profile.onboardingCompletedAt;
+										localStorage.setItem('gycUser', JSON.stringify(p));
+									}
+								} catch {}
 							} else {
-								// Not completed — redirect to onboarding
+								// Not completed — redirect BEFORE app shell renders
 								goto('/onboarding', { replaceState: true }).catch(() => {});
-								return;
+								return; // ← Do NOT set sessionReady
 							}
 						}
 					} catch {
-						// API check failed — allow through rather than looping
+						// API failed — allow through (fail-open, no loop)
 					}
 				}
+
+				// ── All checks passed — NOW render the app shell ──
+				sessionReady = true;
 
 				const hydration = await hydrateUserScopedData({
 					email: activeSession.email,
@@ -126,7 +127,6 @@
 				}).catch(() => null);
 
 				if (hydration?.ok) {
-					// Keep the live stage store aligned with the server-truth bundle we just fetched.
 					hydrateDealStagesFromRows(hydration.bundle?.stages || []);
 					announceUserScopedStateUpdate();
 				}
