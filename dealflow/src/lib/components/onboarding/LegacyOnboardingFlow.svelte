@@ -399,6 +399,31 @@
 		}
 	}
 
+	// ===== Onboarding completion helper =====
+	async function ensureOnboardingCompleted(profile) {
+		if (profile?.onboardingCompletedAt) return; // Already completed
+		try {
+			await fetch('/api/gp-onboarding', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({ email: $user.email, step: 'complete', data: { role: profile?.onboardingRole || 'lp' } })
+			});
+		} catch {}
+		const completedAt = new Date().toISOString();
+		const u = { ...$user, onboardingCompletedAt: completedAt };
+		user.set(u);
+		if (browser) {
+			try {
+				const raw = localStorage.getItem('gycUser');
+				if (raw) {
+					const parsed = JSON.parse(raw);
+					parsed.onboardingCompletedAt = completedAt;
+					localStorage.setItem('gycUser', JSON.stringify(parsed));
+				}
+			} catch {}
+		}
+	}
+
 	// ===== Step 1: Role =====
 	function selectRole(role) {
 		selectedRole = role;
@@ -1248,8 +1273,18 @@
 
 				const step = data.profile?.onboardingStep || 0;
 
-				if (!reviewMode && data.profile?.onboardingComplete && agreementStatus.hasCurrentAgreement) { goto('/gp-dashboard'); return; }
-				if (!reviewMode && data.profile?.onboardingRole === 'lp') { goto(lpDealsRedirect()); return; }
+				if (!reviewMode && data.profile?.onboardingComplete && agreementStatus.hasCurrentAgreement) {
+					// GP completed — ensure onboarding_completed_at is set before redirecting to /app
+					await ensureOnboardingCompleted(data.profile);
+					goto('/gp-dashboard');
+					return;
+				}
+				if (!reviewMode && data.profile?.onboardingRole === 'lp') {
+					// LP already selected role — ensure onboarding_completed_at is set before redirecting to /app
+					await ensureOnboardingCompleted(data.profile);
+					goto('/app/dashboard');
+					return;
+				}
 				if (!reviewMode && data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
 				if (!reviewMode && data.profile?.onboardingComplete && !agreementStatus.hasCurrentAgreement) {
 					selectedRole = 'gp';
