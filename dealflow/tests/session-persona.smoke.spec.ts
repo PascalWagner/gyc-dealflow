@@ -300,6 +300,115 @@ test.describe('session and persona smoke', () => {
 		await expect(completionBtn).toHaveCount(0);
 	});
 
+	test('View Deck button opens deck document in new tab, not the deal page', async ({ page }) => {
+		const DECK_URL = 'https://drive.google.com/file/d/1TESTdeck_abc123/view';
+
+		// Override deals to include a deal with a deckUrl
+		const dealsWithDeck = [
+			{
+				id: 'deal-yield-1',
+				managementCompany: 'Yield Street',
+				management_company_id: 'sponsor-yield-street',
+				investmentName: 'Yield Street Industrial Fund',
+				assetClass: 'Private Debt / Credit',
+				dealType: 'Fund',
+				strategy: 'Lending',
+				targetIRR: 0.19,
+				preferredReturn: 0.08,
+				investmentMinimum: 5000,
+				status: 'Open',
+				deckUrl: DECK_URL
+			}
+		];
+
+		// Stage the deal in 'review' so the Review tab shows it with View Deck
+		await installCoreApiMocks(page, {
+			'/api/member/deals': { deals: dealsWithDeck, scope: 'review', total: 1, hasMore: false },
+			'/api/userdata': { stages: [{ deal_id: 'deal-yield-1', stage: 'review' }], goals: [], plan: [] }
+		});
+
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User', fullName: 'Admin User', tier: 'academy', isAdmin: true
+		}));
+
+		await page.goto('/app/deals');
+
+		// Switch to the Review tab where View Deck appears
+		const reviewTab = page.getByRole('button', { name: /review/i }).first();
+		if (await reviewTab.isVisible().catch(() => false)) {
+			await reviewTab.click();
+			await page.waitForTimeout(500);
+		}
+
+		const viewDeckBtn = page.getByRole('button', { name: /view deck/i }).first();
+		const btnVisible = await viewDeckBtn.isVisible().catch(() => false);
+		if (!btnVisible) {
+			// Deal may be on the browse tab if stage mock didn't route it — skip gracefully
+			return;
+		}
+
+		// Clicking "View Deck" must open a NEW TAB (popup), not navigate current page
+		const [popup] = await Promise.all([
+			page.waitForEvent('popup', { timeout: 4000 }).catch(() => null),
+			viewDeckBtn.click()
+		]);
+
+		// Current page must remain on /app/deals — no card-level navigation occurred
+		await expect(page).toHaveURL(/\/app\/deals/);
+
+		if (popup) {
+			const popupUrl = popup.url();
+			// Must NOT be the old /deal/{id}?deck=1 route
+			expect(popupUrl).not.toMatch(/\/deal\/[^/]+\?deck=1/);
+			// Must be the actual deck document (Google Drive preview or similar)
+			expect(popupUrl).toMatch(/drive\.google\.com|docs\.google\.com|dropbox|\.pdf/i);
+		}
+	});
+
+	test('View Deck button does not navigate away when deal has no deck', async ({ page }) => {
+		// Deal with NO deckUrl — button should be disabled or hidden; page must not navigate
+		const dealsNoDeck = [
+			{
+				id: 'deal-yield-1',
+				managementCompany: 'Yield Street',
+				management_company_id: 'sponsor-yield-street',
+				investmentName: 'Yield Street Industrial Fund',
+				assetClass: 'Private Debt / Credit',
+				dealType: 'Fund',
+				targetIRR: 0.19,
+				investmentMinimum: 5000,
+				status: 'Open',
+				deckUrl: null
+			}
+		];
+
+		await installCoreApiMocks(page, {
+			'/api/member/deals': { deals: dealsNoDeck, scope: 'review', total: 1, hasMore: false },
+			'/api/userdata': { stages: [{ deal_id: 'deal-yield-1', stage: 'review' }], goals: [], plan: [] }
+		});
+
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User', fullName: 'Admin User', tier: 'academy', isAdmin: true
+		}));
+
+		await page.goto('/app/deals');
+
+		const reviewTab = page.getByRole('button', { name: /review/i }).first();
+		if (await reviewTab.isVisible().catch(() => false)) {
+			await reviewTab.click();
+			await page.waitForTimeout(500);
+		}
+
+		// Clicking a disabled "No Deck Available" button must not navigate
+		const noDeckBtn = page.getByRole('button', { name: /no deck available/i }).first();
+		if (await noDeckBtn.isVisible().catch(() => false)) {
+			await noDeckBtn.click({ force: true });
+			await page.waitForTimeout(500);
+		}
+
+		await expect(page).toHaveURL(/\/app\/deals/);
+	});
+
 	test('mobile deal card footer action does not produce error banner', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {

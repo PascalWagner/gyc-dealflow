@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { getDeckPreviewUrl } from './dealDetailUi.js';
 
 export function hasViewableDealDeck(deal) {
 	const deckUrl = String(deal?.deckUrl || '').trim();
@@ -6,15 +7,35 @@ export function hasViewableDealDeck(deal) {
 	return !deckUrl.includes('airtableusercontent.com');
 }
 
-export function getDealDeckViewerHref(deal) {
-	if (!deal?.id || !hasViewableDealDeck(deal)) return null;
-	return `/deal/${deal.id}?deck=1`;
+/**
+ * Returns the direct URL to open the deck document in a browser tab.
+ * Uses getDeckPreviewUrl to normalise Google Drive / Dropbox / PDF links
+ * into an embeddable/viewable form.
+ *
+ * Returns null when the deal has no viewable deck.
+ */
+export function getDealDeckHref(deal) {
+	if (!hasViewableDealDeck(deal)) return null;
+	return getDeckPreviewUrl(deal.deckUrl) || null;
 }
 
+/**
+ * @deprecated Use getDealDeckHref. Previously returned /deal/{id}?deck=1
+ * which never triggered the deck viewer because the deal page does not
+ * read that query parameter. Kept for any callers that may reference it.
+ */
+export function getDealDeckViewerHref(deal) {
+	return getDealDeckHref(deal);
+}
+
+/**
+ * Opens the investment deck for a deal directly in a new browser tab.
+ * Returns true if a tab was opened, false if the deal has no viewable deck.
+ */
 export function openDealDeckInNewTab(deal) {
 	if (!browser) return false;
 
-	const href = getDealDeckViewerHref(deal);
+	const href = getDealDeckHref(deal);
 	if (!href) return false;
 
 	window.open(href, '_blank', 'noopener,noreferrer');
