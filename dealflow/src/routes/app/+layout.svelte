@@ -91,9 +91,32 @@
 
 				// Onboarding gate: redirect to /onboarding if not completed
 				if (!activeSession.onboardingCompletedAt) {
-					const returnPath = `${$page.url.pathname}${$page.url.search}`;
-					goto(`/onboarding?return=${encodeURIComponent(returnPath)}`, { replaceState: true }).catch(() => {});
-					return;
+					// Check API before redirecting — session may be stale
+					try {
+						const checkResp = await fetch(`/api/gp-onboarding?email=${encodeURIComponent(activeSession.email)}`, {
+							headers: { 'Authorization': `Bearer ${activeSession.token}` }
+						});
+						if (checkResp.ok) {
+							const checkData = await checkResp.json();
+							if (checkData.profile?.onboardingCompletedAt || checkData.profile?.onboardingRole) {
+								// Already completed — update session and proceed
+								const stored = localStorage.getItem('gycUser');
+								if (stored) {
+									try {
+										const parsed = JSON.parse(stored);
+										parsed.onboardingCompletedAt = checkData.profile.onboardingCompletedAt || new Date().toISOString();
+										localStorage.setItem('gycUser', JSON.stringify(parsed));
+									} catch {}
+								}
+							} else {
+								const returnPath = `${$page.url.pathname}${$page.url.search}`;
+								goto(`/onboarding?return=${encodeURIComponent(returnPath)}`, { replaceState: true }).catch(() => {});
+								return;
+							}
+						}
+					} catch {
+						// API check failed — allow through rather than looping
+					}
 				}
 
 				const hydration = await hydrateUserScopedData({
