@@ -537,7 +537,7 @@ export async function findSecMatchesForDeal(
 	};
 }
 
-function buildFilingRow({ opportunityId = null, managementCompanyId = null, accession, cik, parsed, xml, url, fileDate = null }) {
+function buildFilingRow({ opportunityId = null, managementCompanyId = null, accession, cik, parsed, xml, url, fileDate = null, isLatest = false }) {
 	return {
 		opportunity_id: opportunityId || null,
 		management_company_id: managementCompanyId || null,
@@ -545,7 +545,7 @@ function buildFilingRow({ opportunityId = null, managementCompanyId = null, acce
 		accession_number: accession,
 		filing_date: fileDate || null,
 		filing_type: parsed.filingType,
-		is_latest_amendment: true,
+		is_latest_amendment: isLatest,
 		entity_name: parsed.entityName,
 		entity_type: parsed.entityType,
 		jurisdiction: parsed.jurisdiction,
@@ -586,15 +586,21 @@ export async function upsertParsedSecFiling({
 	parsed,
 	xml,
 	url,
-	fileDate = null
+	fileDate = null,
+	isLatest = true
 }) {
 	const normalizedCik = String(parsed.cik || cik || '').replace(/^0+/, '');
 
-	await supabase
-		.from('sec_filings')
-		.update({ is_latest_amendment: false })
-		.eq('cik', normalizedCik)
-		.eq('is_latest_amendment', true);
+	// Only manage the is_latest_amendment flag when explicitly setting this as latest.
+	// Bulk loops (fetchAllFilingsForCik) pass isLatest: false and call markLatestFilingForCik
+	// once after all filings are stored, so the flag lands on the correct (newest) row.
+	if (isLatest) {
+		await supabase
+			.from('sec_filings')
+			.update({ is_latest_amendment: false })
+			.eq('cik', normalizedCik)
+			.eq('is_latest_amendment', true);
+	}
 
 	const filingRow = buildFilingRow({
 		opportunityId,
@@ -604,7 +610,8 @@ export async function upsertParsedSecFiling({
 		parsed,
 		xml,
 		url,
-		fileDate
+		fileDate,
+		isLatest
 	});
 
 	const { data: filing, error } = await supabase
@@ -757,7 +764,8 @@ export async function fetchAllFilingsForCik(cik, opportunityId, supabase) {
 				parsed,
 				xml,
 				url,
-				fileDate
+				fileDate,
+				isLatest: false  // Never set the flag in the loop — markLatestFilingForCik handles it once after
 			});
 
 			upsertCount += 1;
@@ -771,7 +779,124 @@ export async function fetchAllFilingsForCik(cik, opportunityId, supabase) {
 		}
 	}
 
+	// Set is_latest_amendment = true on the single newest filing for this CIK.
+	// Done once after all filings are stored, so the flag always lands on the correct row.
+	if (upsertCount > 0) {
+		await markLatestFilingForCik(normalizedCik, supabase);
+	}
+
 	return upsertCount;
+}
+
+/**
+ * markLatestFilingForCik — idempotent flag repair
+ *
+ * Finds the filing with the newest filing_date for a given CIK, clears
+ * is_latest_amendment on ALL rows for that CIK, then sets is_latest_amendment
+ * = true on the single newest row.
+ *
+ * Safe to call multiple times. Must be called after any bulk upsert loop.
+ * Also enforced by the unique partial index: idx_one_latest_per_cik.
+ *
+ * @param {string} cik
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @returns {Promise<{id: string, filing_date: string}|null>} The row that was marked latest, or null if no filings exist
+ */
+export async function markLatestFilingForCik(cik, supabase) {
+	const normalizedCik = String(cik || '').replace(/^0+/, '');
+	if (!normalizedCik) throw new Error('CIK is required');
+
+	// Find the newest filing by filing_date. Rows without a date sort last.
+	const { data: newest, error: fetchError } = await supabase
+		.from('sec_filings')
+		.select('id, filing_date')
+		.eq('cik', normalizedCik)
+		.not('filing_date', 'is', null)
+		.order('filing_date', { ascending: false })
+		.limit(1)
+		.maybeSingle();
+
+	if (fetchError) throw fetchError;
+	if (!newest) return null;
+
+	// Step 1: Clear ALL flags for this CIK
+	const { error: clearError } = await supabase
+		.from('sec_filings')
+		.update({ is_latest_amendment: false })
+		.eq('cik', normalizedCik);
+	if (clearError) throw clearError;
+
+	// Step 2: Set only the newest row to true
+	const { error: setError } = await supabase
+		.from('sec_filings')
+		.update({ is_latest_amendment: true })
+		.eq('id', newest.id);
+	if (setError) throw setError;
+
+	return newest;
+}
+
+/**
+ * refreshSecFilingsForDeal — canonical idempotent refresh
+ *
+ * Fetches ALL SEC filings for a deal's CIK from EDGAR, upserts them all,
+ * calls markLatestFilingForCik to ensure exactly one is_latest_amendment = true,
+ * then pushes the latest filing data to the opportunities row.
+ *
+ * @param {string} dealId — UUID of the opportunity
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @returns {Promise<{upsertCount: number, latestFiling: object|null}>}
+ */
+export async function refreshSecFilingsForDeal(dealId, supabase) {
+	if (!dealId) throw new Error('dealId is required');
+
+	// Resolve CIK: try deal.sec_cik first, fall back to existing sec_filings row
+	const { data: deal, error: dealError } = await supabase
+		.from('opportunities')
+		.select('id, sec_cik, investment_name, management_company_id, issuer_entity, sec_entity_name, instrument')
+		.eq('id', dealId)
+		.single();
+
+	if (dealError || !deal) throw new Error(`Deal not found: ${dealId}`);
+
+	let cik = deal.sec_cik;
+	if (!cik) {
+		const { data: existingFiling } = await supabase
+			.from('sec_filings')
+			.select('cik')
+			.eq('opportunity_id', dealId)
+			.limit(1)
+			.maybeSingle();
+		cik = existingFiling?.cik;
+	}
+
+	if (!cik) throw new Error(`No CIK found for deal ${dealId} — set sec_cik on the opportunity first`);
+
+	// Fetch all filings and mark latest
+	const upsertCount = await fetchAllFilingsForCik(cik, dealId, supabase);
+
+	// Read back the now-correctly-flagged latest filing
+	const normalizedCik = String(cik).replace(/^0+/, '');
+	const { data: latestFiling } = await supabase
+		.from('sec_filings')
+		.select('*')
+		.eq('cik', normalizedCik)
+		.eq('is_latest_amendment', true)
+		.maybeSingle();
+
+	if (latestFiling) {
+		const { updates } = buildDealUpdatesFromSecFiling(deal, latestFiling, {});
+		if (Object.keys(updates).length > 0) {
+			updates.sec_data_refreshed_at = new Date().toISOString();
+			const { error: updateError } = await supabase
+				.from('opportunities')
+				.update(updates)
+				.eq('id', dealId);
+			if (updateError) throw updateError;
+		}
+	}
+
+	return { upsertCount, latestFiling: latestFiling || null };
 }
 
 export async function applySecFilingToDeal({

@@ -32,4 +32,5 @@ Canonical list of every user-facing feature in DealFlow. Each file contains acce
 | Public Landing | [public-landing.md](public-landing.md) | `/landing` | 0 | No tests |
 | Deal Review | [deal-review.md](deal-review.md) | `/deal-review` | 4 smoke (existing) + 4 smoke (new) + 5 unit | Partial |
 | Deal Enrichment | [deal-enrichment.md](deal-enrichment.md) | API-only | 6 unit | Partial |
+| SEC Filings | [sec-filings.md](sec-filings.md) | `api/_sec-edgar.js`, `api/sec-verification.js` | 10 unit | Partial |
 | **Infrastructure** | [infrastructure.md](infrastructure.md) | `api/` + `src/lib/` shared | **21 unit + 14 compat + 4 smoke** | **Active** |
