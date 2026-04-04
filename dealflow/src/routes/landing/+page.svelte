@@ -8,11 +8,13 @@
 	let heroEmail = $state('');
 	let heroLoading = $state(false);
 	let heroSent = $state(false);
+	let heroError = $state('');
 
 	async function handleHeroEmail() {
 		const trimmed = heroEmail.trim();
 		if (!trimmed || !trimmed.includes('@')) return;
 		heroLoading = true;
+		heroError = '';
 		try {
 			const resp = await fetch('/api/auth', {
 				method: 'POST',
@@ -29,9 +31,15 @@
 				window.location.href = '/app/dashboard';
 				return;
 			}
-			heroSent = true;
-		} catch {
-			heroSent = true;
+			if (!resp.ok) {
+				heroError = 'Something went wrong. Please try again or use the login page.';
+				console.error('[Landing] Auth error:', data.error || resp.status);
+			} else {
+				heroSent = true;
+			}
+		} catch (e) {
+			heroError = 'Something went wrong. Please try again or use the login page.';
+			console.error('[Landing] Auth request failed:', e.message);
 		}
 		heroLoading = false;
 	}
@@ -301,7 +309,11 @@
 						{heroLoading ? 'Sending...' : 'Get Started'}
 					</button>
 				</form>
-				<div class="hero-fine-print">No password needed. We'll send you a secure magic link.</div>
+				{#if heroError}
+					<div class="hero-error" style="color:#dc2626;font-size:14px;margin-top:8px;">{heroError}</div>
+				{:else}
+					<div class="hero-fine-print">No password needed. We'll send you a secure magic link.</div>
+				{/if}
 			{/if}
 
 			<div class="hero-bullets">

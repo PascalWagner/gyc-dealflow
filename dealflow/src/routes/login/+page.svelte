@@ -223,8 +223,12 @@
 
 			sent = true;
 		} catch (requestError) {
-			if (requestError.name === 'AbortError') sent = true;
-			else sent = true;
+			if (requestError.name === 'AbortError') {
+				error = 'Request timed out. Please try again.';
+			} else {
+				error = 'Something went wrong. Please try again.';
+			}
+			console.error('[Login] Auth request failed:', requestError.message);
 		}
 
 		loading = false;

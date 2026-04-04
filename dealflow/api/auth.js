@@ -446,7 +446,7 @@ export default async function handler(req, res) {
 
       // Store OTP in user metadata
       if (user) {
-        await adminSupabase.auth.admin.updateUser(user.id, {
+        await adminSupabase.auth.admin.updateUserById(user.id, {
           user_metadata: { ...(user.user_metadata || {}), otp_code: otp, otp_expires: expiresAt }
         });
       }
@@ -537,7 +537,7 @@ export default async function handler(req, res) {
       }
 
       if (user) {
-        await adminSupabase.auth.admin.updateUser(user.id, {
+        await adminSupabase.auth.admin.updateUserById(user.id, {
           user_metadata: { ...user.user_metadata, otp_code: otp, otp_expires: expiresAt }
         });
       }
@@ -597,7 +597,7 @@ export default async function handler(req, res) {
       }
 
       // Code is valid — clear it and generate a session token
-      await adminSupabase.auth.admin.updateUser(user.id, {
+      await adminSupabase.auth.admin.updateUserById(user.id, {
         user_metadata: { ...meta, otp_code: null, otp_expires: null }
       });
 
