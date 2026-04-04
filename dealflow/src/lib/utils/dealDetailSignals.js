@@ -1,3 +1,5 @@
+import { formatLpGpSplit } from './primitives.js';
+
 const STATE_NAME_BY_CODE = {
 	AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado',
 	CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho',
@@ -96,7 +98,7 @@ export function buildFeeRows(deal) {
 	const rows = [];
 
 	if (deal.lpGpSplit) {
-		rows.push({ label: 'LP / GP Split', value: String(deal.lpGpSplit), verdict: 'Market-based split' });
+		rows.push({ label: 'LP / GP Split', value: formatLpGpSplit(deal.lpGpSplit), verdict: 'Market-based split' });
 	}
 
 	const managementFee = extractFeeValue(rawFees, [

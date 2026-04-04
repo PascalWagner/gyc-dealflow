@@ -8,6 +8,7 @@
 import { getDealOperatorName } from './dealSponsors.js';
 import { normalizeAssetClassValue } from './dealReviewSchema.js';
 import { isDebtOrLendingDeal } from './dealReturns.js';
+import { formatLpGpSplit, formatLpSharePercent } from './primitives.js';
 
 // ===== Summary Line Builders =====
 // Each returns a short factual sentence (no judgments) for accordion headers.
@@ -58,7 +59,7 @@ export function buildStructureSummary(deal) {
 		const m = String(deal.fees).match(/([\d.]+)\s*%/);
 		if (m) parts.push(`${m[1]}% fee`);
 	}
-	if (deal.lpGpSplit) parts.push(deal.lpGpSplit);
+	if (deal.lpGpSplit) parts.push(formatLpGpSplit(deal.lpGpSplit));
 	if (deal.preferredReturn) {
 		const pref = deal.preferredReturn > 1 ? deal.preferredReturn : deal.preferredReturn * 100;
 		parts.push(`${pref.toFixed(0)}% pref`);
@@ -220,7 +221,10 @@ function extractCompensation(deal) {
 	}
 
 	if (deal.lpGpSplit) {
-		items.push({ title: `${deal.lpGpSplit} Profit Split`, subtitle: 'LP-favorable split after preferred return is met' });
+		const lpPct = formatLpSharePercent(deal.lpGpSplit);
+		if (lpPct) {
+			items.push({ title: `${lpPct} Profit Split`, subtitle: 'LP-favorable split after preferred return is met' });
+		}
 	}
 
 	if (deal.distributions && deal.distributions !== 'Unknown' && deal.distributions !== 'None') {

@@ -91,6 +91,7 @@
 	import { getDealOperator } from '$lib/utils/dealSponsors.js';
 	import { getDealHistoricalReturns, isDebtOrLendingDeal } from '$lib/utils/dealReturns.js';
 	import * as analytics from '$lib/analytics.js';
+	import { formatLpGpSplit } from '$lib/utils/primitives.js';
 
 	let { data } = $props();
 	function getInitialDeal() {
@@ -312,6 +313,7 @@
 	const displayCashOnCash = $derived(activeShareClassData?.cashOnCash != null ? activeShareClassData.cashOnCash : deal?.cashOnCash);
 	const displayFees = $derived(activeShareClassData?.fees != null ? activeShareClassData.fees : deal?.fees);
 	const displayLpGpSplit = $derived(activeShareClassData?.lpGpSplit != null ? activeShareClassData.lpGpSplit : deal?.lpGpSplit);
+	const formattedLpGpSplit = $derived(displayLpGpSplit != null ? formatLpGpSplit(displayLpGpSplit) : null);
 
 	// Deck preview URL
 	const deckPreviewUrl = $derived(deal?.deckUrl ? getDeckPreviewUrl(deal.deckUrl) : null);
@@ -1295,8 +1297,8 @@ shareDropdownOpen = false;
 								{#if displayEquityMultiple}
 									<div class="detail-item"><div class="detail-label">Equity Multiple</div><div class="detail-value">{fmt(displayEquityMultiple, 'multiple')}</div></div>
 								{/if}
-								{#if displayLpGpSplit && /\d+\s*\/\s*\d+/.test(String(displayLpGpSplit))}
-									<div class="detail-item"><div class="detail-label">LP/GP Split</div><div class="detail-value">{displayLpGpSplit}</div></div>
+								{#if formattedLpGpSplit}
+									<div class="detail-item"><div class="detail-label">LP/GP Split</div><div class="detail-value">{formattedLpGpSplit}</div></div>
 								{/if}
 								<div class="detail-item"><div class="detail-label">Available To</div><div class="detail-value">{deal.availableTo || '---'}</div></div>
 								<div class="detail-item"><div class="detail-label">Offering Size</div><div class="detail-value">{fmt(deal.offeringSize, 'money')}</div></div>
