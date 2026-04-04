@@ -199,6 +199,32 @@ function hasMeaningfulWizardBuyBox(wizardBuyBox = {}) {
   });
 }
 
+export function applyBuyBoxCompletionMetadata(wizardBuyBox = {}, { canonicalCompletedAt = null } = {}) {
+  const next = { ...wizardBuyBox };
+  const normalizedCanonicalCompletedAt = String(canonicalCompletedAt || '').trim();
+  const fallbackCompletedAt = String(next._completedAt || '').trim();
+
+  delete next._completionSource;
+  delete next._completionCandidateAt;
+
+  if (normalizedCanonicalCompletedAt) {
+    next._completedAt = normalizedCanonicalCompletedAt;
+    next._completionSource = 'canonical';
+    return next;
+  }
+
+  delete next._completedAt;
+
+  if (fallbackCompletedAt) {
+    next._completionCandidateAt = fallbackCompletedAt;
+    next._completionSource = 'fallback';
+    return next;
+  }
+
+  next._completionSource = 'none';
+  return next;
+}
+
 async function buildWizardBuyBoxFromGhl(email) {
   const contact = await getGhlContactByEmail(email, { hydrateFields: true });
   if (!contact) return {};
@@ -443,6 +469,9 @@ export default async function handler(req, res) {
           : {};
       wizardBuyBox = mergeWizardFallback(wizardBuyBox, ghlFallback);
       wizardBuyBox = normalizeGoalBranch(applyGoalsOverlay(wizardBuyBox, goalsRow));
+      wizardBuyBox = applyBuyBoxCompletionMetadata(wizardBuyBox, {
+        canonicalCompletedAt: buyBox?.completed_at || null
+      });
 
       return res.status(200).json({
         success: true,

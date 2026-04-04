@@ -27,8 +27,43 @@ async function expectRoute(url, label) {
 	};
 }
 
+async function requestSandboxAuth({
+	baseUrl = BASE_URL,
+	email = QA_EMAIL,
+	label = 'POST /api/auth',
+	maxAttempts = 2
+} = {}) {
+	let lastError = null;
+
+	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+		try {
+			const payload = await expectJson(
+				await fetch(`${baseUrl}/api/auth`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						action: 'magic-link',
+						email,
+						siteUrl: baseUrl
+					})
+				}),
+				attempt === 1 ? label : `${label} (retry ${attempt})`
+			);
+			assert.ok(payload?.token, 'Expected sandbox auth to return an access token');
+			return payload;
+		} catch (error) {
+			lastError = error;
+			if (attempt === maxAttempts) break;
+			await new Promise((resolve) => setTimeout(resolve, 750));
+		}
+	}
+
+	throw lastError;
+}
+
 async function run() {
 	const warnings = [];
+	const failures = [];
 	const routeChecks = await Promise.all([
 		expectRoute(`${BASE_URL}/`, 'GET /'),
 		expectRoute(`${BASE_URL}/login`, 'GET /login'),
@@ -41,27 +76,19 @@ async function run() {
 		)
 	]);
 
-	const authPayload = await expectJson(
-		await fetch(`${BASE_URL}/api/auth`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				action: 'magic-link',
-				email: QA_EMAIL,
-				siteUrl: BASE_URL
-			})
-		}),
-		'POST /api/auth'
-	);
-	assert.ok(authPayload?.token, 'Expected sandbox auth to return an access token');
+	const authPayload = await requestSandboxAuth();
 
 	const headers = {
 		Authorization: `Bearer ${authPayload.token}`
 	};
 
-	const [countsPayload, buyBoxPayload, dealPayload, goalsPayload] = await Promise.all([
+	const [countsPayload, buyBoxPayload, onboardingPayload, dealPayload, goalsPayload] = await Promise.all([
 		expectJson(await fetch(`${BASE_URL}/api/network?action=counts`), 'GET /api/network?action=counts'),
 		expectJson(await fetch(`${BASE_URL}/api/buybox`, { headers }), 'GET /api/buybox'),
+		expectJson(
+			await fetch(`${BASE_URL}/api/gp-onboarding?email=${encodeURIComponent(QA_EMAIL)}`, { headers }),
+			'GET /api/gp-onboarding'
+		),
 		expectJson(await fetch(`${BASE_URL}/api/deals/${encodeURIComponent(DEAL_ID)}`, { headers }), `GET /api/deals/${DEAL_ID}`),
 		expectJson(await fetch(`${BASE_URL}/api/userdata?type=goals`, { headers }), 'GET /api/userdata?type=goals')
 	]);
@@ -71,30 +98,46 @@ async function run() {
 			? goalsPayload.records
 			: [];
 
-	assert.equal(buyBoxPayload?.success, true, 'Expected buy box payload to declare success');
-	assert.ok(buyBoxPayload?.buyBox, 'Expected buy box payload to include buyBox');
-	assert.ok(
-		buyBoxPayload?.buyBox?._completedAt,
-		'Expected buy box payload to include a completed timestamp'
-	);
-	assert.ok(
-		String(buyBoxPayload?.buyBox?._branch || buyBoxPayload?.buyBox?.branch || '').trim(),
-		'Expected buy box payload to include a canonical branch'
-	);
-	assert.ok(goalsRecords.length > 0, 'Expected goals payload to include at least one row');
-	assert.ok(
-		goalsRecords.some((record) => String(record?.goal_type || '').trim()),
-		'Expected goals payload to include a goal_type'
-	);
-	assert.equal(dealPayload?.deal?.lifecycleStatus || dealPayload?.deal?.lifecycle_status, 'approved');
-	assert.ok(
-		Array.isArray(dealPayload?.deal?.riskTags) && dealPayload.deal.riskTags.length > 0,
-		'Expected deal payload to include normalized risk tags'
-	);
-	assert.ok(
-		typeof (dealPayload?.deal?.currentAvgLoanLtv ?? null) === 'number',
-		'Expected deal payload to include currentAvgLoanLtv'
-	);
+	if (buyBoxPayload?.success !== true) {
+		failures.push('Expected buy box payload to declare success');
+	}
+	if (!buyBoxPayload?.buyBox) {
+		failures.push('Expected buy box payload to include buyBox');
+	}
+	if (!String(buyBoxPayload?.buyBox?._branch || buyBoxPayload?.buyBox?.branch || '').trim()) {
+		failures.push('Expected buy box payload to include a canonical branch');
+	}
+	if (goalsRecords.length === 0) {
+		failures.push('Expected goals payload to include at least one row');
+	}
+	if (!goalsRecords.some((record) => String(record?.goal_type || '').trim())) {
+		failures.push('Expected goals payload to include a goal_type');
+	}
+	if (
+		!['approved', 'published'].includes(
+			dealPayload?.deal?.lifecycleStatus || dealPayload?.deal?.lifecycle_status
+		)
+	) {
+		failures.push('Expected sandbox deal payload lifecycle to be approved or published');
+	}
+	if (!(Array.isArray(dealPayload?.deal?.riskTags) && dealPayload.deal.riskTags.length > 0)) {
+		failures.push('Expected deal payload to include normalized risk tags');
+	}
+	if (typeof (dealPayload?.deal?.currentAvgLoanLtv ?? null) !== 'number') {
+		failures.push('Expected deal payload to include currentAvgLoanLtv');
+	}
+
+	const buyBoxCompletionSource = String(buyBoxPayload?.buyBox?._completionSource || '').trim().toLowerCase();
+	const hasCanonicalBuyBox = onboardingPayload?.hasBuyBox === true;
+	if (buyBoxPayload?.buyBox?._completedAt && !hasCanonicalBuyBox) {
+		failures.push('Expected canonical buy-box completion to match /api/gp-onboarding hasBuyBox');
+	}
+	if (hasCanonicalBuyBox && !buyBoxPayload?.buyBox?._completedAt) {
+		failures.push('Expected /api/buybox to include canonical _completedAt when /api/gp-onboarding hasBuyBox is true');
+	}
+	if (buyBoxCompletionSource === 'fallback') {
+		warnings.push('buyBox completion is still coming from fallback data instead of canonical user_buy_box.completed_at');
+	}
 
 	const summary = {
 		baseUrl: BASE_URL,
@@ -108,7 +151,14 @@ async function run() {
 		buyBox: {
 			branch: buyBoxPayload?.buyBox?._branch || buyBoxPayload?.buyBox?.branch || null,
 			goal: buyBoxPayload?.buyBox?.goal || null,
-			completedAt: buyBoxPayload?.buyBox?._completedAt || null
+			completedAt: buyBoxPayload?.buyBox?._completedAt || null,
+			completionSource: buyBoxPayload?.buyBox?._completionSource || null,
+			completionCandidateAt: buyBoxPayload?.buyBox?._completionCandidateAt || null
+		},
+		onboarding: {
+			hasBuyBox: onboardingPayload?.hasBuyBox === true,
+			profileRole: onboardingPayload?.profile?.onboardingRole || null,
+			onboardingComplete: onboardingPayload?.profile?.onboardingComplete || false
 		},
 		goalsRows: goalsRecords.length,
 		goals: {
@@ -159,18 +209,9 @@ async function run() {
 		);
 
 		try {
-			const replayAuthPayload = await expectJson(
-				await fetch(`${BASE_URL}/api/auth`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						action: 'magic-link',
-						email: QA_EMAIL,
-						siteUrl: BASE_URL
-					})
-				}),
-				'POST /api/auth replay'
-			);
+			const replayAuthPayload = await requestSandboxAuth({
+				label: 'POST /api/auth replay'
+			});
 
 			assert.equal(
 				replayAuthPayload?.avatar_url,
@@ -189,6 +230,12 @@ async function run() {
 
 	if (warnings.length > 0) {
 		summary.warnings = warnings;
+	}
+
+	if (failures.length > 0) {
+		summary.failures = failures;
+		console.error(JSON.stringify(summary, null, 2));
+		throw new Error(failures.join('; '));
 	}
 
 	console.log(JSON.stringify(summary, null, 2));

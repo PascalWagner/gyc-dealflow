@@ -1,0 +1,317 @@
+issues:
+  - issue_id: AUTH-001
+    title: Unauthenticated auth lookup exposed privileged profile data
+    status: resolved
+    severity: high
+    category: security
+    feature_area: login
+    root_cause: POST /api/auth action=lookup returned full profile and subscription payloads without verifying the caller's bearer token.
+    symptoms:
+      - Sandbox lookup requests could read tier, admin state, profile fields, and subscription metadata without authentication.
+      - Login and settings flows depended on the same unauthenticated lookup path.
+    source_of_truth: Sandbox POST /api/auth response on 2026-04-04 plus api/auth.js audit.
+    related_files:
+      - api/auth.js
+      - src/routes/login/+page.svelte
+      - src/routes/app/settings/+page.svelte
+      - src/lib/components/Sidebar.svelte
+    related_tables:
+      - user_profiles
+      - user_subscriptions
+    related_endpoints:
+      - POST /api/auth
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: Lookup now requires a valid bearer token and only allows self-lookup unless the requester is an admin. Login callback and settings refresh now send authenticated lookup requests.
+    validation_steps:
+      - Run node --test tests/auth-bypass-env.test.mjs
+      - Confirm login callback and settings refresh include Authorization headers when calling POST /api/auth action=lookup
+    regression_test_required: true
+    regression_test_path: tests/auth-bypass-env.test.mjs
+    readme_updated: true
+
+  - issue_id: AUTH-002
+    title: Sandbox magic-link redirects could normalize back to production
+    status: resolved
+    severity: high
+    category: contract
+    feature_area: login
+    root_cause: normalizeSiteOrigin did not allow sandbox.growyourcashflow.io, so sandbox login requests could fall back to the production default origin.
+    symptoms:
+      - Sandbox-generated magic links could redirect users to the wrong host.
+    source_of_truth: api/auth.js audit and sandbox login contract review on 2026-04-04.
+    related_files:
+      - api/auth.js
+      - src/routes/login/+page.svelte
+    related_tables: []
+    related_endpoints:
+      - POST /api/auth
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: Added sandbox.growyourcashflow.io to the allowed auth redirect origins and covered it with a unit test.
+    validation_steps:
+      - Run node --test tests/auth-bypass-env.test.mjs
+      - Inspect normalizeSiteOrigin in api/auth.js
+    regression_test_required: true
+    regression_test_path: tests/auth-bypass-env.test.mjs
+    readme_updated: true
+
+  - issue_id: AUTH-003
+    title: Protected app-shell routes still depend on client-side session bootstrap
+    status: deferred
+    severity: medium
+    category: auth_session
+    feature_area: login
+    root_cause: /app/* routing still restores and validates auth on the client because SSR remains disabled for the app shell.
+    symptoms:
+      - Refresh, back-button, and logout races can still disagree with server truth until the client bootstrap settles.
+      - Protected-route determinism depends on local storage hydration plus token refresh.
+    source_of_truth: Sandbox browser QA plus auth store audit on 2026-04-04.
+    related_files:
+      - src/routes/app/+layout.js
+      - src/routes/app/+layout.svelte
+      - src/lib/stores/auth.js
+      - src/lib/components/Sidebar.svelte
+    related_tables: []
+    related_endpoints:
+      - POST /api/auth
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: Deferred because removing the residual race requires a broader app-shell auth architecture pass, not a sandbox-safe patch in this refactor batch.
+    validation_steps:
+      - Verify unauthenticated navigation to /app/settings redirects to /login?return=%2Fapp%2Fsettings in sandbox
+      - Verify magic-link callback and refresh stay authenticated on /app/settings in sandbox
+    regression_test_required: true
+    regression_test_path: tests/session-persona.smoke.spec.ts
+    readme_updated: true
+
+  - issue_id: ONB-001
+    title: LP onboarding completion only marked local state, not canonical server completion
+    status: resolved
+    severity: high
+    category: persistence
+    feature_area: onboarding
+    root_cause: completeLpOnboarding posted wizardData without _markComplete, so user_buy_box.completed_at was not reliably written.
+    symptoms:
+      - Local onboarding flags showed completion while server-backed completion signals lagged behind.
+      - Rehydrate and analytics flows could treat completed LP users as incomplete.
+    source_of_truth: LegacyOnboardingFlow.svelte plus api/buybox.js audit on 2026-04-04.
+    related_files:
+      - src/lib/components/onboarding/LegacyOnboardingFlow.svelte
+      - api/buybox.js
+      - api/gp-onboarding.js
+    related_tables:
+      - user_buy_box
+      - user_profiles
+    related_endpoints:
+      - POST /api/buybox
+      - POST /api/gp-onboarding
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: LP completion now posts wizardData with _markComplete=true before writing local completion flags.
+    validation_steps:
+      - Run npm run qa:plan-wizard
+      - Review completeLpOnboarding in LegacyOnboardingFlow.svelte
+    regression_test_required: true
+    regression_test_path: scripts/qa-plan-wizard.mjs
+    readme_updated: true
+
+  - issue_id: ONB-002
+    title: Incomplete LP onboarding resumed as if it were finished
+    status: resolved
+    severity: high
+    category: state_transition
+    feature_area: onboarding
+    root_cause: Legacy onboarding redirected on onboardingRole=lp alone instead of using hasBuyBox as the canonical completion signal.
+    symptoms:
+      - Users who selected LP and refreshed could be bounced away from onboarding before completion.
+      - Resume behavior disagreed with server-backed buy-box completion.
+    source_of_truth: LegacyOnboardingFlow.svelte and api/gp-onboarding.js audit on 2026-04-04.
+    related_files:
+      - src/lib/components/onboarding/LegacyOnboardingFlow.svelte
+      - src/lib/onboarding/legacyOnboardingBootstrap.js
+      - api/gp-onboarding.js
+    related_tables:
+      - user_profiles
+      - user_buy_box
+    related_endpoints:
+      - GET /api/gp-onboarding
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: Added a dedicated LP onboarding bootstrap helper so incomplete LP flows resume instead of redirecting, while completed LP flows still redirect.
+    validation_steps:
+      - Run node --test tests/legacy-onboarding-bootstrap.test.mjs
+      - Run npm run qa:plan-wizard
+    regression_test_required: true
+    regression_test_path: tests/legacy-onboarding-bootstrap.test.mjs
+    readme_updated: true
+
+  - issue_id: DEAL-001
+    title: Deal review sponsor-linkage PATCH path could throw at runtime
+    status: resolved
+    severity: high
+    category: runtime
+    feature_area: deal_review
+    root_cause: api/deals/[id].js destructured currentManagementCompany as a const and later reassigned it in the management-company update branch.
+    symptoms:
+      - Sponsor/linkage edits in deal review could fail even though the broader PATCH contract was valid.
+    source_of_truth: api/deals/[id].js audit on 2026-04-04.
+    related_files:
+      - api/deals/[id].js
+      - src/routes/deal-review/+page.svelte
+    related_tables:
+      - opportunities
+      - management_companies
+    related_endpoints:
+      - PATCH /api/deals/:id
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: currentManagementCompany is now mutable in the handler, so sponsor-management-company updates no longer throw on reassignment.
+    validation_steps:
+      - Run npx playwright test tests/deal-review-provenance.smoke.spec.ts -c playwright.config.ts
+      - Review api/deals/[id].js sponsor-management-company update branch
+    regression_test_required: true
+    regression_test_path: tests/deal-review-provenance.smoke.spec.ts
+    readme_updated: true
+
+  - issue_id: QA-001
+    title: Sandbox QA script asserted a stale review lifecycle
+    status: resolved
+    severity: medium
+    category: verification
+    feature_area: deal_review
+    root_cause: scripts/qa-sandbox-live.mjs expected approved for the canonical review deal even though sandbox now returns published.
+    symptoms:
+      - Sandbox QA failed before it could validate deeper payload integrity.
+    source_of_truth: npm run qa:sandbox:live on 2026-04-04.
+    related_files:
+      - scripts/qa-sandbox-live.mjs
+    related_tables:
+      - opportunities
+    related_endpoints:
+      - POST /api/auth
+      - GET /api/deals/:id
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: QA now retries sandbox auth once and accepts approved or published lifecycle states before continuing deeper assertions.
+    validation_steps:
+      - Run npm run qa:sandbox:live
+    regression_test_required: true
+    regression_test_path: scripts/qa-sandbox-live.mjs
+    readme_updated: true
+
+  - issue_id: ONB-003
+    title: Standalone onboarding still uses stale bearer tokens outside the app-shell refresh guard
+    status: deferred
+    severity: high
+    category: auth_session
+    feature_area: onboarding
+    root_cause: LegacyOnboardingFlow derives Authorization headers from stored user state instead of refreshing tokens through getFreshSessionToken before API calls.
+    symptoms:
+      - Longer onboarding sessions can hit 401s even when the same user would refresh successfully inside /app/*.
+    source_of_truth: LegacyOnboardingFlow.svelte and auth store audit on 2026-04-04.
+    related_files:
+      - src/lib/components/onboarding/LegacyOnboardingFlow.svelte
+      - src/lib/stores/auth.js
+    related_tables: []
+    related_endpoints:
+      - GET /api/gp-onboarding
+      - POST /api/buybox
+      - POST /api/gp-onboarding
+      - POST /api/network?action=avatar
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: Deferred for a follow-up because it requires a broader pass over onboarding request helpers and token refresh semantics.
+    validation_steps:
+      - Exercise long-lived onboarding sessions and token refresh behavior in sandbox after a follow-up patch
+    regression_test_required: true
+    regression_test_path: scripts/qa-plan-wizard.mjs
+    readme_updated: true
+
+  - issue_id: ONB-004
+    title: Buy-box completion can disagree between onboarding and buy-box APIs
+    status: open
+    severity: high
+    category: data_integrity
+    feature_area: onboarding
+    root_cause: GET /api/buybox can synthesize _completedAt from GHL tags and fallback fields, while GET /api/gp-onboarding only treats user_buy_box.completed_at as canonical hasBuyBox state.
+    symptoms:
+      - The same sandbox identity can receive buyBox._completedAt from /api/buybox while /api/gp-onboarding returns hasBuyBox false.
+      - Browser and API onboarding resume behavior can disagree with buy-box hydration for fallback-only users.
+    source_of_truth: Side-by-side sandbox GET /api/buybox and GET /api/gp-onboarding comparison on 2026-04-04.
+    related_files:
+      - api/buybox.js
+      - api/gp-onboarding.js
+      - src/lib/components/onboarding/LegacyOnboardingFlow.svelte
+    related_tables:
+      - user_buy_box
+      - user_profiles
+    related_endpoints:
+      - GET /api/buybox
+      - GET /api/gp-onboarding
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: Branch code now labels fallback buy-box completion separately and preserves _completedAt for canonical user_buy_box completion only, with regression coverage in tests/buybox-completion-contract.test.mjs. The issue remains open because the deployed sandbox on 2026-04-04 still returned canonical-looking _completedAt from /api/buybox while /api/gp-onboarding reported hasBuyBox false.
+    validation_steps:
+      - Run node --test tests/buybox-completion-contract.test.mjs
+      - Compare GET /api/buybox and GET /api/gp-onboarding for the same sandbox identity
+      - Verify whether buyBox._completedAt comes from user_buy_box.completed_at or from GHL fallback tags
+    regression_test_required: true
+    regression_test_path: scripts/qa-sandbox-live.mjs
+    readme_updated: true
+
+  - issue_id: DEAL-002
+    title: GP-visible deal review still depends on admin-only cleanup actions
+    status: deferred
+    severity: high
+    category: permissions
+    feature_area: deal_review
+    root_cause: The deal review UI calls /api/deal-cleanup for extraction and evidence helpers, but that endpoint is verifyAdmin-gated.
+    symptoms:
+      - GP reviewers can reach deal review while some review actions remain effectively admin-only.
+    source_of_truth: src/routes/deal-review/+page.svelte plus api/deal-cleanup.js audit on 2026-04-04.
+    related_files:
+      - src/routes/deal-review/+page.svelte
+      - api/deal-cleanup.js
+      - api/_supabase.js
+    related_tables: []
+    related_endpoints:
+      - POST /api/deal-cleanup
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: Deferred because fixing it safely requires a broader permission-boundary decision and likely endpoint splitting.
+    validation_steps:
+      - Verify GP-authenticated review actions in sandbox after permission-boundary refactor
+    regression_test_required: true
+    regression_test_path: tests/deal-review-provenance.smoke.spec.ts
+    readme_updated: true
+
+  - issue_id: DEAL-003
+    title: Deployed sandbox canonical review deal still returns empty normalized riskTags
+    status: open
+    severity: medium
+    category: data_integrity
+    feature_area: deal_review
+    root_cause: The live sandbox code path still returns empty risk_tags for the canonical lending-fund review deal, even though the branch now falls back from empty arrays to inferred review tags.
+    symptoms:
+      - npm run qa:sandbox:live fails on missing riskTags after auth and lifecycle checks pass.
+      - Browser and API review surfaces can load while the canonical review payload still omits normalized risk tags.
+    source_of_truth: Live sandbox payload inspection plus branch-side transform regression coverage on 2026-04-04.
+    related_files:
+      - scripts/qa-sandbox-live.mjs
+      - api/member/deals/transform.js
+      - api/deals/[id].js
+    related_tables:
+      - opportunities
+    related_endpoints:
+      - GET /api/deals/:id
+    first_detected_at: 2026-04-04
+    last_seen_at: 2026-04-04
+    resolution_notes: Branch code now falls back from empty risk_tags, investing_states, and underlying_exposure_types arrays to inferred values, and local regression tests cover that path. The issue remains open because the deployed sandbox still returns empty riskTags as of April 4, 2026.
+    validation_steps:
+      - Run node --test tests/deal-transform-lending.test.mjs
+      - Re-run npm run qa:sandbox:live
+      - Inspect GET /api/deals/:id payload for riskTags, sourceRiskFactors, and highlightedRisks
+    regression_test_required: true
+    regression_test_path: scripts/qa-sandbox-live.mjs
+    readme_updated: true

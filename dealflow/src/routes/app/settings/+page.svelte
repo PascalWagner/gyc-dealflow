@@ -278,11 +278,16 @@
 		if (!browser) return;
 		const storedUser = getStoredUser();
 		if (!storedUser?.email) return;
+		const token = (await getFreshSessionToken()) || storedUser.token || '';
+		if (!token) return;
 
 		try {
 			const resp = await fetch('/api/auth', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				},
 				body: JSON.stringify({ action: 'lookup', email: storedUser.email })
 			});
 			if (!resp.ok) return;

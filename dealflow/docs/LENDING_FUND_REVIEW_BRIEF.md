@@ -1,5 +1,9 @@
 # Lending Fund Review Brief
 
+> Sandbox audit update (2026-04-04)
+>
+> This branch hardens sponsor-linkage PATCH behavior and adds empty-array fallback inference for `riskTags`, `investingStates`, and `underlyingExposureTypes`. The deployed sandbox still returns empty `riskTags` for the canonical review deal, and some GP-visible review helpers still depend on admin-only `/api/deal-cleanup` actions.
+
 ## Purpose
 
 Define the right product, data, and review-flow contract for `lending_fund` deals.

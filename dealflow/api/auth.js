@@ -32,12 +32,13 @@ export function shouldUseAuthBypass(email, env = process.env) {
   return BYPASS_EMAILS.includes(normalizeEmail(email)) && isSandboxPreviewEnvironment(env);
 }
 
-function normalizeSiteOrigin(candidate) {
+export function normalizeSiteOrigin(candidate) {
   try {
     const url = new URL(candidate || DEFAULT_SITE_URL);
     const host = url.hostname.toLowerCase();
     const isAllowedHost =
       host === 'dealflow.growyourcashflow.io' ||
+      host === 'sandbox.growyourcashflow.io' ||
       host.endsWith('.vercel.app') ||
       host === 'localhost' ||
       host === '127.0.0.1';
@@ -65,6 +66,13 @@ function normalizeReturnPath(candidate) {
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
+}
+
+export function canLookupEmail({ requestEmail = '', tokenEmail = '', isAdmin = false } = {}) {
+  const normalizedRequestEmail = normalizeEmail(requestEmail);
+  const normalizedTokenEmail = normalizeEmail(tokenEmail);
+  if (!normalizedRequestEmail || !normalizedTokenEmail) return false;
+  return isAdmin || normalizedRequestEmail === normalizedTokenEmail;
 }
 
 function displayNameFromEmail(email) {
@@ -511,6 +519,27 @@ export default async function handler(req, res) {
   // ── Lookup (for existing magic link flow compatibility) ────────────
   if (action === 'lookup') {
     if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authorization token required' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: lookupAuthData, error: lookupAuthError } = await supabase.auth.getUser(token);
+    if (lookupAuthError || !lookupAuthData?.user?.email) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const requesterEmail = normalizeEmail(lookupAuthData.user.email);
+    const requesterIsAdmin = isAdminEmail(requesterEmail);
+    if (!canLookupEmail({
+      requestEmail: normalizedEmail,
+      tokenEmail: requesterEmail,
+      isAdmin: requesterIsAdmin
+    })) {
+      return res.status(403).json({ error: 'Lookup email does not match authenticated user' });
+    }
 
     // Check if user exists in Supabase
     const user = await findUserRecordByEmail(adminSupabase, normalizedEmail);

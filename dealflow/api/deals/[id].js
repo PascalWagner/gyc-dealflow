@@ -389,9 +389,9 @@ export default async function handler(req, res) {
   const {
     supabase,
     deal,
-    availableColumns,
-    currentManagementCompany
+    availableColumns
   } = context;
+  let currentManagementCompany = context.currentManagementCompany;
 
   if (req.method === 'GET') {
     return res.status(200).json({

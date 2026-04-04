@@ -13,6 +13,7 @@
 	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import { resolveLegacyLpOnboardingIntent } from '$lib/onboarding/legacyOnboardingBootstrap.js';
 	import { normalizeWizardData } from '$lib/onboarding/planWizard.js';
 	import {
 		buildFallbackTeamContacts,
@@ -631,7 +632,10 @@
 				headers,
 				body: JSON.stringify({
 					email: $user.email,
-					wizardData,
+					wizardData: {
+						...wizardData,
+						_markComplete: true
+					},
 					...(isAdminImpersonation ? { admin: true } : {})
 				})
 			});
@@ -1211,7 +1215,22 @@
 				const step = data.profile?.onboardingStep || 0;
 
 				if (!reviewMode && data.profile?.onboardingComplete && agreementStatus.hasCurrentAgreement) { goto('/gp-dashboard'); return; }
-				if (!reviewMode && data.profile?.onboardingRole === 'lp') { goto(lpDealsRedirect()); return; }
+				const lpOnboardingIntent = resolveLegacyLpOnboardingIntent({
+					reviewMode,
+					onboardingRole: data.profile?.onboardingRole,
+					hasCompletedBuyBox: data.hasBuyBox === true
+				});
+				if (lpOnboardingIntent === 'redirect') {
+					goto(lpDealsRedirect());
+					return;
+				}
+				if (lpOnboardingIntent === 'resume') {
+					selectedRole = 'lp';
+					const snapshot = hydrateLpWizardSnapshot();
+					const requestedLpStep = resolveLpAppModeStep($page.url);
+					goToStep(requestedLpStep || inferLpResumeStep(snapshot));
+					return;
+				}
 				if (!reviewMode && data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
 				if (!reviewMode && data.profile?.onboardingComplete && !agreementStatus.hasCurrentAgreement) {
 					selectedRole = 'gp';

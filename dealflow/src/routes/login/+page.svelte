@@ -195,7 +195,10 @@
 		// Look up user profile
 		fetch('/api/auth', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${accessToken}`
+			},
 			body: JSON.stringify({ action: 'lookup', email: userEmail })
 		})
 			.then((r) => r.json())

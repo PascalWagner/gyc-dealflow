@@ -21,7 +21,7 @@ const EXPOSURE_KEYWORDS = [
 const RISK_TAG_KEYWORDS = [
 	{ option: 'Leverage', patterns: [/\bleverage\b/i, /\bcredit facilit/i] },
 	{ option: 'Liquidity', patterns: [/\bliquid/i, /\bredemption\b/i, /\bavailable capital\b/i] },
-	{ option: 'Credit Loss', patterns: [/\bcredit loss\b/i, /\bdefault\b/i, /\bforeclos/i, /\breo\b/i] },
+	{ option: 'Credit Loss', patterns: [/\bcredit loss\b/i, /\bdefaults?\b/i, /\bforeclos/i, /\breo\b/i] },
 	{ option: 'Concentration', patterns: [/\bconcentration\b/i, /\bstate exposure\b/i] },
 	{ option: 'Underwriting', patterns: [/\bunderwriting\b/i, /\bcollateral\b/i, /\bltv\b/i] },
 	{ option: 'Execution', patterns: [/\bexpansion\b/i, /\bnew market\b/i] },
@@ -89,6 +89,10 @@ function inferStateCodesFromText(text) {
 		matches.add(match[1].toUpperCase());
 	}
 	return [...matches];
+}
+
+function pickNonEmptyArray(value, fallback = []) {
+	return Array.isArray(value) && value.length > 0 ? value : fallback;
 }
 
 function inferExposureTypes(deal) {
@@ -247,14 +251,20 @@ export function transformDeals(parentDeals, childShareClasses, sponsorRows) {
 		const managementCompany = deal.management_company || {};
 		const staleness = computeStaleness(deal);
 		const normalizedSponsors = sponsorsByDeal[deal.id] || [];
-		const inferredInvestingStates = deal.investing_states || inferStateCodesFromText(deal.investing_geography);
-		const inferredExposureTypes = deal.underlying_exposure_types || inferExposureTypes(deal);
+		const inferredInvestingStates = pickNonEmptyArray(
+			deal.investing_states,
+			inferStateCodesFromText(deal.investing_geography)
+		);
+		const inferredExposureTypes = pickNonEmptyArray(
+			deal.underlying_exposure_types,
+			inferExposureTypes(deal)
+		);
 		const inferredCurrentFundSize = deal.current_fund_size ?? deal.offering_size ?? null;
 		const inferredMaxAllowedLtv = deal.max_allowed_ltv ?? deal.loan_to_value ?? null;
 		const inferredCurrentAvgLoanLtv = deal.current_avg_loan_ltv ?? deal.avg_loan_ltv ?? deal.loan_to_value ?? null;
 		const inferredFundFoundedYear = inferFundFoundedYear(deal);
 		const inferredSnapshotAsOfDate = inferSnapshotAsOfDate(deal);
-		const inferredRiskTags = deal.risk_tags || inferRiskTags(deal);
+		const inferredRiskTags = pickNonEmptyArray(deal.risk_tags, inferRiskTags(deal));
 		const operator = getDealOperator({
 			sponsors: normalizedSponsors,
 			managementCompany: managementCompany.operator_name || '',

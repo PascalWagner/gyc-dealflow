@@ -1,5 +1,10 @@
 # GYC Platform — Onboarding, Intake Quiz, Videos & Social Proof
 
+> Sandbox update (2026-04-04)
+>
+> LP completion is now treated as canonical only when `POST /api/buybox` writes `_markComplete: true` and the server reports `hasBuyBox`. `onboardingComplete` alone is not sufficient for LP redirect decisions. Standalone onboarding still has weaker token-refresh behavior than `/app/*`.
+> The deployed sandbox still shows one open integrity drift: `/api/buybox` can surface completion-looking data from fallback sources while `/api/gp-onboarding` reports `hasBuyBox: false`.
+
 ## Table of Contents
 
 - [1. Guided Onboarding Flow](#1-guided-onboarding-flow)
@@ -24,7 +29,7 @@
 
 ## 1. Guided Onboarding Flow
 
-**Trigger:** First login or account creation. Stored as `onboardingComplete: false`.
+**Trigger:** First login or account creation. GP progress still centers on `onboardingComplete`, but LP completion is canonically derived from `user_buy_box.completed_at` and `hasBuyBox`.
 
 **Total time:** ~2 minutes across 5 screens.
 

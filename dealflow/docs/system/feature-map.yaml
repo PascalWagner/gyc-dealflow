@@ -1,0 +1,123 @@
+features:
+  - feature_name: login
+    description: Email-based auth entry and session bootstrap for sandbox users, admins, and impersonation flows.
+    routes/pages:
+      - /login
+      - /app/*
+    related_tables:
+      - auth.users
+      - user_profiles
+      - management_companies
+      - user_subscriptions
+    related_endpoints:
+      - POST /api/auth
+    related_files:
+      - api/auth.js
+      - src/routes/login/+page.svelte
+      - src/routes/login/+page.server.js
+      - src/routes/app/+layout.js
+      - src/routes/app/+layout.svelte
+      - src/lib/stores/auth.js
+      - src/lib/components/Sidebar.svelte
+      - src/routes/app/settings/+page.svelte
+    shared_components:
+      - src/lib/components/LoginForm.svelte
+      - src/lib/layout/AppShell.svelte
+      - src/lib/components/Sidebar.svelte
+    readme_path: docs/SANDBOX_LOGIN_FLOW.md
+    test_paths:
+      - tests/auth-bypass-env.test.mjs
+      - tests/session-persona.smoke.spec.ts
+      - scripts/qa-sandbox-live.mjs
+    known_fragility_notes:
+      - Login callback and settings refresh depend on authenticated lookup payloads from POST /api/auth.
+      - Protected /app routes still rely on client-side session bootstrap because SSR is disabled for /app/*.
+      - Sandbox auth QA currently depends on preview-only bypass behavior for allowlisted test accounts.
+
+  - feature_name: onboarding
+    description: Legacy onboarding entry for LP and GP setup, plus in-app plan/profile continuation for LP users.
+    routes/pages:
+      - /onboarding
+      - /onboarding/plan
+      - /app/plan
+      - /gp-onboarding
+    related_tables:
+      - user_profiles
+      - user_buy_box
+      - management_companies
+      - operator_permissions
+      - gp_agreements
+    related_endpoints:
+      - GET /api/gp-onboarding
+      - POST /api/gp-onboarding
+      - GET /api/buybox
+      - POST /api/buybox
+      - POST /api/network?action=avatar
+      - GET /api/management-companies/:id/settings
+    related_files:
+      - src/routes/onboarding/+page.svelte
+      - src/routes/onboarding/plan/+page.svelte
+      - src/routes/app/plan/+page.svelte
+      - src/lib/components/onboarding/LegacyOnboardingFlow.svelte
+      - src/lib/onboarding/legacyOnboardingBootstrap.js
+      - api/gp-onboarding.js
+      - api/buybox.js
+      - src/lib/utils/userScopedState.js
+      - src/lib/stores/auth.js
+    shared_components:
+      - src/lib/components/onboarding/LegacyOnboardingFlow.svelte
+      - src/lib/components/onboarding/TeamContactsStage.svelte
+      - src/lib/components/LegacyPlanWizard.svelte
+    readme_path: docs/ONBOARDING_AND_INTAKE_SPEC.md
+    test_paths:
+      - tests/plan-wizard-state.test.mjs
+      - tests/legacy-onboarding-bootstrap.test.mjs
+      - tests/buybox-completion-contract.test.mjs
+      - scripts/qa-plan-wizard.mjs
+      - scripts/qa-sandbox-live.mjs
+    known_fragility_notes:
+      - LP progress still resumes from scoped browser state first; cross-device restore is only partially backed by server-truth data.
+      - Standalone onboarding lives outside the /app session refresh guard, so stale-token handling remains weaker here than inside /app/*.
+      - Branch code now labels fallback buy-box completion separately, but the deployed sandbox can still present a fallback _completedAt from GHL tags while GET /api/gp-onboarding only trusts user_buy_box.completed_at for hasBuyBox.
+      - GP and LP bootstrap decisions share one legacy component, which makes redirect ordering easy to drift.
+
+  - feature_name: deal_review
+    description: Reviewer and GP editing workflow for deal data, citations, lifecycle transitions, and publish readiness.
+    routes/pages:
+      - /deal-review
+      - /deal-review/risk-redesign
+      - /deal/[id]
+    related_tables:
+      - opportunities
+      - management_companies
+      - operator_permissions
+      - sec_filings
+    related_endpoints:
+      - GET /api/deals/:id
+      - PATCH /api/deals/:id
+      - GET /api/sec-verification
+      - POST /api/deal-cleanup
+    related_files:
+      - src/routes/deal-review/+page.svelte
+      - src/routes/deal-review/+layout.svelte
+      - src/lib/utils/dealReviewSchema.js
+      - src/lib/utils/reviewSummaryState.js
+      - src/lib/utils/dealOnboardingFlow.js
+      - api/deals/[id].js
+      - api/deal-cleanup.js
+      - api/member/deals/transform.js
+    shared_components:
+      - src/lib/components/deal-review/DealReviewSidebar.svelte
+      - src/lib/components/deal-review/LendingFundReviewSectionStage.svelte
+      - src/lib/components/deal-review/FieldRenderer.svelte
+      - src/lib/components/deal-review/SecVerificationStage.svelte
+    readme_path: docs/LENDING_FUND_REVIEW_BRIEF.md
+    test_paths:
+      - tests/deal-review-provenance.smoke.spec.ts
+      - tests/review-summary-state.test.mjs
+      - tests/review-field-evidence.test.mjs
+      - scripts/qa-sandbox-live.mjs
+    known_fragility_notes:
+      - GP-visible review still depends on admin-only /api/deal-cleanup actions for some extraction and evidence paths.
+      - Sandbox currently returns empty riskTags for the canonical review deal even though source risk fields are populated.
+      - Summary readiness can still drift from stricter schema-required publish fields in lending-fund flows.

@@ -155,3 +155,36 @@ test('single-deal transform infers investing states from spelled-out geography n
 
 	assert.deepEqual(deal.investingStates, ['AZ', 'CO', 'NV', 'CA', 'OR', 'WA', 'TX']);
 });
+
+test('single-deal transform infers risk tags when the raw risk_tags array is empty', () => {
+	const [deal] = transformDeals(
+		[
+			{
+				id: 'legacy-empty-risk-tags',
+				investment_name: 'Capital Fund 2',
+				asset_class: 'Private Debt / Credit',
+				deal_branch: 'lending_fund',
+				deal_type: 'Fund',
+				risk_tags: [],
+				source_risk_factors: [
+					'Redemptions are paid from available capital and can be delayed when liquidity is tight.',
+					'Credit facilities add leverage to the fund structure.'
+				],
+				highlighted_risks: [
+					'Collateral and underwriting outcomes drive loss severity when defaults occur.'
+				],
+				management_company: {
+					id: 'cad0d99d-675a-4abf-94be-c98902c915f0',
+					operator_name: 'Capital Fund',
+					website: 'https://capitalfund1.com',
+					founding_year: 2009,
+					authorized_emails: []
+				}
+			}
+		],
+		[],
+		[]
+	);
+
+	assert.deepEqual(deal.riskTags, ['Leverage', 'Liquidity', 'Credit Loss', 'Underwriting']);
+});

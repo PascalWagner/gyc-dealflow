@@ -5,6 +5,7 @@ Dealflow app.
 
 ## Useful starting points
 
+- `SANDBOX_LOGIN_FLOW.md`
 - `ONBOARDING_AND_INTAKE_SPEC.md`
 - `PRODUCT_ROADMAP_JTBD.md`
 - `ARCHITECTURE_REMEDIATION_PLAN.md`
