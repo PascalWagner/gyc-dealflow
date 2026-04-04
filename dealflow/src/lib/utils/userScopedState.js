@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { normalizeStage } from '$lib/utils/dealflow-contract.js';
+import { safeJsonParse } from '$lib/utils/primitives.js';
 
 export const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
 export const PLAN_SESSION_MODE_KEY = 'gycPlanSessionMode';
@@ -43,14 +44,6 @@ const PREFIX_SCOPED_KEYS = [
 	'gycIntroRequested_',
 	'gycDailyDeals_'
 ];
-
-function safeJsonParse(value, fallback) {
-	try {
-		return JSON.parse(value);
-	} catch {
-		return fallback;
-	}
-}
 
 function normalizeEmail(email) {
 	return String(email || '').trim().toLowerCase();

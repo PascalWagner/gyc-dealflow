@@ -1,4 +1,5 @@
 import { getDealHistoricalReturns, isDebtOrLendingDeal } from './dealReturns.js';
+import { hasValue } from './primitives.js';
 
 const DEFAULT_HERO_PRESET = {
 	gradient: 'linear-gradient(135deg, #0A1E21 0%, #1F5159 100%)',
@@ -32,12 +33,6 @@ const HERO_PRESETS = [
 	}
 ];
 
-function hasValue(value) {
-	if (value === undefined || value === null) return false;
-	if (typeof value === 'string') return value.trim() !== '';
-	if (Array.isArray(value)) return value.length > 0;
-	return true;
-}
 
 function firstDefined(...values) {
 	for (const value of values) {
