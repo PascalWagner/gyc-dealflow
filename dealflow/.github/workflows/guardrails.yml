@@ -36,3 +36,12 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Run unit tests
+        run: npm run test:unit:all
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run smoke tests
+        run: npm run test:smoke

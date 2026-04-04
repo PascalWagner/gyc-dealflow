@@ -28,6 +28,7 @@
     "test:deal-card-state": "node --test --import ./scripts/register-codex-alias-loader.mjs ./scripts/test-deal-card-state.mjs",
     "test:subscriptions": "node --test --import ./scripts/register-codex-alias-loader.mjs ./tests/subscription-membership.test.mjs",
     "test:unit": "npm run test:deal-card-state && npm run test:subscriptions",
+    "test:unit:all": "node --test --import ./scripts/register-codex-alias-loader.mjs ./tests/*.test.mjs ./scripts/test-deal-card-state.mjs ./scripts/test-email-actions.mjs",
     "audit:architecture": "node scripts/audit-architecture-sizes.mjs",
     "audit:routes": "node scripts/audit-route-contracts.mjs",
     "audit:migrations": "node scripts/audit-migrations.mjs",
@@ -52,6 +53,8 @@
     "@capacitor/splash-screen": "^6.0.0",
     "@capacitor/status-bar": "^6.0.0",
     "@napi-rs/canvas": "^0.1.80",
+    "@sentry/sveltekit": "^10.47.0",
+    "@sentry/vite-plugin": "^5.1.1",
     "@supabase/supabase-js": "^2.99.3",
     "@vercel/og": "^0.11.1",
     "chart.js": "^4.5.1",
@@ -59,7 +62,8 @@
     "fast-xml-parser": "^4.5.4",
     "leaflet": "^1.9.4",
     "pdf-parse": "^2.4.5",
-    "pdfjs-dist": "^5.4.296"
+    "pdfjs-dist": "^5.4.296",
+    "posthog-js": "^1.364.7"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",

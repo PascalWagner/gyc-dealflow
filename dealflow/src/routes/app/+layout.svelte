@@ -12,6 +12,7 @@
 		inferAdminEmailForSession,
 		restoreScopedUserState
 	} from '$lib/utils/userScopedState.js';
+	import * as analytics from '$lib/analytics.js';
 
 	let { children } = $props();
 
@@ -119,6 +120,10 @@
 
 				// ── All checks passed — NOW render the app shell ──
 				sessionReady = true;
+
+				// ── Analytics ──
+				analytics.init();
+				analytics.identify(activeSession);
 
 				const hydration = await hydrateUserScopedData({
 					email: activeSession.email,

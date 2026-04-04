@@ -1,40 +1,19 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import { makeSessionUser as _makeSessionUser } from '../tests/fixtures/session.mjs';
 
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:4173';
 const USER_EMAIL = 'member@example.com';
 const STRICT_PLANNED_ONBOARDING = process.env.STRICT_PLANNED_ONBOARDING === '1';
 
-function base64UrlEncode(value) {
-	return Buffer.from(value)
-		.toString('base64')
-		.replace(/\+/g, '-')
-		.replace(/\//g, '_')
-		.replace(/=+$/g, '');
-}
-
-function fakeJwt(email) {
-	const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-	const payload = base64UrlEncode(JSON.stringify({
-		sub: `user-${email}`,
-		email,
-		role: 'authenticated',
-		exp: Math.floor(Date.now() / 1000) + 60 * 60
-	}));
-	return `${header}.${payload}.signature`;
-}
-
 function makeSessionUser(email = USER_EMAIL) {
-	return {
-		email,
+	return _makeSessionUser(email, {
 		name: 'Plan Tester',
 		fullName: 'Plan Tester',
 		tier: 'member',
 		accessTier: 'member',
-		isAdmin: false,
-		token: fakeJwt(email),
-		refreshToken: `refresh-${email}`
-	};
+		isAdmin: false
+	});
 }
 
 const completedAt = '2026-04-02T12:00:00.000Z';
