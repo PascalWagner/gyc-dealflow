@@ -2318,7 +2318,7 @@
 		--onboarding-shell-offset: 0px;
 		min-height: auto;
 	}
-	.onboarding-shell { min-width: 0; }
+	.onboarding-shell { min-width: 0; margin-inline: auto; }
 	.onboarding-shell--app {
 		width: min(100%, 900px);
 		padding-inline: 0;
