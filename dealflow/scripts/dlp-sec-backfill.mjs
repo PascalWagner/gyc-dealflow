@@ -132,14 +132,10 @@ async function main() {
         if (xmlResp.ok) {
           const xmlText = await xmlResp.text();
 
-          // Mark previous latest as not latest
-          await supabase
-            .from('sec_filings')
-            .update({ is_latest_amendment: false })
-            .eq('cik', normalizedCik)
-            .eq('is_latest_amendment', true);
-
-          // Upsert this filing
+          // IMPORTANT: Do NOT touch is_latest_amendment here.
+          // We upsert every filing with is_latest_amendment: false.
+          // markLatestFilingForCik() runs once after the loop and sets
+          // the flag correctly on the single newest filing.
           const { error: upsertErr } = await supabase
             .from('sec_filings')
             .upsert({
@@ -149,7 +145,7 @@ async function main() {
               filing_date: fileDate || null,
               filing_type: form,
               entity_name: entityName,
-              is_latest_amendment: true,
+              is_latest_amendment: false,
               raw_xml: xmlText,
               edgar_url: xmlUrl
             }, { onConflict: 'accession_number' });
@@ -171,7 +167,42 @@ async function main() {
     }
   }
 
-  console.log(`\nStored ${stored} filings. Latest: ${latest?.fileDate} — ${latest?.entityName}`);
+  console.log(`\nStored ${stored} filings. Latest filing by date: ${latest?.fileDate} — ${latest?.entityName}`);
+
+  // After storing all filings, set is_latest_amendment = true on ONLY the newest one.
+  // This is the correct pattern: one atomic operation after all rows exist,
+  // not a destructive set-and-clear on every loop iteration.
+  if (!DRY_RUN && stored > 0) {
+    console.log('\nMarking latest amendment...');
+
+    // Step 1: Clear all flags for this CIK
+    await supabase
+      .from('sec_filings')
+      .update({ is_latest_amendment: false })
+      .eq('cik', normalizedCik);
+
+    // Step 2: Find the newest filing by filing_date
+    const { data: newest, error: newestErr } = await supabase
+      .from('sec_filings')
+      .select('id, accession_number, filing_date')
+      .eq('cik', normalizedCik)
+      .not('filing_date', 'is', null)
+      .order('filing_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (newestErr || !newest) {
+      console.warn('Could not find newest filing to mark as latest:', newestErr?.message);
+    } else {
+      // Step 3: Set only the newest to true
+      await supabase
+        .from('sec_filings')
+        .update({ is_latest_amendment: true })
+        .eq('id', newest.id);
+
+      console.log(`Marked as latest: ${newest.filing_date} (${newest.accession_number})`);
+    }
+  }
 
   // 4. Get the latest filing from DB and update the deal
   if (!DRY_RUN && stored > 0) {
@@ -194,6 +225,7 @@ async function main() {
 
       if (Object.keys(updates).length > 0) {
         updates.updated_at = new Date().toISOString();
+        updates.sec_data_refreshed_at = new Date().toISOString();
         const { error: updateErr } = await supabase
           .from('opportunities')
           .update(updates)
