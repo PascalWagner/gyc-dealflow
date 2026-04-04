@@ -1182,11 +1182,9 @@
 			appMode ||
 			['1', 'true', 'yes'].includes(($page.url.searchParams.get('review') || '').toLowerCase());
 
-		// Dark mode
-		const savedTheme = localStorage.getItem('gyc-theme');
-		if (savedTheme === 'dark') {
-			document.documentElement.classList.add('dark');
-		}
+		// Force light mode
+		document.documentElement.classList.add('light');
+		document.documentElement.classList.remove('dark');
 
 		// Prefill name
 		if ($user?.name && $user.name !== $user.email?.split('@')[0]) {
