@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { canonicalizeUserTier, isAdmin, getFreshSessionToken } from '$lib/stores/auth.js';
+	import { canonicalizeUserTier, isAdmin, getFreshSessionToken, getStoredSessionUser } from '$lib/stores/auth.js';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { readScopedStaleCache, writeScopedStaleCache } from '$lib/utils/scopedStaleCache.js';
@@ -78,7 +78,12 @@
 	});
 
 	async function adminFetch(body) {
-		const token = await getFreshSessionToken();
+		let token = await getFreshSessionToken();
+		// Fallback to stored token if refresh fails (bypass/expired tokens)
+		if (!token) {
+			const stored = getStoredSessionUser();
+			token = stored?.token || '';
+		}
 		if (!token) return { success: false, error: 'Not signed in' };
 		const resp = await fetch('/api/admin-manage', {
 			method: 'POST',
