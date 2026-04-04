@@ -65,3 +65,48 @@ test('evergreen lending fund with no holdPeriod defaults to 5-year projection', 
 	assert.equal(projection.holdYears, 5);
 	assert.equal(projection.rows.length, 5);
 });
+
+// ---------------------------------------------------------------------------
+// buildSecFilingSummary — Latest Filing field
+// ---------------------------------------------------------------------------
+
+import { buildSecFilingSummary } from '../src/lib/utils/dealDetailSignals.js';
+
+test('buildSecFilingSummary includes latestFilingDate from secLatestFilingDate', () => {
+	const result = buildSecFilingSummary({
+		secCik: '1622059',
+		dateOfFirstSale: '2014-10-06',
+		secLatestFilingDate: '2026-03-02',
+		totalAmountSold: 628887587,
+		totalInvestors: 1503
+	});
+	assert.equal(result.latestFilingDate, '2026-03-02');
+	assert.equal(result.firstSaleDate, '2014-10-06');
+	assert.equal(result.totalRaised, 628887587);
+	assert.equal(result.totalInvestors, 1503);
+	assert.equal(result.hasFiling, true);
+});
+
+test('buildSecFilingSummary latestFilingDate is null when secLatestFilingDate absent', () => {
+	const result = buildSecFilingSummary({
+		secCik: '1622059',
+		totalAmountSold: 100000
+	});
+	assert.equal(result.latestFilingDate, null);
+	assert.equal(result.hasFiling, true);
+});
+
+test('buildSecFilingSummary latestFilingDate differs from firstSaleDate for multi-amendment deals', () => {
+	const result = buildSecFilingSummary({
+		secCik: '1622059',
+		dateOfFirstSale: '2014-10-06',
+		secLatestFilingDate: '2026-03-02'
+	});
+	assert.notEqual(result.latestFilingDate, result.firstSaleDate);
+	assert.equal(result.latestFilingDate, '2026-03-02');
+	assert.equal(result.firstSaleDate, '2014-10-06');
+});
+
+test('buildSecFilingSummary returns null for null deal', () => {
+	assert.equal(buildSecFilingSummary(null), null);
+});

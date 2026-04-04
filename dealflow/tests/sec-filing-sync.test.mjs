@@ -290,3 +290,21 @@ test('refreshSecFilingsForDeal does not select non-existent columns (issuer_enti
 	assert.ok(!capturedSelectCols.includes('sec_entity_name'),
 		`sec_entity_name is not a real column and must not be selected. Got: ${capturedSelectCols}`);
 });
+
+test('buildDealUpdatesFromSecFiling maps filing_date to sec_latest_filing_date', () => {
+	const { updates } = buildDealUpdatesFromSecFiling(
+		{ id: 'deal-1' },
+		{ filing_date: '2026-03-02', total_amount_sold: 628887587, total_investors: 1503, federal_exemptions: ['06c'] }
+	);
+	assert.equal(updates.sec_latest_filing_date, '2026-03-02');
+	assert.equal(updates.total_amount_sold, 628887587);
+	assert.equal(updates.total_investors, 1503);
+});
+
+test('buildDealUpdatesFromSecFiling does not set sec_latest_filing_date when filing_date is absent', () => {
+	const { updates } = buildDealUpdatesFromSecFiling(
+		{ id: 'deal-1' },
+		{ total_amount_sold: 100000, federal_exemptions: [] }
+	);
+	assert.equal('sec_latest_filing_date' in updates, false);
+});

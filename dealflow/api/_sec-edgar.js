@@ -697,6 +697,7 @@ export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}, options = 
 	updates.is_506b = is506b;
 	if (filing.minimum_investment) updates.investment_minimum = filing.minimum_investment;
 	if (filing.date_of_first_sale) updates.date_of_first_sale = filing.date_of_first_sale;
+	if (filing.filing_date) updates.sec_latest_filing_date = filing.filing_date;
 	if (filing.total_offering_amount) updates.offering_size = filing.total_offering_amount;
 	if (filing.total_amount_sold) updates.total_amount_sold = filing.total_amount_sold;
 	if (filing.total_investors) updates.total_investors = filing.total_investors;

@@ -84,6 +84,7 @@ export function buildSecFilingSummary(deal) {
 		totalRaised,
 		totalInvestors,
 		firstSaleDate: deal.dateOfFirstSale || null,
+		latestFilingDate: deal.secLatestFilingDate || null,
 		offeringType: deal.offeringType || null
 	};
 }

@@ -179,6 +179,7 @@
 									{#if secFiling.totalRaised}<div class="struct-row"><span class="struct-label">Capital Raised</span><span class="struct-value">{fmt(secFiling.totalRaised, 'money')}</span></div>{/if}
 									{#if secFiling.totalInvestors}<div class="struct-row"><span class="struct-label">Investors</span><span class="struct-value">{secFiling.totalInvestors}</span></div>{/if}
 									{#if secFiling.firstSaleDate}<div class="struct-row"><span class="struct-label">First Sale</span><span class="struct-value">{secFiling.firstSaleDate}</span></div>{/if}
+								{#if secFiling.latestFilingDate}<div class="struct-row"><span class="struct-label">Latest Filing</span><span class="struct-value">{secFiling.latestFilingDate}</span></div>{/if}
 								{:else}
 									<div class="ad-empty"><p>No SEC filing data matched for this deal.</p></div>
 								{/if}

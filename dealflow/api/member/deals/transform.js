@@ -449,6 +449,7 @@ export function transformDeals(parentDeals, childShareClasses, sponsorRows) {
 			secCik: deal.sec_cik || '',
 			secEntityName: deal.sec_entity_name || '',
 			dateOfFirstSale: deal.date_of_first_sale,
+			secLatestFilingDate: deal.sec_latest_filing_date || null,
 			totalAmountSold: deal.total_amount_sold,
 			totalInvestors: deal.total_investors,
 			pctFunded:
