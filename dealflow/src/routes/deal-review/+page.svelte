@@ -2884,6 +2884,9 @@
 
 		if (movingForward) {
 			// TODO: add per-stage validation gates here (e.g. SEC verification must pass before advancing)
+			if (activeStage === 'sec' && targetStage === 'classification') {
+				await loadDeal();
+			}
 			if (targetStage === 'classification' && branchInfo.branch === 'lending_fund') {
 				await loadClassificationSignals();
 			}
@@ -3749,15 +3752,25 @@
 					</div>
 
 					{#if activeStage === 'sec'}
-						<SecVerificationStage
-							dealId={dealId}
-							deal={deal}
-							initialPayload={secVerificationContext}
-							refreshKey={secStageRefreshKey}
-							onchange={(nextContext) => {
-								secVerificationContext = nextContext;
-							}}
-						/>
+						{#if extractionState === 'running'}
+							<div class="extraction-loading-card">
+								<div class="extraction-loading-card__inner">
+									<span class="extraction-loading-card__spinner" aria-hidden="true"></span>
+									<p class="extraction-loading-card__label">Extracting deal data&hellip;</p>
+									<p class="extraction-loading-card__sub">SEC verification will load once extraction completes.</p>
+								</div>
+							</div>
+						{:else}
+							<SecVerificationStage
+								dealId={dealId}
+								deal={deal}
+								initialPayload={secVerificationContext}
+								refreshKey={secStageRefreshKey}
+								onchange={(nextContext) => {
+									secVerificationContext = nextContext;
+								}}
+							/>
+						{/if}
 					{:else if activeStage === 'team'}
 						{#key `${dealId}:${activeStage}`}
 							<TeamContactsStage
@@ -4256,6 +4269,48 @@
 
 	.review-stage-progress-mobile {
 		display: none;
+	}
+
+	.extraction-loading-card {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 48px 24px;
+	}
+
+	.extraction-loading-card__inner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+		text-align: center;
+	}
+
+	.extraction-loading-card__spinner {
+		display: block;
+		width: 32px;
+		height: 32px;
+		border: 3px solid var(--color-border, #e5e7eb);
+		border-top-color: var(--color-primary, #6366f1);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.extraction-loading-card__label {
+		font-size: 15px;
+		font-weight: 500;
+		color: var(--color-text, #111827);
+		margin: 0;
+	}
+
+	.extraction-loading-card__sub {
+		font-size: 13px;
+		color: var(--color-text-muted, #6b7280);
+		margin: 0;
 	}
 
 	.editor-stack {

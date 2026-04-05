@@ -21,6 +21,7 @@ If this is a PPM or subscription agreement, prioritize the INVESTOR'S specific d
   "dealType": "One of: Fund, Syndication, Direct, REIT",
   "strategy": "One of: Core, Core-Plus, Value-Add, Opportunistic, Development, Lending, Distressed",
   "investmentStrategy": "2-3 sentence LP-facing summary of the investment strategy",
+  "shortSummary": "2-3 sentence investor-facing summary of the deal: what it is, why it exists, and what an investor should understand immediately. Write for a sophisticated LP scanning a deal listing — clear, direct, no jargon.",
   "targetIRR": "Target IRR as decimal (e.g. 0.15 for 15%)",
   "preferredReturn": "Preferred return as decimal (e.g. 0.08 for 8%)",
   "cashOnCash": "Cash on cash return as decimal if mentioned",
@@ -85,6 +86,7 @@ If this is a PPM or subscription agreement, prioritize the INVESTOR'S specific d
   "entityInvestedInto": "The legal entity being invested into (issuer / SPV name)",
   "historicalReturns": "Array of completed full-year annual returns. Each entry: {\"year\": 2024, \"value\": 10.23, \"type\": \"non_drip\"}. Extract from annualized returns tables, historical performance sections, or fund reports. Use NON-DRIP returns when both DRIP and Non-DRIP are available. Only include completed full calendar years — exclude YTD or partial-year data. Values should be percentages (10.23 = 10.23%, NOT decimals). Look for headings like 'Annualized Returns', 'Historical Returns', 'Fund Performance', 'Annual Net Returns', 'Non-DRIP Avg'.",
   "sourceRiskFactors": "Array of risk factors from the Risk Factors section. For each risk: {\"tag\": \"one of [Leverage, Liquidity, Credit Loss, Concentration, Refinancing, Interest Rate, Sponsor, Key Personnel, Execution, Regulatory, Valuation, Counterparty, Tax, Operational, Insufficient Cash Flow, Transfer Restrictions, Unspecified Investments, Litigation, Limited Recourse, Economic/Market Conditions, Capital Call Risk, Nonperforming Loans, Environmental]\", \"title\": \"Short LP-friendly title\", \"quote\": \"Key sentence from the document\", \"source\": \"PPM §X / page Y\"}. IMPORTANT: Skip boilerplate risks (terrorism, pandemics, acts of God, mold/air quality, general economic uncertainty, cybersecurity, force majeure). Focus on risks SPECIFIC to this deal's structure, strategy, sponsor, or asset type. Map each to the closest standard tag.",
+  "underlyingExposureTypes": "Array of asset or receivable types this fund lends against or invests in. Only use values from this list: [\"Multifamily\", \"Single Family\", \"Commercial Real Estate\", \"Industrial\", \"Retail\", \"Office\", \"Hospitality\", \"Self Storage\", \"Land\", \"Medical Receivables\", \"Aviation\", \"Education\", \"Consumer\", \"Small Business\", \"Equipment\", \"Mixed Portfolio\", \"Other\"]. Return null if this is not a lending fund or the underlying collateral is not described.",
   "riskTags": "Array of risk tag strings from the standardized list: [Leverage, Liquidity, Credit Loss, Concentration, Refinancing, Interest Rate, Sponsor, Key Personnel, Execution, Regulatory, Valuation, Counterparty, Tax, Operational, Insufficient Cash Flow, Transfer Restrictions, Unspecified Investments, Litigation, Limited Recourse, Economic/Market Conditions, Capital Call Risk, Nonperforming Loans, Environmental]. Include ONLY tags that apply to this specific deal.",
   "riskNotes": "2-4 sentence LP-facing summary of the key risks. Write for an accredited investor evaluating this deal — be specific about what could go wrong and what the LP should watch for. Do NOT copy PPM legalese. Do NOT include boilerplate risks."
 }
@@ -99,6 +101,7 @@ IMPORTANT:
 - For fees, extract BOTH the "fees" field (full text description) AND the individual fee percentage fields
 - PRIORITIZE investor-specific details (amountInvested, dateInvested, investingEntity) from signature pages
 - For secEntityName and issuerEntity: return the exact legal entity name, not the marketing name
+- shortSummary should be distinct from investmentStrategy: it's the deal card headline, not the strategy document
 - Use the full document as context, not only the cover pages, but prefer the most formal issuer definitions when multiple names are present
 - For historicalReturns: prefer NON-DRIP annual returns over DRIP. Do NOT confuse target returns with actual historical returns. Do NOT include the current incomplete year as a full-year return. Look for annualized returns tables with monthly columns plus an average column
 - For lending funds: distinguish between totalLoansUnderMgmt (total loan book), fundAUM (total assets), and equityCommitments (LP capital). These are three distinct numbers

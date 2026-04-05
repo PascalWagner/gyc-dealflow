@@ -1453,9 +1453,11 @@ export function createDealReviewFormFromDeal(source) {
 
 	for (const field of Object.values(dealFieldConfig)) {
 		if (field.type === 'entity_reference') {
+			const entityId = String(readField(source, field.readIdFrom) || '').trim();
+			const entityName = entityId ? String(readField(source, field.readNameFrom) || '').trim() : '';
 			form[field.key] = {
-				id: String(readField(source, field.readIdFrom) || '').trim(),
-				name: String(readField(source, field.readNameFrom) || '').trim(),
+				id: entityId,
+				name: entityName,
 				createIfMissing: false
 			};
 			continue;

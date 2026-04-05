@@ -693,7 +693,10 @@ export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}, options = 
 
 	const updates = {};
 	if (is506b) updates.offering_type = '506(b)';
-	else if (is506c) updates.offering_type = '506(c)';
+	else if (is506c) {
+		updates.offering_type = '506(c)';
+		updates.available_to = 'Accredited Investors';
+	}
 	updates.is_506b = is506b;
 	// Only set investment_minimum from SEC filing if the deal doesn't already have one.
 	// Manually curated minimums (e.g. raised from $100K to $500K) must never be overwritten
