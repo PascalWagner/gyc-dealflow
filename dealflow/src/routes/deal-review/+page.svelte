@@ -2789,14 +2789,8 @@
 			return false;
 		}
 
-		if (!movingForward && !confirmDiscardUnsavedChanges()) {
-			return false;
-		}
-
 		if (movingForward) {
-			const shouldSaveBeforeAdvance = dirty || ['intake', 'team', 'sec'].includes(activeStage);
-			const ok = shouldSaveBeforeAdvance ? await saveCurrentStage(activeStage) : true;
-			if (!ok) return false;
+			// TODO: add per-stage validation gates here (e.g. SEC verification must pass before advancing)
 			if (targetStage === 'classification' && branchInfo.branch === 'lending_fund') {
 				await loadClassificationSignals();
 			}
