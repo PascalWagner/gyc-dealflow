@@ -9,8 +9,9 @@
 //     recentActivity: [{user_id, deal_id, stage, updated_at}] }
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
+import { withErrorCapture } from './_handler.js';
 
-export default async function handler(req, res) {
+export default withErrorCapture(async (req, res) => {
   setCors(res);
 
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -196,4 +197,4 @@ export default async function handler(req, res) {
     console.error('gp-analytics error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+}, 'gp-analytics');

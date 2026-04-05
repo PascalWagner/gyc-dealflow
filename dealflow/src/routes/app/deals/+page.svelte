@@ -117,6 +117,11 @@
 	}
 
 	function trackDealView(dealId) {
+		analytics.track('deal_card_clicked', {
+			dealId,
+			assetClass: filteredDeals.find(d => d.id === dealId)?.assetClass || null,
+			tab: currentTab
+		});
 		if (!browser || !isFreeUser) return;
 		let stored = readUserScopedJson(todayKey, []);
 		if (!stored.includes(dealId)) {
@@ -395,7 +400,9 @@
 		if (!DEALFLOW_UI_STAGE_TABS.has(tab)) return;
 		if (tab === currentTab) return;
 		captureScrollForTab(currentTab);
+		const previousTab = currentTab;
 		currentTab = tab;
+		analytics.track('deals_tab_switched', { from: previousTab, to: tab });
 		syncTabInUrl(tab);
 		persistDealFlowUiState();
 		await restoreScrollForCurrentTab({ force: true });
@@ -832,6 +839,22 @@
 			fetchMemberDeals({
 				...request,
 				preserveResults: currentTab !== 'filter' && $memberDealsMeta.loaded && $memberDealsMeta.scope === 'ids'
+			}).then(() => {
+				if (currentTab === 'filter') {
+					analytics.track('deals_filtered', {
+						assetClass: effectiveFilters.assetClass || null,
+						dealType: effectiveFilters.dealType || null,
+						strategy: effectiveFilters.strategy || null,
+						search: effectiveFilters.search ? true : false,
+						resultCount: $memberDealsMeta.total || 0
+					});
+					if (effectiveFilters.search?.trim()) {
+						analytics.track('deals_searched', {
+							hasResults: ($memberDealsMeta.total || 0) > 0,
+							resultCount: $memberDealsMeta.total || 0
+						});
+					}
+				}
 			}).catch(() => {});
 		}, search.trim() ? 150 : 0);
 

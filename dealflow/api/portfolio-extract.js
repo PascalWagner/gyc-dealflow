@@ -7,6 +7,7 @@
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
 import { extractFromPdf, runEnrichmentCascade } from './_enrichment.js';
+import { withErrorCapture } from './_handler.js';
 
 // ── Portfolio-specific prompt override ───────────────────────────────────────
 // Adds LP-specific field prioritization on top of the standard enrichment prompt
@@ -19,7 +20,7 @@ ADDITIONAL INSTRUCTIONS FOR PORTFOLIO IMPORT:
 - For investingEntity: look for "Subscriber Name", "Investor Name" in signature blocks
 - For targetIRR: if you find it as a decimal (0.15), keep it as-is. The system will handle conversion.`;
 
-export default async function handler(req, res) {
+export default withErrorCapture(async (req, res) => {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -76,4 +77,4 @@ export default async function handler(req, res) {
     console.error('Portfolio extract error:', error);
     return res.status(500).json({ error: 'Extraction failed: ' + error.message });
   }
-}
+}, 'portfolio-extract');

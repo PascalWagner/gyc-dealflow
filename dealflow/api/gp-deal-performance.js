@@ -10,6 +10,7 @@
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
 import { normalizeStage } from '../src/lib/utils/dealflow-contract.js';
+import { withErrorCapture } from './_handler.js';
 
 // Stage hierarchy for cumulative funnel (higher = further in pipeline)
 const STAGE_RANK = { filter: 0, review: 1, connect: 2, decide: 3, invested: 4, skipped: -1 };
@@ -73,7 +74,7 @@ function periodCutoff(period) {
   return d.toISOString();
 }
 
-export default async function handler(req, res) {
+export default withErrorCapture(async (req, res) => {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -390,4 +391,4 @@ export default async function handler(req, res) {
     console.error('gp-deal-performance error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+}, 'gp-deal-performance');

@@ -4,11 +4,12 @@
 // Supports chunked uploads for files > 3.5MB (Vercel 4.5MB body limit).
 
 import { getAdminClient, setCors, rateLimit } from './_supabase.js';
+import { withErrorCapture } from './_handler.js';
 
 // In-memory chunk buffer (cleared after assembly)
 const _chunkBuffers = new Map();
 
-export default async function handler(req, res) {
+export default withErrorCapture(async (req, res) => {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
     console.error('Portfolio upload error:', error);
     return res.status(500).json({ error: 'Failed to upload document' });
   }
-}
+}, 'portfolio-upload');
 
 async function uploadAndRespond(supabase, fileBuffer, storagePath, res) {
   // Upload to Supabase Storage
