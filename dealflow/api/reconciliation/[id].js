@@ -103,7 +103,7 @@ function isUuid(value) {
 async function loadTask(supabase, id) {
   const { data, error } = await supabase
     .from('reconciliation_tasks')
-    .select('id, deal_id, status, conflict_fields, created_at, resolved_by, resolved_at')
+    .select('id, deal_id, status, conflict_fields, extraction_run_id, created_at, resolved_by, resolved_at')
     .eq('id', id)
     .single();
   return { task: data || null, error };
@@ -162,6 +162,9 @@ export default async function handler(req, res) {
     }
 
     const actorEmail = String(user?.email || '').toLowerCase();
+    const actorName = String(
+      user?.user_metadata?.full_name || user?.user_metadata?.name || ''
+    ).trim();
     const now = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('reconciliation_tasks')
@@ -172,6 +175,34 @@ export default async function handler(req, res) {
       console.error('[reconciliation/dismiss] update failed', { id, message: updateError.message });
       return res.status(500).json({ error: 'Failed to dismiss reconciliation task' });
     }
+
+    // Audit: log the dismiss to review_field_events (non-fatal)
+    const conflictFields = Array.isArray(task.conflict_fields) ? task.conflict_fields : [];
+    const { error: auditError } = await supabase
+      .from('review_field_events')
+      .insert({
+        opportunity_id: task.deal_id,
+        field_key: '',
+        event_type: 'reconciliation_dismissed',
+        actor_type: 'admin',
+        actor_email: actorEmail,
+        actor_name: actorName,
+        previous_value: { status: 'pending' },
+        next_value: { status: 'dismissed' },
+        metadata: {
+          reconciliationTaskId: id,
+          conflictFieldCount: conflictFields.length,
+          extractionRunId: task.extraction_run_id || null
+        }
+      });
+
+    if (auditError) {
+      console.warn('[reconciliation/dismiss] audit event insert failed (non-fatal)', {
+        id,
+        message: auditError.message
+      });
+    }
+
     return res.status(200).json({ success: true, status: 'dismissed' });
   }
 
