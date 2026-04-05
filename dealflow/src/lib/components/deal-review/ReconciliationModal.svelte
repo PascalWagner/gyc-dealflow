@@ -18,6 +18,7 @@
 	let task = $state(null);
 	let loadError = $state('');
 	let submitError = $state('');
+	let alreadyResolvedInfo = $state(null); // { resolvedBy, resolvedAt } — set on 409 already_resolved
 
 	// Per-field decision state: { [fieldKey]: { action, manualValue, editing } }
 	let decisions = $state({});
@@ -106,6 +107,14 @@
 				body: JSON.stringify({ decisions: decisionList })
 			});
 			const payload = await response.json().catch(() => ({}));
+			if (response.status === 409 && payload?.error === 'already_resolved') {
+				alreadyResolvedInfo = {
+					resolvedBy: payload.resolvedBy || 'another admin',
+					resolvedAt: payload.resolvedAt || ''
+				};
+				submitState = 'error';
+				return;
+			}
 			if (!response.ok || !payload?.success) {
 				throw new Error(payload?.error || 'Failed to resolve reconciliation task.');
 			}
@@ -279,7 +288,12 @@
 					</table>
 				</div>
 
-				{#if submitError}
+				{#if alreadyResolvedInfo}
+					<div class="recon-error">
+						This reconciliation was already resolved by {alreadyResolvedInfo.resolvedBy}{alreadyResolvedInfo.resolvedAt ? ` at ${new Date(alreadyResolvedInfo.resolvedAt).toLocaleString()}` : ''}.
+						<button type="button" class="recon-reload-btn" onclick={() => window.location.reload()}>Reload page</button>
+					</div>
+				{:else if submitError}
 					<div class="recon-error">{submitError}</div>
 				{/if}
 
@@ -511,6 +525,25 @@
 		background: rgba(185, 28, 28, 0.06);
 		color: #b91c1c;
 		font-size: 13px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.recon-reload-btn {
+		flex-shrink: 0;
+		background: none;
+		border: 1px solid #b91c1c;
+		border-radius: 4px;
+		color: #b91c1c;
+		font-size: 12px;
+		padding: 2px 8px;
+		cursor: pointer;
+	}
+
+	.recon-reload-btn:hover {
+		background: rgba(185, 28, 28, 0.08);
 	}
 
 	.recon-footer {

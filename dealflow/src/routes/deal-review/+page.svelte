@@ -34,7 +34,8 @@
 		getFreshSessionToken,
 		getStoredSessionUser,
 		isAdmin,
-		isGP
+		isGP,
+		supabase
 	} from '$lib/stores/auth.js';
 	import {
 		buildDealReviewPayload,
@@ -3078,6 +3079,91 @@
 			writeDraft(snapshot, stageSnapshot);
 		}, 30_000);
 		return () => clearTimeout(timerId);
+	});
+
+	// Realtime subscription for new reconciliation tasks.
+	// When a GP uploads a new document while a reviewer has the deal open, the extraction
+	// pipeline inserts a new reconciliation_tasks row. Without this subscription the amber
+	// banner would not appear until the reviewer reloaded — meaning the publish button's
+	// reconciliation-blocking guard could be bypassed.
+	//
+	// NOTE: Supabase replication must be enabled on the reconciliation_tasks table:
+	// Supabase dashboard → Database → Replication → supabase_realtime publication → add reconciliation_tasks.
+	//
+	// Fallback: if the channel is not SUBSCRIBED within 5 seconds, switch to polling
+	// every 60 seconds via GET /api/deals/:id. This keeps the guard functional even
+	// when realtime is unavailable (e.g. in local dev or if the publication is not set up).
+	$effect(() => {
+		if (!browser || !dealId || !supabase) return;
+
+		let pollInterval = null;
+		let pollingStarted = false;
+
+		async function pollForReconciliation() {
+			try {
+				const token = await getFreshSessionToken();
+				if (!token) return;
+				const response = await fetch(`/api/deals/${encodeURIComponent(dealId)}`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (!response.ok) return;
+				const payload = await response.json().catch(() => ({}));
+				if (payload?.deal?.pendingReconciliationId) {
+					reconciliationTaskId = payload.deal.pendingReconciliationId;
+					reconciliationConflictCount = payload.deal.pendingReconciliationConflictCount || 0;
+				}
+			} catch {
+				// polling failure is non-fatal — silent to avoid noise
+			}
+		}
+
+		function startPolling() {
+			if (pollingStarted) return;
+			pollingStarted = true;
+			pollInterval = setInterval(pollForReconciliation, 60_000);
+		}
+
+		const channel = supabase
+			.channel(`reconciliation:${dealId}`)
+			.on(
+				'postgres_changes',
+				{
+					event: 'INSERT',
+					schema: 'public',
+					table: 'reconciliation_tasks',
+					filter: `deal_id=eq.${dealId}`
+				},
+				(payload) => {
+					if (payload.new?.status === 'pending') {
+						reconciliationTaskId = payload.new.id;
+						reconciliationConflictCount = 0;
+					}
+				}
+			)
+			.subscribe((status, err) => {
+				if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+					console.warn('[deal-review] realtime subscription failed, falling back to polling', {
+						status,
+						dealId,
+						err: err?.message
+					});
+					startPolling();
+				}
+			});
+
+		// 5-second safety timeout: if not joined, activate polling as bridge
+		const subscribeTimeout = setTimeout(() => {
+			if (channel.state !== 'joined') {
+				console.warn('[deal-review] realtime not SUBSCRIBED within 5s, falling back to polling', { dealId });
+				startPolling();
+			}
+		}, 5000);
+
+		return () => {
+			clearTimeout(subscribeTimeout);
+			if (pollInterval) clearInterval(pollInterval);
+			supabase.removeChannel(channel);
+		};
 	});
 </script>
 

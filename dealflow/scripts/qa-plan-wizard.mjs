@@ -16,6 +16,14 @@ function makeSessionUser(email = USER_EMAIL) {
 	});
 }
 
+// Fixture validation: ensure the session user has tosVersion so the plan wizard
+// skips the 'Before we continue' TOS gate without a workaround.
+// If this assertion fails, update tests/fixtures/session.mjs to include tosVersion.
+assert.ok(
+	makeSessionUser().tosVersion,
+	'Fixture validation: session user must have tosVersion set (see tests/fixtures/session.mjs)'
+);
+
 const completedAt = '2026-04-02T12:00:00.000Z';
 
 const branchFixtures = {
@@ -524,7 +532,7 @@ async function runOnboardingEntryScenario(browser) {
 	await page.locator('#first-name').fill('Plan');
 	await page.locator('#last-name').fill('Tester');
 	await clickActiveContinue(page);
-	await handleTosGateIfPresent(page);
+	// TOS gate is bypassed because the fixture user has tosVersion set (see session.mjs)
 	await expectActiveStepTitle(page, 'What best describes you right now?');
 
 	await page.getByRole('button', { name: "I'm an investor (LP)" }).click();
@@ -598,7 +606,7 @@ async function runPlannedOnboardingContractScenario(browser) {
 	await page.locator('#first-name').fill('Plan');
 	await page.locator('#last-name').fill('Tester');
 	await clickActiveContinue(page);
-	await handleTosGateIfPresent(page);
+	// TOS gate is bypassed because the fixture user has tosVersion set (see session.mjs)
 	await expectActiveStepTitle(page, 'What best describes you right now?');
 
 	await page.getByRole('button', { name: "I'm an investor (LP)" }).click();
@@ -694,9 +702,13 @@ async function expectActiveStepTitle(page, expected) {
 }
 
 /**
- * If the TOS gate step is currently active, click all 3 checkboxes and
- * proceed. This step was added after the tests were written (migration 068)
- * and always appears after the name step for users without tos_accepted_version.
+ * @deprecated No longer called — the fixture user now has tosVersion set (see
+ * tests/fixtures/session.mjs) so the onboarding flow skips the TOS gate entirely.
+ * Kept for reference in case a test needs to simulate a first-time user.
+ *
+ * If the TOS gate step is currently active, click all 3 checkboxes and proceed.
+ * This step was added after the tests were written (migration 068) and appears
+ * after the name step for users whose session does not have tosVersion set.
  */
 async function handleTosGateIfPresent(page) {
 	const title = await activeStepTitle(page).catch(() => '');
