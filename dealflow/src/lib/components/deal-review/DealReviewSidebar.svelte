@@ -11,7 +11,8 @@
 		deckUrl = '',
 		ppmUrl = '',
 		subAgreementUrl = '',
-		extractionState = 'idle'
+		extractionState = 'idle',
+		isDirty = false
 	} = $props();
 </script>
 
@@ -24,6 +25,7 @@
 		onselect={onselect}
 		variant="sidebar"
 		title="Deal Review Flow"
+		isDirty={isDirty}
 	/>
 
 	<DealSourceRail
