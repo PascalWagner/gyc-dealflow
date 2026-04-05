@@ -797,7 +797,7 @@
 									<div class="add-deal-modal__selected-title">Using existing sponsor record</div>
 									<div class="add-deal-modal__selected-copy"><strong>{sponsor}</strong></div>
 								</div>
-								<button type="button" class="add-deal-modal__selected-clear" onclick={() => { sponsor = ''; selectedSponsorId = ''; website = ''; }}>
+								<button type="button" class="add-deal-modal__text-btn" onclick={() => { sponsor = ''; selectedSponsorId = ''; website = ''; }}>
 									Change
 								</button>
 							</div>
