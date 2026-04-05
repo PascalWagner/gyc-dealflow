@@ -1,5 +1,7 @@
 <script>
+	import { getContext } from 'svelte';
 	import FieldEvidence from '$lib/components/deal-review/FieldEvidence.svelte';
+	import FieldProvenance from '$lib/components/deal-review/FieldProvenance.svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import {
 		dealFieldConfig,
@@ -23,6 +25,11 @@
 		onupdate = () => {},
 		onaction = null
 	} = $props();
+
+	const _provenanceCtx = getContext('deal-review-provenance');
+	function getProvenanceEntry(fieldKey) {
+		return _provenanceCtx?.reviewFieldState?.[fieldKey] ?? null;
+	}
 
 	function isHistoricalReturnField(fieldKey) {
 		return /^historicalReturn20\d{2}$/i.test(fieldKey);
@@ -80,7 +87,7 @@
 					{#each section.fieldKeys as fieldKey}
 						{#if variant === 'lending_fund' && fieldKey === 'offeringStatus'}
 							<label class="lf-special-field">
-								<span>{labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}</span>
+								<span class="lf-field-label-row">{labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}<FieldProvenance entry={getProvenanceEntry(fieldKey)} fieldKey={fieldKey} onreset={_provenanceCtx?.onreset} /></span>
 								<select value={getLendingOfferingStatusValue(form[fieldKey])} onchange={(event) => onupdate(fieldKey, event.currentTarget.value)}>
 									<option value="">Select {labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}</option>
 									{#each LENDING_FUND_OFFERING_STATUS_OPTIONS as option}
@@ -105,7 +112,7 @@
 							</label>
 						{:else if variant === 'lending_fund' && fieldKey === 'investingStates'}
 							<div class="lf-special-field lf-special-field--span-2">
-								<span>{labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}</span>
+								<span class="lf-field-label-row">{labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}<FieldProvenance entry={getProvenanceEntry(fieldKey)} fieldKey={fieldKey} onreset={_provenanceCtx?.onreset} /></span>
 								<div class="lf-state-actions">
 									<button type="button" class="lf-inline-btn" onclick={toggleAllStates}>
 										{(Array.isArray(form.investingStates) ? form.investingStates.length : 0) === STATE_OPTIONS.length ? 'Clear All States' : 'Select All States'}
@@ -141,7 +148,7 @@
 							</div>
 						{:else if variant === 'lending_fund' && fieldKey === 'lpGpSplit'}
 							<label class="lf-special-field">
-								<span>{labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}</span>
+								<span class="lf-field-label-row">{labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}<FieldProvenance entry={getProvenanceEntry(fieldKey)} fieldKey={fieldKey} onreset={_provenanceCtx?.onreset} /></span>
 								<div class="lf-number-shell">
 									<input
 										type="number"
@@ -171,7 +178,7 @@
 							</label>
 						{:else if isHistoricalReturnField(fieldKey)}
 							<label class="lf-special-field">
-								<span>{labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}</span>
+								<span class="lf-field-label-row">{labelOverrides[fieldKey] || dealFieldConfig[fieldKey]?.label || fieldKey}<FieldProvenance entry={getProvenanceEntry(fieldKey)} fieldKey={fieldKey} onreset={_provenanceCtx?.onreset} /></span>
 								<div class="lf-number-shell">
 									<input
 										type="number"
@@ -277,6 +284,19 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 		gap: 16px;
+	}
+
+	.lf-field-label-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 6px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--text-muted);
 	}
 
 	.lf-special-field {

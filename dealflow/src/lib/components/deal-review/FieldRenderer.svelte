@@ -1,5 +1,7 @@
 <script>
+	import { getContext } from 'svelte';
 	import FieldEvidence from '$lib/components/deal-review/FieldEvidence.svelte';
+	import FieldProvenance from '$lib/components/deal-review/FieldProvenance.svelte';
 	import {
 		COUNTRY_OPTIONS,
 		formatDealReviewFieldDisplay,
@@ -17,6 +19,11 @@
 		onupdate = () => {},
 		onaction = null
 	} = $props();
+
+	// Read provenance data from deal-review page context (set once per review session).
+	// Returns null safely when used outside the deal-review context.
+	const _provenanceCtx = getContext('deal-review-provenance');
+	const provenanceEntry = $derived(_provenanceCtx?.reviewFieldState?.[field?.key] ?? null);
 
 	let sponsorResults = $state([]);
 	let sponsorLoading = $state(false);
@@ -158,7 +165,7 @@
 
 {#if field?.type === 'entity_reference'}
 	<div class:field--span-2={field?.span === 2} class="field entity-field">
-		<span>{field.label}</span>
+		<span class="field-label-row">{field.label}<FieldProvenance entry={provenanceEntry} fieldKey={field?.key || ''} onreset={_provenanceCtx?.onreset} /></span>
 		<div class="entity-shell" onfocusin={cancelSponsorBlur} onfocusout={closeSponsorMenuSoon}>
 			<input
 				type="text"
@@ -209,7 +216,7 @@
 	</div>
 {:else if field?.type === 'location'}
 	<div class:field--span-2={field?.span === 2} class="field">
-		<span>{field.label}</span>
+		<span class="field-label-row">{field.label}<FieldProvenance entry={provenanceEntry} fieldKey={field?.key || ''} onreset={_provenanceCtx?.onreset} /></span>
 		<div class="location-grid">
 			<input
 				type="text"
@@ -249,7 +256,7 @@
 	</div>
 {:else if field?.type === 'multi_select'}
 	<div class:field--span-2={field?.span === 2} class="field">
-		<span>{field.label}</span>
+		<span class="field-label-row">{field.label}<FieldProvenance entry={provenanceEntry} fieldKey={field?.key || ''} onreset={_provenanceCtx?.onreset} /></span>
 		<div class="tags-shell" aria-invalid={hasFieldError}>
 			<div class="tag-list">
 				{#each Array.isArray(value) ? value : [] as tag}
@@ -279,7 +286,7 @@
 	</div>
 {:else if field?.type === 'string_enum' && field?.searchable}
 	<label class:field--span-2={field?.span === 2} class="field">
-		<span>{field.label}</span>
+		<span class="field-label-row">{field.label}<FieldProvenance entry={provenanceEntry} fieldKey={field?.key || ''} onreset={_provenanceCtx?.onreset} /></span>
 		<input
 			list={`deal-review-options-${field.key}`}
 			value={value || ''}
@@ -304,7 +311,7 @@
 	</label>
 {:else if field?.type === 'string_enum'}
 	<label class:field--span-2={field?.span === 2} class="field">
-		<span>{field.label}</span>
+		<span class="field-label-row">{field.label}<FieldProvenance entry={provenanceEntry} fieldKey={field?.key || ''} onreset={_provenanceCtx?.onreset} /></span>
 		<select value={value || ''} aria-invalid={hasFieldError} onchange={(event) => emit(event.currentTarget.value)}>
 			<option value="">{field.placeholder || `Select ${field.label}`}</option>
 			{#each field.options || [] as option}
@@ -323,7 +330,7 @@
 	</label>
 {:else if field?.input === 'textarea'}
 	<label class:field--span-2={field?.span === 2} class="field">
-		<span>{field.label}</span>
+		<span class="field-label-row">{field.label}<FieldProvenance entry={provenanceEntry} fieldKey={field?.key || ''} onreset={_provenanceCtx?.onreset} /></span>
 		<textarea
 			rows={field.rows || 3}
 			value={value || ''}
@@ -343,8 +350,8 @@
 	</label>
 {:else}
 	<label class:field--span-2={field?.span === 2} class="field">
-		<span class:field-label-row={field?.actionLabel && onaction}>
-			<span>{field.label}</span>
+		<span class="field-label-row">
+			<span>{field.label}<FieldProvenance entry={provenanceEntry} fieldKey={field?.key || ''} onreset={_provenanceCtx?.onreset} /></span>
 			{#if field?.actionLabel && onaction}
 				<button type="button" class="inline-btn" onclick={onaction}>{field.actionLabel}</button>
 			{/if}
@@ -426,7 +433,13 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 12px;
+		gap: 6px;
+	}
+
+	.field-label-row > span {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
 	}
 
 	.inline-btn {

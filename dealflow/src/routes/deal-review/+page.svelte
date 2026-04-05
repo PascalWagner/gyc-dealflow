@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, setContext } from 'svelte';
 	import DealOnboardingProgress from '$lib/components/deal-review/DealOnboardingProgress.svelte';
 	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
@@ -781,41 +781,10 @@
 	});
 	const unlockedStageIds = $derived.by(() => {
 		if (!deal) return requestedStage ? [requestedStage] : ['intake'];
-		if (preservesFullReviewAccess) {
-			return reviewStages.map((stage) => stage.id);
-		}
-		if (firstIncompleteStage === 'summary') {
-			return reviewStages.map((stage) => stage.id);
-		}
-		if (branchInfo.branch === 'lending_fund') {
-			const unlockedIndex = reviewStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
-			if (unlockedIndex < 0) return ['intake'];
-			const unlockedIds = reviewStages
-				.filter((stage, index) => index <= unlockedIndex)
-				.map((stage) => stage.id);
-			if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
-				return [...unlockedIds, 'summary'];
-			}
-			return unlockedIds;
-		}
-		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) {
-			const unlockedIds = reviewStages
-				.filter((stage) => stage.id !== 'summary')
-				.map((stage) => stage.id);
-			if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
-				return [...unlockedIds, 'summary'];
-			}
-			return unlockedIds;
-		}
-		const unlockedIndex = reviewStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
-		if (unlockedIndex < 0) return ['intake'];
-		const unlockedIds = reviewStages
-			.filter((stage, index) => index <= unlockedIndex)
-			.map((stage) => stage.id);
-		if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
-			return [...unlockedIds, 'summary'];
-		}
-		return unlockedIds;
+		// Once source documents are uploaded, all stages are navigable.
+		// Completion indicators remain advisory — they do not gate access.
+		if (!hasSourceDocuments) return ['intake'];
+		return reviewStages.map((stage) => stage.id);
 	});
 	const activeStage = $derived.by(() => {
 		if (requestedStage === 'summary' && canOpenSummaryPreview) return 'summary';
@@ -900,6 +869,14 @@
 	const reviewFieldState = $derived(
 		normalizeReviewFieldStateMap(deal?.reviewFieldState || deal?.review_field_state || {})
 	);
+
+	// Provide per-field provenance data to FieldRenderer descendants via context.
+	// Uses a getter so descendants always read the current reactive value.
+	setContext('deal-review-provenance', {
+		get reviewFieldState() { return reviewFieldState; },
+		onreset: resetFieldToExtracted
+	});
+
 	const reviewStateVersion = $derived(Number(deal?.reviewStateVersion || deal?.review_state_version || 0));
 	const reviewFieldEvidence = $derived(
 		normalizeReviewFieldEvidenceMap(deal?.reviewFieldEvidence || deal?.review_field_evidence || {})
@@ -2673,15 +2650,11 @@
 			&& targetIndex === unlockedIndex + 1;
 
 		if (targetIndex < 0) return false;
-		if (targetIndex > unlockedIndex && !isAdvancingIntoNextNewStage && !allowImmediateAdvance) {
-			console.warn('[deal-review] navigation blocked', {
+		if (!unlockedStageIds.includes(targetStage)) {
+			console.warn('[deal-review] navigation blocked — stage not accessible', {
 				dealId,
 				activeStage,
-				targetStage,
-				currentIndex,
-				targetIndex,
-				unlockedIndex,
-				furthestUnlockedStage
+				targetStage
 			});
 			revealReviewFeedback();
 			return false;

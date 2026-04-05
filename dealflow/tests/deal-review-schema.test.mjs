@@ -54,8 +54,9 @@ function buildOfferingStatus(rawValue) {
 
 // ===========================================================================
 // 1. resolveFinalReviewFieldValue()
-//    All four resolution tiers + edge cases for null vs absent values.
-//    Tier order: adminOverride > aiValue > finalValue > fallback (column value)
+//    Three-tier resolution + edge cases for null vs absent values.
+//    Tier order: adminOverride > aiValue > fallback (flat column)
+//    finalValue tier was eliminated — see deal-review-audit.md §3.1
 // ===========================================================================
 
 // -- Tier 1: admin override --------------------------------------------------
@@ -70,14 +71,12 @@ test('resolveFinalReviewFieldValue: adminOverrideActive=true returns adminOverri
 	assert.equal(resolveFinalReviewFieldValue(entry, 99999), 500000);
 });
 
-test('resolveFinalReviewFieldValue: admin override wins over every lower tier', () => {
+test('resolveFinalReviewFieldValue: admin override wins over aiValue and fallback', () => {
 	const entry = {
 		adminOverrideActive: true,
 		adminOverrideValue: 'admin-set',
 		aiValue: 'ai-value',
-		aiValuePresent: true,
-		finalValue: 'final-value',
-		finalValuePresent: true
+		aiValuePresent: true
 	};
 	assert.equal(resolveFinalReviewFieldValue(entry, 'db-column'), 'admin-set');
 });
@@ -99,13 +98,11 @@ test('resolveFinalReviewFieldValue: aiValuePresent=true (no admin override) retu
 	assert.equal(resolveFinalReviewFieldValue(entry, 99999), 100000);
 });
 
-test('resolveFinalReviewFieldValue: aiValue wins over finalValue tier when no admin override', () => {
+test('resolveFinalReviewFieldValue: aiValue wins over fallback when no admin override', () => {
 	const entry = {
 		adminOverrideActive: false,
 		aiValue: 'from-ai',
-		aiValuePresent: true,
-		finalValue: 'from-final',
-		finalValuePresent: true
+		aiValuePresent: true
 	};
 	assert.equal(resolveFinalReviewFieldValue(entry, 'db-col'), 'from-ai');
 });
@@ -126,21 +123,7 @@ test('resolveFinalReviewFieldValue: having the aiValue key (hasOwn) implies aiVa
 	assert.equal(resolveFinalReviewFieldValue(entry, 'FALLBACK'), 0);
 });
 
-// -- Tier 3: finalValue ------------------------------------------------------
-
-test('resolveFinalReviewFieldValue: finalValue tier returns finalValue when admin and ai are absent', () => {
-	const entry = { finalValue: 250000 };
-	assert.equal(resolveFinalReviewFieldValue(entry, 99999), 250000);
-});
-
-test('resolveFinalReviewFieldValue: having the finalValue key (hasOwn) implies finalValuePresent', () => {
-	// Mirrors the hasOwn behaviour for aiValue — legacy entries without the
-	// explicit *Present flag still resolve correctly.
-	const entry = { finalValue: 'enriched-value' };
-	assert.equal(resolveFinalReviewFieldValue(entry, 'FALLBACK'), 'enriched-value');
-});
-
-// -- Tier 4: fallback --------------------------------------------------------
+// -- Tier 3: fallback (flat column) ------------------------------------------
 
 test('resolveFinalReviewFieldValue: empty entry returns fallbackValue', () => {
 	assert.equal(resolveFinalReviewFieldValue({}, 'DB_COLUMN_VALUE'), 'DB_COLUMN_VALUE');
