@@ -1503,6 +1503,9 @@
 		conflictServerDeal = null;
 		extractionPreview = null;
 		editedFieldLogCache = new Set();
+		// Apply branch-specific defaults for fields that are blank after loading from DB.
+		// shouldMarkDirty: false so this doesn't create phantom unsaved-changes on load.
+		applyFormPatch({}, { shouldMarkDirty: false });
 		console.info('[deal-review/load]', {
 			dealId: nextDeal?.id || dealId,
 			reviewStateVersion: Number(nextDeal?.reviewStateVersion || nextDeal?.review_state_version || 0),
