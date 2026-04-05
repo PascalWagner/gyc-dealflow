@@ -860,7 +860,7 @@ export async function refreshSecFilingsForDeal(dealId, supabase) {
 	// Resolve CIK: try deal.sec_cik first, fall back to existing sec_filings row
 	const { data: deal, error: dealError } = await supabase
 		.from('opportunities')
-		.select('id, sec_cik, investment_name, management_company_id, instrument')
+		.select('id, sec_cik, investment_name, management_company_id, instrument, investment_minimum')
 		.eq('id', dealId)
 		.single();
 
