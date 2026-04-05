@@ -115,7 +115,8 @@ export default async function handler(req, res) {
 			website,
 			lifecycleStatus,
 			intent,
-			entrySurface
+			entrySurface,
+			confirmedNewSponsor
 		} = req.body || {};
 
 		const normalizedIntent = normalizeSubmissionIntent(intent, 'interested');
@@ -169,6 +170,8 @@ export default async function handler(req, res) {
 		}
 
 		let managementCompanyId = null;
+
+		// Phase A — exact match (case-insensitive)
 		const { data: existingCompany } = await supabase
 			.from('management_companies')
 			.select('id')
@@ -178,7 +181,28 @@ export default async function handler(req, res) {
 
 		if (existingCompany?.id) {
 			managementCompanyId = existingCompany.id;
-		} else {
+		} else if (!confirmedNewSponsor) {
+			// Phase B — similarity check to catch near-duplicates (e.g. "DLP Capital" vs "DLP Capital Partners")
+			// Only runs when the caller hasn't already confirmed they want a new record.
+			const { data: similarRows } = await supabase.rpc('find_similar_sponsors', {
+				p_name: trimmedSponsor,
+				p_threshold: 0.45,
+				p_limit: 3
+			});
+
+			if (Array.isArray(similarRows) && similarRows.length > 0) {
+				return res.status(200).json({
+					success: false,
+					requiresSponsorConfirmation: true,
+					similarSponsors: similarRows,
+					submittedSponsor: trimmedSponsor,
+					submittedWebsite: trimmedWebsite
+				});
+			}
+		}
+
+		if (!managementCompanyId) {
+			// Phase C — no match; create a new management_company row
 			const { data: newCompany, error: companyError } = await supabase
 				.from('management_companies')
 				.insert({

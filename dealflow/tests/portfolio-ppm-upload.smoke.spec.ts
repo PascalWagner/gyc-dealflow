@@ -99,4 +99,53 @@ test.describe('portfolio PPM upload (AddDealModal)', () => {
 		// Success state appears
 		await expect(page.locator('body')).toContainText(/Submission Complete|submitted|review/i, { timeout: 10000 });
 	});
+
+	test('sponsor dedup: similar-name response shows confirmation overlay', async ({ page }) => {
+		// Override deal-create to return a requiresSponsorConfirmation response
+		await page.route('**/api/deal-create**', async (route) => {
+			const body = await route.request().postDataJSON().catch(() => ({}));
+			if (body?.confirmedNewSponsor) {
+				// Second submission after user confirms → proceed normally
+				await route.fulfill({
+					status: 200,
+					contentType: 'application/json',
+					body: JSON.stringify({ dealId: 'new-deal-456', createdNewDeal: true, lifecycleStatus: 'in_review' })
+				});
+			} else {
+				// First submission → return similarity warning
+				await route.fulfill({
+					status: 200,
+					contentType: 'application/json',
+					body: JSON.stringify({
+						success: false,
+						requiresSponsorConfirmation: true,
+						similarSponsors: [
+							{ id: 'dlp-uuid', operator_name: 'DLP Capital', website: 'dlpcapital.com', type: 'Debt Fund' }
+						],
+						submittedSponsor: 'DLP Capital Partners',
+						submittedWebsite: ''
+					})
+				});
+			}
+		});
+
+		await page.goto('/app/portfolio');
+		await page.getByRole('button', { name: /Add Existing Investment/i }).click();
+		await expect(page.locator('.add-deal-modal__card')).toBeVisible({ timeout: 5000 });
+
+		await page.locator('#addDealName').fill('DLP Capital Partners Fund');
+		await page.locator('#addDealSponsor').fill('DLP Capital Partners');
+		await page.locator('.add-deal-modal__intent-card').first().click();
+
+		await page.locator('.add-deal-modal__primary').first().click();
+
+		// Confirmation overlay appears
+		await expect(page.locator('.add-deal-modal__dedup')).toBeVisible({ timeout: 5000 });
+		await expect(page.locator('.add-deal-modal__dedup-title')).toContainText('might already exist');
+		await expect(page.locator('.add-deal-modal__dedup-list')).toContainText('DLP Capital');
+
+		// Clicking "create new" resubmits with confirmedNewSponsor=true and succeeds
+		await page.locator('.add-deal-modal__dedup-new').click();
+		await expect(page.locator('body')).toContainText(/Submission Complete|submitted|review/i, { timeout: 10000 });
+	});
 });

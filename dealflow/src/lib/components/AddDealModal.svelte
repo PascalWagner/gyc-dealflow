@@ -54,6 +54,10 @@
 	let submitError = $state('');
 	let submitWarnings = $state([]);
 	let successCopy = $state(null);
+	let similarSponsors = $state([]);
+	let showSponsorConfirmation = $state(false);
+	let pendingSponsorName = $state('');
+	let confirmedNewSponsor = $state(false);
 
 	let searchRequestId = 0;
 	let blurTimer = null;
@@ -420,12 +424,22 @@
 								website: trimmedWebsite,
 								lifecycleStatus: 'in_review',
 								intent: submissionIntent,
-								entrySurface: normalizedEntrySurface
+								entrySurface: normalizedEntrySurface,
+								...(confirmedNewSponsor ? { confirmedNewSponsor: true } : {})
 							}
 				)
 			});
 
 			const createData = await createResponse.json().catch(() => ({}));
+
+			if (createData?.requiresSponsorConfirmation) {
+				similarSponsors = createData.similarSponsors || [];
+				pendingSponsorName = createData.submittedSponsor || trimmedSponsor;
+				showSponsorConfirmation = true;
+				submitting = false;
+				return;
+			}
+
 			if (!createResponse.ok || !createData?.dealId) {
 				throw new Error(createData?.error || 'Could not submit the deal right now.');
 			}
@@ -561,7 +575,49 @@
 			<button class="add-deal-modal__close" aria-label="Close add deal modal" onclick={closeModal}>&times;</button>
 		</div>
 
-		{#if successCopy}
+		{#if showSponsorConfirmation}
+			<div class="add-deal-modal__dedup">
+				<div class="add-deal-modal__dedup-eyebrow">Hold on</div>
+				<h3 class="add-deal-modal__dedup-title">This sponsor might already exist</h3>
+				<p class="add-deal-modal__dedup-copy">
+					We found existing records that look similar to <strong>{pendingSponsorName}</strong>.
+					Select one to reuse it, or confirm this is a brand-new sponsor.
+				</p>
+				<div class="add-deal-modal__dedup-list">
+					{#each similarSponsors as match}
+						<button
+							type="button"
+							class="add-deal-modal__dedup-row"
+							onclick={() => {
+								sponsor = match.operator_name;
+								confirmedNewSponsor = false;
+								showSponsorConfirmation = false;
+								submitDeal();
+							}}
+						>
+							<div class="add-deal-modal__dedup-name">{match.operator_name}</div>
+							{#if match.type || match.website}
+								<div class="add-deal-modal__dedup-meta">
+									{#if match.type}<span>{match.type}</span>{/if}
+									{#if match.website}<span>{match.website}</span>{/if}
+								</div>
+							{/if}
+						</button>
+					{/each}
+				</div>
+				<button
+					type="button"
+					class="add-deal-modal__dedup-new"
+					onclick={() => {
+						confirmedNewSponsor = true;
+						showSponsorConfirmation = false;
+						submitDeal();
+					}}
+				>
+					No, "{pendingSponsorName}" is a new sponsor
+				</button>
+			</div>
+		{:else if successCopy}
 			<div class="add-deal-modal__success">
 				<div class="add-deal-modal__success-badge">{successCopy.eyebrow}</div>
 				<h3 class="add-deal-modal__success-title">{successCopy.title}</h3>
@@ -1119,6 +1175,96 @@
 	.add-deal-modal__secondary {
 		border: 1px solid rgba(31, 81, 89, 0.14);
 		background: rgba(255, 255, 255, 0.92);
+		color: var(--text-dark);
+	}
+
+	.add-deal-modal__dedup {
+		padding: 8px 0 4px;
+	}
+
+	.add-deal-modal__dedup-eyebrow {
+		display: inline-flex;
+		padding: 6px 10px;
+		border-radius: 999px;
+		background: rgba(220, 150, 40, 0.12);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #b87a10;
+	}
+
+	.add-deal-modal__dedup-title {
+		margin: 18px 0 8px;
+		font-family: var(--font-headline);
+		font-size: 24px;
+		line-height: 1.2;
+		color: var(--text-dark);
+	}
+
+	.add-deal-modal__dedup-copy {
+		margin: 0 0 20px;
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+	}
+
+	.add-deal-modal__dedup-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-bottom: 20px;
+	}
+
+	.add-deal-modal__dedup-row {
+		display: block;
+		width: 100%;
+		padding: 14px 16px;
+		border: 1.5px solid rgba(31, 81, 89, 0.18);
+		border-radius: 14px;
+		background: #fff;
+		text-align: left;
+		cursor: pointer;
+		transition: border-color 0.15s, background 0.15s;
+	}
+
+	.add-deal-modal__dedup-row:hover {
+		border-color: var(--primary);
+		background: rgba(81, 190, 123, 0.05);
+	}
+
+	.add-deal-modal__dedup-name {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+
+	.add-deal-modal__dedup-meta {
+		display: flex;
+		gap: 10px;
+		margin-top: 4px;
+		font-size: 12px;
+		color: var(--text-secondary);
+	}
+
+	.add-deal-modal__dedup-new {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: none;
+		background: transparent;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		color: var(--text-secondary);
+		text-align: center;
+		cursor: pointer;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	.add-deal-modal__dedup-new:hover {
 		color: var(--text-dark);
 	}
 
