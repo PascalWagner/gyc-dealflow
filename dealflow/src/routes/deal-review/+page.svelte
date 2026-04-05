@@ -44,7 +44,8 @@
 		dealFieldConfig,
 		dealReviewSections,
 		formatDealReviewFieldDisplay,
-		getDealReviewFieldWarning
+		getDealReviewFieldWarning,
+		normalizeEnumValue
 	} from '$lib/utils/dealReviewSchema.js';
 	import {
 		buildDealOnboardingFlow,
@@ -1485,6 +1486,21 @@
 		deal = nextDeal;
 		const hydrated = createDealReviewFormFromDeal(nextDeal);
 		form = hydrated.form;
+		// Backfill blank classification fields from aiValue stored in review_field_state.
+		// Handles deals extracted before flat-column materialization was added for these fields.
+		{
+			const rfs = normalizeReviewFieldStateMap(
+				nextDeal?.reviewFieldState || nextDeal?.review_field_state || {}
+			);
+			for (const k of ['dealType', 'investmentStrategy', 'shortSummary', 'underlyingExposureTypes']) {
+				if (!hasMeaningfulReviewValue(form[k]) && rfs[k]?.aiValuePresent) {
+					const raw = rfs[k].aiValue;
+					form[k] = dealFieldConfig[k]?.type === 'string_enum'
+						? normalizeEnumValue(k, raw, { allowUnknown: true }).value
+						: raw;
+				}
+			}
+		}
 		teamContacts = normalizeTeamContacts(readDealTeamContacts(nextDeal), {
 			ensureOne: false,
 			preserveEmpty: true
@@ -3827,6 +3843,21 @@
 					{:else if ['classification', 'static_terms', 'fees', 'portfolio_snapshot', 'sponsor_trust'].includes(activeStage)}
 							{#if branchInfo.branch === 'lending_fund'}
 								{#if activeStage === 'classification'}
+									{@const _classificationMissingKeys = ['dealType', 'investmentStrategy', 'shortSummary', 'underlyingExposureTypes'].filter(k => !hasMeaningfulReviewValue(form[k]))}
+									{#if _classificationMissingKeys.length > 0 && hasSourceDocuments && extractionState !== 'running'}
+										<div class="message-banner message-banner--warning">
+											{_classificationMissingKeys.length} classification {_classificationMissingKeys.length === 1 ? 'field' : 'fields'} couldn't be auto-filled from the stored extraction.
+											<div class="message-banner__actions">
+												<button
+													type="button"
+													class="ghost-btn"
+													onclick={() => runExtraction({ fieldKeys: _classificationMissingKeys, scopeLabel: 'classification fields' })}
+												>
+													Re-extract from PPM →
+												</button>
+											</div>
+										</div>
+									{/if}
 									<section class="editor-card classification-signals-card">
 										<div class="card-heading">
 											<div>
