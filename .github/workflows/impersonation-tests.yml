@@ -4,10 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'dealflow/index.html'
-      - 'dealflow/js/**'
-      - 'dealflow/tests/**'
-      - '.github/workflows/impersonation-tests.yml'
+      - 'dealflow/**'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 jobs:

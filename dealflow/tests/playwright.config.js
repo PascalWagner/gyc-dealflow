@@ -7,5 +7,6 @@ module.exports = defineConfig({
   use: {
     headless: true,
     viewport: { width: 1400, height: 900 },
+    baseURL: process.env.BASE_URL || 'http://localhost:5173',
   },
 });

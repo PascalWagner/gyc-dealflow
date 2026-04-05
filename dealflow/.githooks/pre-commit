@@ -21,4 +21,25 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "✅ Tests passed."
+
+# Enforce: new API endpoints must have a mock in api-mocks.mjs
+NEW_API_FILES=$(git diff --cached --name-only --diff-filter=A | grep '^api/' | grep -v '^api/_' | grep -v '^api/admin-manage/' | grep -v '^api/member/deals/' | grep -v '^api/userdata/' | grep -v '^api/v1/' | grep '\.js$')
+if [ -n "$NEW_API_FILES" ]; then
+  MISSING_MOCKS=""
+  for file in $NEW_API_FILES; do
+    endpoint=$(basename "$file" .js)
+    if ! grep -q "api/${endpoint}" tests/fixtures/api-mocks.mjs 2>/dev/null; then
+      MISSING_MOCKS="${MISSING_MOCKS}\n  - ${endpoint} (add: page.route('**/api/${endpoint}**', ...) to tests/fixtures/api-mocks.mjs)"
+    fi
+  done
+  if [ -n "$MISSING_MOCKS" ]; then
+    echo ""
+    echo "ERROR: New API endpoints missing mock stubs in tests/fixtures/api-mocks.mjs:"
+    echo -e "$MISSING_MOCKS"
+    echo ""
+    echo "Add a minimal mock to installCoreApiMocks() before committing."
+    exit 1
+  fi
+fi
+
 exit 0

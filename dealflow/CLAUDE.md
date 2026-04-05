@@ -49,3 +49,10 @@ Sandbox URL: `https://sandbox.growyourcashflow.io`
 - Deal card events use Svelte 5 `onclick` with `data-card-control="true"` for footer buttons
 - Smoke tests mock all API routes to avoid DNS failures against the proxy target
 - **Sponsor dedup**: `api/deal-create.js` uses a three-phase sponsor lookup. Phase A: exact ilike match (reuse). Phase B: `pg_trgm` similarity via `find_similar_sponsors` RPC (threshold 0.45) — returns `requiresSponsorConfirmation: true` with matches instead of inserting. Phase C: insert new row. Pass `confirmedNewSponsor: true` from the frontend to skip Phase B after the user confirms. Migration `073_sponsor_dedup.sql` adds the trgm index, unique index on `lower(trim(operator_name))`, and the RPC function.
+
+## CI / CD Pipeline
+
+- **PR smoke workflow** (`.github/workflows/pr-smoke.yml`): triggers on the `deployment_status` GitHub event when Vercel posts a successful preview deployment. Runs the full smoke suite (`--grep "smoke"`) against the Vercel preview URL. Job is named `smoke` — this is the name referenced in GitHub branch protection rules, so it must pass before a PR can merge to main.
+- **Impersonation tests** (`.github/workflows/impersonation-tests.yml`): runs on merge to main as a final gate. Tests admin impersonation flows against the live production deployment.
+- **Branch protection**: requires the `smoke` job to pass before merging to main.
+- **Run smoke tests locally**: `BASE_URL=https://sandbox.growyourcashflow.io npx playwright test --config tests/playwright.config.js --grep "smoke"`

@@ -355,6 +355,106 @@ export async function installCoreApiMocks(page, overrides = {}) {
 		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ buyBox: {} }) });
 	});
 
+	await page.route('**/api/ddchecklist**', async (route) => {
+		if (await fulfillOverride(route, '/api/ddchecklist')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) });
+	});
+
+	await page.route('**/api/deal-alerts**', async (route) => {
+		if (await fulfillOverride(route, '/api/deal-alerts')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ alerts: [] }) });
+	});
+
+	await page.route('**/api/deal-team-contacts**', async (route) => {
+		if (await fulfillOverride(route, '/api/deal-team-contacts')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ contacts: [] }) });
+	});
+
+	await page.route('**/api/resources**', async (route) => {
+		if (await fulfillOverride(route, '/api/resources')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ resources: [] }) });
+	});
+
+	await page.route('**/api/memo**', async (route) => {
+		if (await fulfillOverride(route, '/api/memo')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ memo: null }) });
+	});
+
+	await page.route('**/api/market-intel**', async (route) => {
+		if (await fulfillOverride(route, '/api/market-intel')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+	});
+
+	await page.route('**/api/lp-network-stats**', async (route) => {
+		if (await fulfillOverride(route, '/api/lp-network-stats')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ stats: {} }) });
+	});
+
+	await page.route('**/api/gp-analytics**', async (route) => {
+		if (await fulfillOverride(route, '/api/gp-analytics')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ analytics: {} }) });
+	});
+
+	await page.route('**/api/gp-deal-performance**', async (route) => {
+		if (await fulfillOverride(route, '/api/gp-deal-performance')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ performance: [] }) });
+	});
+
+	await page.route('**/api/gp-investor-insights**', async (route) => {
+		if (await fulfillOverride(route, '/api/gp-investor-insights')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ insights: [] }) });
+	});
+
+	await page.route('**/api/gp-agreement**', async (route) => {
+		if (await fulfillOverride(route, '/api/gp-agreement')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ agreement: null, hasCurrentAgreement: false }) });
+	});
+
+	await page.route('**/api/intro-request**', async (route) => {
+		if (await fulfillOverride(route, '/api/intro-request')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+	});
+
+	await page.route('**/api/portfolio-extract**', async (route) => {
+		if (await fulfillOverride(route, '/api/portfolio-extract')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ holdings: [] }) });
+	});
+
+	await page.route('**/api/feedback**', async (route) => {
+		if (await fulfillOverride(route, '/api/feedback')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+	});
+
+	await page.route('**/api/market-data**', async (route) => {
+		if (await fulfillOverride(route, '/api/market-data')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: {} }) });
+	});
+
+	await page.route('**/api/deal-stats-bulk**', async (route) => {
+		if (await fulfillOverride(route, '/api/deal-stats-bulk')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ stats: {} }) });
+	});
+
+	await page.route('**/api/deal-submissions**', async (route) => {
+		if (await fulfillOverride(route, '/api/deal-submissions')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ submissions: [] }) });
+	});
+
+	await page.route('**/api/company-search**', async (route) => {
+		if (await fulfillOverride(route, '/api/company-search')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) });
+	});
+
+	await page.route('**/api/sponsor-analytics**', async (route) => {
+		if (await fulfillOverride(route, '/api/sponsor-analytics')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ analytics: {} }) });
+	});
+
+	await page.route('**/api/stake-listings**', async (route) => {
+		if (await fulfillOverride(route, '/api/stake-listings')) return;
+		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ listings: [] }) });
+	});
+
 	await page.route('**/api/userdata**', async (route) => {
 		if (await fulfillOverride(route, '/api/userdata')) return;
 
