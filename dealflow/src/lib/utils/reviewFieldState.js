@@ -1,5 +1,10 @@
 import { dealFieldConfig } from './dealReviewSchema.js';
 
+// SEC-sourced fields are legal facts from Form D filings — always read from the DB
+// column directly, never from adminOverrideValue. Only investmentMinimum is legitimately
+// overridable (operators sometimes raise minimums above what the Form D says).
+const SEC_SOURCED_FIELDS = new Set(['totalInvestors', 'totalAmountSold']);
+
 const HISTORICAL_RETURN_START_YEAR = 2015;
 const HISTORICAL_RETURN_END_YEAR = new Date().getFullYear() - 1;
 
@@ -209,7 +214,10 @@ export function applyReviewFieldStateToDeal(deal = {}) {
 	for (const [fieldKey, entry] of Object.entries(reviewFieldState)) {
 		const columnName = getReviewFieldDbColumn(fieldKey);
 		if (!columnName) continue;
-		const resolvedValue = resolveFinalReviewFieldValue(entry, deal?.[columnName]);
+		// SEC-sourced fields are legal facts — always use the DB column, never an admin override.
+		const resolvedValue = SEC_SOURCED_FIELDS.has(fieldKey)
+			? deal?.[columnName]
+			: resolveFinalReviewFieldValue(entry, deal?.[columnName]);
 		nextDeal[columnName] = resolvedValue;
 		nextDeal[fieldKey] = resolvedValue;
 	}

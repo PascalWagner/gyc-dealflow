@@ -302,28 +302,34 @@
 	}
 
 	async function createNew() {
+		if (activeTab === 'deals') {
+			// Skip the name prompt — create with placeholder and land directly on the
+			// Source Package step where the reviewer sets the real investment name.
+			const result = await adminFetch({ action: 'create-deal', investment_name: 'Untitled Deal' });
+			if (!result.success) {
+				alert('Create failed: ' + (result.error || 'Unknown'));
+				return;
+			}
+			if (result.data?.id) {
+				await goto(`/deal-review?id=${encodeURIComponent(result.data.id)}&from=queue&stage=intake`);
+			}
+			return;
+		}
+
 		const name = prompt(
-			`Enter new ${activeTab === 'operators' ? 'operator' : activeTab === 'deals' ? 'deal' : 'record'} name:`
+			`Enter new ${activeTab === 'operators' ? 'operator' : 'record'} name:`
 		);
 		if (!name) return;
 
-		const payload =
-			activeTab === 'deals'
-				? { action: 'create-deal', investment_name: name }
-				: activeTab === 'operators'
-					? { action: 'create-operator', operator_name: name }
-					: null;
+		const payload = activeTab === 'operators'
+			? { action: 'create-operator', operator_name: name }
+			: null;
 
 		if (!payload) return;
 
 		const result = await adminFetch(payload);
 		if (!result.success) {
 			alert('Create failed: ' + (result.error || 'Unknown'));
-			return;
-		}
-
-		if (activeTab === 'deals' && result.data?.id) {
-			await goto(`/deal-review?id=${encodeURIComponent(result.data.id)}&from=queue&stage=intake`);
 			return;
 		}
 

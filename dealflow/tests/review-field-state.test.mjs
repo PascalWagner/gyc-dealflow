@@ -206,3 +206,107 @@ test('deal page pipeline: deal with no review_field_state renders column value u
 
 	assert.equal(transformed.investmentMinimum, 250000);
 });
+
+// ---------------------------------------------------------------------------
+// SEC-sourced field override protection
+// Regression: backfill_existing_value (April 3) wrote stale SEC values as
+// adminOverrides. applyReviewFieldStateToDeal then applied those overrides on
+// every load, silently winning over correct DB column values.
+// totalInvestors and totalAmountSold must ALWAYS come from the DB column.
+// ---------------------------------------------------------------------------
+
+test('SEC field protection: totalInvestors override is ignored — DB column wins', () => {
+	const deal = {
+		id: 'deal-sec-1',
+		total_investors: 281,
+		review_field_state: {
+			totalInvestors: buildAdminReviewFieldStateEntry(
+				{ aiValue: 281, aiValuePresent: true },
+				{
+					nextValue: 999,
+					actor: { email: 'system@gyc.com', name: 'system' },
+					at: '2026-04-03T00:00:00.000Z'
+				}
+			)
+		}
+	};
+
+	const result = applyReviewFieldStateToDeal(deal);
+	assert.equal(
+		result.total_investors, 281,
+		'totalInvestors: DB column (281) must win over stale override (999)'
+	);
+	assert.equal(result.totalInvestors, 281);
+});
+
+test('SEC field protection: totalAmountSold override is ignored — DB column wins', () => {
+	const deal = {
+		id: 'deal-sec-2',
+		total_amount_sold: 106564660,
+		review_field_state: {
+			totalAmountSold: buildAdminReviewFieldStateEntry(
+				{ aiValue: 106564660, aiValuePresent: true },
+				{
+					nextValue: 1,
+					actor: { email: 'system@gyc.com', name: 'system' },
+					at: '2026-04-03T00:00:00.000Z'
+				}
+			)
+		}
+	};
+
+	const result = applyReviewFieldStateToDeal(deal);
+	assert.equal(
+		result.total_amount_sold, 106564660,
+		'totalAmountSold: DB column (106564660) must win over stale override (1)'
+	);
+	assert.equal(result.totalAmountSold, 106564660);
+});
+
+test('SEC field protection: investmentMinimum remains overridable', () => {
+	const deal = {
+		id: 'deal-sec-3',
+		investment_minimum: 500000,
+		review_field_state: {
+			investmentMinimum: buildAdminReviewFieldStateEntry(
+				{ aiValue: 500000, aiValuePresent: true },
+				{
+					nextValue: 250000,
+					actor: { email: 'admin@gyc.com', name: 'Admin' },
+					at: '2026-04-03T00:00:00.000Z'
+				}
+			)
+		}
+	};
+
+	const result = applyReviewFieldStateToDeal(deal);
+	assert.equal(
+		result.investment_minimum, 250000,
+		'investmentMinimum override (250000) must still apply — it is legitimately overridable'
+	);
+	assert.equal(result.investmentMinimum, 250000);
+});
+
+test('SEC field protection: non-SEC fields still apply admin overrides normally', () => {
+	const deal = {
+		id: 'deal-sec-4',
+		target_irr: 0.09,
+		review_field_state: {
+			targetIRR: buildAdminReviewFieldStateEntry(
+				{ aiValue: 0.09, aiValuePresent: true },
+				{
+					nextValue: 0.12,
+					actor: { email: 'admin@gyc.com', name: 'Admin' },
+					at: '2026-04-03T00:00:00.000Z'
+				}
+			)
+		}
+	};
+
+	const result = applyReviewFieldStateToDeal(deal);
+	assert.equal(
+		result.target_irr, 0.12,
+		'targetIRR override must apply — not a SEC-sourced field'
+	);
+	assert.equal(result.targetIRR, 0.12);
+});

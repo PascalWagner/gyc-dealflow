@@ -66,6 +66,10 @@ function hasMeaningfulValue(value) {
 	return true;
 }
 
+// SEC-sourced fields must never be written as admin overrides — they are legal facts
+// from Form D filings and must always be read from the DB column directly.
+const BACKFILL_EXCLUDED_FIELDS = new Set(['totalInvestors', 'totalAmountSold']);
+
 function buildBackfilledEntry(value, at) {
 	return {
 		aiValue: null,
@@ -132,6 +136,8 @@ async function main() {
 		for (const [columnName, fieldKey] of Object.entries(DB_COLUMN_REVIEW_FIELD_MAP)) {
 			if (Object.prototype.hasOwnProperty.call(nextState, fieldKey)) continue;
 			if (!Object.prototype.hasOwnProperty.call(deal, columnName)) continue;
+			// Never write SEC-sourced fields as admin overrides — they are legal facts.
+			if (BACKFILL_EXCLUDED_FIELDS.has(fieldKey)) continue;
 
 			const currentValue = deal[columnName];
 			if (!hasMeaningfulValue(currentValue)) continue;
