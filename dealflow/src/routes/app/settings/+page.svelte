@@ -7,6 +7,7 @@
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import UserAvatar from '$lib/components/UserAvatar.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
+	import ProfilePhotoCropModal from '$lib/components/ProfilePhotoCropModal.svelte';
 	import {
 		applyAdminImpersonationToUrl,
 		readUserScopedJson,
@@ -28,6 +29,10 @@
 	let avatarUploadError = $state('');
 	let avatarUploading = $state(false);
 	let avatarUploadSuccess = $state(false);
+
+	// Crop modal state
+	let cropModalFile = $state(null);
+	let cropModalSaving = $state(false);
 	let profileSaving = $state(false);
 	let profileSaved = $state(false);
 
@@ -595,40 +600,62 @@
 
 	async function handleAvatarUpload(event) {
 		const file = event.target.files?.[0];
+		event.target.value = '';
 		if (!file) return;
+
 		if (!file.type.startsWith('image/')) {
-			avatarUploadError = 'Please choose an image file.';
-			event.target.value = '';
+			avatarUploadError = 'Please choose an image file (JPG, PNG, or WebP).';
 			return;
 		}
 		if (file.size > 10 * 1024 * 1024) {
 			avatarUploadError = 'Image must be under 10 MB.';
-			event.target.value = '';
 			return;
 		}
 
+		// Open crop modal — upload happens only after user confirms crop
 		avatarUploadError = '';
-		pendingAvatarFile = file;
-		revokePendingAvatarPreview();
-		pendingAvatarPreviewUrl = URL.createObjectURL(file);
-		event.target.value = '';
+		cropModalFile = file;
+	}
 
-		// Auto-save photo immediately without requiring Save Profile
-		avatarUploading = true;
+	async function handleCropSave(dataUrl) {
+		cropModalSaving = true;
+		avatarUploadError = '';
 		try {
-			const url = await uploadPendingAvatar();
-			if (url) {
-				avatarUrl = url;
-				pendingAvatarFile = null;
-				revokePendingAvatarPreview();
-				avatarUploadSuccess = true;
-				setTimeout(() => { avatarUploadSuccess = false; }, 2000);
+			const token = (await getFreshSessionToken()) || getToken();
+			if (!token) throw new Error('Your session expired. Please sign in again and retry.');
+
+			const resp = await fetch('/api/network?action=avatar', {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${token}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ imageData: dataUrl })
+			});
+			const data = await resp.json().catch(() => ({}));
+			if (!resp.ok || !data?.avatarUrl) {
+				if (data?.code === 'avatar_storage_unavailable') {
+					throw new Error('Profile photo uploads are temporarily unavailable.');
+				}
+				throw new Error(data?.error || 'Photo upload failed.');
 			}
+
+			avatarUrl = data.avatarUrl;
+			patchStoredUser({ avatar_url: data.avatarUrl });
+			cropModalFile = null;
+			avatarUploadSuccess = true;
+			setTimeout(() => { avatarUploadSuccess = false; }, 2500);
 		} catch (err) {
 			avatarUploadError = err?.message || 'Photo upload failed. Please try again.';
+			cropModalFile = null;
 		} finally {
-			avatarUploading = false;
+			cropModalSaving = false;
 		}
+	}
+
+	function handleCropCancel() {
+		cropModalFile = null;
+		cropModalSaving = false;
 	}
 
 	function logout() {
@@ -675,6 +702,14 @@
 	});
 </script>
 
+<!-- Profile photo crop modal (portal-style, rendered outside layout) -->
+<ProfilePhotoCropModal
+	imageFile={cropModalFile}
+	saving={cropModalSaving}
+	onSave={handleCropSave}
+	onCancel={handleCropCancel}
+/>
+
 <PageContainer className="settings-shell-page">
 <div class="settings-page">
 	<PageHeader title="Settings" className="settings-header">
@@ -695,22 +730,15 @@
 				<div class="settings-card-title">Personal Information</div>
 				<div class="settings-card-desc">This information is shown to GPs when you request an introduction.</div>
 				<div class="avatar-row profile-avatar-row">
-					{#if pendingAvatarPreviewUrl}
-						<div class="avatar-preview"><img src={pendingAvatarPreviewUrl} alt="Uploading..." /></div>
-					{:else}
-						<UserAvatar name="{firstName} {lastName}" avatarUrl={displayAvatarUrl} size="lg" />
-					{/if}
+					<UserAvatar name="{firstName} {lastName}" avatarUrl={avatarUrl} size="lg" />
 					<div class="avatar-actions">
-						<label class="upload-btn">
+						<label class="upload-btn" class:upload-btn--disabled={cropModalSaving}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
 							Choose Photo
-							<input type="file" accept="image/*" onchange={handleAvatarUpload} style="display:none;" />
+							<input type="file" accept="image/*" onchange={handleAvatarUpload} style="display:none;" disabled={cropModalSaving} />
 						</label>
 						<div class="avatar-help">
-								{#if avatarUploadSuccess}Photo saved successfully.{:else if avatarUploading}Uploading photo...{:else}This appears on your member profile and next to your deal activity.{/if}
-
-
-
+							{#if avatarUploadSuccess}Photo saved successfully.{:else}This appears on your member profile and next to your deal activity.{/if}
 						</div>
 						{#if avatarUploadError}
 							<div class="avatar-error">{avatarUploadError}</div>
@@ -1155,6 +1183,7 @@
 		transition: all 0.15s;
 	}
 	.upload-btn:hover { border-color: var(--surface-border-strong); background: var(--surface-2); }
+	.upload-btn--disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
 	.profile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 	.profile-field { margin-bottom: 20px; }
