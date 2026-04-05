@@ -308,6 +308,11 @@ test('refreshSecFilingsForDeal does not select non-existent columns (issuer_enti
 		`issuer_entity is not a real column and must not be selected. Got: ${capturedSelectCols}`);
 	assert.ok(!capturedSelectCols.includes('sec_entity_name'),
 		`sec_entity_name is not a real column and must not be selected. Got: ${capturedSelectCols}`);
+	// investment_minimum MUST be selected so the guard !deal.investment_minimum works correctly
+	// Regression: omitting it caused the guard to always evaluate true (undefined is falsy),
+	// which meant every refreshSecFilingsForDeal call silently overwrote manually-set minimums.
+	assert.ok(capturedSelectCols.includes('investment_minimum'),
+		`investment_minimum must be selected so the overwrite guard works. Got: ${capturedSelectCols}`);
 });
 
 test('buildDealUpdatesFromSecFiling maps filing_date to sec_latest_filing_date', () => {
