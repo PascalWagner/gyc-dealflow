@@ -28,6 +28,8 @@
 	let sponsorResults = $state([]);
 	let sponsorLoading = $state(false);
 	let sponsorOpen = $state(false);
+	let sponsorSearchError = $state(null);
+	let sponsorSearchDone = $state(false);
 	let sponsorBlurTimer = $state(null);
 	let sponsorSearchTimer = $state(null);
 	let tagDraft = $state('');
@@ -45,19 +47,27 @@
 		const trimmed = String(query || '').trim();
 		if (trimmed.length < 2) {
 			sponsorResults = [];
+			sponsorSearchError = null;
+			sponsorSearchDone = false;
 			sponsorLoading = false;
 			return;
 		}
 
+		sponsorSearchError = null;
 		sponsorLoading = true;
 		try {
 			const response = await fetch(`/api/company-search?q=${encodeURIComponent(trimmed)}`);
+			if (!response.ok) {
+				throw new Error(`Search failed (${response.status})`);
+			}
 			const payload = await response.json().catch(() => ({}));
 			sponsorResults = Array.isArray(payload?.results) ? payload.results : [];
 		} catch {
 			sponsorResults = [];
+			sponsorSearchError = 'Sponsor search unavailable — enter manually or try again';
 		} finally {
 			sponsorLoading = false;
+			sponsorSearchDone = true;
 		}
 	}
 
@@ -183,6 +193,12 @@
 				<div class="field-meta field-meta--success">Linked to sponsor record</div>
 			{:else if value?.createIfMissing}
 				<div class="field-meta field-meta--info">Will create a new sponsor record on save</div>
+			{/if}
+
+			{#if sponsorSearchError}
+				<div class="field-meta field-meta--search-error">{sponsorSearchError}</div>
+			{:else if sponsorSearchDone && !sponsorLoading && sponsorResults.length === 0 && !showCreateSponsor}
+				<div class="field-meta field-meta--search-empty">No results found</div>
 			{/if}
 
 			{#if sponsorOpen && (sponsorLoading || sponsorResults.length > 0 || showCreateSponsor)}
@@ -488,6 +504,14 @@
 
 	.field-meta--info {
 		color: #1f5159;
+	}
+
+	.field-meta--search-error {
+		color: #9a6c00;
+	}
+
+	.field-meta--search-empty {
+		color: var(--text-muted, #789);
 	}
 
 	.location-grid {
