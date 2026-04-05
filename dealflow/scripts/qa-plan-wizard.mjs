@@ -524,6 +524,7 @@ async function runOnboardingEntryScenario(browser) {
 	await page.locator('#first-name').fill('Plan');
 	await page.locator('#last-name').fill('Tester');
 	await clickActiveContinue(page);
+	await handleTosGateIfPresent(page);
 	await expectActiveStepTitle(page, 'What best describes you right now?');
 
 	await page.getByRole('button', { name: "I'm an investor (LP)" }).click();
@@ -597,6 +598,7 @@ async function runPlannedOnboardingContractScenario(browser) {
 	await page.locator('#first-name').fill('Plan');
 	await page.locator('#last-name').fill('Tester');
 	await clickActiveContinue(page);
+	await handleTosGateIfPresent(page);
 	await expectActiveStepTitle(page, 'What best describes you right now?');
 
 	await page.getByRole('button', { name: "I'm an investor (LP)" }).click();
@@ -689,6 +691,24 @@ async function expectActiveStepTitle(page, expected) {
 		return el?.textContent?.trim() === title;
 	}, expected);
 	assert.equal(await activeStepTitle(page), expected);
+}
+
+/**
+ * If the TOS gate step is currently active, click all 3 checkboxes and
+ * proceed. This step was added after the tests were written (migration 068)
+ * and always appears after the name step for users without tos_accepted_version.
+ */
+async function handleTosGateIfPresent(page) {
+	const title = await activeStepTitle(page).catch(() => '');
+	if (title !== 'Before we continue') return;
+	await page.locator('.consent-row').nth(0).click();
+	await page.locator('.consent-row').nth(1).click();
+	await page.locator('.consent-row').nth(2).click();
+	await page.getByRole('button', { name: /I Agree/i }).click();
+	await page.waitForFunction(() => {
+		const el = document.querySelector('.step.active .step-title');
+		return el?.textContent?.trim() !== 'Before we continue';
+	}, null, { timeout: 15000 });
 }
 
 async function reopenReview(page, branch) {
