@@ -6,7 +6,8 @@
 		completedStages = [],
 		accessibleStages = [],
 		variant = 'inline',
-		title = 'Review Flow'
+		title = 'Review Flow',
+		isDirty = false
 	} = $props();
 
 	const completedSet = $derived(new Set(completedStages || []));
@@ -46,7 +47,7 @@
 				>
 					<span class="sidebar-progress__index">{complete ? '✓' : index + 1}</span>
 					<span class="sidebar-progress__meta">
-						<strong>{stage.label}</strong>
+						<strong>{stage.label}{#if active && isDirty}<span class="dirty-dot" aria-label="unsaved changes">•</span>{/if}</strong>
 						<small>{stage.title || stage.description || ''}</small>
 					</span>
 				</button>
@@ -178,6 +179,15 @@
 		font-size: 11px;
 		line-height: 1.4;
 		color: var(--text-secondary);
+	}
+
+	.dirty-dot {
+		margin-left: 4px;
+		color: #d97706;
+		font-size: 10px;
+		line-height: 1;
+		vertical-align: middle;
+		opacity: 0.85;
 	}
 
 	.sidebar-progress__step.is-active {

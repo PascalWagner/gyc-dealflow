@@ -3368,6 +3368,7 @@
 					ppmUrl={getDocumentUrl('ppm') || form.ppmUrl}
 					subAgreementUrl={deal?.subAgreementUrl || deal?.sub_agreement_url || ''}
 					extractionState={extractionState}
+					isDirty={dirty}
 				/>
 			</div>
 		{:else}
@@ -3985,6 +3986,7 @@
 					ppmUrl={getDocumentUrl('ppm') || form.ppmUrl}
 					subAgreementUrl={deal?.subAgreementUrl || deal?.sub_agreement_url || ''}
 					extractionState={extractionState}
+					isDirty={dirty}
 				/>
 			</div>
 		{/if}
