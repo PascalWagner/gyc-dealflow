@@ -6,6 +6,7 @@ import { getAdminClient, setCors, ADMIN_EMAILS } from '../_supabase.js';
 import { resolveDealWorkflowMutation, slugify } from '../../src/lib/utils/dealWorkflow.js';
 import { normalizeDealReviewPatch } from '../../src/lib/utils/dealReviewSchema.js';
 import { transformDeals } from '../member/deals/transform.js';
+import { captureApiError, captureApiWarning } from '../_sentry.js';
 import {
 	applyReviewFieldStateToDeal,
 	buildAdminReviewFieldStateEntry,
@@ -325,10 +326,11 @@ export default async function handler(req, res) {
     // Non-fatal: if the table doesn't exist yet (pre-migration) we return false.
     let pendingReconciliation = false;
     let pendingReconciliationId = null;
+    let pendingReconciliationConflictCount = 0;
     try {
       const { data: reconTask } = await supabase
         .from('reconciliation_tasks')
-        .select('id')
+        .select('id, conflict_fields')
         .eq('deal_id', id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -337,6 +339,9 @@ export default async function handler(req, res) {
       if (reconTask) {
         pendingReconciliation = true;
         pendingReconciliationId = reconTask.id;
+        pendingReconciliationConflictCount = Array.isArray(reconTask.conflict_fields)
+          ? reconTask.conflict_fields.length
+          : 0;
       }
     } catch {
       // reconciliation_tasks table may not exist in all environments yet
@@ -346,7 +351,8 @@ export default async function handler(req, res) {
       deal: {
         ...serialized,
         pendingReconciliation,
-        pendingReconciliationId
+        pendingReconciliationId,
+        pendingReconciliationConflictCount
       }
     });
   }
@@ -378,6 +384,12 @@ export default async function handler(req, res) {
     && requestedReviewStateVersion !== null
     && requestedReviewStateVersion !== currentReviewStateVersion
   ) {
+    captureApiWarning('review_state_conflict', {
+      endpoint: `PATCH /api/deals/${req.query?.id}`,
+      dealId: req.query?.id,
+      localVersion: requestedReviewStateVersion,
+      serverVersion: currentReviewStateVersion
+    });
     return res.status(409).json({
       error: 'This deal was updated somewhere else. Reload the latest version before saving again.',
       code: 'review_state_conflict',
@@ -415,7 +427,13 @@ export default async function handler(req, res) {
       email: String(user?.email || '').trim().toLowerCase(),
       name: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim()
     };
-    const reviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+    let reviewFieldState;
+    try {
+      reviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+    } catch (parseErr) {
+      captureApiError(parseErr, { endpoint: `PATCH /api/deals/${req.query?.id}`, field: 'review_field_state', dealId: req.query?.id });
+      reviewFieldState = {};
+    }
     const nextReviewFieldState = { ...reviewFieldState };
     const updates = {};
     const eventRows = [];
@@ -583,7 +601,13 @@ export default async function handler(req, res) {
     email: String(user?.email || '').trim().toLowerCase(),
     name: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim()
   };
-  const existingReviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+  let existingReviewFieldState;
+  try {
+    existingReviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+  } catch (parseErr) {
+    captureApiError(parseErr, { endpoint: `PATCH /api/deals/${req.query?.id}`, field: 'review_field_state', dealId: req.query?.id });
+    existingReviewFieldState = {};
+  }
   let nextReviewFieldState = { ...existingReviewFieldState };
   let reviewFieldStateChanged = false;
 

@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import * as analytics from '$lib/analytics.js';
 	import { onDestroy, onMount, setContext } from 'svelte';
 	import DealOnboardingProgress from '$lib/components/deal-review/DealOnboardingProgress.svelte';
 	import FieldProvenance from '$lib/components/deal-review/FieldProvenance.svelte';
@@ -2233,6 +2234,12 @@
 				stage,
 				errorKeys: Object.keys(errors)
 			});
+			analytics.track('stage_save_attempted', {
+				dealId,
+				stage,
+				success: false,
+				validationErrors: Object.keys(errors)
+			});
 			return false;
 		}
 
@@ -2241,6 +2248,9 @@
 		if (!quiet) {
 			saveMessage = '';
 		}
+
+		// Capture pre-save provenance for field_override tracking
+		const preSaveReviewFieldState = { ...reviewFieldState };
 
 		try {
 			const token = await getFreshSessionToken();
@@ -2296,6 +2306,22 @@
 				},
 				{ clearSaveMessage: true }
 			);
+			analytics.track('stage_save_attempted', { dealId, stage, success: true, validationErrors: [] });
+			// Fire field_override for each field that now has adminOverrideActive
+			if (Array.isArray(scopedFieldKeys) && scopedFieldKeys.length > 0) {
+				const savedState = normalizeReviewFieldStateMap(
+					payload.deal?.reviewFieldState || payload.deal?.review_field_state || {}
+				);
+				for (const fieldKey of scopedFieldKeys) {
+					if (savedState[fieldKey]?.adminOverrideActive) {
+						const pre = preSaveReviewFieldState[fieldKey];
+						const previousTier = pre?.adminOverrideActive ? 'human_override'
+							: pre?.aiValuePresent ? 'ai'
+							: 'empty';
+						analytics.track('field_override', { dealId, fieldKey, previousTier });
+					}
+				}
+			}
 			clearDraft();
 			if (Array.isArray(scopedFieldKeys) && scopedFieldKeys.length > 0) {
 				await loadReviewFieldEvidence({
@@ -2407,6 +2433,11 @@
 
 	async function handlePublish() {
 		if (!canPublish || lifecycleSyncState === 'running') return;
+		analytics.track('deal_publish_attempted', {
+			dealId,
+			summaryPublishReady,
+			pendingReconciliation: Boolean(reconciliationTaskId)
+		});
 		await syncReviewLifecycleStatus({ quiet: false, targetLifecycle: 'approved' });
 	}
 
@@ -2663,6 +2694,7 @@
 				force: true
 			});
 			saveMessage = `${getReviewFieldLabel(fieldKey)} was reset to the extracted value.`;
+			analytics.track('field_reset_to_ai', { dealId, fieldKey });
 			console.info('[deal-review/extraction] reset to ai', {
 				dealId,
 				fieldKey
@@ -2781,6 +2813,7 @@
 		}
 
 		saveError = '';
+		analytics.track('stage_navigation', { dealId, fromStage: activeStage, toStage: targetStage });
 		await goto(getStageHref(targetStage, { from: from || (cameFromQueue ? 'queue' : cameFromIntake ? 'intake' : '') }), {
 			replaceState: true,
 			noScroll: true,
@@ -2843,8 +2876,12 @@
 	function restoreDraft() {
 		if (!draftBanner) return;
 		const { formSnapshot, stage: draftStage } = draftBanner;
+		const draftAgeMinutes = draftBanner.savedAt
+			? Math.round((Date.now() - new Date(draftBanner.savedAt).getTime()) / 60_000)
+			: 0;
 		form = formSnapshot;
 		markDirty();
+		analytics.track('draft_restored', { dealId, draftAgeMinutes });
 		draftBanner = null;
 		clearDraft();
 		if (draftStage && draftStage !== activeStage) {
@@ -3051,7 +3088,10 @@
 				<button
 					type="button"
 					class="reconciliation-banner__btn"
-					onclick={() => (reconciliationOpen = true)}
+					onclick={() => {
+						reconciliationOpen = true;
+						analytics.track('reconciliation_opened', { dealId, conflictCount: reconciliationConflictCount });
+					}}
 				>Review differences</button>
 			</div>
 		{/if}
@@ -3060,6 +3100,7 @@
 				taskId={reconciliationTaskId}
 				dealId={dealId}
 				onresolved={() => {
+					analytics.track('reconciliation_resolved', { dealId, conflictCount: reconciliationConflictCount });
 					reconciliationTaskId = null;
 					reconciliationConflictCount = 0;
 					reconciliationOpen = false;
@@ -3711,7 +3752,10 @@
 								<button
 									type="button"
 									class="ghost-btn ghost-btn--sm"
-									onclick={() => (reconciliationOpen = true)}
+									onclick={() => {
+										reconciliationOpen = true;
+										analytics.track('reconciliation_opened', { dealId, conflictCount: reconciliationConflictCount });
+									}}
 								>Review differences</button>
 							</div>
 						{/if}

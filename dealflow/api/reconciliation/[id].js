@@ -7,6 +7,7 @@
 // Auth: admin-only (Bearer token verified against ADMIN_EMAILS).
 
 import { getAdminClient, setCors, verifyAdmin } from '../_supabase.js';
+import { captureApiError } from '../_sentry.js';
 import {
   buildAdminReviewFieldStateEntry,
   buildAiReviewFieldStateEntry,
@@ -263,6 +264,11 @@ export default async function handler(req, res) {
         id,
         dealId,
         message: dealUpdateError.message
+      });
+      captureApiError(new Error(dealUpdateError.message), {
+        endpoint: `POST /api/reconciliation/${id}`,
+        dealId,
+        taskId: id
       });
       return res.status(500).json({ error: 'Failed to apply decisions to deal' });
     }

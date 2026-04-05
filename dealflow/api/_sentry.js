@@ -39,3 +39,19 @@ export function captureApiError(error, context = {}) {
 		Sentry.captureException(error);
 	});
 }
+
+export function captureApiWarning(message, context = {}) {
+	ensureInit();
+	Sentry.withScope((scope) => {
+		scope.setLevel('warning');
+		if (context.endpoint) scope.setTag('api.endpoint', context.endpoint);
+		if (context.userId) scope.setUser({ id: context.userId });
+		if (context.email) scope.setUser({ email: context.email });
+		for (const [key, value] of Object.entries(context)) {
+			if (!['endpoint', 'userId', 'email'].includes(key)) {
+				scope.setExtra(key, value);
+			}
+		}
+		Sentry.captureMessage(message);
+	});
+}

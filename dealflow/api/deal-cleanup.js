@@ -8,6 +8,7 @@
 
 import { createRequire } from 'node:module';
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
+import { captureApiError, captureApiWarning } from './_sentry.js';
 import { fetchAndStoreSecFiling, findSecMatchesForDeal } from './_sec-edgar.js';
 import {
   buildDocumentInvestingStateSignals,
@@ -1464,6 +1465,7 @@ export default async function handler(req, res) {
 
         if (existingRun) {
           console.log(`[deal-cleanup/enrich-deal] skipping re-extraction — run ${existingRun.id} already exists for document_ref ${documentRef} (status=${existingRun.status})`);
+          console.info('[deal-cleanup/enrich-deal] extraction_skipped_duplicate', { dealId, existingRunId: existingRun.id, documentRef });
           return res.status(200).json({
             success: true,
             deal_id: dealId,
@@ -1501,6 +1503,7 @@ export default async function handler(req, res) {
       } else {
         extractionRunId = runRow?.id || null;
       }
+      console.info('[deal-cleanup/enrich-deal] extraction_started', { dealId, triggeredBy, documentRef, extractionRunId });
 
       // Run the multi-step enrichment pipeline
       let result;
@@ -1515,10 +1518,23 @@ export default async function handler(req, res) {
             .filter(s => s.error)
             .map(s => `${s.step}: ${s.error}`)
             .join('; ');
+          captureApiWarning('extraction_partial', {
+            endpoint: 'POST /api/deal-cleanup enrich-deal',
+            dealId,
+            documentRef,
+            failedSteps: result.steps.filter(s => s.error).map(s => ({ step: s.step, error: s.error }))
+          });
         }
       } catch (enrichErr) {
         runStatus = 'failed';
         runErrorDetail = enrichErr.message;
+        captureApiError(enrichErr, {
+          endpoint: 'POST /api/deal-cleanup enrich-deal',
+          dealId,
+          documentRef,
+          extractionRunId
+        });
+        console.info('[deal-cleanup/enrich-deal] extraction_failed', { dealId, documentRef, extractionRunId, failureReason: enrichErr.message });
         // Update run row to failed before re-throwing
         if (extractionRunId) {
           await supabase.from('extraction_runs').update({
@@ -1541,6 +1557,15 @@ export default async function handler(req, res) {
           extraction_source: extractionSource,
           error_detail: runErrorDetail
         }).eq('id', extractionRunId);
+        const fieldsExtractedCount = Object.keys(result.found_fields || {}).length;
+        console.info('[deal-cleanup/enrich-deal] extraction_completed', {
+          dealId,
+          extractionRunId,
+          runStatus,
+          fieldsExtracted: fieldsExtractedCount,
+          source: extractionSource,
+          documentRef
+        });
       }
 
       // ── Conflict detection + auto-resolution ────────────────────────────────
