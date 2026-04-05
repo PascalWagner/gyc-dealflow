@@ -1447,7 +1447,8 @@ export default async function handler(req, res) {
       // Deduplication: if a document_ref is provided, check whether a complete
       // or partial extraction run already exists for that exact document.
       // Avoids re-running the expensive pipeline on the same PDF twice.
-      if (documentRef) {
+      // Skip dedup when forceRun=true — caller is explicitly requesting fresh extraction.
+      if (documentRef && !forceRun) {
         const { data: existingRun } = await supabase
           .from('extraction_runs')
           .select('id, status, fields_extracted, extraction_source')
