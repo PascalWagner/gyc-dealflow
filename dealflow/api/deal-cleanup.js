@@ -8,6 +8,7 @@
 
 import { createRequire } from 'node:module';
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
+import { logReviewEvents } from './_review-events.js';
 import { captureApiError, captureApiWarning } from './_sentry.js';
 import { fetchAndStoreSecFiling, findSecMatchesForDeal } from './_sec-edgar.js';
 import {
@@ -808,26 +809,6 @@ function filterFoundFieldUpdates(foundFields = {}, requestedFieldKeys = []) {
   );
 }
 
-async function insertReviewFieldEvents(supabase, events = []) {
-  if (!Array.isArray(events) || events.length === 0) return;
-
-  try {
-    const { error } = await supabase
-      .from('review_field_events')
-      .insert(events);
-    if (error) {
-      console.warn('[deal-cleanup/events] insert failed', {
-        message: error.message,
-        count: events.length
-      });
-    }
-  } catch (error) {
-    console.warn('[deal-cleanup/events] insert threw', {
-      message: error?.message || 'unknown_error',
-      count: events.length
-    });
-  }
-}
 
 // ── Auto-resolve helper ──────────────────────────────────────────────────────
 
@@ -1832,7 +1813,7 @@ export default async function handler(req, res) {
 
       if (error) throw error;
 
-      await insertReviewFieldEvents(supabase, eventRows);
+      await logReviewEvents(supabase, eventRows);
 
       return res.status(200).json({
         success: true,

@@ -3,6 +3,7 @@
 // Auth: Bearer token + authorized_emails check (same pattern as management-companies settings)
 
 import { getAdminClient, setCors, ADMIN_EMAILS } from '../_supabase.js';
+import { logReviewEvents } from '../_review-events.js';
 import { resolveDealWorkflowMutation, slugify } from '../../src/lib/utils/dealWorkflow.js';
 import { normalizeDealReviewPatch } from '../../src/lib/utils/dealReviewSchema.js';
 import { transformDeals } from '../member/deals/transform.js';
@@ -138,25 +139,6 @@ function normalizeValue(key, value) {
   return value;
 }
 
-async function insertReviewFieldEvents(supabase, events = []) {
-  if (!Array.isArray(events) || events.length === 0) return;
-  try {
-    const { error } = await supabase
-      .from('review_field_events')
-      .insert(events);
-    if (error) {
-      console.warn('[deal-review/events] insert failed', {
-        message: error.message,
-        count: events.length
-      });
-    }
-  } catch (error) {
-    console.warn('[deal-review/events] insert threw', {
-      message: error?.message || 'unknown_error',
-      count: events.length
-    });
-  }
-}
 
 function isUuid(value) {
   return /^[0-9a-f-]{36}$/i.test(String(value || '').trim());
@@ -492,7 +474,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to reset the selected review fields.' });
     }
 
-    await insertReviewFieldEvents(supabase, eventRows);
+    await logReviewEvents(supabase, eventRows);
 
     return res.status(200).json({
       success: true,
@@ -713,7 +695,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to save deal' });
   }
 
-  await insertReviewFieldEvents(supabase, reviewFieldEvents);
+  await logReviewEvents(supabase, reviewFieldEvents);
 
   const responseDeal = serializeDealRecord(
     {
