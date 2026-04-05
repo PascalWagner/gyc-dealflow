@@ -168,7 +168,9 @@ export function normalizeReviewFieldStateEntry(entry = {}) {
 		lastUpdatedAt: normalizeString(entry?.lastUpdatedAt || ''),
 		adminActorEmail: normalizeString(entry?.adminActorEmail || ''),
 		adminActorName: normalizeString(entry?.adminActorName || ''),
-		aiSource: normalizeString(entry?.aiSource || '')
+		aiSource: normalizeString(entry?.aiSource || ''),
+		// traceability: which extraction_runs row produced this aiValue
+		extractionRunId: normalizeString(entry?.extractionRunId || '')
 	};
 }
 
@@ -253,7 +255,8 @@ export function buildAiReviewFieldStateEntry(
 		nextValue,
 		overwriteAdmin = false,
 		source = 'ai_extraction',
-		at = new Date().toISOString()
+		at = new Date().toISOString(),
+		extractionRunId = ''
 	} = {}
 ) {
 	const normalized = normalizeReviewFieldStateEntry(existingEntry);
@@ -263,7 +266,8 @@ export function buildAiReviewFieldStateEntry(
 		aiValuePresent: true,
 		aiUpdatedAt: at,
 		lastUpdatedAt: at,
-		aiSource: normalizeString(source)
+		aiSource: normalizeString(source),
+		extractionRunId: normalizeString(extractionRunId)
 	};
 
 	if (overwriteAdmin) {

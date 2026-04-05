@@ -16,12 +16,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { resolveFinalReviewFieldValue } from '../src/lib/utils/reviewFieldState.js';
+import {
+	resolveFinalReviewFieldValue,
+	buildAiReviewFieldStateEntry,
+	normalizeReviewFieldStateEntry
+} from '../src/lib/utils/reviewFieldState.js';
 import {
 	buildDealReviewPayload,
 	normalizeDealReviewPatch,
 	normalizeEnumValue
 } from '../src/lib/utils/dealReviewSchema.js';
+import {
+	buildCascadeStatus,
+	shouldSkipExtraction,
+	runEnrichmentCascade
+} from '../api/_enrichment.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -453,3 +462,106 @@ test('normalizeDealReviewPatch: bad enum value produces an error for that field'
 //   const deal = await getDeal(dealId);
 //   assert.notEqual(deal.investment_minimum, 999999, 'field must not have been written');
 // });
+
+// ===========================================================================
+// Extraction cascade resilience — buildCascadeStatus / shouldSkipExtraction
+// ===========================================================================
+//
+// These tests cover Workstream 4 from deal-review-audit.md §6.1:
+//   • runEnrichmentCascade returns status 'partial' when a secondary step
+//     fails, but still preserves primary extracted fields.
+//   • shouldSkipExtraction correctly gates re-extraction against existing runs.
+//
+// buildCascadeStatus and shouldSkipExtraction are pure helpers exported from
+// api/_enrichment.js for easy unit testing without network calls.
+
+test('buildCascadeStatus: no failed steps → "complete"', () => {
+	assert.equal(buildCascadeStatus([]), 'complete');
+});
+
+test('buildCascadeStatus: one failed secondary step → "partial"', () => {
+	assert.equal(buildCascadeStatus([{ step: 'sec', error: 'timeout' }]), 'partial');
+});
+
+test('buildCascadeStatus: multiple failed steps → "partial"', () => {
+	const failures = [
+		{ step: 'sec', error: 'timeout' },
+		{ step: 'property', error: 'RentCast 503' }
+	];
+	assert.equal(buildCascadeStatus(failures), 'partial');
+});
+
+test('buildCascadeStatus: null/undefined input treated as no failures → "complete"', () => {
+	// Defensive: callers should always pass an array, but guard just in case.
+	assert.equal(buildCascadeStatus(null), 'complete');
+	assert.equal(buildCascadeStatus(undefined), 'complete');
+});
+
+// Cascade integration: runEnrichmentCascade with an empty extracted object fires
+// no secondary lookups (no entity names, no address, no supabase), so partialFailures
+// should be empty and status should be 'complete'.
+test('runEnrichmentCascade with empty extracted object: no secondary failures, status complete', async () => {
+	const result = await runEnrichmentCascade({}, null);
+	assert.equal(result.status, 'complete', 'status should be complete when no secondaries were attempted');
+	assert.deepEqual(result.partialFailures, [], 'no failures when no secondaries ran');
+	assert.deepEqual(result.matchedDeals, [], 'no matched deals when supabase is null');
+	assert.ok(Array.isArray(result.enrichmentSteps), 'enrichmentSteps should be an array');
+});
+
+// Deduplication: shouldSkipExtraction gate
+test('shouldSkipExtraction: null run → do not skip', () => {
+	assert.equal(shouldSkipExtraction(null), false);
+});
+
+test('shouldSkipExtraction: undefined run → do not skip', () => {
+	assert.equal(shouldSkipExtraction(undefined), false);
+});
+
+test('shouldSkipExtraction: status "complete" → skip', () => {
+	assert.equal(shouldSkipExtraction({ status: 'complete' }), true);
+});
+
+test('shouldSkipExtraction: status "partial" → skip (primary extraction succeeded)', () => {
+	assert.equal(shouldSkipExtraction({ status: 'partial' }), true);
+});
+
+test('shouldSkipExtraction: status "running" → do not skip (still in progress)', () => {
+	assert.equal(shouldSkipExtraction({ status: 'running' }), false);
+});
+
+test('shouldSkipExtraction: status "failed" → do not skip (should retry)', () => {
+	assert.equal(shouldSkipExtraction({ status: 'failed' }), false);
+});
+
+// extractionRunId propagation through reviewFieldState
+test('buildAiReviewFieldStateEntry: extractionRunId is stored when provided', () => {
+	const runId = 'a1b2c3d4-0000-0000-0000-000000000001';
+	const entry = buildAiReviewFieldStateEntry({}, {
+		nextValue: 'Lending Fund',
+		source: 'ai_extraction',
+		extractionRunId: runId
+	});
+	assert.equal(entry.extractionRunId, runId, 'extractionRunId should be set on the entry');
+	assert.equal(entry.aiValue, 'Lending Fund');
+	assert.equal(entry.aiValuePresent, true);
+});
+
+test('buildAiReviewFieldStateEntry: extractionRunId defaults to empty string when not provided', () => {
+	const entry = buildAiReviewFieldStateEntry({}, { nextValue: 42 });
+	assert.equal(entry.extractionRunId, '', 'extractionRunId should be empty string when absent');
+});
+
+test('normalizeReviewFieldStateEntry: preserves extractionRunId from stored entry', () => {
+	const runId = 'a1b2c3d4-0000-0000-0000-000000000002';
+	const normalized = normalizeReviewFieldStateEntry({
+		aiValue: 'test',
+		aiValuePresent: true,
+		extractionRunId: runId
+	});
+	assert.equal(normalized.extractionRunId, runId, 'normalize should preserve extractionRunId');
+});
+
+test('normalizeReviewFieldStateEntry: extractionRunId defaults to empty string when absent', () => {
+	const normalized = normalizeReviewFieldStateEntry({ aiValue: 'test', aiValuePresent: true });
+	assert.equal(normalized.extractionRunId, '', 'missing extractionRunId should default to empty string');
+});

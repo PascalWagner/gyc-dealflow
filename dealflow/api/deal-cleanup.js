@@ -1358,7 +1358,12 @@ export default async function handler(req, res) {
 
     // Action: enrich a single deal via multi-step pipeline
     if (action === 'enrich-deal') {
-      const { dealId, fieldKeys = [] } = req.body;
+      const {
+        dealId,
+        fieldKeys = [],
+        documentRef = null,   // deck_submissions.id — used for deduplication
+        triggeredBy = 'manual'
+      } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
 
       const { data: deal, error: dealErr } = await supabase
@@ -1385,8 +1390,100 @@ export default async function handler(req, res) {
         });
       }
 
+      // Deduplication: if a document_ref is provided, check whether a complete
+      // or partial extraction run already exists for that exact document.
+      // Avoids re-running the expensive pipeline on the same PDF twice.
+      if (documentRef) {
+        const { data: existingRun } = await supabase
+          .from('extraction_runs')
+          .select('id, status, fields_extracted, extraction_source')
+          .eq('deal_id', dealId)
+          .eq('document_ref', documentRef)
+          .in('status', ['complete', 'partial'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingRun) {
+          console.log(`[deal-cleanup/enrich-deal] skipping re-extraction — run ${existingRun.id} already exists for document_ref ${documentRef} (status=${existingRun.status})`);
+          return res.status(200).json({
+            success: true,
+            deal_id: dealId,
+            skipped: true,
+            existing_run_id: existingRun.id,
+            existing_run_status: existingRun.status,
+            found_fields: existingRun.fields_extracted || {},
+            sources: existingRun.extraction_source ? [existingRun.extraction_source] : [],
+            steps: [],
+            notes: `Skipped — extraction run ${existingRun.id} already exists for this document (status=${existingRun.status})`,
+            current_data: deal,
+            operator_name: operatorName,
+            missing_fields: missingFields.map(f => ({ key: f.key, label: f.label }))
+          });
+        }
+      }
+
+      // Insert extraction_runs row before starting (status='running')
+      let extractionRunId = null;
+      const runInsert = {
+        deal_id: dealId,
+        triggered_by: triggeredBy,
+        document_ref: documentRef || null,
+        status: 'running',
+        started_at: new Date().toISOString()
+      };
+      const { data: runRow, error: runInsertError } = await supabase
+        .from('extraction_runs')
+        .insert(runInsert)
+        .select('id')
+        .single();
+      if (runInsertError) {
+        // Non-fatal: extraction proceeds even if run tracking fails
+        console.warn('[deal-cleanup/enrich-deal] failed to insert extraction_run:', runInsertError.message);
+      } else {
+        extractionRunId = runRow?.id || null;
+      }
+
       // Run the multi-step enrichment pipeline
-      const result = await enrichDeal(supabase, deal, operatorName);
+      let result;
+      let runStatus = 'failed';
+      let runErrorDetail = null;
+      try {
+        result = await enrichDeal(supabase, deal, operatorName);
+        const hasStepErrors = result.steps.some(s => s.error);
+        runStatus = hasStepErrors ? 'partial' : 'complete';
+        if (hasStepErrors) {
+          runErrorDetail = result.steps
+            .filter(s => s.error)
+            .map(s => `${s.step}: ${s.error}`)
+            .join('; ');
+        }
+      } catch (enrichErr) {
+        runStatus = 'failed';
+        runErrorDetail = enrichErr.message;
+        // Update run row to failed before re-throwing
+        if (extractionRunId) {
+          await supabase.from('extraction_runs').update({
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error_detail: enrichErr.message
+          }).eq('id', extractionRunId);
+        }
+        throw enrichErr;
+      }
+
+      // Update extraction_runs row: status, completed_at, fields_extracted, extraction_source
+      if (extractionRunId) {
+        const primaryStep = result.steps.find(s => s.fields_found > 0 && s.api);
+        const extractionSource = primaryStep?.api || null;
+        await supabase.from('extraction_runs').update({
+          status: runStatus,
+          completed_at: new Date().toISOString(),
+          fields_extracted: result.found_fields || {},
+          extraction_source: extractionSource,
+          error_detail: runErrorDetail
+        }).eq('id', extractionRunId);
+      }
 
       const filteredFoundFields = filterFoundFieldUpdates(result.found_fields, fieldKeys);
       const filteredConfidence = Object.fromEntries(
@@ -1398,6 +1495,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         deal_id: dealId,
+        extraction_run_id: extractionRunId,
+        run_status: runStatus,
         found_fields: filteredFoundFields,
         confidence: filteredConfidence,
         sources: result.sources,
@@ -1415,7 +1514,10 @@ export default async function handler(req, res) {
         dealId,
         updates,
         overwriteAdmin = false,
-        forceFieldKeys = []
+        forceFieldKeys = [],
+        // extractionRunId links each aiValue entry back to its source run.
+        // Pass this from the enrich-deal response when confirming enrichment.
+        extractionRunId = ''
       } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
       if (!updates || Object.keys(updates).length === 0) {
@@ -1524,7 +1626,8 @@ export default async function handler(req, res) {
           nextValue: value,
           overwriteAdmin: shouldForceOverwrite,
           source: 'ai_extraction',
-          at: now
+          at: now,
+          extractionRunId
         });
         nextReviewFieldState[fieldKey] = nextEntry;
         storedAiFields.push(fieldKey);
