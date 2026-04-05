@@ -23,10 +23,12 @@ import { dealFieldConfig } from '../src/lib/utils/dealReviewSchema.js';
 import {
   applyReviewFieldStateToDeal,
   buildAiReviewFieldStateEntry,
+  getReviewFieldDbColumn,
   getReviewFieldKeyForColumn,
   normalizeReviewFieldStateMap,
   resolveFinalReviewFieldValue
 } from '../src/lib/utils/reviewFieldState.js';
+import { computeExtractionConflicts } from './_reconciliation.js';
 
 const EXTRACTION_TEXT_LIMIT = 120000;
 const require = createRequire(import.meta.url);
@@ -826,6 +828,62 @@ async function insertReviewFieldEvents(supabase, events = []) {
   }
 }
 
+// ── Auto-resolve helper ──────────────────────────────────────────────────────
+
+/**
+ * Write auto-resolved fields (fields with no prior aiValue) directly to
+ * review_field_state without requiring reviewer interaction.  Also
+ * materializes values to the corresponding flat DB columns where available.
+ *
+ * @param {object} supabase          Supabase admin client
+ * @param {string} dealId            UUID of the deal
+ * @param {object} dealRow           Current DB row for the deal
+ * @param {Array}  autoResolvedFields From computeConflictsFromState().autoResolved
+ * @param {string} runId             extraction_runs.id — stamped on each entry
+ */
+async function applyAutoResolvedToReviewState(supabase, dealId, dealRow, autoResolvedFields, runId) {
+  if (!autoResolvedFields || autoResolvedFields.length === 0) return;
+
+  const availableColumns = new Set(Object.keys(dealRow || {}));
+  if (!availableColumns.has('review_field_state')) return;
+
+  const reviewFieldState = normalizeReviewFieldStateMap(dealRow.review_field_state || {});
+  const nextReviewFieldState = { ...reviewFieldState };
+  const materializedUpdates = {};
+  const now = new Date().toISOString();
+
+  for (const { fieldKey, extractedValue } of autoResolvedFields) {
+    nextReviewFieldState[fieldKey] = buildAiReviewFieldStateEntry({}, {
+      nextValue: extractedValue,
+      source: 'ai_extraction',
+      at: now,
+      extractionRunId: runId
+    });
+    const columnName = getReviewFieldDbColumn(fieldKey);
+    if (
+      columnName
+      && availableColumns.has(columnName)
+      && extractedValue !== null
+      && extractedValue !== undefined
+      && extractedValue !== ''
+    ) {
+      materializedUpdates[columnName] = extractedValue;
+    }
+  }
+
+  materializedUpdates.review_field_state = nextReviewFieldState;
+  materializedUpdates.updated_at = now;
+
+  const { error } = await supabase
+    .from('opportunities')
+    .update(materializedUpdates)
+    .eq('id', dealId);
+
+  if (error) {
+    throw new Error(`applyAutoResolvedToReviewState: DB update failed: ${error.message}`);
+  }
+}
+
 // ── Build web search prompt ──────────────────────────────────────────────────
 
 function buildWebSearchPrompt(deal, operatorName, missingFields) {
@@ -1485,6 +1543,69 @@ export default async function handler(req, res) {
         }).eq('id', extractionRunId);
       }
 
+      // ── Conflict detection + auto-resolution ────────────────────────────────
+      // Run after the extraction_runs row is finalized.  partialFailures from
+      // WS4 do not block this — we operate on whatever was successfully extracted.
+      let pendingReconciliationId = null;
+      let autoResolvedCount = 0;
+      let conflictCount = 0;
+      let protectedCount = 0;
+
+      if (extractionRunId && runStatus !== 'failed') {
+        try {
+          const conflictResult = await computeExtractionConflicts(dealId, extractionRunId, supabase);
+          autoResolvedCount = conflictResult.autoResolved.length;
+          conflictCount = conflictResult.conflicts.length;
+          protectedCount = conflictResult.protected.length;
+
+          // Apply auto-resolved fields immediately — no reviewer decision needed.
+          if (conflictResult.autoResolved.length > 0) {
+            await applyAutoResolvedToReviewState(
+              supabase, dealId, deal, conflictResult.autoResolved, extractionRunId
+            );
+          }
+
+          // Insert a reconciliation task for fields that need reviewer attention.
+          if (conflictResult.conflicts.length > 0) {
+            const { data: reconTask, error: reconInsertError } = await supabase
+              .from('reconciliation_tasks')
+              .insert({
+                deal_id: dealId,
+                extraction_run_id: extractionRunId,
+                status: 'pending',
+                conflict_fields: conflictResult.conflicts
+              })
+              .select('id')
+              .single();
+
+            if (reconInsertError) {
+              console.warn('[deal-cleanup/enrich-deal] reconciliation_tasks insert failed (non-fatal)', {
+                dealId,
+                extractionRunId,
+                message: reconInsertError.message
+              });
+            } else {
+              pendingReconciliationId = reconTask?.id || null;
+              console.info('[deal-cleanup/enrich-deal] reconciliation task created', {
+                dealId,
+                extractionRunId,
+                conflictCount,
+                autoResolvedCount,
+                protectedCount,
+                pendingReconciliationId
+              });
+            }
+          }
+        } catch (conflictErr) {
+          // Non-fatal: conflict detection failure must not fail the extraction response.
+          console.warn('[deal-cleanup/enrich-deal] conflict detection failed (non-fatal)', {
+            dealId,
+            extractionRunId,
+            message: conflictErr?.message || 'unknown_error'
+          });
+        }
+      }
+
       const filteredFoundFields = filterFoundFieldUpdates(result.found_fields, fieldKeys);
       const filteredConfidence = Object.fromEntries(
         Object.entries(result.confidence || {}).filter(([fieldKey]) =>
@@ -1504,7 +1625,11 @@ export default async function handler(req, res) {
         notes: result.notes,
         current_data: deal,
         operator_name: operatorName,
-        missing_fields: missingFields.map(f => ({ key: f.key, label: f.label }))
+        missing_fields: missingFields.map(f => ({ key: f.key, label: f.label })),
+        pending_reconciliation_id: pendingReconciliationId,
+        auto_resolved_count: autoResolvedCount,
+        conflict_count: conflictCount,
+        protected_count: protectedCount
       });
     }
 

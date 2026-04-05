@@ -321,8 +321,33 @@ export default async function handler(req, res) {
   let currentManagementCompany = context.currentManagementCompany;
 
   if (req.method === 'GET') {
+    // Check for a pending reconciliation task for this deal.
+    // Non-fatal: if the table doesn't exist yet (pre-migration) we return false.
+    let pendingReconciliation = false;
+    let pendingReconciliationId = null;
+    try {
+      const { data: reconTask } = await supabase
+        .from('reconciliation_tasks')
+        .select('id')
+        .eq('deal_id', id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (reconTask) {
+        pendingReconciliation = true;
+        pendingReconciliationId = reconTask.id;
+      }
+    } catch {
+      // reconciliation_tasks table may not exist in all environments yet
+    }
+    const serialized = serializeDealRecord(deal, { currentManagementCompany, availableColumns });
     return res.status(200).json({
-      deal: serializeDealRecord(deal, { currentManagementCompany, availableColumns })
+      deal: {
+        ...serialized,
+        pendingReconciliation,
+        pendingReconciliationId
+      }
     });
   }
 

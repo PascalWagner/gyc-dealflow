@@ -31,6 +31,10 @@ import {
 	shouldSkipExtraction,
 	runEnrichmentCascade
 } from '../api/_enrichment.js';
+import {
+	normalizeValueForComparison,
+	computeConflictsFromState
+} from '../api/_reconciliation.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -564,4 +568,174 @@ test('normalizeReviewFieldStateEntry: preserves extractionRunId from stored entr
 test('normalizeReviewFieldStateEntry: extractionRunId defaults to empty string when absent', () => {
 	const normalized = normalizeReviewFieldStateEntry({ aiValue: 'test', aiValuePresent: true });
 	assert.equal(normalized.extractionRunId, '', 'missing extractionRunId should default to empty string');
+});
+
+// ---------------------------------------------------------------------------
+// normalizeValueForComparison
+// ---------------------------------------------------------------------------
+
+test('normalizeValueForComparison: null → null', () => {
+	assert.equal(normalizeValueForComparison(null), null);
+});
+
+test('normalizeValueForComparison: undefined → null', () => {
+	assert.equal(normalizeValueForComparison(undefined), null);
+});
+
+test('normalizeValueForComparison: empty string → null', () => {
+	assert.equal(normalizeValueForComparison(''), null);
+});
+
+test('normalizeValueForComparison: numeric string "0.10" equals number 0.1', () => {
+	assert.equal(
+		normalizeValueForComparison('0.10'),
+		normalizeValueForComparison(0.1),
+		'"0.10" and 0.1 should normalize to the same value'
+	);
+});
+
+test('normalizeValueForComparison: "0.15" equals 0.15 (percentage parity)', () => {
+	assert.equal(normalizeValueForComparison('0.15'), normalizeValueForComparison(0.15));
+});
+
+test('normalizeValueForComparison: comma-formatted number "1,500" equals 1500', () => {
+	assert.equal(normalizeValueForComparison('1,500'), normalizeValueForComparison(1500));
+});
+
+test('normalizeValueForComparison: strings compared case-insensitively', () => {
+	assert.equal(
+		normalizeValueForComparison('Multi Family'),
+		normalizeValueForComparison('multi family')
+	);
+});
+
+test('normalizeValueForComparison: arrays sorted before comparison', () => {
+	assert.equal(
+		normalizeValueForComparison(['B', 'A']),
+		normalizeValueForComparison(['A', 'B'])
+	);
+});
+
+test('normalizeValueForComparison: distinct numeric values are not equal', () => {
+	assert.notEqual(normalizeValueForComparison(0.10), normalizeValueForComparison(0.15));
+});
+
+// ---------------------------------------------------------------------------
+// computeConflictsFromState
+// ---------------------------------------------------------------------------
+
+const RUN_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+test('computeConflictsFromState: adminOverrideActive=true → protected, never conflict', () => {
+	const reviewFieldState = {
+		targetIRR: {
+			aiValue: 0.12,
+			aiValuePresent: true,
+			adminOverrideActive: true,
+			adminOverrideValue: 0.15
+		}
+	};
+	const fieldsExtracted = { targetIRR: 0.10 };
+	const result = computeConflictsFromState(reviewFieldState, fieldsExtracted, RUN_ID);
+	assert.equal(result.protected.length, 1, 'should be in protected');
+	assert.equal(result.conflicts.length, 0, 'should not be in conflicts');
+	assert.equal(result.autoResolved.length, 0, 'should not be in autoResolved');
+	assert.equal(result.protected[0].fieldKey, 'targetIRR');
+});
+
+test('computeConflictsFromState: existing aiValue matches extraction → no conflict', () => {
+	const reviewFieldState = {
+		investmentMinimum: {
+			aiValue: 50000,
+			aiValuePresent: true,
+			adminOverrideActive: false
+		}
+	};
+	const fieldsExtracted = { investmentMinimum: 50000 };
+	const result = computeConflictsFromState(reviewFieldState, fieldsExtracted, RUN_ID);
+	assert.equal(result.conflicts.length, 0, 'same value should not create a conflict');
+	assert.equal(result.autoResolved.length, 0);
+	assert.equal(result.protected.length, 0);
+});
+
+test('computeConflictsFromState: existing aiValue differs from extraction → conflict', () => {
+	const reviewFieldState = {
+		investmentMinimum: {
+			aiValue: 50000,
+			aiValuePresent: true,
+			adminOverrideActive: false,
+			aiSource: 'ai_extraction'
+		}
+	};
+	const fieldsExtracted = { investmentMinimum: 25000 };
+	const result = computeConflictsFromState(reviewFieldState, fieldsExtracted, RUN_ID);
+	assert.equal(result.conflicts.length, 1, 'differing value should create a conflict');
+	assert.equal(result.conflicts[0].fieldKey, 'investmentMinimum');
+	assert.equal(result.conflicts[0].currentValue, 50000);
+	assert.equal(result.conflicts[0].extractedValue, 25000);
+	assert.equal(result.conflicts[0].extractionRunId, RUN_ID);
+	assert.equal(result.conflicts[0].autoResolved, false);
+});
+
+test('computeConflictsFromState: no existing aiValue → autoResolved', () => {
+	const reviewFieldState = {};
+	const fieldsExtracted = { holdPeriod: 5 };
+	const result = computeConflictsFromState(reviewFieldState, fieldsExtracted, RUN_ID);
+	assert.equal(result.autoResolved.length, 1, 'empty field should be auto-resolved');
+	assert.equal(result.autoResolved[0].fieldKey, 'holdPeriod');
+	assert.equal(result.autoResolved[0].extractedValue, 5);
+	assert.equal(result.autoResolved[0].autoResolved, true);
+	assert.equal(result.conflicts.length, 0);
+});
+
+test('computeConflictsFromState: aiValuePresent=false → autoResolved even if entry exists', () => {
+	const reviewFieldState = {
+		holdPeriod: { aiValuePresent: false, adminOverrideActive: false }
+	};
+	const fieldsExtracted = { holdPeriod: 7 };
+	const result = computeConflictsFromState(reviewFieldState, fieldsExtracted, RUN_ID);
+	assert.equal(result.autoResolved.length, 1, 'aiValuePresent=false should be auto-resolved');
+	assert.equal(result.conflicts.length, 0);
+});
+
+test('computeConflictsFromState: numeric format parity — "0.10" vs 0.1 is not a conflict', () => {
+	const reviewFieldState = {
+		targetIRR: {
+			aiValue: '0.10',
+			aiValuePresent: true,
+			adminOverrideActive: false
+		}
+	};
+	const fieldsExtracted = { targetIRR: 0.1 };
+	const result = computeConflictsFromState(reviewFieldState, fieldsExtracted, RUN_ID);
+	assert.equal(
+		result.conflicts.length,
+		0,
+		'"0.10" vs 0.1 should normalize to the same value — not a conflict'
+	);
+});
+
+test('computeConflictsFromState: mixed scenario — protected + autoResolved + conflict in one call', () => {
+	const reviewFieldState = {
+		targetIRR: {
+			aiValue: 0.12,
+			aiValuePresent: true,
+			adminOverrideActive: true,
+			adminOverrideValue: 0.15
+		},
+		investmentMinimum: {
+			aiValue: 50000,
+			aiValuePresent: true,
+			adminOverrideActive: false
+		}
+	};
+	const fieldsExtracted = {
+		targetIRR: 0.10,          // protected — admin override active
+		investmentMinimum: 25000, // conflict — differs from existing aiValue
+		holdPeriod: 5             // autoResolved — no existing aiValue
+	};
+	const result = computeConflictsFromState(reviewFieldState, fieldsExtracted, RUN_ID);
+	assert.equal(result.protected.length, 1);
+	assert.equal(result.conflicts.length, 1);
+	assert.equal(result.autoResolved.length, 1);
 });
