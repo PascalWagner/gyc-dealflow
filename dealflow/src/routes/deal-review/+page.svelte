@@ -670,6 +670,8 @@
 	let intakeSponsorOpen = $state(false);
 	let intakeSponsorBlurTimer = $state(null);
 	let intakeSponsorSearchTimer = $state(null);
+	let intakeSimilarSponsors = $state([]);
+	let intakeShowSponsorConfirmation = $state(false);
 	let teamContacts = $state([]);
 	let teamContactsError = $state('');
 	let teamContactsSaveState = $state('idle');
@@ -1420,6 +1422,25 @@
 		});
 	}
 
+	function confirmIntakeSponsorExisting(result) {
+		intakeShowSponsorConfirmation = false;
+		intakeSimilarSponsors = [];
+		selectIntakeSponsor(result);
+	}
+
+	function confirmIntakeSponsorNew() {
+		intakeShowSponsorConfirmation = false;
+		intakeSimilarSponsors = [];
+		form = {
+			...form,
+			sponsor: {
+				...form.sponsor,
+				createIfMissing: true,
+				confirmedNew: true
+			}
+		};
+	}
+
 	function intakeSponsorLabel(result) {
 		const name = result?.operator_name || result?.name || 'Unknown sponsor';
 		const detail = [result?.type, Array.isArray(result?.asset_classes) ? result.asset_classes[0] : '']
@@ -1685,7 +1706,11 @@
 		uploadError = '';
 
 		try {
-			await saveIntakeDetails();
+			const intakeSaved = await saveIntakeDetails();
+			if (intakeSaved === false) {
+				uploadState = 'idle';
+				return;
+			}
 			let nextDealState = deal ? { ...deal } : null;
 
 			if ((deckFile || ppmFile) && autoExtract !== false) {
@@ -1759,6 +1784,7 @@
 			sponsorName,
 			managementCompanyId: sponsorId,
 			createManagementCompany: Boolean(form.sponsor?.createIfMissing && sponsorName && !sponsorId),
+			confirmedNewSponsor: Boolean(form.sponsor?.confirmedNew),
 			companyWebsite: form.companyWebsite,
 			slug: form.slug || slugify(form.investmentName)
 		};
@@ -1776,9 +1802,18 @@
 		});
 		const payload = await response.json().catch(() => ({}));
 
+		if (response.ok && payload?.requiresSponsorConfirmation) {
+			intakeSimilarSponsors = payload.similarSponsors || [];
+			intakeShowSponsorConfirmation = true;
+			return false;
+		}
+
 		if (!response.ok || !payload?.deal) {
 			throw new Error(resolveDealPatchFailure(payload, 'Could not save the intake details.'));
 		}
+
+		intakeShowSponsorConfirmation = false;
+		intakeSimilarSponsors = [];
 
 		console.info('[deal-review/save]', {
 			dealId,
@@ -3480,6 +3515,29 @@
 							<div class="message-banner message-banner--error">{uploadError}</div>
 						{/if}
 
+						{#if intakeShowSponsorConfirmation}
+							<div class="intake-sponsor-dedup">
+								<div class="intake-sponsor-dedup__eyebrow">HOLD ON</div>
+								<div class="intake-sponsor-dedup__title">This sponsor might already exist</div>
+								<p class="intake-sponsor-dedup__body">We found similar management company records. Link to one of these instead of creating a duplicate:</p>
+								<ul class="intake-sponsor-dedup__list">
+									{#each intakeSimilarSponsors as match}
+										<li class="intake-sponsor-dedup__item">
+											<div class="intake-sponsor-dedup__item-name">{match.operator_name}</div>
+											{#if match.website}<div class="intake-sponsor-dedup__item-detail">{match.website}</div>{/if}
+											{#if match.type}<div class="intake-sponsor-dedup__item-detail">{match.type}</div>{/if}
+											<button type="button" class="intake-sponsor-dedup__use-btn" onclick={() => confirmIntakeSponsorExisting(match)}>
+												Use this record
+											</button>
+										</li>
+									{/each}
+								</ul>
+								<button type="button" class="intake-sponsor-dedup__new-btn" onclick={confirmIntakeSponsorNew}>
+									No, create a new management company
+								</button>
+							</div>
+						{/if}
+
 						<div class="intake-screen__actions">
 							<button
 								type="button"
@@ -4559,6 +4617,100 @@
 		justify-content: flex-end;
 		gap: 12px;
 		flex-wrap: wrap;
+	}
+
+	.intake-sponsor-dedup {
+		background: #fffbeb;
+		border: 1.5px solid #f59e0b;
+		border-radius: 10px;
+		padding: 16px 20px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.intake-sponsor-dedup__eyebrow {
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		color: #b45309;
+		text-transform: uppercase;
+	}
+
+	.intake-sponsor-dedup__title {
+		font-size: 15px;
+		font-weight: 600;
+		color: #1a1a1a;
+	}
+
+	.intake-sponsor-dedup__body {
+		font-size: 13px;
+		color: #555;
+		margin: 0;
+	}
+
+	.intake-sponsor-dedup__list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.intake-sponsor-dedup__item {
+		background: #fff;
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+		padding: 10px 12px;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 12px;
+	}
+
+	.intake-sponsor-dedup__item-name {
+		font-size: 13px;
+		font-weight: 600;
+		color: #1a1a1a;
+		flex: 1 1 auto;
+	}
+
+	.intake-sponsor-dedup__item-detail {
+		font-size: 12px;
+		color: #888;
+	}
+
+	.intake-sponsor-dedup__use-btn {
+		background: none;
+		border: 1.5px solid #10b981;
+		color: #10b981;
+		border-radius: 6px;
+		padding: 4px 12px;
+		font-size: 12px;
+		font-weight: 600;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.intake-sponsor-dedup__use-btn:hover {
+		background: #f0fdf4;
+	}
+
+	.intake-sponsor-dedup__new-btn {
+		background: none;
+		border: none;
+		color: #6b7280;
+		font-size: 13px;
+		cursor: pointer;
+		padding: 0;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+		align-self: flex-start;
+	}
+
+	.intake-sponsor-dedup__new-btn:hover {
+		color: #374151;
 	}
 
 	.review-stage-controls {

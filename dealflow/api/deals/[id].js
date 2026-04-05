@@ -498,30 +498,83 @@ export default async function handler(req, res) {
   let resolvedCompanyWebsite = currentManagementCompany?.website || '';
 
   if (candidateBody.createManagementCompany === true && !candidateBody.managementCompanyId && requestedSponsorName) {
-    const { data: createdCompany, error: createCompanyError } = await supabase
+    // Phase A — exact match (case-insensitive); reuse existing row
+    const { data: existingCompany } = await supabase
       .from('management_companies')
-      .insert({
-        operator_name: requestedSponsorName,
-        website: requestedCompanyWebsite || null
-      })
       .select('id, operator_name')
-      .single();
+      .ilike('operator_name', requestedSponsorName)
+      .limit(1)
+      .maybeSingle();
 
-    if (createCompanyError || !createdCompany) {
-      return res.status(500).json({ error: 'Failed to create sponsor record' });
-    }
+    if (existingCompany?.id) {
+      candidateBody.managementCompanyId = existingCompany.id;
+      candidateBody.sponsorName = existingCompany.operator_name;
+      touchedManagementCompany = true;
+      resolvedCompanyWebsite = requestedCompanyWebsite !== undefined ? requestedCompanyWebsite : (currentManagementCompany?.website || '');
+    } else if (!candidateBody.confirmedNewSponsor) {
+      // Phase B — similarity check; halt if near-duplicates found
+      const { data: similarRows } = await supabase.rpc('find_similar_sponsors', {
+        p_name: requestedSponsorName,
+        p_threshold: 0.45,
+        p_limit: 3
+      });
 
-    candidateBody.managementCompanyId = createdCompany.id;
-    candidateBody.sponsorName = createdCompany.operator_name;
-    touchedManagementCompany = true;
-    resolvedCompanyWebsite = requestedCompanyWebsite || '';
+      if (Array.isArray(similarRows) && similarRows.length > 0) {
+        return res.status(200).json({
+          requiresSponsorConfirmation: true,
+          similarSponsors: similarRows,
+          submittedSponsor: requestedSponsorName,
+          submittedWebsite: requestedCompanyWebsite || ''
+        });
+      }
 
-    const operatorPermissionUpsert = await supabase
-      .from('operator_permissions')
-      .upsert({ management_company_id: createdCompany.id }, { onConflict: 'management_company_id' });
+      // Phase C — no match; create new row
+      const { data: createdCompany, error: createCompanyError } = await supabase
+        .from('management_companies')
+        .insert({ operator_name: requestedSponsorName, website: requestedCompanyWebsite || null })
+        .select('id, operator_name')
+        .single();
 
-    if (operatorPermissionUpsert.error) {
-      console.warn('Operator permissions upsert failed:', operatorPermissionUpsert.error);
+      if (createCompanyError || !createdCompany) {
+        return res.status(500).json({ error: 'Failed to create sponsor record' });
+      }
+
+      candidateBody.managementCompanyId = createdCompany.id;
+      candidateBody.sponsorName = createdCompany.operator_name;
+      touchedManagementCompany = true;
+      resolvedCompanyWebsite = requestedCompanyWebsite || '';
+
+      const operatorPermissionUpsert = await supabase
+        .from('operator_permissions')
+        .upsert({ management_company_id: createdCompany.id }, { onConflict: 'management_company_id' });
+
+      if (operatorPermissionUpsert.error) {
+        console.warn('Operator permissions upsert failed:', operatorPermissionUpsert.error);
+      }
+    } else {
+      // confirmedNewSponsor = true — skip Phase B, go straight to Phase C
+      const { data: createdCompany, error: createCompanyError } = await supabase
+        .from('management_companies')
+        .insert({ operator_name: requestedSponsorName, website: requestedCompanyWebsite || null })
+        .select('id, operator_name')
+        .single();
+
+      if (createCompanyError || !createdCompany) {
+        return res.status(500).json({ error: 'Failed to create sponsor record' });
+      }
+
+      candidateBody.managementCompanyId = createdCompany.id;
+      candidateBody.sponsorName = createdCompany.operator_name;
+      touchedManagementCompany = true;
+      resolvedCompanyWebsite = requestedCompanyWebsite || '';
+
+      const operatorPermissionUpsert = await supabase
+        .from('operator_permissions')
+        .upsert({ management_company_id: createdCompany.id }, { onConflict: 'management_company_id' });
+
+      if (operatorPermissionUpsert.error) {
+        console.warn('Operator permissions upsert failed:', operatorPermissionUpsert.error);
+      }
     }
   } else if (candidateBody.managementCompanyId) {
     let linkedCompany = currentManagementCompany;
