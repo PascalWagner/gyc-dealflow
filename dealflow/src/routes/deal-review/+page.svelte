@@ -774,7 +774,7 @@
 			? reviewStages.filter((stage) => stage.id !== 'summary').every((stage) => isReviewStageComplete(stage))
 			: onboardingFlow.isPublishReady))
 		&& teamContactsValidation.valid
-		&& secGateResolved
+		// SEC gate moved to publishBlockers — checked via secCanAdvance (allows 'skipped')
 	);
 	const firstIncompleteStage = $derived.by(() => {
 		const incompleteStage = reviewStages.find((stage) => stage.id !== 'summary' && !isReviewStageComplete(stage));
@@ -996,7 +996,60 @@
 		return { total, complete: total - missing, missing, missingCitations };
 	});
 
-	const canPublish = $derived(summaryPublishReady && !reconciliationTaskId);
+	// ── Publish blockers (WS14) ────────────────────────────────────────────────
+	// Each entry: { reason: string, stage: string, severity: 'error' | 'warning' }
+	// The publish button is disabled when any error-severity blocker exists.
+	const publishBlockers = $derived.by(() => {
+		const blockers = [];
+
+		// Missing required fields
+		const missingCount = publishReadinessCounts.missing;
+		if (missingCount > 0) {
+			const firstStage = publishReadinessGroups.find((g) => g.fields.some((f) => f.isMissing))?.stageId || '';
+			blockers.push({
+				reason: `${missingCount} required field${missingCount === 1 ? '' : 's'} must be filled`,
+				stage: firstStage,
+				severity: 'error'
+			});
+		}
+
+		// Missing required citations
+		const citCount = publishReadinessCounts.missingCitations;
+		if (citCount > 0) {
+			const firstStage = publishReadinessGroups.find(
+				(g) => g.fields.some((f) => f.requiresCitation && !f.hasCitation && !f.isMissing)
+			)?.stageId || '';
+			blockers.push({
+				reason: `${citCount} field${citCount === 1 ? '' : 's'} missing required citation`,
+				stage: firstStage,
+				severity: 'error'
+			});
+		}
+
+		// Pending reconciliation task
+		if (reconciliationTaskId) {
+			blockers.push({
+				reason: 'Unreviewed extraction differences must be resolved',
+				stage: '',
+				severity: 'error'
+			});
+		}
+
+		// SEC verification incomplete
+		if (!secCanAdvance) {
+			blockers.push({
+				reason: 'SEC verification is incomplete',
+				stage: 'sec',
+				severity: 'error'
+			});
+		}
+
+		return blockers;
+	});
+
+	const canPublish = $derived(
+		summaryPublishReady && publishBlockers.filter((b) => b.severity === 'error').length === 0
+	);
 
 	const summaryRelevantWarningFieldKeys = $derived.by(() => {
 		const keys = new Set();
@@ -3790,6 +3843,23 @@
 							</div>
 						</section>
 
+						<!-- Publish blockers (WS14) -->
+						{#if publishBlockers.length > 0}
+							<section class="editor-card publish-blockers-card">
+								<h3 class="publish-blockers__heading">Publish blockers</h3>
+								<ul class="publish-blockers__list">
+									{#each publishBlockers as blocker}
+										<li class="publish-blocker" class:publish-blocker--error={blocker.severity === 'error'} class:publish-blocker--warning={blocker.severity === 'warning'}>
+											<span class="publish-blocker__reason">{blocker.reason}</span>
+											{#if blocker.stage}
+												<a href={getStageHref(blocker.stage)} class="publish-blocker__fix">Fix →</a>
+											{/if}
+										</li>
+									{/each}
+								</ul>
+							</section>
+						{/if}
+
 						<!-- Per-field breakdown grouped by stage -->
 						{#each publishReadinessGroups as group}
 							{@const groupIssues = group.fields.filter((f) => f.isMissing || (f.requiresCitation && !f.hasCitation)).length}
@@ -3855,17 +3925,9 @@
 
 						<!-- Publish action card -->
 						<section class="editor-card publish-action-card">
-							{#if !canPublish}
+							{#if publishBlockers.filter((b) => b.severity === 'error').length > 0}
 								<p class="publish-blocked-reason">
-									{#if reconciliationTaskId}
-										Resolve the unreviewed extraction differences before publishing.
-									{:else if publishReadinessCounts.missing > 0}
-										{publishReadinessCounts.missing} required field{publishReadinessCounts.missing === 1 ? '' : 's'} must be filled before publishing.
-									{:else if publishReadinessCounts.missingCitations > 0}
-										{publishReadinessCounts.missingCitations} required citation{publishReadinessCounts.missingCitations === 1 ? '' : 's'} must be added before publishing.
-									{:else}
-										Complete all required checklist items before publishing.
-									{/if}
+									{publishBlockers.filter((b) => b.severity === 'error').length} blocker{publishBlockers.filter((b) => b.severity === 'error').length === 1 ? '' : 's'} must be resolved before publishing — see checklist above.
 								</p>
 							{/if}
 							<div class="publish-btn-row">
@@ -5138,6 +5200,68 @@
 	}
 
 	.field-fix-link:hover {
+		opacity: 1;
+		text-decoration: underline;
+	}
+
+	.publish-blockers-card {
+		padding: 18px 22px;
+	}
+
+	.publish-blockers__heading {
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.6px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin: 0 0 10px;
+	}
+
+	.publish-blockers__list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 6px;
+	}
+
+	.publish-blocker {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 9px 12px;
+		border-radius: 10px;
+		font-size: 13px;
+	}
+
+	.publish-blocker--error {
+		background: rgba(185, 28, 28, 0.05);
+		border: 1px solid rgba(185, 28, 28, 0.14);
+		color: #b91c1c;
+	}
+
+	.publish-blocker--warning {
+		background: rgba(180, 130, 0, 0.05);
+		border: 1px solid rgba(180, 130, 0, 0.14);
+		color: #9a6c00;
+	}
+
+	.publish-blocker__reason {
+		flex: 1;
+		font-weight: 500;
+	}
+
+	.publish-blocker__fix {
+		font-size: 12px;
+		font-weight: 700;
+		color: inherit;
+		white-space: nowrap;
+		opacity: 0.8;
+		text-decoration: none;
+	}
+
+	.publish-blocker__fix:hover {
 		opacity: 1;
 		text-decoration: underline;
 	}
