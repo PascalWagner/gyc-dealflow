@@ -18,7 +18,7 @@ export default defineConfig({
 		// Proxy API calls to existing Vercel serverless functions during dev
 		proxy: {
 			'/api': {
-				target: process.env.VITE_API_PROXY_TARGET || 'https://dealflow.growyourcashflow.io',
+				target: process.env.VITE_API_PROXY_TARGET || 'https://sandbox.growyourcashflow.io',
 				changeOrigin: true
 			}
 		}
