@@ -38,6 +38,7 @@ import {
 import {
 	applyReconciliationDecisions
 } from '../api/reconciliation/[id].js';
+import { DEAL_FIELD_MAP } from '../api/_field-map.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -819,4 +820,17 @@ test('applyReconciliationDecisions: edit_manual sets adminOverrideValue and prod
 	assert.equal(eventRows[0].event_type, 'admin_save');
 	assert.equal(eventRows[0].actor_email, 'admin@example.com');
 	assert.equal(eventRows[0].next_value, 0.16);
+});
+
+// ---------------------------------------------------------------------------
+// Field map integrity
+
+test('field map has no duplicate column targets', () => {
+	const columns = Object.values(DEAL_FIELD_MAP);
+	const unique = new Set(columns);
+	assert.equal(
+		columns.length,
+		unique.size,
+		`DEAL_FIELD_MAP maps ${columns.length - unique.size} column(s) to more than one field key — remove the duplicate`
+	);
 });

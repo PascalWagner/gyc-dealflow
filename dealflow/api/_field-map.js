@@ -62,7 +62,6 @@ export const DEAL_FIELD_MAP = {
   waterfallDetails: 'waterfall_details',
 
   // Sponsor / operator
-  sponsorCoinvest: 'sponsor_in_deal_pct',
   sponsorInDeal: 'sponsor_in_deal_pct',
   operatorBackground: 'operator_background',
   fundFoundedYear: 'fund_founded_year',
@@ -71,7 +70,7 @@ export const DEAL_FIELD_MAP = {
 
   // Fund metrics
   fundAUM: 'fund_aum',
-  managerAUM: 'fund_aum',
+  // managerAUM needs its own DB column (manager_aum) — not mapped until migration added
   currentFundSize: 'current_fund_size',
   loanCount: 'loan_count',
   avgLoanLtv: 'avg_loan_ltv',

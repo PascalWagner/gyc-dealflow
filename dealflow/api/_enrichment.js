@@ -46,7 +46,7 @@ If this is a PPM or subscription agreement, prioritize the INVESTOR'S specific d
   "inceptionDate": "Fund inception / launch date (YYYY-MM-DD)",
   "fundTerm": "Fund term description (e.g. 'Evergreen', '7 years', '10 years with two 1-year extensions')",
   "redemption": "Redemption terms if mentioned",
-  "sponsorCoinvest": "GP co-investment percentage or amount if mentioned",
+  "sponsorInDeal": "GP co-investment percentage or amount if mentioned",
   "taxForm": "K-1, 1099, etc.",
   "secEntityName": "The exact legal entity name of the issuer as it appears on the PPM cover page (e.g. 'NCG Burgundy Investors LLC'). This is the entity filed with the SEC, not the marketing name",
   "issuerEntity": "The exact legal issuer entity being offered to the investor. Prefer the named Company or issuer from the PPM cover and opening paragraph.",
