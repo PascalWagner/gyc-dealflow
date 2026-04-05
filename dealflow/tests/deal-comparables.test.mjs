@@ -33,7 +33,7 @@ test('lending comparable config swaps in income-oriented comparison fields', () 
 
 	assert.deepEqual(
 		metrics.map((metric) => metric.label),
-		['Target Yield', 'Distributions', 'Minimum', 'Lockup', 'Manager AUM']
+		['Target Yield', 'Distributions', 'Minimum', 'Lockup', 'Fund AUM']
 	);
 });
 

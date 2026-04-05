@@ -13,7 +13,7 @@ const LENDING_COMPARABLE_METRICS = [
 	{ key: 'distributions', label: 'Distributions', type: 'text' },
 	{ key: 'investmentMinimum', label: 'Minimum', type: 'money' },
 	{ key: 'holdPeriod', label: 'Lockup', type: 'hold' },
-	{ keys: ['managerAUM', 'fundAUM'], label: 'Manager AUM', type: 'money' }
+	{ keys: ['fundAUM', 'managerAUM'], label: 'Fund AUM', type: 'money' }
 ];
 
 export function getComparableMetricConfig(referenceDeal = {}) {
