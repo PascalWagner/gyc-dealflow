@@ -172,6 +172,14 @@ async function installApiMocks(page, fixture) {
 		if (request.url().startsWith('https://fonts.googleapis.com/') || request.url().startsWith('https://fonts.gstatic.com/')) {
 			return;
 		}
+		// Ignore third-party analytics/monitoring endpoints aborted on page unload
+		if (
+			request.url().includes('sentry.io') ||
+			request.url().includes('posthog.com') ||
+			request.url().includes('i.posthog.com')
+		) {
+			return;
+		}
 		requestFailures.push(`${request.method()} ${request.url()} :: ${failureText}`);
 	});
 	page.on('pageerror', (error) => {
