@@ -702,8 +702,13 @@ export function buildDealUpdatesFromSecFiling(deal = {}, filing = {}, options = 
 	if (filing.date_of_first_sale) updates.date_of_first_sale = filing.date_of_first_sale;
 	if (filing.filing_date) updates.sec_latest_filing_date = filing.filing_date;
 	if (filing.total_offering_amount) updates.offering_size = filing.total_offering_amount;
-	if (filing.total_amount_sold) updates.total_amount_sold = filing.total_amount_sold;
-	if (filing.total_investors) updates.total_investors = filing.total_investors;
+	// Only apply fund-level stats (total raised / investor count) from the latest amendment.
+	// Applying an old Form D amendment would silently downgrade authoritative fund stats — e.g.
+	// a 2017 filing linked in deal_sec_verification overwriting a 2026 filing's correct values.
+	if (filing.is_latest_amendment) {
+		if (filing.total_amount_sold) updates.total_amount_sold = filing.total_amount_sold;
+		if (filing.total_investors) updates.total_investors = filing.total_investors;
+	}
 	if (filing.cik) updates.sec_cik = filing.cik;
 	if (filing.entity_name) {
 		const currentIssuerEntity = String(deal.issuer_entity || '').trim();
@@ -860,7 +865,7 @@ export async function refreshSecFilingsForDeal(dealId, supabase) {
 	// Resolve CIK: try deal.sec_cik first, fall back to existing sec_filings row
 	const { data: deal, error: dealError } = await supabase
 		.from('opportunities')
-		.select('id, sec_cik, investment_name, management_company_id, instrument')
+		.select('id, sec_cik, investment_name, management_company_id, instrument, investment_minimum')
 		.eq('id', dealId)
 		.single();
 

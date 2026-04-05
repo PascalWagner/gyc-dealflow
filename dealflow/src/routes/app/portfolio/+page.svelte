@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 	import { getStoredSessionToken, isMember } from '$lib/stores/auth.js';
 	import * as analytics from '$lib/analytics.js';
@@ -9,6 +10,7 @@
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
 	import { buildInvestedPortfolio, normalizePortfolioRecord } from '$lib/utils/investedPortfolio.js';
+	import { formatHoldPeriod } from '$lib/utils/primitives.js';
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
 	function createEmptyInvestmentDraft() {
@@ -333,11 +335,9 @@
 		return `$${amount.toLocaleString()}`;
 	}
 
-	function formatHoldPeriodValue(value) {
-		const amount = Number(value || 0);
-		if (!Number.isFinite(amount) || amount <= 0) return '—';
-		return `${amount} yr${amount === 1 ? '' : 's'}`;
-	}
+	// formatHoldPeriod lives in primitives.js (imported above).
+	// This alias keeps call sites unchanged while enabling unit testing.
+	const formatHoldPeriodValue = formatHoldPeriod;
 
 	function formatMetricSource(source) {
 		return source === 'actual' ? 'Actual' : source === 'projected' ? 'Projected' : '';
@@ -727,8 +727,17 @@
 
 						{#each sorted as inv}
 							{@const sc = inv.isPendingReview ? '#f59e0b' : (statusColors[inv.status] || 'var(--text-muted)')}
+							{@const rowIsNavigable = !!inv.dealId && editingId !== inv.id}
 							<div class="holdings-row" class:holdings-row--editing={editingId === inv.id}>
-								<div class="holdings-row-grid">
+								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<div
+									class="holdings-row-grid"
+									class:holdings-row-grid--linked={rowIsNavigable}
+									role={rowIsNavigable ? 'button' : undefined}
+									tabindex={rowIsNavigable ? 0 : undefined}
+									onclick={rowIsNavigable ? () => goto(`/deal/${inv.dealId}`) : undefined}
+									onkeydown={rowIsNavigable ? (e) => { if (e.key === 'Enter' || e.key === ' ') goto(`/deal/${inv.dealId}`); } : undefined}
+								>
 									<div class="holding-cell holding-cell--primary" data-label="Investment">
 										<div class="holding-primary">{inv.investmentName || 'Unnamed investment'}</div>
 										<div class="holding-secondary">
@@ -775,7 +784,7 @@
 										<button
 											class="btn-edit"
 											class:btn-edit--active={editingId === inv.id}
-											onclick={() => (editingId === inv.id ? closeInlineEditor() : openAddModal(inv.id))}
+											onclick={(e) => { e.stopPropagation(); editingId === inv.id ? closeInlineEditor() : openAddModal(inv.id); }}
 										>
 											{editingId === inv.id ? 'Close' : inv._missingDetails ? 'Add Details' : 'Edit'}
 										</button>
@@ -1085,6 +1094,9 @@
 	}
 	.stat-card {
 		padding: 18px 20px;
+		/* Prevent long values from blowing out the grid cell */
+		overflow: hidden;
+		min-width: 0;
 	}
 	.stat-label {
 		font-size: 12px;
@@ -1101,6 +1113,10 @@
 		color: var(--primary);
 		font-family: var(--font-ui);
 		font-variant-numeric: tabular-nums;
+		/* Defensive containment: truncate if value somehow still exceeds card */
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.portfolio-view-switch {
@@ -1231,6 +1247,12 @@
 	}
 	.holdings-row-grid {
 		padding: 18px 22px;
+	}
+	.holdings-row-grid--linked {
+		cursor: pointer;
+	}
+	.holdings-row-grid--linked:hover {
+		background: color-mix(in srgb, var(--bg-card) 94%, var(--text-base));
 	}
 	.holding-cell {
 		min-width: 0;
@@ -1756,6 +1778,10 @@
 	@media (max-width: 768px) {
 		.summary-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.stat-value {
+			/* Scale down on narrow screens so values don't overflow their card */
+			font-size: clamp(16px, 5vw, 22px);
 		}
 		.holdings-empty-grid {
 			grid-template-columns: 1fr;

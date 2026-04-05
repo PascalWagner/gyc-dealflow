@@ -57,10 +57,10 @@ test('confirmed SEC filing preserves an explicit issuer entity that differs from
 // Since we can't call DB in unit tests, we import _sec-edgar internals by
 // verifying that upsertParsedSecFiling is exported with the expected signature.
 
-test('buildDealUpdatesFromSecFiling maps total_amount_sold to deal updates', () => {
+test('buildDealUpdatesFromSecFiling maps total_amount_sold to deal updates when is_latest_amendment', () => {
 	const { updates } = buildDealUpdatesFromSecFiling(
 		{ id: 'deal-1' },
-		{ total_amount_sold: 1500000000, total_investors: 1500, federal_exemptions: ['06c'] }
+		{ is_latest_amendment: true, total_amount_sold: 1500000000, total_investors: 1500, federal_exemptions: ['06c'] }
 	);
 	assert.equal(updates.total_amount_sold, 1500000000);
 	assert.equal(updates.total_investors, 1500);
@@ -68,11 +68,25 @@ test('buildDealUpdatesFromSecFiling maps total_amount_sold to deal updates', () 
 	assert.equal(updates.is_506b, false);
 });
 
+test('buildDealUpdatesFromSecFiling does NOT write total_amount_sold or total_investors from a non-latest filing', () => {
+	// Regression: deal_sec_verification may link an old filing (e.g. 2017 Form D) while the deal
+	// already has correct stats from a newer filing. applySecFilingToDeal is called on every
+	// /api/sec-verification GET, so without this guard the old stats would overwrite on every page load.
+	const { updates } = buildDealUpdatesFromSecFiling(
+		{ id: 'deal-1' },
+		{ is_latest_amendment: false, total_amount_sold: 13118333, total_investors: 73, federal_exemptions: ['06c'] }
+	);
+	assert.equal('total_amount_sold' in updates, false,
+		'old filing must NOT overwrite total_amount_sold');
+	assert.equal('total_investors' in updates, false,
+		'old filing must NOT overwrite total_investors');
+});
+
 test('buildDealUpdatesFromSecFiling does not overwrite a set total_investors of 0', () => {
 	// total_investors: 0 is falsy — should not be written (same as no investors)
 	const { updates } = buildDealUpdatesFromSecFiling(
 		{ id: 'deal-1' },
-		{ total_investors: 0, federal_exemptions: [] }
+		{ is_latest_amendment: true, total_investors: 0, federal_exemptions: [] }
 	);
 	assert.equal('total_investors' in updates, false);
 });
@@ -308,12 +322,50 @@ test('refreshSecFilingsForDeal does not select non-existent columns (issuer_enti
 		`issuer_entity is not a real column and must not be selected. Got: ${capturedSelectCols}`);
 	assert.ok(!capturedSelectCols.includes('sec_entity_name'),
 		`sec_entity_name is not a real column and must not be selected. Got: ${capturedSelectCols}`);
+	// investment_minimum MUST be selected so the guard !deal.investment_minimum works correctly
+	// Regression: omitting it caused the guard to always evaluate true (undefined is falsy),
+	// which meant every refreshSecFilingsForDeal call silently overwrote manually-set minimums.
+	assert.ok(capturedSelectCols.includes('investment_minimum'),
+		`investment_minimum must be selected so the overwrite guard works. Got: ${capturedSelectCols}`);
+});
+
+test('refreshSecFilingsForDeal SELECT includes investment_minimum so overwrite protection works', async () => {
+	let capturedSelectCols = null;
+
+	const supabase = {
+		from(table) {
+			if (table === 'opportunities') {
+				return {
+					select(cols) {
+						capturedSelectCols = cols;
+						return {
+							eq() { return this; },
+							single: async () => ({ data: null, error: { message: 'intentional test stop' } })
+						};
+					}
+				};
+			}
+			return { select() { return this; }, eq() { return this; } };
+		}
+	};
+
+	try {
+		await refreshSecFilingsForDeal('fake-deal-id', supabase);
+	} catch (e) {
+		// Expected — we stopped at the deal lookup
+	}
+
+	assert.ok(capturedSelectCols !== null, 'SELECT was called');
+	assert.ok(
+		capturedSelectCols.includes('investment_minimum'),
+		`investment_minimum must be in the SELECT so buildDealUpdatesFromSecFiling's overwrite guard works. Got: ${capturedSelectCols}`
+	);
 });
 
 test('buildDealUpdatesFromSecFiling maps filing_date to sec_latest_filing_date', () => {
 	const { updates } = buildDealUpdatesFromSecFiling(
 		{ id: 'deal-1' },
-		{ filing_date: '2026-03-02', total_amount_sold: 628887587, total_investors: 1503, federal_exemptions: ['06c'] }
+		{ is_latest_amendment: true, filing_date: '2026-03-02', total_amount_sold: 628887587, total_investors: 1503, federal_exemptions: ['06c'] }
 	);
 	assert.equal(updates.sec_latest_filing_date, '2026-03-02');
 	assert.equal(updates.total_amount_sold, 628887587);
