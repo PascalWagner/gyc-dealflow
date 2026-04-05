@@ -37,7 +37,7 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "debtPosition": "Senior, Mezzanine, Bridge, etc. (if lending/debt)",
   "fundAUM": "Current AUM in dollars if mentioned",
   "redemption": "Redemption terms if mentioned",
-  "sponsorCoinvest": "GP co-investment percentage or amount if mentioned",
+  "sponsorInDeal": "GP co-investment percentage or amount if mentioned",
   "taxForm": "K-1, 1099, etc.",
   "secEntityName": "The exact legal entity name of the issuer as it appears on the PPM cover page (e.g. 'NCG Burgundy Investors LLC'). This is the entity filed with the SEC, not the marketing name.",
   "issuerEntity": "The exact legal issuer entity being offered to the investor. Prefer the Company or issuer defined in the PPM opening paragraphs.",

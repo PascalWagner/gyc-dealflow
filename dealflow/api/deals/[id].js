@@ -37,7 +37,6 @@ const NUMERIC_FIELD_KEYS = new Set([
   'avgLoanLTC',
   'performanceFeePct',
   'currentFundSize',
-  'sponsorCoinvest',
   'sponsorInDeal',
   'unitCount',
   'yearBuilt',

@@ -718,7 +718,7 @@ export const dealFieldConfig = {
 		requiredForPublish: false,
 		placeholder: '5',
 		helperText: 'Percent of sponsor capital in the deal, if disclosed.',
-		readFrom: ['sponsorInDeal', 'sponsorCoinvest', 'sponsor_in_deal_pct']
+		readFrom: ['sponsorInDeal', 'sponsor_in_deal_pct']
 	},
 	holdPeriod: {
 		key: 'holdPeriod',
