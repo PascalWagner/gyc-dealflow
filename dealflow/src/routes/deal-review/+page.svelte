@@ -697,7 +697,11 @@
 	let reconciliationOpen = $state(false);
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
-	const requestedStage = $derived($page.url.searchParams.get('stage') || '');
+	const STAGE_URL_ALIASES = { contacts: 'team', source_package: 'intake', snapshot: 'portfolio_snapshot' };
+	const requestedStage = $derived.by(() => {
+		const raw = $page.url.searchParams.get('stage') || '';
+		return STAGE_URL_ALIASES[raw] ?? raw;
+	});
 	const shouldAutoExtract = $derived($page.url.searchParams.get('extract') === '1');
 	const cameFromIntake = $derived($page.url.searchParams.get('from') === 'intake');
 	const cameFromQueue = $derived($page.url.searchParams.get('from') === 'queue');

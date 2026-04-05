@@ -1508,6 +1508,7 @@ export function formatDealReviewFieldDisplay(fieldKey, value) {
 	if (field.type === 'percentage') return formatPercentDisplay(value);
 	if (field.type === 'number') return formatNumber(value);
 	if (field.type === 'team_contacts') return Array.isArray(value) ? value : [];
+	if (field.type === 'entity_reference') return value?.name ?? value;
 	return value;
 }
 
