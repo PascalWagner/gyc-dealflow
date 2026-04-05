@@ -329,6 +329,39 @@ test('refreshSecFilingsForDeal does not select non-existent columns (issuer_enti
 		`investment_minimum must be selected so the overwrite guard works. Got: ${capturedSelectCols}`);
 });
 
+test('refreshSecFilingsForDeal SELECT includes investment_minimum so overwrite protection works', async () => {
+	let capturedSelectCols = null;
+
+	const supabase = {
+		from(table) {
+			if (table === 'opportunities') {
+				return {
+					select(cols) {
+						capturedSelectCols = cols;
+						return {
+							eq() { return this; },
+							single: async () => ({ data: null, error: { message: 'intentional test stop' } })
+						};
+					}
+				};
+			}
+			return { select() { return this; }, eq() { return this; } };
+		}
+	};
+
+	try {
+		await refreshSecFilingsForDeal('fake-deal-id', supabase);
+	} catch (e) {
+		// Expected — we stopped at the deal lookup
+	}
+
+	assert.ok(capturedSelectCols !== null, 'SELECT was called');
+	assert.ok(
+		capturedSelectCols.includes('investment_minimum'),
+		`investment_minimum must be in the SELECT so buildDealUpdatesFromSecFiling's overwrite guard works. Got: ${capturedSelectCols}`
+	);
+});
+
 test('buildDealUpdatesFromSecFiling maps filing_date to sec_latest_filing_date', () => {
 	const { updates } = buildDealUpdatesFromSecFiling(
 		{ id: 'deal-1' },

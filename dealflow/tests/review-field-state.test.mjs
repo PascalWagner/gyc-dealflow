@@ -8,6 +8,7 @@ import {
 	clearAdminOverrideReviewFieldStateEntry,
 	resolveFinalReviewFieldValue
 } from '../src/lib/utils/reviewFieldState.js';
+import { transformDeals } from '../api/member/deals/transform.js';
 
 test('admin overrides become the final authoritative value', () => {
 	const entry = buildAdminReviewFieldStateEntry(
@@ -137,4 +138,71 @@ test('applyReviewFieldStateToDeal hydrates canonical and camelCase values from r
 	assert.equal(hydrated.investmentMinimum, 60000);
 	assert.equal(hydrated.fees, '2% management fee.');
 	assert.equal(hydrated.reviewFieldState.investmentMinimum.adminOverrideActive, true);
+});
+
+// ---------------------------------------------------------------------------
+// End-to-end pipeline: applyReviewFieldStateToDeal + transformDeals
+// Regression: /api/deals called transformDeals on raw DB rows without first
+// calling applyReviewFieldStateToDeal, so admin overrides were invisible on
+// the deal page even though deal review showed the correct value.
+// ---------------------------------------------------------------------------
+
+test('deal page pipeline: applyReviewFieldStateToDeal + transformDeals shows admin-overridden investmentMinimum', () => {
+	const rawDbRow = {
+		id: 'deal-abc',
+		investment_name: 'DLP Lending Fund',
+		investment_minimum: 100000,
+		review_field_state: {
+			investmentMinimum: buildAdminReviewFieldStateEntry(
+				{ aiValue: 100000, aiValuePresent: true },
+				{
+					nextValue: 500000,
+					actor: { email: 'admin@gyc.com', name: 'Admin' },
+					at: '2026-04-04T00:00:00.000Z'
+				}
+			)
+		}
+	};
+
+	const stateAwareRow = applyReviewFieldStateToDeal(rawDbRow);
+	const [transformed] = transformDeals([stateAwareRow], [], []);
+
+	assert.equal(
+		transformed.investmentMinimum, 500000,
+		'deal page must display the admin-overridden value ($500K), not the stale column value ($100K)'
+	);
+});
+
+test('deal page pipeline: no admin override falls through to the column value', () => {
+	const rawDbRow = {
+		id: 'deal-xyz',
+		investment_name: 'Some Fund',
+		investment_minimum: 100000,
+		review_field_state: {
+			investmentMinimum: {
+				aiValue: 100000,
+				aiValuePresent: true,
+				adminOverrideActive: false
+			}
+		}
+	};
+
+	const stateAwareRow = applyReviewFieldStateToDeal(rawDbRow);
+	const [transformed] = transformDeals([stateAwareRow], [], []);
+
+	assert.equal(transformed.investmentMinimum, 100000);
+});
+
+test('deal page pipeline: deal with no review_field_state renders column value unchanged', () => {
+	const rawDbRow = {
+		id: 'deal-xyz2',
+		investment_name: 'Another Fund',
+		investment_minimum: 250000,
+		review_field_state: {}
+	};
+
+	const stateAwareRow = applyReviewFieldStateToDeal(rawDbRow);
+	const [transformed] = transformDeals([stateAwareRow], [], []);
+
+	assert.equal(transformed.investmentMinimum, 250000);
 });

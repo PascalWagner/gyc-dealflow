@@ -17,6 +17,7 @@ import {
   supportsOpportunitySubmittedByEmail
 } from './_deal-access.js';
 import { transformDeals } from './member/deals/transform.js';
+import { applyReviewFieldStateToDeal } from '../src/lib/utils/reviewFieldState.js';
 import { captureApiError } from './_sentry.js';
 
 export default async function handler(req, res) {
@@ -84,7 +85,7 @@ export default async function handler(req, res) {
         .eq('parent_deal_id', singleId);
       childQuery = applyDealVisibilityQuery(childQuery, viewerContext);
       const { data: children } = await childQuery;
-      const deal = transformDeals([row], children || [], spRows || [])[0] || null;
+      const deal = transformDeals([applyReviewFieldStateToDeal(row)], children || [], spRows || [])[0] || null;
       if (!deal) return res.status(404).json({ error: 'Deal not found' });
       return res.status(200).json({
         deal
@@ -155,7 +156,7 @@ export default async function handler(req, res) {
     const visibleChildren = (childResult.data || []).filter((deal) =>
       canViewerAccessRestricted506bDeal(deal, viewerContext, { include506b })
     );
-    const deals = transformDeals(visibleParentDeals, visibleChildren, sponsorsResult.data || []);
+    const deals = transformDeals(visibleParentDeals.map(applyReviewFieldStateToDeal), visibleChildren, sponsorsResult.data || []);
 
     const mcMap = {};
     for (const deal of visibleParentDeals) {
