@@ -82,7 +82,7 @@
 		hasActiveAdminOverride,
 		normalizeReviewFieldStateMap
 	} from '$lib/utils/reviewFieldState.js';
-	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
+	import { currentAdminRealUser, currentSessionEmail, readScopedJson, writeScopedJson } from '$lib/utils/userScopedState.js';
 
 	function listFromValue(value) {
 		if (Array.isArray(value)) {
@@ -687,6 +687,7 @@
 	let highlightedRiskDraft = $state('');
 	let manualBranch = $state('');
 	let editedFieldLogCache = new Set();
+	let draftBanner = $state(null);
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
 	const requestedStage = $derived($page.url.searchParams.get('stage') || '');
@@ -2094,6 +2095,18 @@
 			}
 
 			syncDealState(payload.deal, { clearSaveMessage: true });
+			const savedDraft = readDraft(dealId);
+			if (savedDraft) {
+				draftBanner = savedDraft;
+			} else {
+				draftBanner = null;
+				if (!requestedStage) {
+					const lastStage = readLastStage(dealId);
+					if (lastStage && onboardingStages.some((s) => s.id === lastStage)) {
+						await goto(getStageHref(lastStage), { replaceState: true, noScroll: true, keepFocus: true }).catch(() => {});
+					}
+				}
+			}
 			if (!shouldAutoExtract) {
 				extractionError = '';
 			}
@@ -2205,6 +2218,7 @@
 				},
 				{ clearSaveMessage: true }
 			);
+			clearDraft();
 			if (Array.isArray(scopedFieldKeys) && scopedFieldKeys.length > 0) {
 				await loadReviewFieldEvidence({
 					fieldKeys: scopedFieldKeys,
@@ -2692,6 +2706,74 @@
 		return true;
 	}
 
+	// ── Draft / last-stage persistence ──────────────────────────────────────
+
+	const DRAFT_TTL_MS = 30 * 60 * 1000;
+
+	function draftStorageKey(id) {
+		return `gycDealReviewDraft_${id}`;
+	}
+
+	function lastStageStorageKey(id) {
+		return `gycDealReviewLastStage_${id}`;
+	}
+
+	function writeDraft(formSnapshot, stage) {
+		if (!browser || !dealId) return;
+		writeScopedJson(draftStorageKey(dealId), { formSnapshot, stage, savedAt: new Date().toISOString(), dealId });
+	}
+
+	function clearDraft() {
+		if (!browser || !dealId) return;
+		writeScopedJson(draftStorageKey(dealId), null);
+	}
+
+	function readDraft(id) {
+		if (!browser || !id) return null;
+		const draft = readScopedJson(draftStorageKey(id), null);
+		if (!draft?.savedAt || !draft?.formSnapshot) return null;
+		if (Date.now() - new Date(draft.savedAt).getTime() > DRAFT_TTL_MS) {
+			writeScopedJson(draftStorageKey(id), null);
+			return null;
+		}
+		return draft;
+	}
+
+	function writeLastStage(id, stage) {
+		if (!browser || !id || !stage) return;
+		writeScopedJson(lastStageStorageKey(id), { stage, dealId: id });
+	}
+
+	function readLastStage(id) {
+		if (!browser || !id) return '';
+		const stored = readScopedJson(lastStageStorageKey(id), null);
+		return typeof stored?.stage === 'string' ? stored.stage : '';
+	}
+
+	function formatDraftAge(savedAt) {
+		const mins = Math.floor((Date.now() - new Date(savedAt).getTime()) / 60_000);
+		if (mins < 1) return 'just now';
+		if (mins === 1) return '1 minute ago';
+		return `${mins} minutes ago`;
+	}
+
+	function restoreDraft() {
+		if (!draftBanner) return;
+		const { formSnapshot, stage: draftStage } = draftBanner;
+		form = formSnapshot;
+		markDirty();
+		draftBanner = null;
+		clearDraft();
+		if (draftStage && draftStage !== activeStage) {
+			void goto(getStageHref(draftStage), { replaceState: true, noScroll: true, keepFocus: true }).catch(() => {});
+		}
+	}
+
+	function discardDraft() {
+		clearDraft();
+		draftBanner = null;
+	}
+
 	onMount(() => {
 		previousDealId = dealId;
 		const handleBeforeUnload = (event) => {
@@ -2813,6 +2895,23 @@
 		if (!desiredLifecycle) return;
 		void syncReviewLifecycleStatus({ quiet: true, targetLifecycle: desiredLifecycle });
 	});
+
+	// Persist last visited stage on every stage change so we can restore it on re-entry.
+	$effect(() => {
+		if (!browser || !dealId || loading || !deal || !activeStage) return;
+		writeLastStage(dealId, activeStage);
+	});
+
+	// Auto-save draft to localStorage when dirty, debounced 30 seconds.
+	$effect(() => {
+		if (!browser || !dirty || !dealId || loading || !deal) return;
+		const snapshot = JSON.parse(JSON.stringify(form));
+		const stageSnapshot = activeStage;
+		const timerId = setTimeout(() => {
+			writeDraft(snapshot, stageSnapshot);
+		}, 30_000);
+		return () => clearTimeout(timerId);
+	});
 </script>
 
 <svelte:head>
@@ -2851,6 +2950,13 @@
 			</div>
 		</div>
 	{:else}
+		{#if draftBanner}
+			<div class="draft-restore-banner">
+				<span>You have unsaved changes from {formatDraftAge(draftBanner.savedAt)}.</span>
+				<button type="button" class="ghost-btn" onclick={restoreDraft}>Restore</button>
+				<button type="button" class="ghost-btn" onclick={discardDraft}>Discard</button>
+			</div>
+		{/if}
 		{#if activeStage === 'intake'}
 			<div class="review-layout review-layout--intake">
 				<div class="editor-stack editor-stack--intake">
@@ -3774,6 +3880,23 @@
 			radial-gradient(circle at top right, rgba(81, 190, 123, 0.06), transparent 44%);
 		border: 1px solid rgba(31, 81, 89, 0.08);
 		box-shadow: 0 14px 32px rgba(16, 37, 42, 0.04);
+	}
+
+	.draft-restore-banner {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 18px;
+		border-radius: 12px;
+		background: rgba(255, 200, 80, 0.12);
+		border: 1px solid rgba(200, 140, 0, 0.2);
+		color: #7a5000;
+		font-size: 13px;
+		margin-bottom: 4px;
+	}
+
+	.draft-restore-banner span {
+		flex: 1;
 	}
 
 	.classification-signals-card {
