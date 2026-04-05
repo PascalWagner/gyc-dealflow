@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import { onDestroy, onMount, setContext } from 'svelte';
 	import DealOnboardingProgress from '$lib/components/deal-review/DealOnboardingProgress.svelte';
+	import ReconciliationModal from '$lib/components/deal-review/ReconciliationModal.svelte';
 	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import LendingFundReviewSectionStage from '$lib/components/deal-review/LendingFundReviewSectionStage.svelte';
@@ -688,6 +689,9 @@
 	let manualBranch = $state('');
 	let editedFieldLogCache = new Set();
 	let draftBanner = $state(null);
+	let reconciliationTaskId = $state(null);
+	let reconciliationConflictCount = $state(0);
+	let reconciliationOpen = $state(false);
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
 	const requestedStage = $derived($page.url.searchParams.get('stage') || '');
@@ -2095,6 +2099,8 @@
 			}
 
 			syncDealState(payload.deal, { clearSaveMessage: true });
+			reconciliationTaskId = payload.deal.pendingReconciliationId || null;
+			reconciliationConflictCount = payload.deal.pendingReconciliationConflictCount || 0;
 			const savedDraft = readDraft(dealId);
 			if (savedDraft) {
 				draftBanner = savedDraft;
@@ -2956,6 +2962,39 @@
 				<button type="button" class="ghost-btn" onclick={restoreDraft}>Restore</button>
 				<button type="button" class="ghost-btn" onclick={discardDraft}>Discard</button>
 			</div>
+		{/if}
+		{#if reconciliationTaskId}
+			<div class="reconciliation-banner">
+				<span>
+					A new document was extracted.
+					{reconciliationConflictCount > 0
+						? `${reconciliationConflictCount} field${reconciliationConflictCount === 1 ? '' : 's'} differ from your current review.`
+						: 'Review the differences below.'}
+				</span>
+				<button
+					type="button"
+					class="reconciliation-banner__btn"
+					onclick={() => (reconciliationOpen = true)}
+				>Review differences</button>
+			</div>
+		{/if}
+		{#if reconciliationOpen && reconciliationTaskId}
+			<ReconciliationModal
+				taskId={reconciliationTaskId}
+				dealId={dealId}
+				onresolved={() => {
+					reconciliationTaskId = null;
+					reconciliationConflictCount = 0;
+					reconciliationOpen = false;
+					void loadDeal();
+				}}
+				ondismissed={() => {
+					reconciliationTaskId = null;
+					reconciliationConflictCount = 0;
+					reconciliationOpen = false;
+				}}
+				onclose={() => (reconciliationOpen = false)}
+			/>
 		{/if}
 		{#if activeStage === 'intake'}
 			<div class="review-layout review-layout--intake">
@@ -3897,6 +3936,39 @@
 
 	.draft-restore-banner span {
 		flex: 1;
+	}
+
+	.reconciliation-banner {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 18px;
+		border-radius: 12px;
+		background: rgba(255, 200, 80, 0.12);
+		border: 1px solid rgba(200, 140, 0, 0.22);
+		color: #7a5000;
+		font-size: 13px;
+		margin-bottom: 4px;
+	}
+
+	.reconciliation-banner span {
+		flex: 1;
+	}
+
+	.reconciliation-banner__btn {
+		padding: 5px 14px;
+		border-radius: 8px;
+		border: 1px solid rgba(200, 140, 0, 0.35);
+		background: rgba(255, 200, 80, 0.18);
+		color: #7a5000;
+		font-size: 12px;
+		font-weight: 700;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.reconciliation-banner__btn:hover {
+		background: rgba(255, 200, 80, 0.3);
 	}
 
 	.classification-signals-card {

@@ -35,6 +35,9 @@ import {
 	normalizeValueForComparison,
 	computeConflictsFromState
 } from '../api/_reconciliation.js';
+import {
+	applyReconciliationDecisions
+} from '../api/reconciliation/[id].js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -738,4 +741,82 @@ test('computeConflictsFromState: mixed scenario — protected + autoResolved + c
 	assert.equal(result.protected.length, 1);
 	assert.equal(result.conflicts.length, 1);
 	assert.equal(result.autoResolved.length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// applyReconciliationDecisions
+// ---------------------------------------------------------------------------
+
+test('applyReconciliationDecisions: keep_current leaves reviewFieldState unchanged', () => {
+	const reviewFieldState = {
+		targetIRR: {
+			aiValue: 0.12,
+			aiValuePresent: true,
+			adminOverrideActive: false
+		}
+	};
+	const conflictFields = [
+		{ fieldKey: 'targetIRR', currentValue: 0.12, extractedValue: 0.15, extractionRunId: 'run-1' }
+	];
+	const decisions = [{ fieldKey: 'targetIRR', action: 'keep_current' }];
+	const { nextReviewFieldState, appliedFields } = applyReconciliationDecisions(
+		reviewFieldState,
+		conflictFields,
+		decisions
+	);
+	assert.equal(appliedFields.length, 0, 'keep_current should not add to appliedFields');
+	assert.equal(nextReviewFieldState.targetIRR.aiValue, 0.12, 'aiValue unchanged');
+});
+
+test('applyReconciliationDecisions: use_extracted updates aiValue and clears admin override', () => {
+	const reviewFieldState = {
+		targetIRR: {
+			aiValue: 0.12,
+			aiValuePresent: true,
+			adminOverrideActive: true,
+			adminOverrideValue: 0.14
+		}
+	};
+	const conflictFields = [
+		{ fieldKey: 'targetIRR', currentValue: 0.14, extractedValue: 0.18, extractionRunId: 'run-2' }
+	];
+	const decisions = [{ fieldKey: 'targetIRR', action: 'use_extracted' }];
+	const { nextReviewFieldState, appliedFields, eventRows } = applyReconciliationDecisions(
+		reviewFieldState,
+		conflictFields,
+		decisions
+	);
+	assert.ok(appliedFields.includes('targetIRR'), 'targetIRR should be in appliedFields');
+	assert.equal(nextReviewFieldState.targetIRR.aiValue, 0.18, 'aiValue updated to extracted value');
+	assert.equal(nextReviewFieldState.targetIRR.adminOverrideActive, false, 'admin override cleared');
+	assert.equal(eventRows.length, 0, 'use_extracted does not produce event rows');
+});
+
+test('applyReconciliationDecisions: edit_manual sets adminOverrideValue and produces event row', () => {
+	const reviewFieldState = {
+		targetIRR: {
+			aiValue: 0.12,
+			aiValuePresent: true,
+			adminOverrideActive: false
+		}
+	};
+	const conflictFields = [
+		{ fieldKey: 'targetIRR', currentValue: 0.12, extractedValue: 0.18, extractionRunId: 'run-3' }
+	];
+	const decisions = [{ fieldKey: 'targetIRR', action: 'edit_manual', manualValue: 0.16 }];
+	const actor = { email: 'admin@example.com', name: 'Admin' };
+	const { nextReviewFieldState, appliedFields, eventRows } = applyReconciliationDecisions(
+		reviewFieldState,
+		conflictFields,
+		decisions,
+		{ actor }
+	);
+	assert.ok(appliedFields.includes('targetIRR'), 'targetIRR should be in appliedFields');
+	assert.equal(nextReviewFieldState.targetIRR.adminOverrideActive, true, 'admin override active');
+	assert.equal(nextReviewFieldState.targetIRR.adminOverrideValue, 0.16, 'adminOverrideValue set');
+	assert.equal(eventRows.length, 1, 'one event row produced');
+	assert.equal(eventRows[0].field_key, 'targetIRR');
+	assert.equal(eventRows[0].event_type, 'admin_save');
+	assert.equal(eventRows[0].actor_email, 'admin@example.com');
+	assert.equal(eventRows[0].next_value, 0.16);
 });
