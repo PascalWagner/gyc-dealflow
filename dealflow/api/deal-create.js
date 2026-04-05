@@ -116,7 +116,8 @@ export default async function handler(req, res) {
 			lifecycleStatus,
 			intent,
 			entrySurface,
-			confirmedNewSponsor
+			confirmedNewSponsor,
+			selectedSponsorId
 		} = req.body || {};
 
 		const normalizedIntent = normalizeSubmissionIntent(intent, 'interested');
@@ -171,6 +172,11 @@ export default async function handler(req, res) {
 
 		let managementCompanyId = null;
 
+		// Fast path: caller selected from the typeahead — trust the ID, skip all phases
+		const trimmedSelectedId = normalizeDisplayText(selectedSponsorId);
+		if (trimmedSelectedId) {
+			managementCompanyId = trimmedSelectedId;
+		} else {
 		// Phase A — exact match (case-insensitive)
 		const { data: existingCompany } = await supabase
 			.from('management_companies')
@@ -218,6 +224,7 @@ export default async function handler(req, res) {
 				managementCompanyId = newCompany.id;
 			}
 		}
+		} // end fast-path else
 
 		const requestedLifecycleStatus = normalizeLifecycleStatus(lifecycleStatus || 'in_review');
 

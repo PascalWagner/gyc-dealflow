@@ -59,6 +59,13 @@
 	let pendingSponsorName = $state('');
 	let confirmedNewSponsor = $state(false);
 
+	let sponsorResults = $state([]);
+	let showSponsorResults = $state(false);
+	let sponsorSearching = $state(false);
+	let selectedSponsorId = $state('');
+	let sponsorBlurTimer = null;
+	let sponsorRequestId = 0;
+
 	let searchRequestId = 0;
 	let blurTimer = null;
 
@@ -231,6 +238,61 @@
 		showSearchResults = false;
 		searchResults = [];
 		searchMessage = '';
+		submitError = '';
+	}
+
+	async function searchSponsors(query) {
+		const trimmed = String(query || '').trim();
+		if (trimmed.length < 2) {
+			sponsorResults = [];
+			sponsorSearching = false;
+			showSponsorResults = false;
+			return;
+		}
+		const requestId = ++sponsorRequestId;
+		sponsorSearching = true;
+		showSponsorResults = true;
+		try {
+			const token = await getFreshSessionToken();
+			const res = await fetch(`/api/company-search?q=${encodeURIComponent(trimmed)}`, {
+				headers: token ? { Authorization: `Bearer ${token}` } : {}
+			});
+			if (requestId !== sponsorRequestId) return;
+			const data = await res.json().catch(() => ({}));
+			sponsorResults = Array.isArray(data?.results) ? data.results : [];
+		} catch {
+			sponsorResults = [];
+		} finally {
+			if (requestId === sponsorRequestId) sponsorSearching = false;
+		}
+	}
+
+	function handleSponsorInput(event) {
+		sponsor = event.currentTarget.value;
+		selectedSponsorId = '';
+		confirmedNewSponsor = false;
+		void searchSponsors(sponsor);
+	}
+
+	function handleSponsorFocus() {
+		if (sponsorBlurTimer) { window.clearTimeout(sponsorBlurTimer); sponsorBlurTimer = null; }
+		if (sponsor.trim().length >= 2 && !selectedSponsorId) {
+			showSponsorResults = true;
+			void searchSponsors(sponsor);
+		}
+	}
+
+	function handleSponsorBlur() {
+		if (sponsorBlurTimer) window.clearTimeout(sponsorBlurTimer);
+		sponsorBlurTimer = window.setTimeout(() => { showSponsorResults = false; }, 180);
+	}
+
+	function selectSponsor(result) {
+		sponsor = result.operator_name;
+		selectedSponsorId = result.id;
+		website = website || result.website || '';
+		showSponsorResults = false;
+		sponsorResults = [];
 		submitError = '';
 	}
 
@@ -425,6 +487,7 @@
 								lifecycleStatus: 'in_review',
 								intent: submissionIntent,
 								entrySurface: normalizedEntrySurface,
+								...(selectedSponsorId ? { selectedSponsorId } : {}),
 								...(confirmedNewSponsor ? { confirmedNewSponsor: true } : {})
 							}
 				)
@@ -590,6 +653,7 @@
 							class="add-deal-modal__dedup-row"
 							onclick={() => {
 								sponsor = match.operator_name;
+								selectedSponsorId = match.id;
 								confirmedNewSponsor = false;
 								showSponsorConfirmation = false;
 								submitDeal();
@@ -716,9 +780,53 @@
 				</div>
 
 				{#if !selectedExistingDeal}
-					<div class="add-deal-modal__field add-deal-modal__field--full">
+					<div class="add-deal-modal__field add-deal-modal__field--full add-deal-modal__field--search">
 						<label for="addDealSponsor">Sponsor / Management Company *</label>
-						<input id="addDealSponsor" bind:value={sponsor} placeholder="e.g. Acme Capital">
+						<input
+							id="addDealSponsor"
+							value={sponsor}
+							placeholder="Search or enter sponsor name..."
+							autocomplete="off"
+							oninput={handleSponsorInput}
+							onfocus={handleSponsorFocus}
+							onblur={handleSponsorBlur}
+						>
+						{#if selectedSponsorId}
+							<div class="add-deal-modal__selected">
+								<div>
+									<div class="add-deal-modal__selected-title">Using existing sponsor record</div>
+									<div class="add-deal-modal__selected-copy"><strong>{sponsor}</strong></div>
+								</div>
+								<button type="button" class="add-deal-modal__selected-clear" onclick={() => { sponsor = ''; selectedSponsorId = ''; website = ''; }}>
+									Change
+								</button>
+							</div>
+						{/if}
+						{#if showSponsorResults && !selectedSponsorId}
+							<div class="add-deal-modal__search-results" role="listbox">
+								{#if sponsorSearching}
+									<div class="add-deal-modal__search-message">Searching sponsors...</div>
+								{:else if sponsorResults.length === 0}
+									<div class="add-deal-modal__search-message">No existing sponsors found — a new one will be created.</div>
+								{:else}
+									{#each sponsorResults as result}
+										<button
+											type="button"
+											role="option"
+											aria-selected="false"
+											class="add-deal-modal__search-result"
+											onmousedown={() => selectSponsor(result)}
+										>
+											<div class="add-deal-modal__search-name">{result.operator_name}</div>
+											<div class="add-deal-modal__search-sub">
+												{#if result.type}{result.type}{/if}
+												{#if result.website}{result.type ? ' · ' : ''}{result.website}{/if}
+											</div>
+										</button>
+									{/each}
+								{/if}
+							</div>
+						{/if}
 					</div>
 
 					<div class="add-deal-modal__field add-deal-modal__field--full">
