@@ -118,3 +118,26 @@ export function formatLpSharePercent(value) {
 	if (lpShare === null) return null;
 	return `${Math.round(lpShare * 100)}%`;
 }
+
+/**
+ * Formats a hold period (in years) for display in portfolio metric cards.
+ * Rounds to at most 1 decimal place and strips trailing zeros.
+ *
+ * Raw float inputs like 3.1153846153846154 are a known source of UI overflow
+ * on mobile — this function is the single enforcement point for that constraint.
+ *
+ *   3.1153846... → "3.1 yrs"
+ *   5.0          → "5 yrs"
+ *   1.0          → "1 yr"
+ *   0 / null     → "—"
+ *
+ * @param {number|string|null} value  Hold period in years
+ * @returns {string}
+ */
+export function formatHoldPeriod(value) {
+	const amount = Number(value || 0);
+	if (!Number.isFinite(amount) || amount <= 0) return '—';
+	// Round to 1 decimal; parseFloat strips trailing zero ("3.0" → 3, "3.1" → 3.1)
+	const rounded = parseFloat(amount.toFixed(1));
+	return `${rounded} yr${rounded === 1 ? '' : 's'}`;
+}

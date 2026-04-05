@@ -10,6 +10,7 @@
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import { readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
 	import { buildInvestedPortfolio, normalizePortfolioRecord } from '$lib/utils/investedPortfolio.js';
+	import { formatHoldPeriod } from '$lib/utils/primitives.js';
 	const USER_SCOPED_STATE_EVENT = 'gyc:user-scoped-state-updated';
 
 	function createEmptyInvestmentDraft() {
@@ -334,11 +335,9 @@
 		return `$${amount.toLocaleString()}`;
 	}
 
-	function formatHoldPeriodValue(value) {
-		const amount = Number(value || 0);
-		if (!Number.isFinite(amount) || amount <= 0) return '—';
-		return `${amount} yr${amount === 1 ? '' : 's'}`;
-	}
+	// formatHoldPeriod lives in primitives.js (imported above).
+	// This alias keeps call sites unchanged while enabling unit testing.
+	const formatHoldPeriodValue = formatHoldPeriod;
 
 	function formatMetricSource(source) {
 		return source === 'actual' ? 'Actual' : source === 'projected' ? 'Projected' : '';
@@ -1095,6 +1094,9 @@
 	}
 	.stat-card {
 		padding: 18px 20px;
+		/* Prevent long values from blowing out the grid cell */
+		overflow: hidden;
+		min-width: 0;
 	}
 	.stat-label {
 		font-size: 12px;
@@ -1111,6 +1113,10 @@
 		color: var(--primary);
 		font-family: var(--font-ui);
 		font-variant-numeric: tabular-nums;
+		/* Defensive containment: truncate if value somehow still exceeds card */
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.portfolio-view-switch {
@@ -1772,6 +1778,10 @@
 	@media (max-width: 768px) {
 		.summary-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.stat-value {
+			/* Scale down on narrow screens so values don't overflow their card */
+			font-size: clamp(16px, 5vw, 22px);
 		}
 		.holdings-empty-grid {
 			grid-template-columns: 1fr;
