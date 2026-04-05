@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
+import { logReviewEvents } from '../api/_review-events.js';
 import {
 	DB_COLUMN_REVIEW_FIELD_MAP,
 	REVIEW_FIELD_DB_COLUMN_MAP,
@@ -186,9 +187,7 @@ async function main() {
 			}
 		}));
 
-		const { error: eventError } = await supabase
-			.from('review_field_events')
-			.insert(eventRows);
+		const eventError = await logReviewEvents(supabase, eventRows);
 		if (eventError) throw eventError;
 	}
 

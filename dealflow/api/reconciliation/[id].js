@@ -8,6 +8,7 @@
 
 import { getAdminClient, setCors, verifyAdmin } from '../_supabase.js';
 import { captureApiError } from '../_sentry.js';
+import { logReviewEvents } from '../_review-events.js';
 import {
   buildAdminReviewFieldStateEntry,
   buildAiReviewFieldStateEntry,
@@ -306,20 +307,8 @@ export default async function handler(req, res) {
 
     // Insert review_field_events for edit_manual decisions
     if (eventRows.length > 0) {
-      const fullEventRows = eventRows.map((row) => ({
-        ...row,
-        opportunity_id: dealId
-      }));
-      const { error: eventsError } = await supabase
-        .from('review_field_events')
-        .insert(fullEventRows);
-      if (eventsError) {
-        // Non-fatal — audit log failure should not fail resolution
-        console.warn('[reconciliation/resolve] review_field_events insert failed (non-fatal)', {
-          message: eventsError.message,
-          count: fullEventRows.length
-        });
-      }
+      const fullEventRows = eventRows.map((row) => ({ ...row, opportunity_id: dealId }));
+      await logReviewEvents(supabase, fullEventRows);
     }
 
     // Mark task resolved
