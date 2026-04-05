@@ -6,6 +6,7 @@ import { getAdminClient, setCors, ADMIN_EMAILS } from '../_supabase.js';
 import { resolveDealWorkflowMutation, slugify } from '../../src/lib/utils/dealWorkflow.js';
 import { normalizeDealReviewPatch } from '../../src/lib/utils/dealReviewSchema.js';
 import { transformDeals } from '../member/deals/transform.js';
+import { captureApiError, captureApiWarning } from '../_sentry.js';
 import {
 	applyReviewFieldStateToDeal,
 	buildAdminReviewFieldStateEntry,
@@ -15,134 +16,9 @@ import {
 	normalizeReviewFieldStateMap,
 	resolveFinalReviewFieldValue
 } from '../../src/lib/utils/reviewFieldState.js';
-// Shared field map is the canonical source — this file's local FIELD_MAP
-// is kept as the authoritative reference but should be migrated to _field-map.js
-// import { getDealFieldMapWithHistoricalReturns, NUMERIC_DEAL_COLS, JSON_ARRAY_DEAL_COLS } from '../_field-map.js';
+import { getDealFieldMapWithHistoricalReturns } from '../_field-map.js';
 
-const HISTORICAL_RETURN_START_YEAR = 2015;
-const HISTORICAL_RETURN_END_YEAR = new Date().getFullYear() - 1;
-const HISTORICAL_RETURN_YEARS = Array.from(
-  { length: Math.max(0, HISTORICAL_RETURN_END_YEAR - HISTORICAL_RETURN_START_YEAR + 1) },
-  (_, index) => HISTORICAL_RETURN_START_YEAR + index
-);
-
-const FIELD_MAP = {
-  // camelCase (client) → snake_case (DB)
-  investmentName: 'investment_name',
-  managementCompanyId: 'management_company_id',
-  assetClass: 'asset_class',
-  dealType: 'deal_type',
-  strategy: 'strategy',
-  investmentStrategy: 'investment_strategy',
-  targetIRR: 'target_irr',
-  preferredReturn: 'preferred_return',
-  cashOnCash: 'cash_on_cash',
-  cashYield: 'cash_yield',
-  equityMultiple: 'equity_multiple',
-  investmentMinimum: 'investment_minimum',
-  holdPeriod: 'hold_period_years',
-  offeringSize: 'offering_size',
-  purchasePrice: 'purchase_price',
-  offeringType: 'offering_type',
-  offeringSize: 'offering_size',
-  availableTo: 'available_to',
-  distributions: 'distributions',
-  lpGpSplit: 'lp_gp_split',
-  fees: 'fees',
-  financials: 'financials',
-  instrument: 'instrument',
-  shortSummary: 'short_summary',
-  coverImageUrl: 'cover_image_url',
-  heroMediaUrl: 'hero_media_url',
-  riskNotes: 'risk_notes',
-  downsideNotes: 'downside_notes',
-  deckUrl: 'deck_url',
-  ppmUrl: 'ppm_url',
-  subAgreementUrl: 'sub_agreement_url',
-  feeSummary: 'fee_summary',
-  taxCharacteristics: 'tax_characteristics',
-  operatorBackground: 'operator_background',
-  keyDates: 'key_dates',
-  primarySourceContext: 'primary_source_context',
-  primarySourceUrl: 'primary_source_url',
-  sponsorName: 'sponsor_name',
-  slug: 'slug',
-  investingGeography: 'investing_geography',
-  investingStates: 'investing_states',
-  underlyingExposureTypes: 'underlying_exposure_types',
-  debtPosition: 'debt_position',
-  fundAUM: 'fund_aum',
-  managerAUM: 'fund_aum',
-  totalLoansUnderMgmt: 'total_loans_under_mgmt',
-  equityCommitments: 'equity_commitments',
-  avgLoanLTC: 'avg_loan_ltc',
-  performanceFeePct: 'performance_fee_pct',
-  inceptionDate: 'inception_date',
-  fundTerm: 'fund_term',
-  currentFundSize: 'current_fund_size',
-  loanCount: 'loan_count',
-  avgLoanLtv: 'avg_loan_ltv',
-  currentAvgLoanLtv: 'current_avg_loan_ltv',
-  maxAllowedLtv: 'max_allowed_ltv',
-  currentLeverage: 'current_leverage',
-  maxAllowedLeverage: 'max_allowed_leverage',
-  redemption: 'redemption',
-  redemptionNotes: 'redemption_notes',
-  additionalTermNotes: 'additional_term_notes',
-  sponsorCoinvest: 'sponsor_in_deal_pct',
-  sponsorInDeal: 'sponsor_in_deal_pct',
-  taxForm: 'tax_form',
-  fundFoundedYear: 'fund_founded_year',
-  firmFoundedYear: 'firm_founded_year',
-  snapshotAsOfDate: 'snapshot_as_of_date',
-  propertyAddress: 'property_address',
-  unitCount: 'unit_count',
-  yearBuilt: 'year_built',
-  squareFootage: 'square_footage',
-  occupancyPct: 'occupancy_pct',
-  propertyType: 'property_type',
-  acquisitionLoan: 'acquisition_loan',
-  loanToValue: 'loan_to_value',
-  loanRate: 'loan_rate',
-  loanTermYears: 'loan_term_years',
-  loanIOYears: 'loan_io_years',
-  capexBudget: 'capex_budget',
-  closingCosts: 'closing_costs',
-  acquisitionFeePct: 'acquisition_fee_pct',
-  assetMgmtFeePct: 'asset_mgmt_fee_pct',
-  propertyMgmtFeePct: 'property_mgmt_fee_pct',
-  capitalEventFeePct: 'capital_event_fee_pct',
-  dispositionFeePct: 'disposition_fee_pct',
-  constructionMgmtFeePct: 'construction_mgmt_fee_pct',
-  tags: 'tags',
-  issuerEntity: 'issuer_entity',
-  gpEntity: 'gp_entity',
-  sponsorEntity: 'sponsor_entity',
-  secEntityName: 'sec_entity_name',
-  secCik: 'sec_cik',
-  dateOfFirstSale: 'date_of_first_sale',
-  totalAmountSold: 'total_amount_sold',
-  totalInvestors: 'total_investors',
-  is506b: 'is_506b',
-  secVerificationState: 'sec_verification_state',
-  secVerificationNotes: 'sec_verification_notes',
-  secLookupState: 'sec_lookup_state',
-  secFilingId: 'sec_filing_id',
-  dealBranch: 'deal_branch',
-  teamContacts: 'team_contacts',
-  sourceRiskFactors: 'source_risk_factors',
-  highlightedRisks: 'highlighted_risks',
-  riskTags: 'risk_tags',
-  // Special fields
-  status: 'status',
-  gpReviewedAt: 'gp_reviewed_at',
-  lifecycleStatus: 'lifecycle_status',
-  isVisibleToUsers: 'is_visible_to_users',
-};
-
-for (const year of HISTORICAL_RETURN_YEARS) {
-  FIELD_MAP[`historicalReturn${year}`] = `historical_return_${year}`;
-}
+const FIELD_MAP = getDealFieldMapWithHistoricalReturns();
 
 const NUMERIC_FIELD_KEYS = new Set([
   'targetIRR',
@@ -446,8 +322,38 @@ export default async function handler(req, res) {
   let currentManagementCompany = context.currentManagementCompany;
 
   if (req.method === 'GET') {
+    // Check for a pending reconciliation task for this deal.
+    // Non-fatal: if the table doesn't exist yet (pre-migration) we return false.
+    let pendingReconciliation = false;
+    let pendingReconciliationId = null;
+    let pendingReconciliationConflictCount = 0;
+    try {
+      const { data: reconTask } = await supabase
+        .from('reconciliation_tasks')
+        .select('id, conflict_fields')
+        .eq('deal_id', id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (reconTask) {
+        pendingReconciliation = true;
+        pendingReconciliationId = reconTask.id;
+        pendingReconciliationConflictCount = Array.isArray(reconTask.conflict_fields)
+          ? reconTask.conflict_fields.length
+          : 0;
+      }
+    } catch {
+      // reconciliation_tasks table may not exist in all environments yet
+    }
+    const serialized = serializeDealRecord(deal, { currentManagementCompany, availableColumns });
     return res.status(200).json({
-      deal: serializeDealRecord(deal, { currentManagementCompany, availableColumns })
+      deal: {
+        ...serialized,
+        pendingReconciliation,
+        pendingReconciliationId,
+        pendingReconciliationConflictCount
+      }
     });
   }
 
@@ -478,6 +384,12 @@ export default async function handler(req, res) {
     && requestedReviewStateVersion !== null
     && requestedReviewStateVersion !== currentReviewStateVersion
   ) {
+    captureApiWarning('review_state_conflict', {
+      endpoint: `PATCH /api/deals/${req.query?.id}`,
+      dealId: req.query?.id,
+      localVersion: requestedReviewStateVersion,
+      serverVersion: currentReviewStateVersion
+    });
     return res.status(409).json({
       error: 'This deal was updated somewhere else. Reload the latest version before saving again.',
       code: 'review_state_conflict',
@@ -515,7 +427,13 @@ export default async function handler(req, res) {
       email: String(user?.email || '').trim().toLowerCase(),
       name: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim()
     };
-    const reviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+    let reviewFieldState;
+    try {
+      reviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+    } catch (parseErr) {
+      captureApiError(parseErr, { endpoint: `PATCH /api/deals/${req.query?.id}`, field: 'review_field_state', dealId: req.query?.id });
+      reviewFieldState = {};
+    }
     const nextReviewFieldState = { ...reviewFieldState };
     const updates = {};
     const eventRows = [];
@@ -683,7 +601,13 @@ export default async function handler(req, res) {
     email: String(user?.email || '').trim().toLowerCase(),
     name: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim()
   };
-  const existingReviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+  let existingReviewFieldState;
+  try {
+    existingReviewFieldState = normalizeReviewFieldStateMap(deal?.review_field_state || {});
+  } catch (parseErr) {
+    captureApiError(parseErr, { endpoint: `PATCH /api/deals/${req.query?.id}`, field: 'review_field_state', dealId: req.query?.id });
+    existingReviewFieldState = {};
+  }
   let nextReviewFieldState = { ...existingReviewFieldState };
   let reviewFieldStateChanged = false;
 

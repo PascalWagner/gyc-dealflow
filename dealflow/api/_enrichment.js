@@ -170,14 +170,50 @@ export async function extractFromPdf(fileBuffer, prompt) {
 // ── Enrichment Cascade ───────────────────────────────────────────────────────
 
 /**
+ * Compute the overall cascade status from the list of secondary step failures.
+ * Exported so callers and tests can derive the status without re-running the cascade.
+ *
+ * @param {Array<{step: string, error: string}>} failedSteps
+ * @returns {'complete'|'partial'}
+ */
+export function buildCascadeStatus(failedSteps) {
+  return Array.isArray(failedSteps) && failedSteps.length > 0 ? 'partial' : 'complete';
+}
+
+/**
+ * Returns true when an existing extraction_runs row qualifies to skip re-extraction.
+ * A 'complete' or 'partial' run means primary extraction already succeeded for this
+ * document — re-running would produce redundant work and overwrite aiValues.
+ *
+ * @param {object|null} existingRun - Row from extraction_runs, or null
+ * @returns {boolean}
+ */
+export function shouldSkipExtraction(existingRun) {
+  return Boolean(
+    existingRun &&
+    (existingRun.status === 'complete' || existingRun.status === 'partial')
+  );
+}
+
+/**
  * Run enrichment cascade in parallel given extracted data.
+ * Secondary lookups (SEC, RentCast, Census/BLS, background check, sponsor track
+ * record) are each independently fault-tolerant: a failure in any one does NOT
+ * abort the cascade. Successfully retrieved data is preserved regardless of which
+ * secondary steps fail.
+ *
  * @param {object} extracted - Fields extracted from AI
  * @param {object} supabase - Supabase admin client (for deal matching)
- * @returns {{ sec, property, market, backgroundCheck, matchedDeals, enrichmentSteps }}
+ * @returns {{
+ *   sec, property, market, backgroundCheck, matchedDeals, enrichmentSteps,
+ *   partialFailures: Array<{step: string, error: string}>,
+ *   status: 'complete'|'partial'
+ * }}
  */
 export async function runEnrichmentCascade(extracted, supabase) {
   const enrichmentPromises = {};
   const enrichmentSteps = [];
+  const partialFailures = [];
 
   // SEC EDGAR
   const secQuery =
@@ -188,6 +224,7 @@ export async function runEnrichmentCascade(extracted, supabase) {
   if (secQuery) {
     enrichmentPromises.sec = runSecEdgar(secQuery).catch(e => {
       console.warn('SEC enrichment failed:', e.message);
+      partialFailures.push({ step: 'sec', error: e.message });
       return null;
     });
   }
@@ -196,6 +233,7 @@ export async function runEnrichmentCascade(extracted, supabase) {
   if (extracted.propertyAddress) {
     enrichmentPromises.property = runPropertyLookup(extracted.propertyAddress).catch(e => {
       console.warn('Property lookup failed:', e.message);
+      partialFailures.push({ step: 'property', error: e.message });
       return null;
     });
   }
@@ -205,6 +243,7 @@ export async function runEnrichmentCascade(extracted, supabase) {
   if (zip) {
     enrichmentPromises.market = runMarketData(zip).catch(e => {
       console.warn('Market data failed:', e.message);
+      partialFailures.push({ step: 'market', error: e.message });
       return null;
     });
   }
@@ -215,6 +254,7 @@ export async function runEnrichmentCascade(extracted, supabase) {
   if (personName || companyName) {
     enrichmentPromises.backgroundCheck = runBackgroundCheck(personName, companyName).catch(e => {
       console.warn('Background check failed:', e.message);
+      partialFailures.push({ step: 'background_check', error: e.message });
       return null;
     });
   }
@@ -224,6 +264,7 @@ export async function runEnrichmentCascade(extracted, supabase) {
   if (sponsorQuery) {
     enrichmentPromises.sponsorTrackRecord = runSponsorTrackRecord(sponsorQuery).catch(e => {
       console.warn('Sponsor track record failed:', e.message);
+      partialFailures.push({ step: 'sponsor_track_record', error: e.message });
       return null;
     });
   }
@@ -232,11 +273,12 @@ export async function runEnrichmentCascade(extracted, supabase) {
   if (supabase) {
     enrichmentPromises.matchedDeals = matchDeals(supabase, extracted.investmentName, extracted.managementCompany || extracted.sponsor).catch(e => {
       console.warn('Deal matching failed:', e.message);
+      partialFailures.push({ step: 'deal_matching', error: e.message });
       return [];
     });
   }
 
-  // Await all in parallel
+  // Await all in parallel — partialFailures is populated by .catch() callbacks above
   const results = {};
   const keys = Object.keys(enrichmentPromises);
   const values = await Promise.all(keys.map(k => enrichmentPromises[k]));
@@ -254,6 +296,7 @@ export async function runEnrichmentCascade(extracted, supabase) {
     const dealId = results.matchedDeals[0].id;
     dbWriteResult = await persistToDatabase(supabase, dealId, extracted).catch(e => {
       console.warn('DB write failed:', e.message);
+      partialFailures.push({ step: 'db_write', error: e.message });
       return null;
     });
     if (dbWriteResult) enrichmentSteps.push('db-write');
@@ -267,7 +310,9 @@ export async function runEnrichmentCascade(extracted, supabase) {
     sponsorTrackRecord: results.sponsorTrackRecord || null,
     matchedDeals: results.matchedDeals || [],
     dbWrite: dbWriteResult,
-    enrichmentSteps
+    enrichmentSteps,
+    partialFailures,
+    status: buildCascadeStatus(partialFailures)
   };
 }
 

@@ -2,8 +2,11 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { onDestroy, onMount } from 'svelte';
+	import * as analytics from '$lib/analytics.js';
+	import { onDestroy, onMount, setContext } from 'svelte';
 	import DealOnboardingProgress from '$lib/components/deal-review/DealOnboardingProgress.svelte';
+	import FieldProvenance from '$lib/components/deal-review/FieldProvenance.svelte';
+	import ReconciliationModal from '$lib/components/deal-review/ReconciliationModal.svelte';
 	import DealReviewSidebar from '$lib/components/deal-review/DealReviewSidebar.svelte';
 	import FieldRenderer from '$lib/components/deal-review/FieldRenderer.svelte';
 	import LendingFundReviewSectionStage from '$lib/components/deal-review/LendingFundReviewSectionStage.svelte';
@@ -82,7 +85,7 @@
 		hasActiveAdminOverride,
 		normalizeReviewFieldStateMap
 	} from '$lib/utils/reviewFieldState.js';
-	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
+	import { currentAdminRealUser, currentSessionEmail, readScopedJson, writeScopedJson } from '$lib/utils/userScopedState.js';
 
 	function listFromValue(value) {
 		if (Array.isArray(value)) {
@@ -687,6 +690,10 @@
 	let highlightedRiskDraft = $state('');
 	let manualBranch = $state('');
 	let editedFieldLogCache = new Set();
+	let draftBanner = $state(null);
+	let reconciliationTaskId = $state(null);
+	let reconciliationConflictCount = $state(0);
+	let reconciliationOpen = $state(false);
 
 	const dealId = $derived($page.url.searchParams.get('id') || '');
 	const requestedStage = $derived($page.url.searchParams.get('stage') || '');
@@ -781,41 +788,10 @@
 	});
 	const unlockedStageIds = $derived.by(() => {
 		if (!deal) return requestedStage ? [requestedStage] : ['intake'];
-		if (preservesFullReviewAccess) {
-			return reviewStages.map((stage) => stage.id);
-		}
-		if (firstIncompleteStage === 'summary') {
-			return reviewStages.map((stage) => stage.id);
-		}
-		if (branchInfo.branch === 'lending_fund') {
-			const unlockedIndex = reviewStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
-			if (unlockedIndex < 0) return ['intake'];
-			const unlockedIds = reviewStages
-				.filter((stage, index) => index <= unlockedIndex)
-				.map((stage) => stage.id);
-			if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
-				return [...unlockedIds, 'summary'];
-			}
-			return unlockedIds;
-		}
-		if (['overview', 'details', 'risks'].includes(firstIncompleteStage)) {
-			const unlockedIds = reviewStages
-				.filter((stage) => stage.id !== 'summary')
-				.map((stage) => stage.id);
-			if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
-				return [...unlockedIds, 'summary'];
-			}
-			return unlockedIds;
-		}
-		const unlockedIndex = reviewStages.findIndex((candidate) => candidate.id === furthestUnlockedStage);
-		if (unlockedIndex < 0) return ['intake'];
-		const unlockedIds = reviewStages
-			.filter((stage, index) => index <= unlockedIndex)
-			.map((stage) => stage.id);
-		if (canOpenSummaryPreview && requestedStage === 'summary' && !unlockedIds.includes('summary')) {
-			return [...unlockedIds, 'summary'];
-		}
-		return unlockedIds;
+		// Once source documents are uploaded, all stages are navigable.
+		// Completion indicators remain advisory — they do not gate access.
+		if (!hasSourceDocuments) return ['intake'];
+		return reviewStages.map((stage) => stage.id);
 	});
 	const activeStage = $derived.by(() => {
 		if (requestedStage === 'summary' && canOpenSummaryPreview) return 'summary';
@@ -900,6 +876,14 @@
 	const reviewFieldState = $derived(
 		normalizeReviewFieldStateMap(deal?.reviewFieldState || deal?.review_field_state || {})
 	);
+
+	// Provide per-field provenance data to FieldRenderer descendants via context.
+	// Uses a getter so descendants always read the current reactive value.
+	setContext('deal-review-provenance', {
+		get reviewFieldState() { return reviewFieldState; },
+		onreset: resetFieldToExtracted
+	});
+
 	const reviewStateVersion = $derived(Number(deal?.reviewStateVersion || deal?.review_state_version || 0));
 	const reviewFieldEvidence = $derived(
 		normalizeReviewFieldEvidenceMap(deal?.reviewFieldEvidence || deal?.review_field_evidence || {})
@@ -943,6 +927,77 @@
 			&& isStageEvidencePending(stage.id)
 		);
 	});
+	// ── Publish-readiness field list (WS8) ─────────────────────────────────────
+
+	const publishReadinessFields = $derived.by(() => {
+		if (!deal) return [];
+		return Object.values(dealFieldConfig)
+			.filter((f) => f.requiredForPublish)
+			.map((field) => {
+				const fieldKey = field.key;
+				const stageId = fieldStageIds.get(fieldKey) || '__other__';
+				const stageLabel = fieldStageLabels.get(fieldKey) || '';
+				const entry = reviewFieldState[fieldKey];
+				const resolvedValue = form[fieldKey];
+				const isMissing = !hasMeaningfulReviewValue(resolvedValue);
+				const provenanceTier = entry?.adminOverrideActive
+					? 'human_override'
+					: entry?.aiValuePresent
+						? 'ai'
+						: 'empty';
+				const requiresCit = fieldRequiresSourceCitation(fieldKey);
+				const hasCit = requiresCit
+					&& Array.isArray(reviewFieldEvidence[fieldKey])
+					&& reviewFieldEvidence[fieldKey].length > 0;
+				return {
+					fieldKey,
+					label: field.label,
+					stageId,
+					stageLabel,
+					resolvedValue,
+					provenanceTier,
+					isMissing,
+					requiresCitation: requiresCit,
+					hasCitation: hasCit
+				};
+			});
+	});
+
+	const publishReadinessGroups = $derived.by(() => {
+		const stageOrder = reviewStages.map((s) => s.id);
+		const byStage = new Map();
+		for (const f of publishReadinessFields) {
+			const key = f.stageId;
+			if (!byStage.has(key)) {
+				const stageConfig = reviewStages.find((s) => s.id === key);
+				byStage.set(key, {
+					stageId: key === '__other__' ? '' : key,
+					stageLabel: stageConfig?.label || f.stageLabel || 'Other',
+					fields: []
+				});
+			}
+			byStage.get(key).fields.push(f);
+		}
+		return [...byStage.entries()]
+			.sort(([a], [b]) => {
+				const ia = stageOrder.indexOf(a);
+				const ib = stageOrder.indexOf(b);
+				return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+			})
+			.map(([, group]) => group);
+	});
+
+	const publishReadinessCounts = $derived.by(() => {
+		const total = publishReadinessFields.length;
+		const missing = publishReadinessFields.filter((f) => f.isMissing).length;
+		const missingCitations = publishReadinessFields.filter(
+			(f) => f.requiresCitation && !f.hasCitation && !f.isMissing
+		).length;
+		return { total, complete: total - missing, missing, missingCitations };
+	});
+
+	const canPublish = $derived(summaryPublishReady && !reconciliationTaskId);
+
 	const summaryRelevantWarningFieldKeys = $derived.by(() => {
 		const keys = new Set();
 		for (const stage of reviewStages) {
@@ -2117,6 +2172,20 @@
 			}
 
 			syncDealState(payload.deal, { clearSaveMessage: true });
+			reconciliationTaskId = payload.deal.pendingReconciliationId || null;
+			reconciliationConflictCount = payload.deal.pendingReconciliationConflictCount || 0;
+			const savedDraft = readDraft(dealId);
+			if (savedDraft) {
+				draftBanner = savedDraft;
+			} else {
+				draftBanner = null;
+				if (!requestedStage) {
+					const lastStage = readLastStage(dealId);
+					if (lastStage && onboardingStages.some((s) => s.id === lastStage)) {
+						await goto(getStageHref(lastStage), { replaceState: true, noScroll: true, keepFocus: true }).catch(() => {});
+					}
+				}
+			}
 			if (!shouldAutoExtract) {
 				extractionError = '';
 			}
@@ -2165,6 +2234,12 @@
 				stage,
 				errorKeys: Object.keys(errors)
 			});
+			analytics.track('stage_save_attempted', {
+				dealId,
+				stage,
+				success: false,
+				validationErrors: Object.keys(errors)
+			});
 			return false;
 		}
 
@@ -2173,6 +2248,9 @@
 		if (!quiet) {
 			saveMessage = '';
 		}
+
+		// Capture pre-save provenance for field_override tracking
+		const preSaveReviewFieldState = { ...reviewFieldState };
 
 		try {
 			const token = await getFreshSessionToken();
@@ -2228,6 +2306,23 @@
 				},
 				{ clearSaveMessage: true }
 			);
+			analytics.track('stage_save_attempted', { dealId, stage, success: true, validationErrors: [] });
+			// Fire field_override for each field that now has adminOverrideActive
+			if (Array.isArray(scopedFieldKeys) && scopedFieldKeys.length > 0) {
+				const savedState = normalizeReviewFieldStateMap(
+					payload.deal?.reviewFieldState || payload.deal?.review_field_state || {}
+				);
+				for (const fieldKey of scopedFieldKeys) {
+					if (savedState[fieldKey]?.adminOverrideActive) {
+						const pre = preSaveReviewFieldState[fieldKey];
+						const previousTier = pre?.adminOverrideActive ? 'human_override'
+							: pre?.aiValuePresent ? 'ai'
+							: 'empty';
+						analytics.track('field_override', { dealId, fieldKey, previousTier });
+					}
+				}
+			}
+			clearDraft();
 			if (Array.isArray(scopedFieldKeys) && scopedFieldKeys.length > 0) {
 				await loadReviewFieldEvidence({
 					fieldKeys: scopedFieldKeys,
@@ -2334,6 +2429,16 @@
 		} finally {
 			lifecycleSyncState = 'idle';
 		}
+	}
+
+	async function handlePublish() {
+		if (!canPublish || lifecycleSyncState === 'running') return;
+		analytics.track('deal_publish_attempted', {
+			dealId,
+			summaryPublishReady,
+			pendingReconciliation: Boolean(reconciliationTaskId)
+		});
+		await syncReviewLifecycleStatus({ quiet: false, targetLifecycle: 'approved' });
 	}
 
 	async function runExtraction({ fieldKeys = [], scopeLabel = '' } = {}) {
@@ -2589,6 +2694,7 @@
 				force: true
 			});
 			saveMessage = `${getReviewFieldLabel(fieldKey)} was reset to the extracted value.`;
+			analytics.track('field_reset_to_ai', { dealId, fieldKey });
 			console.info('[deal-review/extraction] reset to ai', {
 				dealId,
 				fieldKey
@@ -2673,28 +2779,18 @@
 			&& targetIndex === unlockedIndex + 1;
 
 		if (targetIndex < 0) return false;
-		if (targetIndex > unlockedIndex && !isAdvancingIntoNextNewStage && !allowImmediateAdvance) {
-			console.warn('[deal-review] navigation blocked', {
+		if (!unlockedStageIds.includes(targetStage)) {
+			console.warn('[deal-review] navigation blocked — stage not accessible', {
 				dealId,
 				activeStage,
-				targetStage,
-				currentIndex,
-				targetIndex,
-				unlockedIndex,
-				furthestUnlockedStage
+				targetStage
 			});
 			revealReviewFeedback();
 			return false;
 		}
 
-		if (!movingForward && !confirmDiscardUnsavedChanges()) {
-			return false;
-		}
-
 		if (movingForward) {
-			const shouldSaveBeforeAdvance = dirty || ['intake', 'team', 'sec'].includes(activeStage);
-			const ok = shouldSaveBeforeAdvance ? await saveCurrentStage(activeStage) : true;
-			if (!ok) return false;
+			// TODO: add per-stage validation gates here (e.g. SEC verification must pass before advancing)
 			if (targetStage === 'classification' && branchInfo.branch === 'lending_fund') {
 				await loadClassificationSignals();
 			}
@@ -2711,12 +2807,85 @@
 		}
 
 		saveError = '';
+		analytics.track('stage_navigation', { dealId, fromStage: activeStage, toStage: targetStage });
 		await goto(getStageHref(targetStage, { from: from || (cameFromQueue ? 'queue' : cameFromIntake ? 'intake' : '') }), {
 			replaceState: true,
 			noScroll: true,
 			keepFocus: true
 		});
 		return true;
+	}
+
+	// ── Draft / last-stage persistence ──────────────────────────────────────
+
+	const DRAFT_TTL_MS = 30 * 60 * 1000;
+
+	function draftStorageKey(id) {
+		return `gycDealReviewDraft_${id}`;
+	}
+
+	function lastStageStorageKey(id) {
+		return `gycDealReviewLastStage_${id}`;
+	}
+
+	function writeDraft(formSnapshot, stage) {
+		if (!browser || !dealId) return;
+		writeScopedJson(draftStorageKey(dealId), { formSnapshot, stage, savedAt: new Date().toISOString(), dealId });
+	}
+
+	function clearDraft() {
+		if (!browser || !dealId) return;
+		writeScopedJson(draftStorageKey(dealId), null);
+	}
+
+	function readDraft(id) {
+		if (!browser || !id) return null;
+		const draft = readScopedJson(draftStorageKey(id), null);
+		if (!draft?.savedAt || !draft?.formSnapshot) return null;
+		if (Date.now() - new Date(draft.savedAt).getTime() > DRAFT_TTL_MS) {
+			writeScopedJson(draftStorageKey(id), null);
+			return null;
+		}
+		return draft;
+	}
+
+	function writeLastStage(id, stage) {
+		if (!browser || !id || !stage) return;
+		writeScopedJson(lastStageStorageKey(id), { stage, dealId: id });
+	}
+
+	function readLastStage(id) {
+		if (!browser || !id) return '';
+		const stored = readScopedJson(lastStageStorageKey(id), null);
+		return typeof stored?.stage === 'string' ? stored.stage : '';
+	}
+
+	function formatDraftAge(savedAt) {
+		const mins = Math.floor((Date.now() - new Date(savedAt).getTime()) / 60_000);
+		if (mins < 1) return 'just now';
+		if (mins === 1) return '1 minute ago';
+		return `${mins} minutes ago`;
+	}
+
+	function restoreDraft() {
+		if (!draftBanner) return;
+		const { formSnapshot, stage: draftStage } = draftBanner;
+		const draftAgeMinutes = draftBanner.savedAt
+			? Math.round((Date.now() - new Date(draftBanner.savedAt).getTime()) / 60_000)
+			: 0;
+		form = formSnapshot;
+		markDirty();
+		analytics.track('draft_restored', { dealId, draftAgeMinutes });
+		draftBanner = null;
+		clearDraft();
+		if (draftStage && draftStage !== activeStage) {
+			void goto(getStageHref(draftStage), { replaceState: true, noScroll: true, keepFocus: true }).catch(() => {});
+		}
+	}
+
+	function discardDraft() {
+		clearDraft();
+		draftBanner = null;
 	}
 
 	onMount(() => {
@@ -2840,6 +3009,23 @@
 		if (!desiredLifecycle) return;
 		void syncReviewLifecycleStatus({ quiet: true, targetLifecycle: desiredLifecycle });
 	});
+
+	// Persist last visited stage on every stage change so we can restore it on re-entry.
+	$effect(() => {
+		if (!browser || !dealId || loading || !deal || !activeStage) return;
+		writeLastStage(dealId, activeStage);
+	});
+
+	// Auto-save draft to localStorage when dirty, debounced 30 seconds.
+	$effect(() => {
+		if (!browser || !dirty || !dealId || loading || !deal) return;
+		const snapshot = JSON.parse(JSON.stringify(form));
+		const stageSnapshot = activeStage;
+		const timerId = setTimeout(() => {
+			writeDraft(snapshot, stageSnapshot);
+		}, 30_000);
+		return () => clearTimeout(timerId);
+	});
 </script>
 
 <svelte:head>
@@ -2878,6 +3064,50 @@
 			</div>
 		</div>
 	{:else}
+		{#if draftBanner}
+			<div class="draft-restore-banner">
+				<span>You have unsaved changes from {formatDraftAge(draftBanner.savedAt)}.</span>
+				<button type="button" class="ghost-btn" onclick={restoreDraft}>Restore</button>
+				<button type="button" class="ghost-btn" onclick={discardDraft}>Discard</button>
+			</div>
+		{/if}
+		{#if reconciliationTaskId}
+			<div class="reconciliation-banner">
+				<span>
+					A new document was extracted.
+					{reconciliationConflictCount > 0
+						? `${reconciliationConflictCount} field${reconciliationConflictCount === 1 ? '' : 's'} differ from your current review.`
+						: 'Review the differences below.'}
+				</span>
+				<button
+					type="button"
+					class="reconciliation-banner__btn"
+					onclick={() => {
+						reconciliationOpen = true;
+						analytics.track('reconciliation_opened', { dealId, conflictCount: reconciliationConflictCount });
+					}}
+				>Review differences</button>
+			</div>
+		{/if}
+		{#if reconciliationOpen && reconciliationTaskId}
+			<ReconciliationModal
+				taskId={reconciliationTaskId}
+				dealId={dealId}
+				onresolved={() => {
+					analytics.track('reconciliation_resolved', { dealId, conflictCount: reconciliationConflictCount });
+					reconciliationTaskId = null;
+					reconciliationConflictCount = 0;
+					reconciliationOpen = false;
+					void loadDeal();
+				}}
+				ondismissed={() => {
+					reconciliationTaskId = null;
+					reconciliationConflictCount = 0;
+					reconciliationOpen = false;
+				}}
+				onclose={() => (reconciliationOpen = false)}
+			/>
+		{/if}
 		{#if activeStage === 'intake'}
 			<div class="review-layout review-layout--intake">
 				<div class="editor-stack editor-stack--intake">
@@ -3508,114 +3738,160 @@
 							</section>
 						{/if}
 					{:else if activeStage === 'summary'}
+						<!-- Reconciliation warning -->
+						{#if reconciliationTaskId}
+							<div class="summary-recon-warning">
+								<span class="summary-recon-warning__icon" aria-hidden="true">⚠</span>
+								<span>A new document was extracted with unreviewed differences. Resolve them before publishing.</span>
+								<button
+									type="button"
+									class="ghost-btn ghost-btn--sm"
+									onclick={() => {
+										reconciliationOpen = true;
+										analytics.track('reconciliation_opened', { dealId, conflictCount: reconciliationConflictCount });
+									}}
+								>Review differences</button>
+							</div>
+						{/if}
+
+						<!-- Readiness header -->
 						<section class="editor-card">
 							<div class="card-heading">
 								<div>
-									<h2>Summary and publish readiness</h2>
-									<p>Review each stage, confirm the source-backed risks, and only publish when the record is actually trustworthy.</p>
+									<h2>Publish readiness</h2>
+									<p>All required fields must be filled and cited before this deal can go live.</p>
 								</div>
 								<span class={`readiness-badge tone-${resolveSummaryReadinessTone({ currentLifecycleStatus, summaryPublishReady, summaryEvidencePending })}`}>
 									{resolveSummaryReadinessLabel({ currentLifecycleStatus, summaryPublishReady, summaryEvidencePending })}
 								</span>
 							</div>
-
-							<div class="summary-grid">
-								<div class="summary-card">
-									<div class="summary-card__label">Deal branch</div>
-									<strong>{DEAL_ONBOARDING_BRANCH_LABELS[manualBranch || branchInfo.branch] || branchInfo.label}</strong>
+							<div class="publish-summary-stats">
+								<div class="publish-stat">
+									<span class="publish-stat__num">{publishReadinessCounts.complete}</span>
+									<span class="publish-stat__of">of {publishReadinessCounts.total}</span>
+									<span class="publish-stat__label">required fields complete</span>
 								</div>
-								<div class="summary-card">
-									<div class="summary-card__label">SEC gate</div>
-									<strong>{SEC_VERIFICATION_LABELS[secStatus] || 'Pending'}</strong>
-								</div>
-								<div class="summary-card">
-									<div class="summary-card__label">Team contacts</div>
-									<strong>{teamContactsValidation.valid ? `${teamContacts.length} saved` : 'Needs attention'}</strong>
-								</div>
-								<div class="summary-card">
-									<div class="summary-card__label">Highlighted risks</div>
-									<strong>{highlightedRisks.length || 0}</strong>
-								</div>
-							</div>
-
-							<div class="summary-section-list">
-								{#each onboardingStages.filter((stage) => !['intake', 'summary'].includes(stage.id)) as stage}
-									<button type="button" class="summary-section-card" onclick={() => navigateToStage(stage.id)}>
-										<div>
-											<div class="summary-section-card__label">{stage.label}</div>
-											<strong>{stage.title}</strong>
-											<p>{stage.description}</p>
-										</div>
-										<span>Edit</span>
-									</button>
-								{/each}
-							</div>
-
-							<section class="editor-card editor-card--nested">
-								<div class="card-heading">
-									<div>
-										<h3>Publish blockers</h3>
-										<p>These gates must be satisfied before the deal should move to Published.</p>
+								{#if publishReadinessCounts.missingCitations > 0}
+									<div class="publish-stat publish-stat--warn">
+										<span class="publish-stat__num">{publishReadinessCounts.missingCitations}</span>
+										<span class="publish-stat__label">field{publishReadinessCounts.missingCitations === 1 ? '' : 's'} missing citation</span>
 									</div>
+								{/if}
+								{#if publishReadinessCounts.missing === 0}
+									<div class="publish-stat publish-stat--ready">
+										<span class="publish-stat__label">✓ All required fields filled</span>
+									</div>
+								{:else}
+									<div class="publish-stat publish-stat--issues">
+										<span class="publish-stat__label">{publishReadinessCounts.missing} field{publishReadinessCounts.missing === 1 ? '' : 's'} missing</span>
+									</div>
+								{/if}
+							</div>
+						</section>
+
+						<!-- Per-field breakdown grouped by stage -->
+						{#each publishReadinessGroups as group}
+							{@const groupIssues = group.fields.filter((f) => f.isMissing || (f.requiresCitation && !f.hasCitation)).length}
+							<section class="editor-card publish-stage-group">
+								<div class="publish-stage-group__header">
+									<div class="publish-stage-group__title">
+										<strong>{group.stageLabel}</strong>
+										{#if groupIssues > 0}
+											<span class="publish-stage-badge publish-stage-badge--issues">
+												{groupIssues} issue{groupIssues === 1 ? '' : 's'}
+											</span>
+										{:else}
+											<span class="publish-stage-badge publish-stage-badge--ok">All complete</span>
+										{/if}
+									</div>
+									{#if group.stageId}
+										<a href={getStageHref(group.stageId)} class="stage-edit-link">
+											Edit {group.stageLabel} →
+										</a>
+									{/if}
 								</div>
-								<div class="check-grid">
-									<button
-										type="button"
-										class={`check-row check-row--interactive ${secGateResolved ? 'is-ready' : 'is-blocked'}`}
-										onclick={() => navigateToStage('sec')}
-									>
-										<div class="check-row__copy">
-											<strong>SEC / issuer review completed</strong>
-											<span>{secGateResolved ? 'Resolved' : (secStatus === 'skipped' ? 'Skipped for now still blocks publishing' : 'Resolve the SEC stage first')}</span>
-										</div>
-										<div class="check-row__meta">
-											<span class="check-row__status">{secGateResolved ? 'Resolved' : (secStatus === 'skipped' ? 'Still blocked' : 'Needs review')}</span>
-											<span class="check-row__action">Open SEC</span>
-										</div>
-									</button>
-									<button
-										type="button"
-										class={`check-row check-row--interactive ${teamContactsValidation.valid ? 'is-ready' : 'is-blocked'}`}
-										onclick={() => navigateToStage('team')}
-									>
-										<div class="check-row__copy">
-											<strong>LP-facing contacts validated</strong>
-											<span>{teamContactsValidation.valid ? 'Ready' : (teamContactsValidation.formError || 'Add a valid primary/IR contact')}</span>
-										</div>
-										<div class="check-row__meta">
-											<span class="check-row__status">{teamContactsValidation.valid ? 'Ready' : 'Needs review'}</span>
-											<span class="check-row__action">Open Team</span>
-										</div>
-									</button>
-									{#each onboardingFlow.publishRules as rule}
-										{@const publishRuleState = getPublishRuleState(rule)}
-										<button
-											type="button"
-											class={`check-row check-row--interactive ${publishRuleState === 'ready' ? 'is-ready' : publishRuleState === 'pending' ? 'is-pending' : 'is-blocked'}`}
-											onclick={() => navigateToStage(getRuleTargetStage(rule))}
-										>
-											<div class="check-row__copy">
-												<strong>{rule.label}</strong>
-												<span>{getPublishRuleSummary(rule)}</span>
+								<div class="publish-fields-list">
+									{#each group.fields as field}
+										{@const displayValue = (() => {
+											if (field.isMissing) return null;
+											try {
+												const v = formatDealReviewFieldDisplay(field.fieldKey, field.resolvedValue);
+												if (v !== null && v !== undefined && String(v).trim()) return String(v);
+											} catch { /* fall through */ }
+											if (Array.isArray(field.resolvedValue)) return field.resolvedValue.join(', ');
+											if (field.resolvedValue && typeof field.resolvedValue === 'object' && field.resolvedValue.name) return field.resolvedValue.name;
+											return String(field.resolvedValue ?? '');
+										})()}
+										<div class="publish-field-row" class:publish-field-row--missing={field.isMissing}>
+											<span class="publish-field-row__label">{field.label}</span>
+											<div class="publish-field-row__value-wrap">
+												{#if field.isMissing}
+													<span class="missing-badge">Missing</span>
+												{:else}
+													<span class="publish-field-row__value" title={displayValue || ''}>{displayValue || '—'}</span>
+													<FieldProvenance entry={reviewFieldState[field.fieldKey]} />
+												{/if}
 											</div>
-											<div class="check-row__meta">
-												<span class="check-row__status">{getPublishRuleStatusLabel(rule)}</span>
-												<span class="check-row__action">{getRuleActionLabel(rule)}</span>
+											<div class="publish-field-row__actions">
+												{#if field.requiresCitation}
+													<span
+														class="citation-status"
+														class:citation-status--ok={field.hasCitation}
+														class:citation-status--needed={!field.hasCitation && !field.isMissing}
+													>
+														{field.hasCitation ? 'Cited' : 'Needs citation'}
+													</span>
+												{/if}
+												{#if group.stageId}
+													<a href={getStageHref(group.stageId)} class="field-fix-link">Fix →</a>
+												{/if}
 											</div>
-										</button>
+										</div>
 									{/each}
 								</div>
 							</section>
+						{/each}
 
-							<div class="summary-actions">
+						<!-- Publish action card -->
+						<section class="editor-card publish-action-card">
+							{#if !canPublish}
+								<p class="publish-blocked-reason">
+									{#if reconciliationTaskId}
+										Resolve the unreviewed extraction differences before publishing.
+									{:else if publishReadinessCounts.missing > 0}
+										{publishReadinessCounts.missing} required field{publishReadinessCounts.missing === 1 ? '' : 's'} must be filled before publishing.
+									{:else if publishReadinessCounts.missingCitations > 0}
+										{publishReadinessCounts.missingCitations} required citation{publishReadinessCounts.missingCitations === 1 ? '' : 's'} must be added before publishing.
+									{:else}
+										Complete all required checklist items before publishing.
+									{/if}
+								</p>
+							{/if}
+							<div class="publish-btn-row">
 								<a class="ghost-btn" href={`/deal/${dealId}`} target="_blank" rel="noopener">
-									Open Deal Page
+									Preview deal page
 								</a>
 								{#if buildOperatorValidationHref()}
 									<a class="ghost-btn" href={buildOperatorValidationHref()}>
-										Send operator validation email
+										Send validation email
 									</a>
 								{/if}
+								<button
+									type="button"
+									class="primary-btn"
+									onclick={handlePublish}
+									disabled={!canPublish || lifecycleSyncState === 'running'}
+								>
+									{#if lifecycleSyncState === 'running'}
+										Saving…
+									{:else if currentLifecycleStatus === 'published'}
+										Published ✓
+									{:else if currentLifecycleStatus === 'approved'}
+										Approved ✓
+									{:else}
+										Approve for publishing
+									{/if}
+								</button>
 							</div>
 						</section>
 					{:else}
@@ -3801,6 +4077,56 @@
 			radial-gradient(circle at top right, rgba(81, 190, 123, 0.06), transparent 44%);
 		border: 1px solid rgba(31, 81, 89, 0.08);
 		box-shadow: 0 14px 32px rgba(16, 37, 42, 0.04);
+	}
+
+	.draft-restore-banner {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 18px;
+		border-radius: 12px;
+		background: rgba(255, 200, 80, 0.12);
+		border: 1px solid rgba(200, 140, 0, 0.2);
+		color: #7a5000;
+		font-size: 13px;
+		margin-bottom: 4px;
+	}
+
+	.draft-restore-banner span {
+		flex: 1;
+	}
+
+	.reconciliation-banner {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 18px;
+		border-radius: 12px;
+		background: rgba(255, 200, 80, 0.12);
+		border: 1px solid rgba(200, 140, 0, 0.22);
+		color: #7a5000;
+		font-size: 13px;
+		margin-bottom: 4px;
+	}
+
+	.reconciliation-banner span {
+		flex: 1;
+	}
+
+	.reconciliation-banner__btn {
+		padding: 5px 14px;
+		border-radius: 8px;
+		border: 1px solid rgba(200, 140, 0, 0.35);
+		background: rgba(255, 200, 80, 0.18);
+		color: #7a5000;
+		font-size: 12px;
+		font-weight: 700;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.reconciliation-banner__btn:hover {
+		background: rgba(255, 200, 80, 0.3);
 	}
 
 	.classification-signals-card {
@@ -4573,6 +4899,269 @@
 		text-transform: uppercase;
 		color: var(--text-muted);
 	}
+
+	/* ── WS8: Publish-readiness dashboard ──────────────────────────────────── */
+
+	.summary-recon-warning {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 18px;
+		border-radius: 12px;
+		background: rgba(255, 150, 30, 0.1);
+		border: 1px solid rgba(200, 100, 0, 0.22);
+		color: #7a3800;
+		font-size: 13px;
+		margin-bottom: 4px;
+	}
+
+	.summary-recon-warning__icon {
+		font-size: 16px;
+		flex-shrink: 0;
+	}
+
+	.summary-recon-warning span:not(.summary-recon-warning__icon) {
+		flex: 1;
+	}
+
+	.ghost-btn--sm {
+		padding: 4px 10px;
+		font-size: 12px;
+	}
+
+	.publish-summary-stats {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+		margin-top: 16px;
+	}
+
+	.publish-stat {
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+		padding: 10px 16px;
+		border-radius: 10px;
+		background: rgba(31, 81, 89, 0.05);
+		border: 1px solid rgba(31, 81, 89, 0.08);
+	}
+
+	.publish-stat--warn {
+		background: rgba(255, 200, 80, 0.1);
+		border-color: rgba(200, 140, 0, 0.18);
+		color: #7a5000;
+	}
+
+	.publish-stat--ready {
+		background: rgba(81, 190, 123, 0.1);
+		border-color: rgba(81, 190, 123, 0.2);
+		color: #167a52;
+	}
+
+	.publish-stat--issues {
+		background: rgba(185, 28, 28, 0.06);
+		border-color: rgba(185, 28, 28, 0.14);
+		color: #b91c1c;
+	}
+
+	.publish-stat__num {
+		font-size: 22px;
+		font-weight: 800;
+		line-height: 1;
+		color: #1f5159;
+	}
+
+	.publish-stat--issues .publish-stat__num { color: #b91c1c; }
+	.publish-stat--ready .publish-stat__num  { color: #167a52; }
+	.publish-stat--warn .publish-stat__num   { color: #7a5000; }
+
+	.publish-stat__of {
+		font-size: 13px;
+		color: #556b70;
+	}
+
+	.publish-stat__label {
+		font-size: 12px;
+		font-weight: 600;
+		color: #556b70;
+	}
+
+	.publish-stage-group {
+		padding-top: 0;
+	}
+
+	.publish-stage-group__header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 16px 24px 12px;
+		border-bottom: 1px solid rgba(31, 81, 89, 0.08);
+	}
+
+	.publish-stage-group__title {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.publish-stage-group__title strong {
+		font-size: 14px;
+		color: #1f5159;
+	}
+
+	.publish-stage-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 2px 8px;
+		border-radius: 999px;
+		font-size: 11px;
+		font-weight: 700;
+	}
+
+	.publish-stage-badge--ok {
+		background: rgba(81, 190, 123, 0.12);
+		color: #167a52;
+		border: 1px solid rgba(81, 190, 123, 0.2);
+	}
+
+	.publish-stage-badge--issues {
+		background: rgba(185, 28, 28, 0.08);
+		color: #b91c1c;
+		border: 1px solid rgba(185, 28, 28, 0.14);
+	}
+
+	.stage-edit-link {
+		font-size: 12px;
+		font-weight: 700;
+		color: #1f5159;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.stage-edit-link:hover {
+		text-decoration: underline;
+	}
+
+	.publish-fields-list {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.publish-field-row {
+		display: grid;
+		grid-template-columns: 200px 1fr auto;
+		align-items: center;
+		gap: 12px;
+		padding: 10px 24px;
+		border-bottom: 1px solid rgba(31, 81, 89, 0.05);
+		font-size: 13px;
+	}
+
+	.publish-field-row:last-child {
+		border-bottom: none;
+	}
+
+	.publish-field-row--missing {
+		background: rgba(185, 28, 28, 0.03);
+	}
+
+	.publish-field-row__label {
+		font-weight: 600;
+		color: #1f5159;
+		font-size: 12px;
+	}
+
+	.publish-field-row__value-wrap {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+	}
+
+	.publish-field-row__value {
+		color: #334;
+		font-variant-numeric: tabular-nums;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 280px;
+	}
+
+	.publish-field-row__actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		justify-content: flex-end;
+		white-space: nowrap;
+	}
+
+	.missing-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 2px 8px;
+		border-radius: 999px;
+		font-size: 11px;
+		font-weight: 700;
+		background: rgba(185, 28, 28, 0.08);
+		color: #b91c1c;
+		border: 1px solid rgba(185, 28, 28, 0.14);
+	}
+
+	.citation-status {
+		font-size: 11px;
+		font-weight: 700;
+		padding: 2px 7px;
+		border-radius: 999px;
+	}
+
+	.citation-status--ok {
+		background: rgba(81, 190, 123, 0.1);
+		color: #167a52;
+		border: 1px solid rgba(81, 190, 123, 0.18);
+	}
+
+	.citation-status--needed {
+		background: rgba(255, 200, 80, 0.12);
+		color: #7a5000;
+		border: 1px solid rgba(200, 140, 0, 0.2);
+	}
+
+	.field-fix-link {
+		font-size: 11px;
+		font-weight: 700;
+		color: #1f5159;
+		text-decoration: none;
+		opacity: 0.7;
+	}
+
+	.field-fix-link:hover {
+		opacity: 1;
+		text-decoration: underline;
+	}
+
+	.publish-action-card {
+		padding: 20px 24px;
+	}
+
+	.publish-blocked-reason {
+		font-size: 13px;
+		color: #b91c1c;
+		margin-bottom: 14px;
+		padding: 10px 14px;
+		background: rgba(185, 28, 28, 0.05);
+		border-radius: 8px;
+		border: 1px solid rgba(185, 28, 28, 0.12);
+	}
+
+	.publish-btn-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	/* ─────────────────────────────────────────────────────────────────────── */
 
 	.field-grid--single {
 		grid-template-columns: 1fr;

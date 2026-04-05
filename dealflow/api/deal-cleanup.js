@@ -8,6 +8,7 @@
 
 import { createRequire } from 'node:module';
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
+import { captureApiError, captureApiWarning } from './_sentry.js';
 import { fetchAndStoreSecFiling, findSecMatchesForDeal } from './_sec-edgar.js';
 import {
   buildDocumentInvestingStateSignals,
@@ -23,10 +24,12 @@ import { dealFieldConfig } from '../src/lib/utils/dealReviewSchema.js';
 import {
   applyReviewFieldStateToDeal,
   buildAiReviewFieldStateEntry,
+  getReviewFieldDbColumn,
   getReviewFieldKeyForColumn,
   normalizeReviewFieldStateMap,
   resolveFinalReviewFieldValue
 } from '../src/lib/utils/reviewFieldState.js';
+import { computeExtractionConflicts } from './_reconciliation.js';
 
 const EXTRACTION_TEXT_LIMIT = 120000;
 const require = createRequire(import.meta.url);
@@ -826,6 +829,62 @@ async function insertReviewFieldEvents(supabase, events = []) {
   }
 }
 
+// ── Auto-resolve helper ──────────────────────────────────────────────────────
+
+/**
+ * Write auto-resolved fields (fields with no prior aiValue) directly to
+ * review_field_state without requiring reviewer interaction.  Also
+ * materializes values to the corresponding flat DB columns where available.
+ *
+ * @param {object} supabase          Supabase admin client
+ * @param {string} dealId            UUID of the deal
+ * @param {object} dealRow           Current DB row for the deal
+ * @param {Array}  autoResolvedFields From computeConflictsFromState().autoResolved
+ * @param {string} runId             extraction_runs.id — stamped on each entry
+ */
+async function applyAutoResolvedToReviewState(supabase, dealId, dealRow, autoResolvedFields, runId) {
+  if (!autoResolvedFields || autoResolvedFields.length === 0) return;
+
+  const availableColumns = new Set(Object.keys(dealRow || {}));
+  if (!availableColumns.has('review_field_state')) return;
+
+  const reviewFieldState = normalizeReviewFieldStateMap(dealRow.review_field_state || {});
+  const nextReviewFieldState = { ...reviewFieldState };
+  const materializedUpdates = {};
+  const now = new Date().toISOString();
+
+  for (const { fieldKey, extractedValue } of autoResolvedFields) {
+    nextReviewFieldState[fieldKey] = buildAiReviewFieldStateEntry({}, {
+      nextValue: extractedValue,
+      source: 'ai_extraction',
+      at: now,
+      extractionRunId: runId
+    });
+    const columnName = getReviewFieldDbColumn(fieldKey);
+    if (
+      columnName
+      && availableColumns.has(columnName)
+      && extractedValue !== null
+      && extractedValue !== undefined
+      && extractedValue !== ''
+    ) {
+      materializedUpdates[columnName] = extractedValue;
+    }
+  }
+
+  materializedUpdates.review_field_state = nextReviewFieldState;
+  materializedUpdates.updated_at = now;
+
+  const { error } = await supabase
+    .from('opportunities')
+    .update(materializedUpdates)
+    .eq('id', dealId);
+
+  if (error) {
+    throw new Error(`applyAutoResolvedToReviewState: DB update failed: ${error.message}`);
+  }
+}
+
 // ── Build web search prompt ──────────────────────────────────────────────────
 
 function buildWebSearchPrompt(deal, operatorName, missingFields) {
@@ -1358,7 +1417,12 @@ export default async function handler(req, res) {
 
     // Action: enrich a single deal via multi-step pipeline
     if (action === 'enrich-deal') {
-      const { dealId, fieldKeys = [] } = req.body;
+      const {
+        dealId,
+        fieldKeys = [],
+        documentRef = null,   // deck_submissions.id — used for deduplication
+        triggeredBy = 'manual'
+      } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
 
       const { data: deal, error: dealErr } = await supabase
@@ -1385,8 +1449,187 @@ export default async function handler(req, res) {
         });
       }
 
+      // Deduplication: if a document_ref is provided, check whether a complete
+      // or partial extraction run already exists for that exact document.
+      // Avoids re-running the expensive pipeline on the same PDF twice.
+      if (documentRef) {
+        const { data: existingRun } = await supabase
+          .from('extraction_runs')
+          .select('id, status, fields_extracted, extraction_source')
+          .eq('deal_id', dealId)
+          .eq('document_ref', documentRef)
+          .in('status', ['complete', 'partial'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingRun) {
+          console.log(`[deal-cleanup/enrich-deal] skipping re-extraction — run ${existingRun.id} already exists for document_ref ${documentRef} (status=${existingRun.status})`);
+          console.info('[deal-cleanup/enrich-deal] extraction_skipped_duplicate', { dealId, existingRunId: existingRun.id, documentRef });
+          return res.status(200).json({
+            success: true,
+            deal_id: dealId,
+            skipped: true,
+            existing_run_id: existingRun.id,
+            existing_run_status: existingRun.status,
+            found_fields: existingRun.fields_extracted || {},
+            sources: existingRun.extraction_source ? [existingRun.extraction_source] : [],
+            steps: [],
+            notes: `Skipped — extraction run ${existingRun.id} already exists for this document (status=${existingRun.status})`,
+            current_data: deal,
+            operator_name: operatorName,
+            missing_fields: missingFields.map(f => ({ key: f.key, label: f.label }))
+          });
+        }
+      }
+
+      // Insert extraction_runs row before starting (status='running')
+      let extractionRunId = null;
+      const runInsert = {
+        deal_id: dealId,
+        triggered_by: triggeredBy,
+        document_ref: documentRef || null,
+        status: 'running',
+        started_at: new Date().toISOString()
+      };
+      const { data: runRow, error: runInsertError } = await supabase
+        .from('extraction_runs')
+        .insert(runInsert)
+        .select('id')
+        .single();
+      if (runInsertError) {
+        // Non-fatal: extraction proceeds even if run tracking fails
+        console.warn('[deal-cleanup/enrich-deal] failed to insert extraction_run:', runInsertError.message);
+      } else {
+        extractionRunId = runRow?.id || null;
+      }
+      console.info('[deal-cleanup/enrich-deal] extraction_started', { dealId, triggeredBy, documentRef, extractionRunId });
+
       // Run the multi-step enrichment pipeline
-      const result = await enrichDeal(supabase, deal, operatorName);
+      let result;
+      let runStatus = 'failed';
+      let runErrorDetail = null;
+      try {
+        result = await enrichDeal(supabase, deal, operatorName);
+        const hasStepErrors = result.steps.some(s => s.error);
+        runStatus = hasStepErrors ? 'partial' : 'complete';
+        if (hasStepErrors) {
+          runErrorDetail = result.steps
+            .filter(s => s.error)
+            .map(s => `${s.step}: ${s.error}`)
+            .join('; ');
+          captureApiWarning('extraction_partial', {
+            endpoint: 'POST /api/deal-cleanup enrich-deal',
+            dealId,
+            documentRef,
+            failedSteps: result.steps.filter(s => s.error).map(s => ({ step: s.step, error: s.error }))
+          });
+        }
+      } catch (enrichErr) {
+        runStatus = 'failed';
+        runErrorDetail = enrichErr.message;
+        captureApiError(enrichErr, {
+          endpoint: 'POST /api/deal-cleanup enrich-deal',
+          dealId,
+          documentRef,
+          extractionRunId
+        });
+        console.info('[deal-cleanup/enrich-deal] extraction_failed', { dealId, documentRef, extractionRunId, failureReason: enrichErr.message });
+        // Update run row to failed before re-throwing
+        if (extractionRunId) {
+          await supabase.from('extraction_runs').update({
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error_detail: enrichErr.message
+          }).eq('id', extractionRunId);
+        }
+        throw enrichErr;
+      }
+
+      // Update extraction_runs row: status, completed_at, fields_extracted, extraction_source
+      if (extractionRunId) {
+        const primaryStep = result.steps.find(s => s.fields_found > 0 && s.api);
+        const extractionSource = primaryStep?.api || null;
+        await supabase.from('extraction_runs').update({
+          status: runStatus,
+          completed_at: new Date().toISOString(),
+          fields_extracted: result.found_fields || {},
+          extraction_source: extractionSource,
+          error_detail: runErrorDetail
+        }).eq('id', extractionRunId);
+        const fieldsExtractedCount = Object.keys(result.found_fields || {}).length;
+        console.info('[deal-cleanup/enrich-deal] extraction_completed', {
+          dealId,
+          extractionRunId,
+          runStatus,
+          fieldsExtracted: fieldsExtractedCount,
+          source: extractionSource,
+          documentRef
+        });
+      }
+
+      // ── Conflict detection + auto-resolution ────────────────────────────────
+      // Run after the extraction_runs row is finalized.  partialFailures from
+      // WS4 do not block this — we operate on whatever was successfully extracted.
+      let pendingReconciliationId = null;
+      let autoResolvedCount = 0;
+      let conflictCount = 0;
+      let protectedCount = 0;
+
+      if (extractionRunId && runStatus !== 'failed') {
+        try {
+          const conflictResult = await computeExtractionConflicts(dealId, extractionRunId, supabase);
+          autoResolvedCount = conflictResult.autoResolved.length;
+          conflictCount = conflictResult.conflicts.length;
+          protectedCount = conflictResult.protected.length;
+
+          // Apply auto-resolved fields immediately — no reviewer decision needed.
+          if (conflictResult.autoResolved.length > 0) {
+            await applyAutoResolvedToReviewState(
+              supabase, dealId, deal, conflictResult.autoResolved, extractionRunId
+            );
+          }
+
+          // Insert a reconciliation task for fields that need reviewer attention.
+          if (conflictResult.conflicts.length > 0) {
+            const { data: reconTask, error: reconInsertError } = await supabase
+              .from('reconciliation_tasks')
+              .insert({
+                deal_id: dealId,
+                extraction_run_id: extractionRunId,
+                status: 'pending',
+                conflict_fields: conflictResult.conflicts
+              })
+              .select('id')
+              .single();
+
+            if (reconInsertError) {
+              console.warn('[deal-cleanup/enrich-deal] reconciliation_tasks insert failed (non-fatal)', {
+                dealId,
+                extractionRunId,
+                message: reconInsertError.message
+              });
+            } else {
+              pendingReconciliationId = reconTask?.id || null;
+              console.info('[deal-cleanup/enrich-deal] reconciliation task created', {
+                dealId,
+                extractionRunId,
+                conflictCount,
+                autoResolvedCount,
+                protectedCount,
+                pendingReconciliationId
+              });
+            }
+          }
+        } catch (conflictErr) {
+          // Non-fatal: conflict detection failure must not fail the extraction response.
+          console.warn('[deal-cleanup/enrich-deal] conflict detection failed (non-fatal)', {
+            dealId,
+            extractionRunId,
+            message: conflictErr?.message || 'unknown_error'
+          });
+        }
+      }
 
       const filteredFoundFields = filterFoundFieldUpdates(result.found_fields, fieldKeys);
       const filteredConfidence = Object.fromEntries(
@@ -1398,6 +1641,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         deal_id: dealId,
+        extraction_run_id: extractionRunId,
+        run_status: runStatus,
         found_fields: filteredFoundFields,
         confidence: filteredConfidence,
         sources: result.sources,
@@ -1405,7 +1650,11 @@ export default async function handler(req, res) {
         notes: result.notes,
         current_data: deal,
         operator_name: operatorName,
-        missing_fields: missingFields.map(f => ({ key: f.key, label: f.label }))
+        missing_fields: missingFields.map(f => ({ key: f.key, label: f.label })),
+        pending_reconciliation_id: pendingReconciliationId,
+        auto_resolved_count: autoResolvedCount,
+        conflict_count: conflictCount,
+        protected_count: protectedCount
       });
     }
 
@@ -1415,7 +1664,10 @@ export default async function handler(req, res) {
         dealId,
         updates,
         overwriteAdmin = false,
-        forceFieldKeys = []
+        forceFieldKeys = [],
+        // extractionRunId links each aiValue entry back to its source run.
+        // Pass this from the enrich-deal response when confirming enrichment.
+        extractionRunId = ''
       } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
       if (!updates || Object.keys(updates).length === 0) {
@@ -1524,7 +1776,8 @@ export default async function handler(req, res) {
           nextValue: value,
           overwriteAdmin: shouldForceOverwrite,
           source: 'ai_extraction',
-          at: now
+          at: now,
+          extractionRunId
         });
         nextReviewFieldState[fieldKey] = nextEntry;
         storedAiFields.push(fieldKey);

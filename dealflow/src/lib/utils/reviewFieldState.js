@@ -160,8 +160,7 @@ export function normalizeReviewFieldStateEntry(entry = {}) {
 		aiValuePresent: entry?.aiValuePresent === true || hasOwn(entry, 'aiValue'),
 		adminOverrideActive: entry?.adminOverrideActive === true,
 		adminOverrideValue: hasOwn(entry, 'adminOverrideValue') ? entry.adminOverrideValue : null,
-		finalValue: hasOwn(entry, 'finalValue') ? entry.finalValue : null,
-		finalValuePresent: entry?.finalValuePresent === true || hasOwn(entry, 'finalValue'),
+		// finalValue / finalValuePresent intentionally omitted — tier eliminated (see deal-review-audit.md §3.1)
 		lastWriter: normalizeString(entry?.lastWriter || ''),
 		lastAction: normalizeString(entry?.lastAction || ''),
 		aiUpdatedAt: normalizeString(entry?.aiUpdatedAt || ''),
@@ -169,7 +168,9 @@ export function normalizeReviewFieldStateEntry(entry = {}) {
 		lastUpdatedAt: normalizeString(entry?.lastUpdatedAt || ''),
 		adminActorEmail: normalizeString(entry?.adminActorEmail || ''),
 		adminActorName: normalizeString(entry?.adminActorName || ''),
-		aiSource: normalizeString(entry?.aiSource || '')
+		aiSource: normalizeString(entry?.aiSource || ''),
+		// traceability: which extraction_runs row produced this aiValue
+		extractionRunId: normalizeString(entry?.extractionRunId || '')
 	};
 }
 
@@ -193,9 +194,6 @@ export function resolveFinalReviewFieldValue(entry = {}, fallbackValue) {
 	}
 	if (normalized.aiValuePresent) {
 		return normalized.aiValue;
-	}
-	if (normalized.finalValuePresent) {
-		return normalized.finalValue;
 	}
 	return fallbackValue;
 }
@@ -235,8 +233,6 @@ export function buildAdminReviewFieldStateEntry(
 		...normalized,
 		adminOverrideActive: true,
 		adminOverrideValue: nextValue,
-		finalValue: nextValue,
-		finalValuePresent: true,
 		lastWriter: 'admin',
 		lastAction: 'admin_save',
 		adminEditedAt: at,
@@ -259,7 +255,8 @@ export function buildAiReviewFieldStateEntry(
 		nextValue,
 		overwriteAdmin = false,
 		source = 'ai_extraction',
-		at = new Date().toISOString()
+		at = new Date().toISOString(),
+		extractionRunId = ''
 	} = {}
 ) {
 	const normalized = normalizeReviewFieldStateEntry(existingEntry);
@@ -269,21 +266,18 @@ export function buildAiReviewFieldStateEntry(
 		aiValuePresent: true,
 		aiUpdatedAt: at,
 		lastUpdatedAt: at,
-		aiSource: normalizeString(source)
+		aiSource: normalizeString(source),
+		extractionRunId: normalizeString(extractionRunId)
 	};
 
 	if (overwriteAdmin) {
 		nextEntry.adminOverrideActive = false;
 		nextEntry.adminOverrideValue = null;
-		nextEntry.finalValue = nextValue;
-		nextEntry.finalValuePresent = true;
 		nextEntry.lastWriter = 'ai';
 		nextEntry.lastAction = normalized.adminOverrideActive ? 'ai_overwrite_admin' : 'ai_apply';
 		return nextEntry;
 	}
 
-	nextEntry.finalValue = normalized.adminOverrideActive ? normalized.adminOverrideValue : nextValue;
-	nextEntry.finalValuePresent = true;
 	nextEntry.lastWriter = normalized.adminOverrideActive ? (normalized.lastWriter || 'admin') : 'ai';
 	nextEntry.lastAction = normalized.adminOverrideActive ? 'ai_update_blocked_by_admin' : 'ai_apply';
 	return nextEntry;
@@ -292,19 +286,15 @@ export function buildAiReviewFieldStateEntry(
 export function clearAdminOverrideReviewFieldStateEntry(
 	existingEntry = {},
 	{
-		fallbackValue,
+		fallbackValue, // eslint-disable-line no-unused-vars — kept for backward-compat; finalValue tier eliminated
 		at = new Date().toISOString()
 	} = {}
 ) {
 	const normalized = normalizeReviewFieldStateEntry(existingEntry);
-	const finalValue = normalized.aiValuePresent ? normalized.aiValue : fallbackValue;
-
 	return {
 		...normalized,
 		adminOverrideActive: false,
 		adminOverrideValue: null,
-		finalValue,
-		finalValuePresent: normalized.aiValuePresent || fallbackValue !== undefined,
 		lastWriter: normalized.aiValuePresent ? 'ai' : 'system',
 		lastAction: 'reset_to_ai',
 		lastUpdatedAt: at
