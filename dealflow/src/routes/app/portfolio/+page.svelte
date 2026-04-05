@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 	import { getStoredSessionToken, isMember } from '$lib/stores/auth.js';
 	import * as analytics from '$lib/analytics.js';
@@ -727,8 +728,17 @@
 
 						{#each sorted as inv}
 							{@const sc = inv.isPendingReview ? '#f59e0b' : (statusColors[inv.status] || 'var(--text-muted)')}
+							{@const rowIsNavigable = !!inv.dealId && editingId !== inv.id}
 							<div class="holdings-row" class:holdings-row--editing={editingId === inv.id}>
-								<div class="holdings-row-grid">
+								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<div
+									class="holdings-row-grid"
+									class:holdings-row-grid--linked={rowIsNavigable}
+									role={rowIsNavigable ? 'button' : undefined}
+									tabindex={rowIsNavigable ? 0 : undefined}
+									onclick={rowIsNavigable ? () => goto(`/deal/${inv.dealId}`) : undefined}
+									onkeydown={rowIsNavigable ? (e) => { if (e.key === 'Enter' || e.key === ' ') goto(`/deal/${inv.dealId}`); } : undefined}
+								>
 									<div class="holding-cell holding-cell--primary" data-label="Investment">
 										<div class="holding-primary">{inv.investmentName || 'Unnamed investment'}</div>
 										<div class="holding-secondary">
@@ -775,7 +785,7 @@
 										<button
 											class="btn-edit"
 											class:btn-edit--active={editingId === inv.id}
-											onclick={() => (editingId === inv.id ? closeInlineEditor() : openAddModal(inv.id))}
+											onclick={(e) => { e.stopPropagation(); editingId === inv.id ? closeInlineEditor() : openAddModal(inv.id); }}
 										>
 											{editingId === inv.id ? 'Close' : inv._missingDetails ? 'Add Details' : 'Edit'}
 										</button>
@@ -1231,6 +1241,12 @@
 	}
 	.holdings-row-grid {
 		padding: 18px 22px;
+	}
+	.holdings-row-grid--linked {
+		cursor: pointer;
+	}
+	.holdings-row-grid--linked:hover {
+		background: color-mix(in srgb, var(--bg-card) 94%, var(--text-base));
 	}
 	.holding-cell {
 		min-width: 0;
