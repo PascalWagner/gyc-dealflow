@@ -92,6 +92,8 @@ const QUALITY_FIELDS = [
   { key: 'investing_geography', label: 'Geography' },
   { key: 'instrument', label: 'Instrument' },
   { key: 'management_company_id', label: 'Operator' },
+  { key: 'short_summary', label: 'Short Summary' },
+  { key: 'underlying_exposure_types', label: 'Underlying Exposure Types' },
   { key: 'status', label: 'Status' },
   { key: 'risk_notes', label: 'Risk Notes' },
   { key: 'risk_tags', label: 'Risk Tags' },
@@ -335,6 +337,8 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "dealType": "One of: Fund, Syndication, Direct, REIT",
   "strategy": "One of: Core, Core-Plus, Value-Add, Opportunistic, Development, Lending, Distressed",
   "investmentStrategy": "2-3 sentence LP-facing summary of the investment strategy",
+  "shortSummary": "2-3 sentence investor-facing summary of the deal: what it is, why it exists, and what an investor should understand immediately. Write for a sophisticated LP scanning a deal listing — clear, direct, no jargon.",
+  "underlyingExposureTypes": "Array of asset or receivable types this fund lends against or invests in. Only use values from this list: [\"Multifamily\", \"Single Family\", \"Commercial Real Estate\", \"Industrial\", \"Retail\", \"Office\", \"Hospitality\", \"Self Storage\", \"Land\", \"Medical Receivables\", \"Aviation\", \"Education\", \"Consumer\", \"Small Business\", \"Equipment\", \"Mixed Portfolio\", \"Other\"]. Return null if this is not a lending fund or the underlying collateral is not described.",
   "targetIRR": "Target IRR as decimal (e.g. 0.15 for 15%)",
   "preferredReturn": "Preferred return as decimal (e.g. 0.08 for 8%)",
   "cashOnCash": "Cash on cash return as decimal if mentioned",
@@ -921,9 +925,9 @@ Only include fields you actually found. Be conservative.`;
 
 // ── Multi-step enrichment pipeline ───────────────────────────────────────────
 
-async function enrichDeal(supabase, deal, operatorName) {
+async function enrichDeal(supabase, deal, operatorName, { forceRun = false } = {}) {
   const missingFields = getMissingFields(deal);
-  if (missingFields.length === 0) {
+  if (missingFields.length === 0 && !forceRun) {
     return { found_fields: {}, confidence: {}, sources: [], steps: [], notes: 'Already 100% complete' };
   }
 
@@ -944,13 +948,19 @@ async function enrichDeal(supabase, deal, operatorName) {
     queryPriority: dedupeStrings([deal.issuer_entity, deal.sec_entity_name, deal.investment_name, operatorName])
   };
 
-  // Helper: which fields are still missing after merging found data
+  // Helper: which fields are still missing after merging found data.
+  // When forceRun=true, always reports at least one missing entry so that
+  // the PPM extraction step runs even if standard quality fields are all filled.
   function stillMissing() {
     const tempDeal = { ...deal };
     for (const [k, v] of Object.entries(allFound)) {
       if (v !== null && v !== undefined) tempDeal[k] = v;
     }
-    return getMissingFields(tempDeal);
+    const missing = getMissingFields(tempDeal);
+    if (forceRun && missing.length === 0) {
+      return [{ key: '__forced__', label: 'forced re-extraction' }];
+    }
+    return missing;
   }
 
   // ── Step 0a: Extract issuer identity from the full PPM before SEC search ─
@@ -1418,8 +1428,12 @@ export default async function handler(req, res) {
 
       const operatorName = deal.management_company?.operator_name || '—';
       const missingFields = getMissingFields(deal);
+      // When specific fieldKeys are requested, always run extraction even if the deal
+      // appears "complete" by the standard quality-fields check — the caller is explicitly
+      // asking for those fields to be (re-)extracted and written to review_field_state.
+      const forceRun = fieldKeys.length > 0;
 
-      if (missingFields.length === 0) {
+      if (missingFields.length === 0 && !forceRun) {
         return res.status(200).json({
           success: true,
           deal_id: dealId,
@@ -1491,7 +1505,7 @@ export default async function handler(req, res) {
       let runStatus = 'failed';
       let runErrorDetail = null;
       try {
-        result = await enrichDeal(supabase, deal, operatorName);
+        result = await enrichDeal(supabase, deal, operatorName, { forceRun });
         const hasStepErrors = result.steps.some(s => s.error);
         runStatus = hasStepErrors ? 'partial' : 'complete';
         if (hasStepErrors) {
