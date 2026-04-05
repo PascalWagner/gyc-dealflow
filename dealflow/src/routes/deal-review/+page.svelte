@@ -1287,6 +1287,9 @@
 		if (branchInfo.branch === 'lending_fund' && !hasMeaningfulReviewValue(nextForm.assetClass)) {
 			nextForm.assetClass = 'Private Debt / Credit';
 		}
+		if (branchInfo.branch === 'lending_fund' && !hasMeaningfulReviewValue(nextForm.offeringStatus)) {
+			nextForm.offeringStatus = 'Evergreen';
+		}
 
 		form = nextForm;
 		fieldErrors = {
@@ -2582,6 +2585,21 @@
 			});
 
 			extractionPreview = preview.items.length > 0 ? preview : null;
+
+			// Auto-apply extracted values to fields that are currently empty and not admin-locked.
+			// This fills deal type, short summary, underlying exposure, etc. without requiring
+			// the user to manually click "Apply extraction results" for every new deal.
+			if (preview.items.length > 0) {
+				const autoApplyPatch = Object.fromEntries(
+					preview.items
+						.filter((item) => !item.adminLocked && !hasMeaningfulReviewValue(item.currentValue))
+						.map((item) => [item.fieldKey, item.extractedValue])
+				);
+				if (Object.keys(autoApplyPatch).length > 0) {
+					applyFormPatch(autoApplyPatch);
+				}
+			}
+
 			extractionSummary = {
 				fieldsFound: preview.items.length,
 				fieldsApplied: 0,
