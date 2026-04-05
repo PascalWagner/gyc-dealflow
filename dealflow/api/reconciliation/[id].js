@@ -198,7 +198,13 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Reconciliation task not found' });
     }
     if (task.status === 'resolved') {
-      return res.status(409).json({ error: 'Task is already resolved', status: task.status });
+      return res.status(409).json({
+        error: 'already_resolved',
+        message: `This reconciliation was already resolved by ${task.resolved_by || 'another admin'} at ${task.resolved_at || ''}`,
+        resolvedBy: task.resolved_by || '',
+        resolvedAt: task.resolved_at || '',
+        status: task.status
+      });
     }
     if (task.status === 'dismissed') {
       return res.status(409).json({ error: 'Task was dismissed', status: task.status });

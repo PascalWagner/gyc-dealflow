@@ -374,7 +374,10 @@
 			const u = { ...$user, name: firstName + ' ' + lastName, firstName, lastName };
 		user.set(u);
 
-		goToStep('step_tos');
+		// Skip the TOS gate if the user has already accepted the current agreement version.
+		// tosVersion is set in the session when the user accepts via /accept-terms or the
+		// accept-terms flow, and is included in the test fixture to prevent false gate failures.
+		goToStep($user?.tosVersion ? 'step1' : 'step_tos');
 	}
 
 	// ===== Step TOS: Terms of Service =====

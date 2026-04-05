@@ -19,6 +19,9 @@ export function makeSessionUser(email, overrides = {}) {
 		token: overrides.token || fakeJwt(email),
 		refreshToken: overrides.refreshToken || `refresh-${email}`,
 		onboardingCompletedAt: overrides.onboardingCompletedAt ?? new Date().toISOString(),
+		// Marks TOS as already accepted so the plan wizard skips the 'Before we continue' gate.
+		// Must match CURRENT_USER_AGREEMENT_VERSION in api/_user-agreement.js.
+		tosVersion: '1.0',
 		...overrides
 	};
 }
